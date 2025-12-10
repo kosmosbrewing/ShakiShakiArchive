@@ -9,6 +9,8 @@ import Admin from "@/pages/Admin.vue";
 import Cart from "@/pages/Cart.vue";
 import Checkout from "@/pages/Checkout.vue";
 import Order from "@/pages/Order.vue";
+import OrderList from "@/pages/OrderList.vue";
+import OrderAdmin from "@/pages/OrderAdmin.vue";
 import OrderDetail from "@/pages/OrderDetail.vue";
 
 import ProductDetail from "@/pages/ProductDetail.vue";
@@ -20,6 +22,7 @@ import Modify from "@/pages/Modify.vue";
 
 import ProductAdmin from "@/pages/ProductAdmin.vue";
 import CategoryAdmin from "@/pages/CategoryAdmin.vue";
+import AddressList from "@/pages/AddressList.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -29,7 +32,19 @@ const routes = [
   { path: "/cart", name: "Cart", component: Cart },
   { path: "/checkout", name: "Checkout", component: Checkout },
   { path: "/order", name: "Order", component: Order },
-  { path: "/OrderDetail", name: "OrderDetail", component: OrderDetail },
+  {
+    path: "/orderlist",
+    name: "OrderList",
+    component: OrderList,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addresslist",
+    name: "AddressList",
+    component: AddressList,
+    meta: { requiresAuth: true },
+  },
+  { path: "/orderdetail", name: "OrderDetail", component: OrderDetail },
 
   { path: "/modify", name: "Modify", component: Modify },
   { path: "/product/:category", name: "Product", component: Product },
@@ -40,9 +55,14 @@ const routes = [
   },
   { path: "/contact", name: "Contact", component: Contact },
   { path: "/about", name: "About", component: About },
-  { path: "/account", name: "Account", component: Account },
   {
-    path: "/admin/product",
+    path: "/account",
+    name: "Account",
+    component: Account,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/products",
     name: "ProductAdmin",
     component: ProductAdmin,
     meta: { requiresAuth: true, requiresAdmin: true }, // 🔒 철통 보안,
@@ -52,6 +72,12 @@ const routes = [
     name: "CategoryAdmin",
     component: CategoryAdmin,
     meta: { requiresAuth: true, requiresAdmin: true }, // 🔒 철통 보안,
+  },
+  {
+    path: "/admin/orders",
+    name: "OrderAdmin",
+    component: OrderAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true }, // 관리자 권한 필수
   },
 ];
 

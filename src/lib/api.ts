@@ -108,6 +108,13 @@ export async function fetchCategories(): Promise<any[]> {
 }
 
 export async function fetchProductVariants(productId: string): Promise<any[]> {
+  return apiRequest(`/api/products/${productId}/variants`);
+}
+
+// 관리자 권한 검사가 포함된 API를 호출합니다.
+export async function fetchAdminProductVariants(
+  productId: string | number
+): Promise<any[]> {
   return apiRequest(`/api/admin/products/${productId}/variants`);
 }
 
@@ -248,6 +255,40 @@ export async function createOrder(data: {
   });
 }
 
+// [주문] 주문 상세 조회 (OrderList에서 상품 정보를 가져오기 위해 사용)
+export async function fetchOrder(orderId: number | string): Promise<any> {
+  return apiRequest(`/api/orders/${orderId}`);
+}
+
+// [관리자] 모든 주문 목록 조회
+export async function fetchAdminOrders(): Promise<any[]> {
+  return apiRequest("/api/admin/orders");
+}
+
+// [관리자] 주문 상태 및 운송장 번호 수정
+export async function updateAdminOrderStatus(
+  orderId: string | number,
+  status: string,
+  trackingNumber?: string
+): Promise<any> {
+  return apiRequest(`/api/admin/orders/${orderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, trackingNumber }),
+  });
+}
+
+// [신규] 관리자: 주문 아이템 개별 상태 수정
+export async function updateAdminOrderItem(
+  itemId: number | string,
+  status: string,
+  trackingNumber?: string
+): Promise<any> {
+  return apiRequest(`/api/admin/order-items/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, trackingNumber }),
+  });
+}
+
 // 백엔드 엔드포인트: PATCH /api/auth/user (예상)
 export async function updateMyInfo(data: {
   firstName: string;
@@ -277,6 +318,34 @@ export async function changeMyPassword(data: {
 // [회원 탈퇴]
 export async function withdrawUser(): Promise<void> {
   return apiRequest("/api/auth/user", {
+    method: "DELETE",
+  });
+}
+
+// [추가] 배송지 목록 조회
+export async function fetchDeliveryAddresses(): Promise<any[]> {
+  return apiRequest("/api/user/addresses");
+}
+
+// [추가] 배송지 추가 API
+export async function createDeliveryAddress(data: {
+  recipient: string;
+  phone: string;
+  zipCode: string;
+  address: string;
+  detailAddress?: string;
+  requestNote?: string;
+  isDefault: boolean;
+}): Promise<any> {
+  return apiRequest("/api/user/addresses", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// [추가] 배송지 삭제
+export async function deleteDeliveryAddress(addressId: number): Promise<void> {
+  return apiRequest(`/api/user/addresses/${addressId}`, {
     method: "DELETE",
   });
 }

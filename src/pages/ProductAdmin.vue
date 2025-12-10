@@ -8,7 +8,7 @@ import {
   updateProduct,
   deleteProduct,
   fetchCategories,
-  fetchProductVariants,
+  fetchAdminProductVariants,
   createProductVariant,
   updateProductVariant,
   deleteProductVariant,
@@ -115,7 +115,7 @@ const loadData = async () => {
 
 const loadVariants = async (productId: string) => {
   try {
-    variants.value = await fetchProductVariants(productId);
+    variants.value = await fetchAdminProductVariants(productId);
   } catch (error) {
     console.error(error);
   }

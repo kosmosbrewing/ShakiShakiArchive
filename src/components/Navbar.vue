@@ -52,7 +52,7 @@ const allRoutes = computed<RouteProps[]>(() => {
     return [
       ...baseRoutes,
       { path: "/account", label: "ACCOUNT" },
-      { path: "/order", label: "ORDER" },
+      { path: "/cart", label: "CART" },
       { path: "", label: "LOGOUT" },
     ];
   } else {
