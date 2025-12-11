@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router"; // 1. 라우터 훅 추가
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
+import { useAuthStore } from "@/stores/auth";
+import axios from "axios";
 import { AlertCircle, Loader2 } from "lucide-vue-next"; // Loader2 아이콘 추가 (UI에 사용됨)
 
-// 필요한 컴포넌트를 import 해주세요 (Card, CardHeader, CardContent, CardFooter, Alert, AlertTitle, AlertDescription)
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -13,9 +14,6 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-
-import { useAuthStore } from "@/stores/auth";
-import axios from "axios";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
 interface loginProps {
@@ -81,7 +79,7 @@ const handleSubmit = async () => {
     // 일반적인 이동을 원하시면 router.push('/')를 사용하세요.
     await authStore.loadUser();
     router.replace("/");
-  } catch (error) {
+  } catch (error: any) {
     // 7. 실패(에러) 시 처리
     isLoading.value = false;
     invalidInputForm.value = true;
@@ -172,9 +170,7 @@ const handleSubmit = async () => {
           </Button>
 
           <router-link to="/signup" class="w-full">
-            <Button class="w-full" variant="outline" :disabled="isLoading"
-              >회원가입</Button
-            >
+            <Button class="w-full" :disabled="isLoading">회원가입</Button>
           </router-link>
         </form>
       </CardContent>

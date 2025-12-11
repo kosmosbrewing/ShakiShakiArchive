@@ -9,12 +9,6 @@ import { storeToRefs } from "pinia";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-vue-next";
 import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-import {
   Sheet,
   SheetContent,
   SheetHeader,

@@ -3,10 +3,14 @@
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  isAdmin: boolean;
+  userName: string;
+  zipCode: string;
+  address: string;
+  detailAddress: string;
+  phone: string;
+  emailOptIn: boolean;
   profileImageUrl: string | null;
+  isAdmin: boolean;
   createdAt: string;
   updatedAt: string;
 }
