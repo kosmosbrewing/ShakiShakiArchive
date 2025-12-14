@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useColorMode } from "@vueuse/core";
 import { storeToRefs } from "pinia";
+import { fetchCart } from "@/lib/api";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -16,77 +17,104 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+// 이미지 에셋 Import
+import instagramIcon from "@/assets/instagram.png";
+import accountIcon from "@/assets/account.png";
+import cartIcon from "@/assets/cart.png";
+import loginIcon from "@/assets/login.png";
+import logoutIcon from "@/assets/logout.png";
+
 const mode = useColorMode();
 mode.value = "light";
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const { isAuthenticated } = storeToRefs(authStore);
 const isOpen = ref<boolean>(false);
+const cartItemCount = ref(0);
 
-interface RouteProps {
-  path: string;
-  label: string;
-}
+// 카테고리 메뉴
+const categoryRoutes = [
+  { path: "/product/all", label: "ALL" },
+  { path: "/product/outerwear", label: "OUTERWEAR" },
+  { path: "/product/topwear", label: "TOP" },
+  { path: "/product/bottomwear", label: "BOTTOM" },
+  { path: "/product/accessories", label: "ACCESSORY" },
+  { path: "/contact", label: "CONTACT" },
+];
 
-// [1] 전체 메뉴 리스트
-const allRoutes = computed<RouteProps[]>(() => {
-  const baseRoutes = [
-    { path: "/product/all", label: "ALL" },
-    { path: "/product/outerwear", label: "OUTERWEAR" },
-    { path: "/product/topwear", label: "TOP" },
-    { path: "/product/bottomwear", label: "BOTTOM" },
-    { path: "/product/accessories", label: "ACCESSORY" },
-    { path: "/contact", label: "CONTACT" },
-    { path: "/", label: "INSTAGRAM" },
-    { path: "/about", label: "ABOUT" },
-  ];
-
-  if (isAuthenticated.value) {
-    return [
-      ...baseRoutes,
-      { path: "/account", label: "ACCOUNT" },
-      { path: "/cart", label: "CART" },
-      { path: "", label: "LOGOUT" },
-    ];
+// [핵심] 장바구니 카운트 업데이트 함수
+const updateCartCount = async () => {
+  // 로그인 상태일 때만 실제 DB 조회를 시도
+  if (authStore.isAuthenticated) {
+    try {
+      const cartItems = await fetchCart();
+      cartItemCount.value = cartItems.length;
+    } catch (error) {
+      console.error("Cart fetch error:", error);
+      cartItemCount.value = 0;
+    }
   } else {
-    return [...baseRoutes, { path: "/login", label: "LOGIN" }];
+    cartItemCount.value = 0;
+  }
+};
+
+// 로그인 상태 변경 감지
+watch(isAuthenticated, async (newVal) => {
+  if (newVal) {
+    await updateCartCount();
+  } else {
+    cartItemCount.value = 0;
   }
 });
 
-// [2] 메뉴를 좌우로 50%씩 나누기 (중앙 로고 공간 확보를 위해)
-const leftRoutes = computed(() => {
-  const half = Math.ceil(allRoutes.value.length / 2);
-  return allRoutes.value.slice(0, half);
-});
-
-const rightRoutes = computed(() => {
-  const half = Math.ceil(allRoutes.value.length / 2);
-  return allRoutes.value.slice(half);
+// 라우트 변경 시 모바일 메뉴 닫기
+watch(route, () => {
+  isOpen.value = false;
 });
 
 const handleLogout = async () => {
   isOpen.value = false;
   await authStore.handleLogout();
   router.push("/");
+  // 로그아웃 시 카운트 초기화 및 이벤트 발생
+  cartItemCount.value = 0;
 };
 
 const handleInstagram = () => {
   window.open("https://www.instagram.com", "_blank");
-  isOpen.value = false;
 };
 
-// [3] 홈 이동 함수
 const goHome = () => {
   router.push("/");
 };
+
+// [수정] Account 클릭 핸들러 (비로그인 시 로그인 페이지로)
+const handleAccountClick = () => {
+  if (isAuthenticated.value) {
+    router.push("/account");
+  } else {
+    router.push("/login");
+  }
+};
+
+onMounted(async () => {
+  await updateCartCount();
+  // [필수] ProductDetail에서 보낸 'cart-updated' 신호를 듣고 숫자를 갱신
+  window.addEventListener("cart-updated", updateCartCount);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("cart-updated", updateCartCount);
+});
 </script>
 
 <template>
   <header
     :class="{
       'shadow-light': mode === 'light',
-      'w-[95%] lg:w-[90%] max-w-screen-2xl top-5 mx-auto sticky z-40 rounded-2xl flex items-center p-4 bg-card shadow-md': true,
+      'w-[95%] lg:w-[90%] max-w-screen-2xl top-5 mx-auto sticky z-40 rounded-2xl flex items-center p-4 bg-card shadow-md transition-all duration-300': true,
     }"
     :style="{
       backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.9)',
@@ -99,7 +127,7 @@ const goHome = () => {
         @click="goHome"
       >
         <img
-          src="@/icons/logo01.png"
+          src="@/assets/logo01.png"
           alt="Logo"
           class="h-10 w-auto object-contain"
         />
@@ -107,7 +135,7 @@ const goHome = () => {
       <div class="flex justify-end">
         <Sheet v-model:open="isOpen">
           <SheetTrigger as-child>
-            <Menu @click="isOpen = true" class="cursor-pointer" />
+            <Menu class="cursor-pointer h-6 w-6" />
           </SheetTrigger>
           <SheetContent
             side="left"
@@ -120,46 +148,61 @@ const goHome = () => {
                   @click="goHome"
                 >
                   <img
-                    src="@/icons/logo01.png"
+                    src="@/assets/logo01.png"
                     alt="Logo"
                     class="h-6 w-auto ml-3 mt-7"
                   />
                 </SheetTitle>
               </SheetHeader>
-              <div class="flex flex-col gap-2 mt-8">
-                <Button
-                  v-for="{ path, label } in allRoutes"
-                  :key="label"
-                  as-child
-                  variant="ghost"
-                  class="justify-start text-sm w-full"
-                  @click="isOpen = false"
+              <div class="flex flex-col gap-4 mt-8 px-2">
+                <RouterLink
+                  v-for="route in categoryRoutes"
+                  :key="route.label"
+                  :to="route.path"
+                  class="text-sm font-medium hover:text-primary transition-colors"
                 >
-                  <div
-                    :class="[
-                      'w-full',
-                      ['CONTACT', 'LOGIN', 'ACCOUNT'].includes(label)
-                        ? 'mt-8'
-                        : 'mt-0',
-                    ]"
+                  {{ route.label }}
+                </RouterLink>
+                <div class="h-px bg-border my-2"></div>
+
+                <div
+                  class="text-sm font-medium cursor-pointer"
+                  @click="handleInstagram"
+                >
+                  INSTAGRAM
+                </div>
+
+                <div
+                  class="text-sm font-medium cursor-pointer"
+                  @click="handleAccountClick"
+                >
+                  ACCOUNT
+                </div>
+
+                <template v-if="isAuthenticated">
+                  <RouterLink
+                    to="/cart"
+                    class="text-sm font-medium flex justify-between"
                   >
+                    CART
                     <span
-                      v-if="label === 'INSTAGRAM'"
-                      class="block w-full text-left cursor-pointer"
-                      @click.stop="handleInstagram"
-                      >{{ label }}</span
+                      v-if="cartItemCount > 0"
+                      class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full"
+                      >{{ cartItemCount }}</span
                     >
-                    <span
-                      v-else-if="label === 'LOGOUT'"
-                      class="block w-full text-left cursor-pointer text-red-500 hover:text-red-600"
-                      @click.stop="handleLogout"
-                      >{{ label }}</span
-                    >
-                    <RouterLink v-else :to="path">
-                      <span class="block w-full text-left">{{ label }}</span>
-                    </RouterLink>
+                  </RouterLink>
+                  <div
+                    class="text-sm font-medium text-red-500 cursor-pointer"
+                    @click="handleLogout"
+                  >
+                    LOGOUT
                   </div>
-                </Button>
+                </template>
+                <template v-else>
+                  <RouterLink to="/login" class="text-sm font-medium"
+                    >LOGIN</RouterLink
+                  >
+                </template>
               </div>
             </div>
           </SheetContent>
@@ -172,11 +215,11 @@ const goHome = () => {
     >
       <div class="flex justify-start items-center flex-wrap gap-1">
         <Button
-          v-for="{ path, label } in leftRoutes"
+          v-for="{ path, label } in categoryRoutes"
           :key="label"
           as-child
           variant="ghost"
-          class="h-9 px-3 text-xs font-medium"
+          class="h-9 px-3 text-xs font-medium hover:bg-muted/50"
         >
           <RouterLink :to="path">
             <span>{{ label }}</span>
@@ -189,38 +232,90 @@ const goHome = () => {
         @click="goHome"
       >
         <img
-          src="@/icons/logo01.png"
+          src="@/assets/logo01.png"
           alt="Logo"
           class="h-10 w-auto min-w-[120px] object-contain hover:opacity-80 transition-opacity"
         />
       </div>
 
-      <div class="flex justify-end items-center flex-wrap gap-1">
-        <template v-for="{ path, label } in rightRoutes" :key="label">
+      <div class="flex justify-end items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          class="hover:bg-transparent hover:scale-110 transition-transform"
+          @click="handleInstagram"
+        >
+          <img
+            :src="instagramIcon"
+            alt="Instagram"
+            class="w-5 h-5 object-contain"
+          />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          class="hover:bg-transparent hover:scale-110 transition-transform"
+          @click="handleAccountClick"
+        >
+          <img
+            :src="accountIcon"
+            alt="Account"
+            class="w-5 h-5 object-contain"
+          />
+        </Button>
+
+        <template v-if="isAuthenticated">
           <Button
-            v-if="label === 'INSTAGRAM'"
             variant="ghost"
-            class="h-9 px-3 text-xs font-medium"
-            @click="handleInstagram"
-          >
-            <span>{{ label }}</span>
-          </Button>
-          <Button
-            v-else-if="label === 'LOGOUT'"
-            variant="ghost"
-            class="h-9 px-3 text-xs font-medium text-red-500 hover:text-red-600"
-            @click="handleLogout"
-          >
-            <span>{{ label }}</span>
-          </Button>
-          <Button
-            v-else
+            size="icon"
             as-child
-            variant="ghost"
-            class="h-9 px-3 text-xs font-medium"
+            class="relative hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
           >
-            <RouterLink :to="path">
-              <span>{{ label }}</span>
+            <RouterLink to="/cart">
+              <div class="relative inline-block">
+                <img
+                  :src="cartIcon"
+                  alt="Cart"
+                  class="w-6 h-6 object-contain"
+                />
+                <span
+                  v-if="cartItemCount > 0"
+                  class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+                >
+                  {{ cartItemCount }}
+                </span>
+              </div>
+            </RouterLink>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="handleLogout"
+            class="hover:bg-transparent hover:scale-110 transition-transform"
+          >
+            <img
+              :src="logoutIcon"
+              alt="Logout"
+              class="w-5 h-5 object-contain"
+            />
+          </Button>
+        </template>
+
+        <template v-else>
+          <Button
+            variant="ghost"
+            size="icon"
+            as-child
+            class="hover:bg-transparent hover:scale-110 transition-transform"
+          >
+            <RouterLink to="/login">
+              <img
+                :src="loginIcon"
+                alt="Login"
+                class="w-5 h-5 object-contain"
+              />
             </RouterLink>
           </Button>
         </template>
@@ -228,6 +323,7 @@ const goHome = () => {
     </div>
   </header>
 </template>
+
 <style scoped>
 .shadow-light {
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.085);

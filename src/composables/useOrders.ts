@@ -3,7 +3,12 @@
 
 import { ref, reactive, onMounted } from "vue";
 import { fetchOrders, fetchOrder, createOrder } from "@/lib/api";
-import type { Order, OrderItem, OrderStatusCounts, OrderStatus } from "@/types/api";
+import type {
+  Order,
+  OrderItem,
+  OrderStatusCounts,
+  OrderStatus,
+} from "@/types/api";
 
 // 주문 상태별 Badge variant
 export type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
@@ -183,6 +188,7 @@ export function useCreateOrder() {
     error.value = null;
     try {
       await createOrder(params);
+      window.dispatchEvent(new Event("cart-updated"));
       return true;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "주문 생성 실패";

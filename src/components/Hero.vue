@@ -3,7 +3,7 @@
     <div
       class="grid place-items-center lg:max-w-screen-xl gap-8 mx-auto py-10 md:py-10"
     >
-      <img src="@/icons/logo05.png" alt="Logo" class="h-21 w-15" />
+      <img src="@/assets/logo05.png" alt="Logo" class="h-21 w-15" />
 
       <div class="relative group mt-14">
         <!-- gradient shadow 

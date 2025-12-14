@@ -2,7 +2,12 @@
 // 장바구니 관련 로직
 
 import { ref, computed, onMounted } from "vue";
-import { fetchCart, updateCartItem, deleteCartItem, addToCart } from "@/lib/api";
+import {
+  fetchCart,
+  updateCartItem,
+  deleteCartItem,
+  addToCart,
+} from "@/lib/api";
 import type { CartItem } from "@/types/api";
 
 /**
@@ -72,12 +77,16 @@ export function useCart() {
   };
 
   // 아이템 삭제
-  const removeItem = async (itemId: number, confirmMessage = "장바구니에서 삭제하시겠습니까?") => {
+  const removeItem = async (
+    itemId: number,
+    confirmMessage = "장바구니에서 삭제하시겠습니까?"
+  ) => {
     if (!confirm(confirmMessage)) return false;
 
     try {
       await deleteCartItem(itemId);
       cartItems.value = cartItems.value.filter((item) => item.id !== itemId);
+      window.dispatchEvent(new Event("cart-updated"));
       return true;
     } catch (e) {
       console.error("삭제 실패:", e);

@@ -10,7 +10,7 @@ import Separator from "./ui/separator/Separator.vue";
       >
         <div class="col-span-full xl:col-span-2">
           <a href="#" class="flex font-bold items-center">
-            <img src="@/icons/logo06.png" alt="Logo" class="h-10 w-18" />
+            <img src="@/assets/logo06.png" alt="Logo" class="h-10 w-18" />
           </a>
         </div>
       </div>

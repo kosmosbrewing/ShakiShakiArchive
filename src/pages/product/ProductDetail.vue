@@ -68,30 +68,44 @@ const handleToggleWishlist = () => {
 // 장바구니 담기
 const handleAddToCart = () => {
   requireAuth(async () => {
-    // 옵션 선택 필요 확인
+    // 1. 옵션 선택 필수 체크
     if (variantSelection.needsVariantSelection.value) {
       alert("옵션을 선택해주세요.");
       return;
     }
 
-    // 재고 확인
+    // 2. 재고 확인
     if (!variantSelection.isStockAvailable.value) {
       alert("재고가 부족합니다.");
       return;
     }
 
+    // 1) 상품 ID 변환
+    const pid = Number(productData.product.value!.id);
+
+    // 2) 옵션 ID 변환 (값이 없으면 undefined 전송)
+    // "1" 같은 문자열이 오더라도 1(숫자)로 변환하고, 빈 값은 undefined로 처리
+    const rawVariantId = variantSelection.selectedVariantId.value;
+    const vid = rawVariantId ? Number(rawVariantId) : undefined;
+
+    // 3) 수량 변환
+    const qty = Number(variantSelection.quantity.value);
+
+    // API 호출
     const success = await addItem({
-      productId: productData.product.value!.id,
-      variantId: variantSelection.selectedVariantId.value as number | undefined,
-      quantity: variantSelection.quantity.value,
+      productId: pid,
+      variantId: vid,
+      quantity: qty,
     });
 
     if (success) {
       if (confirm("장바구니에 담았습니다. 장바구니로 이동하시겠습니까?")) {
+        window.dispatchEvent(new Event("cart-updated"));
         router.push("/cart");
       }
     } else {
-      alert("장바구니 담기 실패");
+      // 400 오류 등이 발생했을 때 사용자 알림
+      alert("장바구니 담기에 실패했습니다. (잠시 후 다시 시도해주세요)");
     }
   });
 };
@@ -118,7 +132,9 @@ onMounted(async () => {
 <template>
   <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
     <!-- 로딩 스피너 -->
-    <LoadingSpinner v-if="productData.loading.value || !productData.product.value" />
+    <LoadingSpinner
+      v-if="productData.loading.value || !productData.product.value"
+    />
 
     <div v-else class="flex flex-col lg:grid lg:grid-cols-2 gap-12 items-start">
       <!-- 상품 이미지 갤러리 -->
@@ -139,14 +155,21 @@ onMounted(async () => {
             >
               <Heart
                 class="w-6 h-6 transition-colors duration-200"
-                :class="wishlistToggle.isWishlisted.value ? 'fill-red-500 text-red-500' : 'text-gray-400'"
+                :class="
+                  wishlistToggle.isWishlisted.value
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-gray-400'
+                "
               />
             </button>
           </div>
         </Card>
 
         <!-- 썸네일 갤러리 -->
-        <div v-if="productData.galleryImages.value.length > 1" class="flex gap-2 overflow-x-auto pb-2">
+        <div
+          v-if="productData.galleryImages.value.length > 1"
+          class="flex gap-2 overflow-x-auto pb-2"
+        >
           <button
             v-for="(img, idx) in productData.galleryImages.value"
             :key="`thumb-${idx}`"
@@ -164,7 +187,9 @@ onMounted(async () => {
       </div>
 
       <!-- 상품 정보 카드 -->
-      <Card class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24 h-fit w-full">
+      <Card
+        class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24 h-fit w-full"
+      >
         <CardContent class="p-6">
           <!-- 상품명 + 위시리스트 버튼 -->
           <div class="flex justify-between items-start gap-4 mb-2">
@@ -180,7 +205,11 @@ onMounted(async () => {
             >
               <Heart
                 class="w-6 h-6 transition-colors duration-200"
-                :class="wishlistToggle.isWishlisted.value ? 'fill-red-500 text-red-500' : 'text-gray-400 group-hover:text-red-400'"
+                :class="
+                  wishlistToggle.isWishlisted.value
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-gray-400 group-hover:text-red-400'
+                "
               />
             </button>
           </div>
@@ -200,14 +229,20 @@ onMounted(async () => {
 
           <!-- 사이즈 선택 -->
           <div v-if="productData.variants.value.length > 0" class="mb-8">
-            <label class="block text-sm font-bold text-foreground mb-3">Size</label>
+            <label class="block text-sm font-bold text-foreground mb-3"
+              >Size</label
+            >
             <div class="flex flex-wrap gap-2">
               <Button
                 v-for="variant in productData.variants.value"
                 :key="variant.id"
                 @click="variantSelection.selectVariant(variant)"
                 :disabled="variant.stockQuantity <= 0 || !variant.isAvailable"
-                :variant="variantSelection.selectedVariantId.value === variant.id ? 'default' : 'outline'"
+                :variant="
+                  variantSelection.selectedVariantId.value === variant.id
+                    ? 'default'
+                    : 'outline'
+                "
                 :class="[
                   'min-w-[3rem]',
                   variant.stockQuantity <= 0 || !variant.isAvailable
@@ -223,9 +258,14 @@ onMounted(async () => {
           <!-- 수량 선택 -->
           <div
             class="mb-8 transition-opacity duration-200"
-            :class="{ 'opacity-40 pointer-events-none': variantSelection.needsVariantSelection.value }"
+            :class="{
+              'opacity-40 pointer-events-none':
+                variantSelection.needsVariantSelection.value,
+            }"
           >
-            <label class="block text-sm font-bold text-foreground mb-3">Quantity</label>
+            <label class="block text-sm font-bold text-foreground mb-3"
+              >Quantity</label
+            >
             <QuantitySelector
               v-model="variantSelection.quantity.value"
               :disabled="variantSelection.needsVariantSelection.value"
@@ -240,7 +280,11 @@ onMounted(async () => {
               class="w-full h-14 text-lg font-bold"
               size="lg"
             >
-              {{ variantSelection.needsVariantSelection.value ? "옵션을 선택해주세요" : "장바구니 담기" }}
+              {{
+                variantSelection.needsVariantSelection.value
+                  ? "옵션을 선택해주세요"
+                  : "장바구니 담기"
+              }}
             </Button>
           </div>
 
@@ -285,7 +329,9 @@ onMounted(async () => {
             <div class="py-8 min-h-[200px]">
               <!-- Description 탭 -->
               <div v-show="activeTab === 'description'" class="animate-fade-in">
-                <p class="text-muted-foreground whitespace-pre-line leading-relaxed text-sm">
+                <p
+                  class="text-muted-foreground whitespace-pre-line leading-relaxed text-sm"
+                >
                   {{ productData.product.value.description }}
                 </p>
               </div>
@@ -295,9 +341,13 @@ onMounted(async () => {
                 <div v-if="sizeMeasurements.hasSizeData.value">
                   <div class="overflow-x-auto">
                     <table class="w-full text-sm text-center whitespace-nowrap">
-                      <thead class="bg-muted text-xs text-muted-foreground uppercase">
+                      <thead
+                        class="bg-muted text-xs text-muted-foreground uppercase"
+                      >
                         <tr>
-                          <th class="px-4 py-3 font-bold border-b border-border bg-muted text-left w-20">
+                          <th
+                            class="px-4 py-3 font-bold border-b border-border bg-muted text-left w-20"
+                          >
                             Size
                           </th>
                           <th
@@ -310,8 +360,14 @@ onMounted(async () => {
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-border">
-                        <tr v-for="(data, idx) in sizeMeasurements.allSizeData.value" :key="idx">
-                          <td class="px-4 py-3 font-bold text-left bg-muted/50 text-foreground">
+                        <tr
+                          v-for="(data, idx) in sizeMeasurements.allSizeData
+                            .value"
+                          :key="idx"
+                        >
+                          <td
+                            class="px-4 py-3 font-bold text-left bg-muted/50 text-foreground"
+                          >
                             {{ data.variantSize }}
                           </td>
                           <td
@@ -319,7 +375,11 @@ onMounted(async () => {
                             :key="col.key"
                             class="px-4 py-3 text-muted-foreground"
                           >
-                            {{ formatSizeValue(data[col.key as keyof typeof data] as number) }}
+                            {{
+                              formatSizeValue(
+                                data[col.key as keyof typeof data] as number
+                              )
+                            }}
                           </td>
                         </tr>
                       </tbody>
@@ -344,7 +404,10 @@ onMounted(async () => {
 
       <!-- 상품 상세 이미지 -->
       <div
-        v-if="productData.product.value.detailImages && productData.product.value.detailImages.length > 0"
+        v-if="
+          productData.product.value.detailImages &&
+          productData.product.value.detailImages.length > 0
+        "
         class="order-3 lg:col-start-1 lg:row-start-1 flex flex-col gap-0 w-full"
       >
         <img
