@@ -1,0 +1,11 @@
+// src/components/common/index.ts
+// 공통 컴포넌트 re-export
+
+export { default as LoadingSpinner } from "./LoadingSpinner.vue";
+export { default as EmptyState } from "./EmptyState.vue";
+export { default as QuantitySelector } from "./QuantitySelector.vue";
+export { default as ProductThumbnail } from "./ProductThumbnail.vue";
+export { default as OrderStatusBadge } from "./OrderStatusBadge.vue";
+export { default as AddressCard } from "./AddressCard.vue";
+export { default as AddressForm } from "./AddressForm.vue";
+export { default as PhoneInput } from "./PhoneInput.vue";

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { OrderStatus } from '@shared/schema';
+import type { OrderStatus } from '@/types/api';
 
 const props = defineProps<{
   status: OrderStatus;

@@ -1,40 +1,52 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import OrderStatusBadge from "./OrderStatusBadge.vue";
-import type { OrderStatus } from "@shared/schema";
+import { OrderStatusBadge } from "@/components/common";
+import { fetchOrders } from "@/lib/api";
+import { formatDate } from "@/lib/formatters";
+import type { Order, OrderStatus } from "@/types/api";
 
 const route = useRoute();
 const router = useRouter();
-const ordersStore = useOrdersStore();
 
-const order = computed(() => ordersStore.currentOrder);
+// 주문 상세 상태
+const order = ref<Order | null>(null);
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+// 주문 상세 로드
+const fetchOrder = async (orderId: string) => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const orders = await fetchOrders();
+    order.value = orders.find((o: Order) => String(o.id) === orderId) || null;
+    if (!order.value) {
+      error.value = "주문을 찾을 수 없습니다.";
+    }
+  } catch (e) {
+    error.value = "주문 정보를 불러오는데 실패했습니다.";
+    console.error(e);
+  } finally {
+    loading.value = false;
+  }
+};
 
 onMounted(async () => {
   const id = route.params.id as string;
-  await ordersStore.fetchOrder(id);
+  await fetchOrder(id);
 });
 
 function goBack() {
-  router.push("/orders");
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  router.push("/orderlist");
 }
 </script>
 
 <template>
   <div class="container mx-auto px-4 py-8">
     <!-- 로딩 -->
-    <div v-if="ordersStore.loading" class="flex justify-center py-12">
+    <div v-if="loading" class="flex justify-center py-12">
       <div class="text-center">
         <div class="mb-2 text-4xl">⏳</div>
         <p class="text-muted-foreground">주문 정보를 불러오는 중...</p>
@@ -42,10 +54,10 @@ function formatDate(dateString: string) {
     </div>
 
     <!-- 에러 -->
-    <div v-else-if="ordersStore.error || !order" class="py-12">
+    <div v-else-if="error || !order" class="py-12">
       <div class="rounded-lg border border-destructive bg-destructive/10 p-4">
         <p class="text-destructive mb-4" data-testid="text-error">
-          {{ ordersStore.error || "주문을 찾을 수 없습니다" }}
+          {{ error || "주문을 찾을 수 없습니다" }}
         </p>
         <button
           @click="goBack"

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router"; // useRouter 추가
-
+import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import { Heart } from "lucide-vue-next"; // [신규] 하트 아이콘 추가
+import { useAuthStore } from "@/stores/auth"; // [신규] 인증 스토어
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api"; // [신규] API 함수
 
-// 1. 사용자가 요청한 최종 데이터 형태 (Target Interface)
+// 1. 데이터 인터페이스
 interface productProps {
-  id: number; // [수정] 상세 페이지 이동을 위해 ID 필수 추가
+  id: number;
   imageUrl: string;
   name: string;
   price: string[];
@@ -29,10 +31,16 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 const route = useRoute();
-const router = useRouter(); // [수정] 라우터 인스턴스 생성
+const router = useRouter();
+const authStore = useAuthStore();
+
 const productList = ref<productProps[]>([]);
 const loading = ref(false);
 
+// [신규] 위시리스트에 담긴 상품 ID 목록 (빠른 조회를 위해 Set 사용)
+const wishlistSet = ref<Set<number>>(new Set());
+
+// 상품 데이터 불러오기
 const fetchProductData = async () => {
   loading.value = true;
 
@@ -50,13 +58,11 @@ const fetchProductData = async () => {
 
     if (currentCategory !== "all") {
       const targetUUID = CATEGORY_MAP[currentCategory];
-
       rawData = rawData.filter((item) => item.categoryId === targetUUID);
     }
 
-    // 데이터 변환 후 teamList에 할당
     productList.value = rawData.map((item) => ({
-      id: item.id, // [수정] ID 매핑 추가
+      id: item.id,
       imageUrl: item.imageUrl,
       name: item.name,
       price: [
@@ -72,14 +78,59 @@ const fetchProductData = async () => {
   }
 };
 
-// [수정] 상세 페이지 이동 함수
+// [신규] 위시리스트 목록 불러오기 (로그인 시)
+const loadWishlist = async () => {
+  if (!authStore.isAuthenticated) return;
+  
+  try {
+    const items = await fetchWishlist();
+    // items는 [{ productId: 1, ... }, ...] 형태라고 가정
+    const ids = items.map((item: any) => item.productId);
+    wishlistSet.value = new Set(ids);
+  } catch (error) {
+    console.error("위시리스트 로드 실패:", error);
+  }
+};
+
+// [신규] 위시리스트 추가/삭제 토글
+const toggleWishlist = async (event: Event, productId: number) => {
+  event.stopPropagation(); // [중요] 상세 페이지 이동 방지
+
+  if (!authStore.isAuthenticated) {
+    if (confirm("로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?")) {
+      router.push("/login");
+    }
+    return;
+  }
+
+  try {
+    if (wishlistSet.value.has(productId)) {
+      // 이미 있으면 삭제
+      await removeFromWishlist(productId);
+      wishlistSet.value.delete(productId);
+    } else {
+      // 없으면 추가
+      await addToWishlist(productId);
+      wishlistSet.value.add(productId);
+    }
+    // 반응성을 위해 Set 재할당 (Vue 3 ref 특성)
+    wishlistSet.value = new Set(wishlistSet.value);
+  } catch (error) {
+    console.error("위시리스트 처리 실패:", error);
+    alert("처리 중 오류가 발생했습니다.");
+  }
+};
+
 const goToDetail = (id: number) => {
   router.push(`/productDetail/${id}`);
 };
 
-// 초기 진입 시 실행
-onMounted(() => {
-  fetchProductData();
+onMounted(async () => {
+  await fetchProductData();
+  // 상품 로드 후 위시리스트 상태 확인
+  if (authStore.isAuthenticated) {
+    await loadWishlist();
+  }
 });
 </script>
 
@@ -95,7 +146,7 @@ onMounted(() => {
       >
         <CardHeader class="p-0 gap-0">
           <div
-            class="h-full overflow-hidden cursor-pointer"
+            class="h-full overflow-hidden cursor-pointer relative"
             @click="goToDetail(id)"
           >
             <img
@@ -103,6 +154,17 @@ onMounted(() => {
               alt=""
               class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:saturate-100 group-hover/hoverimg:scale-[1.01]"
             />
+
+            <button
+              @click="toggleWishlist($event, id)"
+              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"
+              title="위시리스트 담기"
+            >
+              <Heart
+                class="w-5 h-5 transition-colors duration-200"
+                :class="wishlistSet.has(id) ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-gray-600'"
+              />
+            </button>
           </div>
 
           <CardContent
