@@ -2,12 +2,19 @@
 // 주문 관련 로직
 
 import { ref, reactive, onMounted } from "vue";
-import { fetchOrders, fetchOrder, createOrder } from "@/lib/api";
+import {
+  fetchOrders,
+  fetchOrder,
+  createOrder,
+  cancelPayment,
+} from "@/lib/api";
 import type {
   Order,
   OrderItem,
   OrderStatusCounts,
   OrderStatus,
+  CreateOrderRequest,
+  CreateOrderResponse,
 } from "@/types/api";
 
 // 주문 상태별 Badge variant
@@ -177,24 +184,25 @@ export function useOrderStats() {
 export function useCreateOrder() {
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const orderResult = ref<CreateOrderResponse | null>(null);
 
-  const submitOrder = async (params: {
-    shippingName: string;
-    shippingPhone: string;
-    shippingAddress: string;
-    shippingPostalCode: string;
-  }) => {
+  // 주문 생성 (결제 전)
+  const submitOrder = async (
+    params: CreateOrderRequest
+  ): Promise<CreateOrderResponse | null> => {
     loading.value = true;
     error.value = null;
+    orderResult.value = null;
     try {
-      await createOrder(params);
+      const result = await createOrder(params);
+      orderResult.value = result;
       window.dispatchEvent(new Event("cart-updated"));
-      return true;
+      return result;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "주문 생성 실패";
       error.value = errorMessage;
       console.error("주문 생성 실패:", e);
-      return false;
+      return null;
     } finally {
       loading.value = false;
     }
@@ -203,7 +211,41 @@ export function useCreateOrder() {
   return {
     loading,
     error,
+    orderResult,
     submitOrder,
+  };
+}
+
+/**
+ * 주문 취소
+ */
+export function useCancelOrder() {
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+
+  const cancel = async (
+    orderId: number | string,
+    cancelReason: string
+  ): Promise<Order | null> => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const result = await cancelPayment(orderId, { cancelReason });
+      return result;
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "주문 취소 실패";
+      error.value = errorMessage;
+      console.error("주문 취소 실패:", e);
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  return {
+    loading,
+    error,
+    cancel,
   };
 }
 

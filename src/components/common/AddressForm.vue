@@ -45,25 +45,25 @@ const deliveryMessageOptions = [
 
 <template>
   <div class="space-y-4">
-    <!-- 받는사람 -->
-    <div class="grid grid-cols-[120px_1fr] gap-4 items-center">
-      <Label class="text-right">받는사람 <span class="text-destructive">*</span></Label>
+    <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+      <Label class="text-left"
+        >받는사람 <span class="text-destructive">*</span></Label
+      >
       <div class="flex items-center gap-2">
         <Input
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
           type="text"
-          class="max-w-xs"
+          class="w-55"
         />
-        <Badge v-if="form.saveDefault" variant="secondary">
-          기본 배송지
-        </Badge>
+        <Badge v-if="form.saveDefault" variant="secondary"> 기본 배송지 </Badge>
       </div>
     </div>
 
-    <!-- 주소 -->
-    <div class="grid grid-cols-[120px_1fr] gap-4 items-start">
-      <Label class="text-right pt-2">주소 <span class="text-destructive">*</span></Label>
+    <div class="grid grid-cols-[80px_1fr] gap-2 items-start">
+      <Label class="text-left pt-2"
+        >주소 <span class="text-destructive">*</span></Label
+      >
       <div class="space-y-2">
         <div class="flex gap-2">
           <Input
@@ -73,7 +73,12 @@ const deliveryMessageOptions = [
             readonly
             placeholder="우편번호"
           />
-          <Button type="button" variant="outline" size="sm" @click="emit('searchAddress')">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            @click="emit('searchAddress')"
+          >
             주소검색
           </Button>
         </div>
@@ -93,9 +98,10 @@ const deliveryMessageOptions = [
       </div>
     </div>
 
-    <!-- 휴대전화 -->
-    <div class="grid grid-cols-[120px_1fr] gap-4 items-center">
-      <Label class="text-right">휴대전화 <span class="text-destructive">*</span></Label>
+    <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+      <Label class="text-left"
+        >휴대전화 <span class="text-destructive">*</span></Label
+      >
       <PhoneInput
         :phone1="form.phone1"
         :phone2="form.phone2"
@@ -106,11 +112,12 @@ const deliveryMessageOptions = [
       />
     </div>
 
-    <!-- 배송 메시지 -->
     <div v-if="showDeliveryMessage" class="space-y-2">
       <select
         :value="form.message"
-        @change="updateField('message', ($event.target as HTMLSelectElement).value)"
+        @change="
+          updateField('message', ($event.target as HTMLSelectElement).value)
+        "
         class="w-full border border-border rounded p-3 text-sm bg-background text-foreground"
       >
         <option
@@ -132,16 +139,23 @@ const deliveryMessageOptions = [
       />
     </div>
 
-    <!-- 기본 배송지 저장 체크박스 -->
     <div v-if="showSaveDefault" class="flex items-center space-x-2">
       <input
         type="checkbox"
         id="saveDefault"
         :checked="form.saveDefault"
-        @change="updateField('saveDefault', ($event.target as HTMLInputElement).checked)"
+        @change="
+          updateField(
+            'saveDefault',
+            ($event.target as HTMLInputElement).checked
+          )
+        "
         class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
       />
-      <Label for="saveDefault" class="text-sm font-normal cursor-pointer text-muted-foreground">
+      <Label
+        for="saveDefault"
+        class="text-sm font-normal cursor-pointer text-muted-foreground"
+      >
         이 배송지를 기본 배송지로 저장
       </Label>
     </div>

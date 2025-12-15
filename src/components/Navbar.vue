@@ -12,9 +12,9 @@ import { Menu } from "lucide-vue-next";
 import {
   Sheet,
   SheetContent,
+  SheetTrigger,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 
 // 이미지 에셋 Import
@@ -41,14 +41,13 @@ const categoryRoutes = [
   { path: "/product/topwear", label: "TOP" },
   { path: "/product/bottomwear", label: "BOTTOM" },
   { path: "/product/accessories", label: "ACCESSORY" },
-  { path: "/contact", label: "CONTACT" },
 ];
 
-// [핵심] 장바구니 카운트 업데이트 함수
+// [수정] 장바구니 카운트 업데이트 (회원/비회원 분기 처리)
 const updateCartCount = async () => {
-  // 로그인 상태일 때만 실제 DB 조회를 시도
   if (authStore.isAuthenticated) {
     try {
+      // 회원: 서버 API 조회
       const cartItems = await fetchCart();
       cartItemCount.value = cartItems.length;
     } catch (error) {
@@ -56,30 +55,28 @@ const updateCartCount = async () => {
       cartItemCount.value = 0;
     }
   } else {
-    cartItemCount.value = 0;
+    // 비회원: 로컬 스토리지 조회
+    const localCart = JSON.parse(localStorage.getItem("guest_cart") || "[]");
+    cartItemCount.value = localCart.length;
   }
 };
 
 // 로그인 상태 변경 감지
-watch(isAuthenticated, async (newVal) => {
-  if (newVal) {
-    await updateCartCount();
-  } else {
-    cartItemCount.value = 0;
-  }
+watch(isAuthenticated, async () => {
+  await updateCartCount();
 });
 
-// 라우트 변경 시 모바일 메뉴 닫기
+// 라우트 변경 시 모바일 메뉴 닫기 & 카운트 갱신
 watch(route, () => {
   isOpen.value = false;
+  updateCartCount();
 });
 
 const handleLogout = async () => {
   isOpen.value = false;
   await authStore.handleLogout();
   router.push("/");
-  // 로그아웃 시 카운트 초기화 및 이벤트 발생
-  cartItemCount.value = 0;
+  // 로그아웃 시 cart-updated 이벤트가 authStore에서 발생하므로 자동 갱신됨
 };
 
 const handleInstagram = () => {
@@ -90,8 +87,8 @@ const goHome = () => {
   router.push("/");
 };
 
-// [수정] Account 클릭 핸들러 (비로그인 시 로그인 페이지로)
 const handleAccountClick = () => {
+  isOpen.value = false;
   if (isAuthenticated.value) {
     router.push("/account");
   } else {
@@ -99,9 +96,14 @@ const handleAccountClick = () => {
   }
 };
 
+const handleCartClick = () => {
+  isOpen.value = false;
+  router.push("/cart");
+};
+
+// [중요] 이벤트 리스너 등록 (병합 완료 신호 수신)
 onMounted(async () => {
   await updateCartCount();
-  // [필수] ProductDetail에서 보낸 'cart-updated' 신호를 듣고 숫자를 갱신
   window.addEventListener("cart-updated", updateCartCount);
 });
 
@@ -120,10 +122,85 @@ onUnmounted(() => {
       backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.9)',
     }"
   >
-    <div class="grid grid-cols-3 items-center lg:hidden w-full">
-      <div></div>
+    <div
+      class="relative flex items-center justify-between lg:hidden w-full h-10"
+    >
+      <div class="flex justify-start z-10">
+        <Sheet v-model:open="isOpen">
+          <SheetTrigger as-child>
+            <Menu class="cursor-pointer h-6 w-6" />
+          </SheetTrigger>
+
+          <SheetContent
+            side="left"
+            class="flex flex-col rounded-tr-2xl rounded-br-2xl bg-card"
+          >
+            <SheetHeader class="mb-4 text-left">
+              <SheetTitle
+                class="flex items-center cursor-pointer"
+                @click="goHome"
+              >
+                <img
+                  src="@/assets/logo03.png"
+                  alt="Logo"
+                  class="h-6 w-auto ml-1 mt-5"
+                />
+              </SheetTitle>
+            </SheetHeader>
+
+            <div class="flex flex-col gap-1">
+              <RouterLink
+                v-for="route in categoryRoutes"
+                :key="route.label"
+                :to="route.path"
+                class="text-base font-medium hover:text-primary transition-colors py-3"
+                @click="isOpen = false"
+              >
+                {{ route.label }}
+              </RouterLink>
+            </div>
+
+            <div class="flex-1"></div>
+
+            <div class="flex justify-end p-2 mt-2">
+              <Button
+                v-if="isAuthenticated"
+                variant="ghost"
+                size="icon"
+                class="h-10 w-10 hover:bg-transparent"
+                @click="handleLogout"
+                title="LOGOUT"
+              >
+                <img
+                  :src="logoutIcon"
+                  alt="Logout"
+                  class="w-6 h-6 object-contain"
+                />
+              </Button>
+
+              <Button
+                v-else
+                variant="ghost"
+                size="icon"
+                as-child
+                class="h-10 w-10 hover:bg-transparent"
+                title="LOGIN"
+              >
+                <RouterLink to="/login" @click="isOpen = false">
+                  <img
+                    :src="loginIcon"
+                    alt="Login"
+                    class="w-6 h-6 object-contain"
+                  />
+                </RouterLink>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
       <div
-        class="flex items-center justify-center cursor-pointer"
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer"
         @click="goHome"
       >
         <img
@@ -132,81 +209,54 @@ onUnmounted(() => {
           class="h-10 w-auto object-contain"
         />
       </div>
-      <div class="flex justify-end">
-        <Sheet v-model:open="isOpen">
-          <SheetTrigger as-child>
-            <Menu class="cursor-pointer h-6 w-6" />
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            class="flex flex-col justify-between rounded-tr-2xl rounded-br-2xl bg-card"
-          >
-            <div>
-              <SheetHeader class="mb-4">
-                <SheetTitle
-                  class="flex items-center cursor-pointer"
-                  @click="goHome"
-                >
-                  <img
-                    src="@/assets/logo01.png"
-                    alt="Logo"
-                    class="h-6 w-auto ml-3 mt-7"
-                  />
-                </SheetTitle>
-              </SheetHeader>
-              <div class="flex flex-col gap-4 mt-8 px-2">
-                <RouterLink
-                  v-for="route in categoryRoutes"
-                  :key="route.label"
-                  :to="route.path"
-                  class="text-sm font-medium hover:text-primary transition-colors"
-                >
-                  {{ route.label }}
-                </RouterLink>
-                <div class="h-px bg-border my-2"></div>
 
-                <div
-                  class="text-sm font-medium cursor-pointer"
-                  @click="handleInstagram"
-                >
-                  INSTAGRAM
-                </div>
+      <div class="flex items-center justify-end gap-1 z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-8 w-8 hover:bg-transparent p-1"
+          @click="handleInstagram"
+        >
+          <img
+            :src="instagramIcon"
+            alt="Instagram"
+            class="w-full h-full object-contain"
+          />
+        </Button>
 
-                <div
-                  class="text-sm font-medium cursor-pointer"
-                  @click="handleAccountClick"
-                >
-                  ACCOUNT
-                </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-8 w-8 hover:bg-transparent p-1"
+          @click="handleAccountClick"
+        >
+          <img
+            :src="accountIcon"
+            alt="Account"
+            class="w-full h-full object-contain"
+          />
+        </Button>
 
-                <template v-if="isAuthenticated">
-                  <RouterLink
-                    to="/cart"
-                    class="text-sm font-medium flex justify-between"
-                  >
-                    CART
-                    <span
-                      v-if="cartItemCount > 0"
-                      class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full"
-                      >{{ cartItemCount }}</span
-                    >
-                  </RouterLink>
-                  <div
-                    class="text-sm font-medium text-red-500 cursor-pointer"
-                    @click="handleLogout"
-                  >
-                    LOGOUT
-                  </div>
-                </template>
-                <template v-else>
-                  <RouterLink to="/login" class="text-sm font-medium"
-                    >LOGIN</RouterLink
-                  >
-                </template>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-8 w-8 relative hover:bg-transparent overflow-visible p-1"
+          @click="handleCartClick"
+        >
+          <div class="relative w-full h-full">
+            <img
+              :src="cartIcon"
+              alt="Cart"
+              class="w-full h-full object-contain"
+            />
+            <span
+              v-if="cartItemCount > 0"
+              class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white"
+            >
+              {{ cartItemCount }}
+            </span>
+          </div>
+        </Button>
       </div>
     </div>
 
@@ -265,30 +315,26 @@ onUnmounted(() => {
           />
         </Button>
 
-        <template v-if="isAuthenticated">
-          <Button
-            variant="ghost"
-            size="icon"
-            as-child
-            class="relative hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
-          >
-            <RouterLink to="/cart">
-              <div class="relative inline-block">
-                <img
-                  :src="cartIcon"
-                  alt="Cart"
-                  class="w-6 h-6 object-contain"
-                />
-                <span
-                  v-if="cartItemCount > 0"
-                  class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
-                >
-                  {{ cartItemCount }}
-                </span>
-              </div>
-            </RouterLink>
-          </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          as-child
+          class="relative hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
+        >
+          <RouterLink to="/cart">
+            <div class="relative inline-block">
+              <img :src="cartIcon" alt="Cart" class="w-6 h-6 object-contain" />
+              <span
+                v-if="cartItemCount > 0"
+                class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+              >
+                {{ cartItemCount }}
+              </span>
+            </div>
+          </RouterLink>
+        </Button>
 
+        <template v-if="isAuthenticated">
           <Button
             variant="ghost"
             size="icon"

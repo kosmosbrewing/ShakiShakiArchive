@@ -4,12 +4,18 @@
 
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthGuard } from "@/composables/useAuthGuard";
+// import { useAuthGuard } from "@/composables/useAuthGuard"; // [삭제] 비회원 접근 허용
 import { useCart } from "@/composables/useCart";
+import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/formatters";
 
 // 공통 컴포넌트
-import { LoadingSpinner, EmptyState, QuantitySelector, ProductThumbnail } from "@/components/common";
+import {
+  LoadingSpinner,
+  EmptyState,
+  QuantitySelector,
+  ProductThumbnail,
+} from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();
+const authStore = useAuthStore();
 
-// 인증 체크
-useAuthGuard();
+// [삭제] 인증 체크 로직 제거 (이제 누구나 접근 가능)
+// useAuthGuard();
 
 // 장바구니 로직
 const {
@@ -38,6 +45,19 @@ const goToOrder = () => {
     alert("장바구니가 비어있습니다.");
     return;
   }
+
+  // 비회원일 경우 로그인 페이지로 유도 (결제는 회원만 가능)
+  if (!authStore.isAuthenticated) {
+    if (
+      confirm(
+        "주문을 위해 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?"
+      )
+    ) {
+      router.push("/login");
+    }
+    return;
+  }
+
   router.push("/order");
 };
 
@@ -48,17 +68,14 @@ onMounted(() => {
 
 <template>
   <div class="max-w-6xl mx-auto px-4 py-12 sm:py-16">
-    <!-- 페이지 타이틀 -->
     <div class="mb-8">
       <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
         Shopping Cart
       </h1>
     </div>
 
-    <!-- 로딩 스피너 -->
     <LoadingSpinner v-if="loading" />
 
-    <!-- 빈 장바구니 -->
     <EmptyState
       v-else-if="isEmpty"
       message="장바구니에 담긴 상품이 없습니다."
@@ -66,19 +83,15 @@ onMounted(() => {
       button-link="/product/all"
     />
 
-    <!-- 장바구니 내용 -->
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- 장바구니 아이템 목록 -->
       <div class="lg:col-span-2 space-y-4">
         <Card v-for="item in cartItems" :key="item.id">
           <CardContent class="flex gap-6 p-4">
-            <!-- 상품 이미지 -->
             <ProductThumbnail
               :image-url="item.product?.imageUrl"
               :product-id="item.productId"
             />
 
-            <!-- 상품 정보 -->
             <div class="flex-1 flex flex-col justify-between">
               <div>
                 <div class="flex justify-between items-start">
@@ -98,21 +111,24 @@ onMounted(() => {
                   </Button>
                 </div>
 
-                <p v-if="item.variant" class="text-sm text-muted-foreground mt-1">
+                <p
+                  v-if="item.variant"
+                  class="text-sm text-muted-foreground mt-1"
+                >
                   옵션: {{ item.variant.size }}
-                  <span v-if="item.variant.color">/ {{ item.variant.color }}</span>
+                  <span v-if="item.variant.color"
+                    >/ {{ item.variant.color }}</span
+                  >
                 </p>
               </div>
 
               <div class="flex justify-between items-end mt-4">
-                <!-- 수량 조절 -->
                 <QuantitySelector
                   :model-value="item.quantity"
                   size="sm"
                   @change="(change) => updateQuantity(item, change)"
                 />
 
-                <!-- 가격 -->
                 <div class="font-bold text-foreground">
                   {{ formatPrice(Number(item.product?.price) * item.quantity) }}
                 </div>
@@ -122,7 +138,6 @@ onMounted(() => {
         </Card>
       </div>
 
-      <!-- 주문 요약 -->
       <div class="lg:col-span-1">
         <Card class="sticky top-24">
           <CardHeader>
@@ -131,7 +146,9 @@ onMounted(() => {
           <CardContent class="space-y-4">
             <div class="flex justify-between text-sm">
               <span class="text-muted-foreground">상품 금액</span>
-              <span class="text-foreground">{{ formatPrice(totalProductPrice) }}</span>
+              <span class="text-foreground">{{
+                formatPrice(totalProductPrice)
+              }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-muted-foreground">배송비</span>
@@ -142,7 +159,9 @@ onMounted(() => {
 
             <div class="flex justify-between text-lg font-bold">
               <span class="text-foreground">총 결제 금액</span>
-              <span class="text-foreground">{{ formatPrice(totalProductPrice) }}</span>
+              <span class="text-foreground">{{
+                formatPrice(totalProductPrice)
+              }}</span>
             </div>
 
             <Button @click="goToOrder" class="w-full" size="lg">

@@ -1,4 +1,12 @@
-import type { User, Order } from "@/types/api"; // 타입 경로 확인 (없으면 any로 변경 가능)
+import type {
+  User,
+  Order,
+  CreateOrderRequest,
+  CreateOrderResponse,
+  ConfirmPaymentRequest,
+  ConfirmPaymentResponse,
+  CancelPaymentRequest,
+} from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -104,11 +112,14 @@ export async function withdrawUser(): Promise<void> {
 // ------------------------------------------------------------------
 
 // 전체 상품 조회 (관리자용 아님)
-export async function fetchProducts(categoryId?: number, search?: string): Promise<any[]> {
+export async function fetchProducts(
+  categoryId?: number,
+  search?: string
+): Promise<any[]> {
   const params = new URLSearchParams();
   if (categoryId) params.append("categoryId", categoryId.toString());
   if (search) params.append("search", search);
-  
+
   return apiRequest(`/api/products?${params.toString()}`);
 }
 
@@ -118,7 +129,9 @@ export async function fetchProduct(id: string | number): Promise<any> {
 }
 
 // 상품 옵션(Variants) 조회
-export async function fetchProductVariants(productId: string | number): Promise<any[]> {
+export async function fetchProductVariants(
+  productId: string | number
+): Promise<any[]> {
   return apiRequest(`/api/products/${productId}/variants`);
 }
 
@@ -186,14 +199,10 @@ export async function removeFromWishlist(productId: number): Promise<void> {
 // ------------------------------------------------------------------
 
 // --- 주문 (Orders) ---
-export async function createOrder(data: {
-  shippingName: string;
-  shippingPhone: string;
-  shippingAddress: string;
-  shippingPostalCode?: string;
-  requestNote?: string;
-}): Promise<any> {
-  return apiRequest("/api/orders", {
+export async function createOrder(
+  data: CreateOrderRequest
+): Promise<CreateOrderResponse> {
+  return apiRequest<CreateOrderResponse>("/api/orders", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -203,7 +212,7 @@ export async function fetchOrders(): Promise<Order[]> {
   return apiRequest<Order[]>("/api/orders");
 }
 
-export async function fetchOrder(orderId: number | string): Promise<any> {
+export async function fetchOrder(orderId: number | string): Promise<Order> {
   return apiRequest(`/api/orders/${orderId}`);
 }
 
@@ -249,7 +258,10 @@ export async function createProduct(data: any): Promise<any> {
   });
 }
 
-export async function updateProduct(id: string | number, data: any): Promise<any> {
+export async function updateProduct(
+  id: string | number,
+  data: any
+): Promise<any> {
   return apiRequest(`/api/admin/products/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -342,7 +354,10 @@ export async function createCategory(data: any): Promise<any> {
   });
 }
 
-export async function updateCategory(id: string | number, data: any): Promise<any> {
+export async function updateCategory(
+  id: string | number,
+  data: any
+): Promise<any> {
   return apiRequest(`/api/admin/categories/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -379,5 +394,61 @@ export async function updateAdminOrderItem(
   return apiRequest(`/api/admin/order-items/${itemId}`, {
     method: "PATCH",
     body: JSON.stringify({ status, trackingNumber }),
+  });
+}
+
+// ------------------------------------------------------------------
+// [6] 결제 (Payments)
+// ------------------------------------------------------------------
+
+// 토스페이먼츠 클라이언트 키 조회
+export async function getPaymentClientKey(): Promise<{ clientKey: string }> {
+  return apiRequest<{ clientKey: string }>("/api/payments/client-key");
+}
+
+// 결제 승인 (토스페이먼츠)
+export async function confirmPayment(
+  data: ConfirmPaymentRequest
+): Promise<ConfirmPaymentResponse> {
+  return apiRequest<ConfirmPaymentResponse>("/api/payments/confirm", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 결제 취소
+export async function cancelPayment(
+  orderId: number | string,
+  data: CancelPaymentRequest
+): Promise<Order> {
+  return apiRequest<Order>(`/api/payments/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 결제 상태 조회
+export async function getPaymentStatus(
+  orderId: number | string
+): Promise<{ status: string; order: Order }> {
+  return apiRequest<{ status: string; order: Order }>(
+    `/api/payments/${orderId}/status`
+  );
+}
+
+// --- 관리자 결제 관리 ---
+export async function getAdminPaymentDetail(
+  orderId: number | string
+): Promise<any> {
+  return apiRequest(`/api/admin/payments/${orderId}`);
+}
+
+export async function adminCancelPayment(
+  orderId: number | string,
+  cancelReason: string
+): Promise<any> {
+  return apiRequest(`/api/admin/payments/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ cancelReason }),
   });
 }

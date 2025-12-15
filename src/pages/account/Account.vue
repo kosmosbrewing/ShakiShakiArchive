@@ -19,7 +19,8 @@ const authStore = useAuthStore();
 const { orderCounts, loadOrderStats } = useOrderStats();
 
 // 위시리스트 개수
-const { count: wishlistCount, loadCount: loadWishlistCount } = useWishlistCount();
+const { count: wishlistCount, loadCount: loadWishlistCount } =
+  useWishlistCount();
 
 // 유저 이름 표시
 const userName = computed(() => {
@@ -53,31 +54,17 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-    <!-- 페이지 타이틀 -->
     <div class="mb-12">
       <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
         My Page
       </h1>
     </div>
 
-    <!-- 회원 정보 -->
     <div class="text-center text-xl mb-10 text-foreground">
       <span class="font-bold">{{ userName }}님</span>은
       <span class="font-bold">일반회원</span>입니다.
     </div>
 
-    <!-- 쿠폰 카드 -->
-    <Card class="mb-10">
-      <CardContent class="flex h-28 p-0">
-        <div class="flex-1 border-r border-border flex flex-col justify-center items-center" />
-        <div class="flex-1 flex flex-col justify-center items-center">
-          <span class="text-sm font-bold text-primary mb-2">쿠폰</span>
-          <span class="text-xl font-bold text-foreground">0장</span>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- 주문 현황 -->
     <Card class="mb-16">
       <CardContent class="flex justify-between text-center py-6 px-4 md:px-10">
         <div
@@ -122,7 +109,6 @@ onMounted(async () => {
       </CardContent>
     </Card>
 
-    <!-- 메뉴 버튼 그리드 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
       <Button
         variant="outline"
@@ -164,7 +150,6 @@ onMounted(async () => {
       </Button>
     </div>
 
-    <!-- 관리자 메뉴 -->
     <div v-if="authStore.user?.isAdmin" class="border-t border-border pt-8">
       <h3 class="text-xs font-bold text-muted-foreground uppercase mb-4">
         Admin Menu

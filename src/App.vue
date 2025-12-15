@@ -32,7 +32,7 @@ onUnmounted(() => {
     class="cursor-follower"
     :style="{ transform: `translate(${mouseX + 15}px, ${mouseY + 15}px)` }"
   >
-    <img src="/rabbit-cursor.svg" alt="cursor" width="32" height="32" />
+    <img src="@/assets/cursor.png" alt="cursor" width="32" height="32" />
   </div>
   <Navbar />
   <router-view :key="$route.fullPath" />

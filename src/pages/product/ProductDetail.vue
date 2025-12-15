@@ -55,7 +55,7 @@ const gallery = useImageGallery(productData.galleryImages);
 // 위시리스트 토글
 const wishlistToggle = useWishlistToggle(productId);
 
-// 위시리스트 토글 핸들러
+// 위시리스트 토글 핸들러 (회원 전용 유지)
 const handleToggleWishlist = () => {
   requireAuth(async () => {
     const success = await wishlistToggle.toggle();
@@ -65,49 +65,55 @@ const handleToggleWishlist = () => {
   });
 };
 
-// 장바구니 담기
-const handleAddToCart = () => {
-  requireAuth(async () => {
-    // 1. 옵션 선택 필수 체크
-    if (variantSelection.needsVariantSelection.value) {
-      alert("옵션을 선택해주세요.");
-      return;
-    }
+// [수정] 장바구니 담기 (비회원 허용)
+const handleAddToCart = async () => {
+  // 1. 옵션 선택 필수 체크
+  if (variantSelection.needsVariantSelection.value) {
+    alert("옵션을 선택해주세요.");
+    return;
+  }
 
-    // 2. 재고 확인
-    if (!variantSelection.isStockAvailable.value) {
-      alert("재고가 부족합니다.");
-      return;
-    }
+  // 2. 재고 확인
+  if (!variantSelection.isStockAvailable.value) {
+    alert("재고가 부족합니다.");
+    return;
+  }
 
-    // 1) 상품 ID 변환
-    const pid = Number(productData.product.value!.id);
+  // 1) 상품 ID 변환
+  const pid = Number(productData.product.value!.id);
 
-    // 2) 옵션 ID 변환 (값이 없으면 undefined 전송)
-    // "1" 같은 문자열이 오더라도 1(숫자)로 변환하고, 빈 값은 undefined로 처리
-    const rawVariantId = variantSelection.selectedVariantId.value;
-    const vid = rawVariantId ? Number(rawVariantId) : undefined;
+  // 2) 옵션 ID 변환
+  const rawVariantId = variantSelection.selectedVariantId.value;
+  const vid = rawVariantId ? Number(rawVariantId) : undefined;
 
-    // 3) 수량 변환
-    const qty = Number(variantSelection.quantity.value);
+  // 3) 수량 변환
+  const qty = Number(variantSelection.quantity.value);
 
-    // API 호출
-    const success = await addItem({
-      productId: pid,
-      variantId: vid,
-      quantity: qty,
-    });
+  // [중요] 비회원 장바구니를 위한 상품 정보 구성
+  // useCart.ts의 addItem에서 로컬 저장 시 이 정보를 사용함
+  const productInfo = {
+    id: pid,
+    name: productData.product.value!.name,
+    price: productData.product.value!.price,
+    imageUrl: productData.product.value!.imageUrl,
+    variant: vid ? productData.variants.value.find((v) => v.id === vid) : null,
+  };
 
-    if (success) {
-      if (confirm("장바구니에 담았습니다. 장바구니로 이동하시겠습니까?")) {
-        window.dispatchEvent(new Event("cart-updated"));
-        router.push("/cart");
-      }
-    } else {
-      // 400 오류 등이 발생했을 때 사용자 알림
-      alert("장바구니 담기에 실패했습니다. (잠시 후 다시 시도해주세요)");
-    }
+  // API 호출 (비회원은 내부적으로 localStorage 사용)
+  const success = await addItem({
+    productId: pid,
+    variantId: vid,
+    quantity: qty,
+    productInfo: productInfo, // [추가] 상품 상세 정보 전달
   });
+
+  if (success) {
+    if (confirm("장바구니에 담았습니다. 장바구니로 이동하시겠습니까?")) {
+      router.push("/cart");
+    }
+  } else {
+    alert("장바구니 담기에 실패했습니다.");
+  }
 };
 
 // 데이터 로드
@@ -119,7 +125,7 @@ onMounted(async () => {
     gallery.initializeImage(productData.product.value.imageUrl);
   }
 
-  // 위시리스트 상태 확인
+  // 위시리스트 상태 확인 (회원인 경우만)
   if (authStore.isAuthenticated) {
     await wishlistToggle.checkStatus();
   }
@@ -131,13 +137,11 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
-    <!-- 로딩 스피너 -->
     <LoadingSpinner
       v-if="productData.loading.value || !productData.product.value"
     />
 
     <div v-else class="flex flex-col lg:grid lg:grid-cols-2 gap-12 items-start">
-      <!-- 상품 이미지 갤러리 -->
       <div class="order-1 lg:col-start-1 lg:row-start-2 w-full space-y-4">
         <Card class="overflow-hidden">
           <div class="aspect-[3/4] bg-muted relative">
@@ -147,7 +151,6 @@ onMounted(async () => {
               alt="Product Main Image"
             />
 
-            <!-- 모바일 위시리스트 버튼 -->
             <button
               @click.stop="handleToggleWishlist"
               class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm lg:hidden"
@@ -165,7 +168,6 @@ onMounted(async () => {
           </div>
         </Card>
 
-        <!-- 썸네일 갤러리 -->
         <div
           v-if="productData.galleryImages.value.length > 1"
           class="flex gap-2 overflow-x-auto pb-2"
@@ -186,18 +188,15 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- 상품 정보 카드 -->
       <Card
         class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24 h-fit w-full"
       >
         <CardContent class="p-6">
-          <!-- 상품명 + 위시리스트 버튼 -->
           <div class="flex justify-between items-start gap-4 mb-2">
             <h1 class="text-3xl font-bold text-foreground">
               {{ productData.product.value.name }}
             </h1>
 
-            <!-- 데스크탑 위시리스트 버튼 -->
             <button
               @click="handleToggleWishlist"
               class="hidden lg:flex items-center justify-center p-2 rounded-full bg-background border border-border shadow-sm hover:bg-accent transition-all group"
@@ -214,7 +213,6 @@ onMounted(async () => {
             </button>
           </div>
 
-          <!-- 가격 -->
           <div class="flex items-end gap-2 mb-8">
             <span class="text-2xl font-bold text-foreground">
               {{ formatPrice(productData.product.value.price) }}
@@ -227,7 +225,6 @@ onMounted(async () => {
             </span>
           </div>
 
-          <!-- 사이즈 선택 -->
           <div v-if="productData.variants.value.length > 0" class="mb-8">
             <label class="block text-sm font-bold text-foreground mb-3"
               >Size</label
@@ -255,7 +252,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- 수량 선택 -->
           <div
             class="mb-8 transition-opacity duration-200"
             :class="{
@@ -272,7 +268,6 @@ onMounted(async () => {
             />
           </div>
 
-          <!-- 장바구니 버튼 -->
           <div class="mb-8">
             <Button
               @click="handleAddToCart"
@@ -290,7 +285,6 @@ onMounted(async () => {
 
           <Separator />
 
-          <!-- 탭 메뉴 -->
           <div class="mt-6">
             <div class="flex border-b border-border">
               <button
@@ -325,9 +319,7 @@ onMounted(async () => {
               </button>
             </div>
 
-            <!-- 탭 콘텐츠 -->
             <div class="py-8 min-h-[200px]">
-              <!-- Description 탭 -->
               <div v-show="activeTab === 'description'" class="animate-fade-in">
                 <p
                   class="text-muted-foreground whitespace-pre-line leading-relaxed text-sm"
@@ -336,7 +328,6 @@ onMounted(async () => {
                 </p>
               </div>
 
-              <!-- Size Guide 탭 -->
               <div v-show="activeTab === 'size'" class="animate-fade-in">
                 <div v-if="sizeMeasurements.hasSizeData.value">
                   <div class="overflow-x-auto">
@@ -402,7 +393,6 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <!-- 상품 상세 이미지 -->
       <div
         v-if="
           productData.product.value.detailImages &&

@@ -23,32 +23,40 @@ const prefixOptions = ["010", "011", "016", "017", "018", "019"];
 </script>
 
 <template>
-  <div class="flex items-center gap-2 max-w-sm">
-    <select
-      :value="phone1"
-      @change="emit('update:phone1', ($event.target as HTMLSelectElement).value)"
-      class="border border-border rounded px-2 py-2 w-20 bg-background text-foreground"
-    >
-      <option v-for="opt in prefixOptions" :key="opt" :value="opt">
-        {{ opt }}
-      </option>
-    </select>
+  <div class="flex items-center gap-2 w-full">
+    <div class="relative">
+      <select
+        :value="phone1"
+        @change="
+          emit('update:phone1', ($event.target as HTMLSelectElement).value)
+        "
+        class="flex h-10 w-[90px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option v-for="opt in prefixOptions" :key="opt" :value="opt">
+          {{ opt }}
+        </option>
+      </select>
+    </div>
+
     <span class="text-muted-foreground">-</span>
+
     <Input
       :model-value="phone2"
       @update:model-value="emit('update:phone2', String($event))"
       type="text"
       maxlength="4"
-      class="text-center"
+      class="flex-1 h-10 text-center text-sm"
       placeholder="0000"
     />
+
     <span class="text-muted-foreground">-</span>
+
     <Input
       :model-value="phone3"
       @update:model-value="emit('update:phone3', String($event))"
       type="text"
       maxlength="4"
-      class="text-center"
+      class="flex-1 h-10 text-center text-sm"
       placeholder="0000"
     />
   </div>

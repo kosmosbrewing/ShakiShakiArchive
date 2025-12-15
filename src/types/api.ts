@@ -9,6 +9,12 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
+// 결제 제공자 타입 (PG사 통합)
+export type PaymentProvider = "toss" | "naverpay" | "kakaopay" | string;
+
+// 결제 방법 타입
+export type PaymentMethod = "card" | "transfer" | "naverpay" | "kakaopay" | string;
+
 // 사용자 정보
 export interface User {
   id: string;
@@ -83,10 +89,12 @@ export interface OrderItem {
   productId: number;
   productName: string;
   productPrice: string;
+  options?: string; // 옵션 정보 (사이즈/색상 등)
   quantity: number;
   status: OrderStatus;
   trackingNumber?: string;
   product?: Product;
+  createdAt?: string;
 }
 
 // 주문 정보
@@ -95,11 +103,24 @@ export interface Order {
   userId: number;
   totalAmount: string;
   status: OrderStatus;
+  // 배송 정보
   shippingName: string;
   shippingPhone: string;
-  shippingAddress: string;
   shippingPostalCode: string;
+  shippingAddress: string;
+  shippingDetailAddress?: string; // 상세 주소 (NEW)
+  shippingRequestNote?: string; // 배송 요청사항 (NEW)
   trackingNumber?: string;
+  // 결제 정보 (PG사 통합)
+  paymentProvider?: PaymentProvider; // 'toss', 'naverpay', 'kakaopay' 등
+  paymentKey?: string; // PG사 결제 고유 키
+  externalOrderId?: string; // PG사 주문 ID
+  paymentMethod?: PaymentMethod; // 'card', 'transfer' 등
+  paidAt?: string; // 결제 완료 시각
+  canceledAt?: string; // 취소 시각
+  cancelReason?: string; // 취소 사유
+  refundedAmount?: string; // 환불 금액
+  // 주문 상품
   orderItems?: OrderItem[];
   createdAt: string;
   updatedAt?: string;
@@ -155,4 +176,51 @@ export interface OrderStatusCounts {
   preparing: number;
   shipped: number;
   delivered: number;
+}
+
+// 주문 생성 요청 타입
+export interface CreateOrderRequest {
+  shippingName: string;
+  shippingPhone: string;
+  shippingPostalCode: string;
+  shippingAddress: string;
+  shippingDetailAddress?: string; // 상세 주소 (NEW)
+  shippingRequestNote?: string; // 배송 요청사항 (NEW)
+}
+
+// 주문 생성 응답 타입
+export interface CreateOrderResponse {
+  orderId: number;
+  externalOrderId: string; // PG사 주문번호
+  orderName: string; // "상품명 외 N건"
+  amount: number;
+}
+
+// 결제 승인 요청 타입
+export interface ConfirmPaymentRequest {
+  paymentKey: string;
+  orderId: string; // externalOrderId
+  amount: number;
+}
+
+// 결제 승인 응답 타입
+export interface ConfirmPaymentResponse {
+  success: boolean;
+  order: Order;
+}
+
+// 결제 취소 요청 타입
+export interface CancelPaymentRequest {
+  cancelReason: string;
+  cancelAmount?: number; // 부분 취소 시
+}
+
+// 카테고리 타입
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  createdAt: string;
 }
