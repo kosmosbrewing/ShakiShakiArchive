@@ -5,5 +5,5 @@
 
 <script setup lang="ts">
 import Hero from "@/components/Hero.vue";
-import Product from "@/components/Product.vue";
+import { Product } from "@/pages/product";
 </script>

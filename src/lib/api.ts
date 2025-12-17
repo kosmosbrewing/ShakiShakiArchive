@@ -216,6 +216,17 @@ export async function fetchOrder(orderId: number | string): Promise<Order> {
   return apiRequest(`/api/orders/${orderId}`);
 }
 
+// 주문 취소 (결제 대기/결제 완료/상품 준비 중 상태에서만 가능)
+export async function cancelOrder(
+  orderId: number | string,
+  data: CancelPaymentRequest
+): Promise<{ message: string; order: Order; refund?: { cancelAmount: number; refundableAmount: number; canceledAt: string } }> {
+  return apiRequest(`/api/orders/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 // --- 배송지 (Address Book) ---
 export async function fetchDeliveryAddresses(): Promise<any[]> {
   return apiRequest("/api/user/addresses");

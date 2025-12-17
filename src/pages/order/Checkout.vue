@@ -99,14 +99,14 @@ onMounted(() => {
               class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:saturate-100 group-hover/hoverimg:scale-[1.01]"
             />
           </div>
-          <CardContent class="text-sm py-6 pb-1 px-6">{{ name }} </CardContent>
+          <CardContent class="text-body py-6 pb-1 px-6">{{ name }} </CardContent>
         </CardHeader>
 
         <CardContent
           v-for="(position, index) in price"
           :key="index"
           :class="{
-            'pb-0 text-sm text-muted-foreground ': true,
+            'pb-0 text-body text-muted-foreground ': true,
             'pb-4': index === price.length - 1,
           }"
         >

@@ -52,7 +52,7 @@ const sizeClasses = {
     />
     <div
       v-else
-      class="w-full h-full flex items-center justify-center text-muted-foreground text-xs"
+      class="w-full h-full flex items-center justify-center text-muted-foreground text-caption"
     >
       No Img
     </div>

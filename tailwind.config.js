@@ -1,4 +1,5 @@
 const animate = require("tailwindcss-animate");
+const { fontFamily } = require("tailwindcss/defaultTheme");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -22,6 +23,45 @@ module.exports = {
       },
     },
     extend: {
+      // [1] 폰트 패밀리 통합 (Pretendard 하나만 사용)
+      fontFamily: {
+        sans: ["Pretendard", ...fontFamily.sans],
+      },
+
+      // [2] 5단계 폰트 계층 시스템 (Size + LineHeight + Weight)
+      fontSize: {
+        // H1: 페이지 제목 (24px, Bold)
+        h1: [
+          "1.5rem", // 24px
+          { lineHeight: "1.3", fontWeight: "700" },
+        ],
+        // H2: 섹션 제목 (20px, SemiBold)
+        h2: [
+          "1.25rem", // 20px
+          { lineHeight: "1.35", fontWeight: "600" },
+        ],
+        // H3: 카드/모달 제목 (18px, SemiBold)
+        h3: [
+          "1.125rem", // 18px
+          { lineHeight: "1.4", fontWeight: "600" },
+        ],
+        // Body: 본문 기본 (14px, Regular) - 쇼핑몰 표준
+        body: [
+          "0.875rem", // 14px
+          { lineHeight: "1.6", fontWeight: "400" },
+        ],
+        // Caption: 설명/주석 (12px, Regular)
+        caption: [
+          "0.75rem", // 12px
+          { lineHeight: "1.5", fontWeight: "400" },
+        ],
+        // (필요시 추가) Tiny: 아주 작은 텍스트
+        tiny: [
+          "0.625rem", // 10px
+          { lineHeight: "1", fontWeight: "400" },
+        ],
+      },
+
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -55,6 +95,10 @@ module.exports = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        admin: {
+          DEFAULT: "hsl(var(--admin-foreground))", // text-admin (진한 검정)
+          muted: "hsl(var(--admin-muted-foreground))", // text-admin-muted (연한 회색)
         },
       },
       borderRadius: {

@@ -2,7 +2,7 @@
   <div class="min-h-screen flex items-center justify-center bg-background">
     <div class="text-center">
       <img :src="notfound" alt="notfound" class="w-40 h-40 object-contain" />
-      <p class="text-xl mb-8">페이지를 찾을 수 없습니다</p>
+      <p class="text-heading mb-8">페이지를 찾을 수 없습니다</p>
       <RouterLink
         to="/"
         data-testid="link-home"

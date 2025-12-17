@@ -69,7 +69,7 @@ const buttonSizeClasses = {
     >
       -
     </button>
-    <span class="flex-1 text-center text-sm font-medium text-foreground">
+    <span class="flex-1 text-center text-body font-medium text-foreground">
       {{ modelValue }}
     </span>
     <button

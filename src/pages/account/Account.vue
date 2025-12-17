@@ -55,12 +55,12 @@ onMounted(async () => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-12">
-      <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
+      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
         My Page
       </h1>
     </div>
 
-    <div class="text-center text-xl mb-10 text-foreground">
+    <div class="text-center text-heading mb-10 text-foreground">
       <span class="font-bold">{{ userName }}님</span>은
       <span class="font-bold">일반회원</span>입니다.
     </div>
@@ -71,8 +71,8 @@ onMounted(async () => {
           @click="goToOrderList"
           class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
         >
-          <div class="text-xs text-muted-foreground mb-3">입금전</div>
-          <div class="text-lg font-bold text-foreground">
+          <div class="text-caption text-muted-foreground mb-3">입금전</div>
+          <div class="text-heading text-foreground">
             {{ orderCounts.pending }}
           </div>
         </div>
@@ -81,8 +81,8 @@ onMounted(async () => {
           @click="goToOrderList"
           class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
         >
-          <div class="text-xs text-muted-foreground mb-3">배송준비중</div>
-          <div class="text-lg font-bold text-foreground">
+          <div class="text-caption text-muted-foreground mb-3">배송준비중</div>
+          <div class="text-heading text-foreground">
             {{ orderCounts.preparing }}
           </div>
         </div>
@@ -91,8 +91,8 @@ onMounted(async () => {
           @click="goToOrderList"
           class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
         >
-          <div class="text-xs text-muted-foreground mb-3">배송중</div>
-          <div class="text-lg font-bold text-foreground">
+          <div class="text-caption text-muted-foreground mb-3">배송중</div>
+          <div class="text-heading text-foreground">
             {{ orderCounts.shipped }}
           </div>
         </div>
@@ -101,8 +101,8 @@ onMounted(async () => {
           @click="goToOrderList"
           class="flex-1 last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
         >
-          <div class="text-xs text-muted-foreground mb-3">배송완료</div>
-          <div class="text-lg font-bold text-foreground">
+          <div class="text-caption text-muted-foreground mb-3">배송완료</div>
+          <div class="text-heading text-foreground">
             {{ orderCounts.delivered }}
           </div>
         </div>
@@ -113,7 +113,7 @@ onMounted(async () => {
       <Button
         variant="outline"
         @click="goToOrderList"
-        class="h-16 text-sm font-medium"
+        class="h-16 text-body font-medium"
       >
         ORDER
       </Button>
@@ -121,7 +121,7 @@ onMounted(async () => {
       <Button
         variant="outline"
         @click="goToWishlist"
-        class="h-16 text-sm font-medium"
+        class="h-16 text-body font-medium"
       >
         <span>WISHLIST</span>
         &nbsp;
@@ -136,7 +136,7 @@ onMounted(async () => {
       <Button
         variant="outline"
         @click="goToModify"
-        class="h-16 text-sm font-medium"
+        class="h-16 text-body font-medium"
       >
         PROFILE
       </Button>
@@ -144,18 +144,23 @@ onMounted(async () => {
       <Button
         variant="outline"
         @click="goToAddress"
-        class="h-16 text-sm font-medium"
+        class="h-16 text-body font-medium"
       >
         ADDRESS
       </Button>
     </div>
 
     <div v-if="authStore.user?.isAdmin" class="border-t border-border pt-8">
-      <h3 class="text-xs font-bold text-muted-foreground uppercase mb-4">
+      <div class="text-body text-admin font-bold uppercase mb-4">
         Admin Menu
-      </h3>
+      </div>
       <div class="flex flex-wrap gap-3">
-        <Button variant="secondary" size="sm" @click="goToCategoryAdmin">
+        <Button
+          variant="secondary"
+          size="sm"
+          @click="goToCategoryAdmin"
+          class="bg-admin hover:bg-gray-800 text-white"
+        >
           카테고리 관리
         </Button>
         <Button variant="default" size="sm" @click="goToProductAdmin">

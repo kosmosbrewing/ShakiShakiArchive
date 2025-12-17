@@ -6,7 +6,6 @@ import {
   updateCartItem,
   deleteCartItem,
   addToCart,
-  fetchProduct, // [추가] 로컬 장바구니 표시용 상품 정보 조회
 } from "@/lib/api";
 import type { CartItem } from "@/types/api";
 

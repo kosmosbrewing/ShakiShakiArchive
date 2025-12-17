@@ -4,7 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useColorMode } from "@vueuse/core";
 import { storeToRefs } from "pinia";
-import { fetchCart } from "@/lib/api";
+import { fetchCart, fetchCategories } from "@/lib/api";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -34,20 +34,40 @@ const { isAuthenticated } = storeToRefs(authStore);
 const isOpen = ref<boolean>(false);
 const cartItemCount = ref(0);
 
-// 카테고리 메뉴
-const categoryRoutes = [
-  { path: "/product/all", label: "ALL" },
-  { path: "/product/outerwear", label: "OUTERWEAR" },
-  { path: "/product/topwear", label: "TOP" },
-  { path: "/product/bottomwear", label: "BOTTOM" },
-  { path: "/product/accessories", label: "ACCESSORY" },
-];
+// 카테고리 메뉴 (동적 로드)
+const categoryRoutes = ref([{ path: "/product/all", label: "ALL" }]);
 
-// [수정] 장바구니 카운트 업데이트 (회원/비회원 분기 처리)
+// [수정] 카테고리 데이터 로드 및 정렬 함수
+const loadCategories = async () => {
+  try {
+    const categories = await fetchCategories();
+
+    // [핵심] ID 기준 오름차순 정렬 (100 -> 200 -> 300)
+    // a.id가 b.id보다 작으면 앞으로 보냄
+    categories.sort((a: any, b: any) => {
+      return (a.id || 0) - (b.id || 0);
+    });
+
+    // DB의 slug와 name을 매핑
+    const dynamicRoutes = categories.map((cat: any) => ({
+      path: `/product/${cat.slug}`, // URL에 slug 사용
+      label: cat.name.toUpperCase(), // 메뉴명 대문자 변환
+    }));
+
+    // ALL 메뉴 뒤에 정렬된 카테고리 추가
+    categoryRoutes.value = [
+      { path: "/product/all", label: "ALL" },
+      ...dynamicRoutes,
+    ];
+  } catch (error) {
+    console.error("카테고리 로딩 실패:", error);
+  }
+};
+
+// 장바구니 카운트 업데이트
 const updateCartCount = async () => {
   if (authStore.isAuthenticated) {
     try {
-      // 회원: 서버 API 조회
       const cartItems = await fetchCart();
       cartItemCount.value = cartItems.length;
     } catch (error) {
@@ -55,18 +75,16 @@ const updateCartCount = async () => {
       cartItemCount.value = 0;
     }
   } else {
-    // 비회원: 로컬 스토리지 조회
     const localCart = JSON.parse(localStorage.getItem("guest_cart") || "[]");
     cartItemCount.value = localCart.length;
   }
 };
 
-// 로그인 상태 변경 감지
+// 감시 및 이벤트 핸들러들
 watch(isAuthenticated, async () => {
   await updateCartCount();
 });
 
-// 라우트 변경 시 모바일 메뉴 닫기 & 카운트 갱신
 watch(route, () => {
   isOpen.value = false;
   updateCartCount();
@@ -76,7 +94,6 @@ const handleLogout = async () => {
   isOpen.value = false;
   await authStore.handleLogout();
   router.push("/");
-  // 로그아웃 시 cart-updated 이벤트가 authStore에서 발생하므로 자동 갱신됨
 };
 
 const handleInstagram = () => {
@@ -101,9 +118,8 @@ const handleCartClick = () => {
   router.push("/cart");
 };
 
-// [중요] 이벤트 리스너 등록 (병합 완료 신호 수신)
 onMounted(async () => {
-  await updateCartCount();
+  await Promise.all([updateCartCount(), loadCategories()]);
   window.addEventListener("cart-updated", updateCartCount);
 });
 
@@ -153,7 +169,7 @@ onUnmounted(() => {
                 v-for="route in categoryRoutes"
                 :key="route.label"
                 :to="route.path"
-                class="text-base font-medium hover:text-primary transition-colors py-3"
+                class="text-body font-medium hover:text-primary transition-colors py-3"
                 @click="isOpen = false"
               >
                 {{ route.label }}
@@ -269,7 +285,7 @@ onUnmounted(() => {
           :key="label"
           as-child
           variant="ghost"
-          class="h-9 px-3 text-xs font-medium hover:bg-muted/50"
+          class="h-9 px-3 text-caption font-medium hover:bg-muted/50"
         >
           <RouterLink :to="path">
             <span>{{ label }}</span>

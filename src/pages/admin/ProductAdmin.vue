@@ -406,8 +406,8 @@ onMounted(async () => {
   <div class="max-w-7xl mx-auto px-4 py-12">
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">상품 관리</h1>
-        <p class="text-sm text-gray-500 mt-1">
+        <h1 class="text-admin font-bold text-admin">상품 관리</h1>
+        <p class="text-admin text-gray-500 mt-1">
           총 <span class="text-blue-600 font-bold">{{ products.length }}</span
           >개 상품
         </p>
@@ -421,9 +421,7 @@ onMounted(async () => {
     </div>
 
     <div v-if="isLoading" class="text-center py-20">
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto"
-      ></div>
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto"></div>
     </div>
 
     <div
@@ -432,7 +430,9 @@ onMounted(async () => {
     >
       <div class="flex-grow overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-[800px]">
-          <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+          <thead
+            class="bg-gray-50 text-admin font-bold text-gray-500 uppercase"
+          >
             <tr>
               <th class="px-6 py-3">이미지</th>
               <th class="px-6 py-3 w-1/3">상품명 / 슬러그</th>
@@ -467,7 +467,7 @@ onMounted(async () => {
                 </div>
               </td>
               <td class="px-6 py-4">
-                <div class="font-medium text-gray-900">{{ product.name }}</div>
+                <div class="font-medium text-admin">{{ product.name }}</div>
                 <div class="text-xs text-gray-500">{{ product.slug }}</div>
               </td>
               <td class="px-6 py-4 text-sm">

@@ -38,14 +38,14 @@ const emit = defineEmits<{
       <div class="flex justify-between items-start mb-4">
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2">
-            <span class="text-lg font-bold text-foreground">
+            <span class="text-heading text-foreground">
               {{ address.recipient }}
             </span>
             <Badge v-if="address.isDefault" variant="default" class="text-[10px]">
               기본 배송지
             </Badge>
           </div>
-          <span class="text-sm text-muted-foreground">{{ address.phone }}</span>
+          <span class="text-body text-muted-foreground">{{ address.phone }}</span>
         </div>
 
         <div v-if="showActions" class="flex items-center gap-2">
@@ -53,7 +53,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="sm"
             @click.stop="emit('edit', address)"
-            class="text-xs text-muted-foreground hover:text-primary h-auto p-1"
+            class="text-caption text-muted-foreground hover:text-primary h-auto p-1"
           >
             수정
           </Button>
@@ -62,7 +62,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="sm"
             @click.stop="emit('delete', address.id)"
-            class="text-xs text-muted-foreground hover:text-destructive h-auto p-1"
+            class="text-caption text-muted-foreground hover:text-destructive h-auto p-1"
           >
             삭제
           </Button>
@@ -80,7 +80,7 @@ const emit = defineEmits<{
       </div>
 
       <!-- 주소 정보 -->
-      <div class="text-sm space-y-1 mb-4 min-h-[60px]">
+      <div class="text-body space-y-1 mb-4 min-h-[60px]">
         <p class="text-muted-foreground">({{ address.zipCode }})</p>
         <p class="text-foreground">{{ address.address }}</p>
         <p class="text-foreground">{{ address.detailAddress }}</p>
@@ -88,7 +88,7 @@ const emit = defineEmits<{
 
       <!-- 배송 메모 -->
       <div v-if="address.requestNote" class="mt-auto">
-        <p class="text-xs text-primary bg-primary/10 p-2 rounded truncate">
+        <p class="text-caption text-primary bg-primary/10 p-2 rounded truncate">
           "{{ address.requestNote }}"
         </p>
       </div>

@@ -129,7 +129,7 @@ const handleSignup = async () => {
   <section id="signup" class="container py-24 sm:py-16">
     <div class="max-w-lg mx-auto">
       <div class="mb-8 text-center">
-        <h2 class="text-lg text-primary mb-2 tracking-wider">회원가입</h2>
+        <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
         <p class="mt-2 text-muted-foreground">
           이미 계정이 있으신가요?
           <router-link
@@ -203,7 +203,7 @@ const handleSignup = async () => {
                   <KeyRound class="w-4 h-4 mr-2" /> 확인
                 </Button>
               </div>
-              <p class="text-xs text-muted-foreground">테스트 코드: 123456</p>
+              <p class="text-caption text-muted-foreground">테스트 코드: 123456</p>
             </div>
 
             <Alert
@@ -211,7 +211,7 @@ const handleSignup = async () => {
               class="bg-green-50 text-green-700 border-green-200 py-2"
             >
               <CheckCircle2 class="h-4 w-4" />
-              <AlertTitle class="ml-2 text-sm font-medium"
+              <AlertTitle class="ml-2 text-body font-medium"
                 >이메일 인증 완료</AlertTitle
               >
             </Alert>
@@ -308,7 +308,7 @@ const handleSignup = async () => {
               />
               <label
                 for="email-opt-in"
-                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                class="text-body font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 [선택] 이벤트 및 할인 소식 이메일 수신 동의
               </label>

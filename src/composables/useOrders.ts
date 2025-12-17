@@ -6,7 +6,7 @@ import {
   fetchOrders,
   fetchOrder,
   createOrder,
-  cancelPayment,
+  cancelOrder,
 } from "@/lib/api";
 import type {
   Order,
@@ -216,8 +216,22 @@ export function useCreateOrder() {
   };
 }
 
+// 주문 취소 응답 타입
+export interface CancelOrderResult {
+  message: string;
+  order: Order;
+  refund?: {
+    cancelAmount: number;
+    refundableAmount: number;
+    canceledAt: string;
+  };
+}
+
 /**
  * 주문 취소
+ * - pending_payment: 단순 상태 변경
+ * - payment_confirmed, preparing: PG사 결제 취소 후 상태 변경
+ * - shipped, delivered, cancelled: 취소 불가
  */
 export function useCancelOrder() {
   const loading = ref(false);
@@ -225,12 +239,13 @@ export function useCancelOrder() {
 
   const cancel = async (
     orderId: number | string,
-    cancelReason: string
-  ): Promise<Order | null> => {
+    cancelReason: string,
+    cancelAmount?: number
+  ): Promise<CancelOrderResult | null> => {
     loading.value = true;
     error.value = null;
     try {
-      const result = await cancelPayment(orderId, { cancelReason });
+      const result = await cancelOrder(orderId, { cancelReason, cancelAmount });
       return result;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "주문 취소 실패";
@@ -242,10 +257,16 @@ export function useCancelOrder() {
     }
   };
 
+  // 취소 가능 여부 체크
+  const canCancelOrder = (status: string): boolean => {
+    return ["pending_payment", "payment_confirmed", "preparing"].includes(status);
+  };
+
   return {
     loading,
     error,
     cancel,
+    canCancelOrder,
   };
 }
 

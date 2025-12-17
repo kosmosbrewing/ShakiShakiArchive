@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useOrders } from "@/composables/useOrders";
+import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 
@@ -10,6 +10,7 @@ import {
   LoadingSpinner,
   ProductThumbnail,
   OrderStatusBadge,
+  CancelOrderDialog,
 } from "@/components/common";
 
 // UI 컴포넌트
@@ -34,6 +35,13 @@ const router = useRouter();
 const { loadOrder, loading, error } = useOrders();
 const order = ref<Order | null>(null);
 
+// 주문 취소 훅
+const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
+
+// 취소 다이얼로그 상태
+const cancelDialogOpen = ref(false);
+const cancelTargetItem = ref<OrderItem | null>(null);
+
 // 데이터 로드
 onMounted(async () => {
   const orderId = route.params.id as string;
@@ -56,10 +64,37 @@ const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
 };
 
-// 주문 취소 핸들러
-const handleCancelOrder = async (item: OrderItem) => {
-  if (confirm(`'${item.productName}' 주문을 취소하시겠습니까?`)) {
-    alert("주문 취소 요청이 접수되었습니다. (기능 준비중)");
+// 취소 다이얼로그 열기
+const openCancelDialog = (item: OrderItem) => {
+  cancelTargetItem.value = item;
+  cancelDialogOpen.value = true;
+};
+
+// 취소 다이얼로그 닫기
+const closeCancelDialog = () => {
+  cancelDialogOpen.value = false;
+  cancelTargetItem.value = null;
+};
+
+// 주문 취소 확인 핸들러
+const handleConfirmCancel = async (reason: string) => {
+  if (!order.value) return;
+
+  const result = await cancelOrder(order.value.id, reason);
+
+  if (result) {
+    // 취소 성공 시 주문 정보 갱신
+    order.value = result.order;
+    closeCancelDialog();
+
+    // 환불 정보가 있으면 알림
+    if (result.refund) {
+      alert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
+    } else {
+      alert("주문이 취소되었습니다.");
+    }
+  } else {
+    alert("주문 취소에 실패했습니다. 다시 시도해주세요.");
   }
 };
 
@@ -101,8 +136,8 @@ const getPaymentMethodLabel = (method: string): string => {
         <ArrowLeft class="w-5 h-5" />
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">주문 상세</h1>
-        <p v-if="order" class="text-sm text-muted-foreground">
+        <h1 class="text-heading font-bold tracking-tight">주문 상세</h1>
+        <p v-if="order" class="text-body text-muted-foreground">
           주문번호 {{ order.id }} • {{ formatDate(order.createdAt) }}
         </p>
       </div>
@@ -147,17 +182,17 @@ const getPaymentMethodLabel = (method: string): string => {
               <div class="flex-1 flex flex-col justify-between min-h-[100px]">
                 <div>
                   <div class="flex justify-between items-start gap-2 mb-1">
-                    <h3 class="font-bold text-foreground text-lg">
+                    <h3 class="font-bold text-foreground text-heading">
                       {{ item.productName }}
                     </h3>
                     <OrderStatusBadge :status="item.status" class="shrink-0" />
                   </div>
 
-                  <p class="text-sm text-muted-foreground mb-2">
+                  <p class="text-body text-muted-foreground mb-2">
                     {{ item.options || "옵션 없음" }}
                   </p>
 
-                  <p class="text-sm font-medium">
+                  <p class="text-body font-medium">
                     {{ formatPrice(item.productPrice) }} / {{ item.quantity }}개
                   </p>
                 </div>
@@ -167,7 +202,7 @@ const getPaymentMethodLabel = (method: string): string => {
                 >
                   <div
                     v-if="item.trackingNumber"
-                    class="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit"
+                    class="text-caption text-muted-foreground bg-muted px-2 py-1 rounded w-fit"
                   >
                     운송장:
                     <span class="font-mono font-bold">{{
@@ -181,7 +216,7 @@ const getPaymentMethodLabel = (method: string): string => {
                       v-if="canCancel(item.status)"
                       variant="outline"
                       size="sm"
-                      @click="handleCancelOrder(item)"
+                      @click="openCancelDialog(item)"
                     >
                       주문취소
                     </Button>
@@ -204,24 +239,24 @@ const getPaymentMethodLabel = (method: string): string => {
       <div class="lg:col-span-1 space-y-6">
         <Card>
           <CardHeader class="pb-3">
-            <CardTitle class="flex items-center gap-2 text-base">
+            <CardTitle class="flex items-center gap-2 text-body">
               <CreditCard class="w-4 h-4" />
               결제 정보
             </CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div class="flex justify-between text-sm">
+            <div class="flex justify-between text-body">
               <span class="text-muted-foreground">상품 금액</span>
               <span>{{ formatPrice(order.totalAmount) }}</span>
             </div>
-            <div class="flex justify-between text-sm">
+            <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
               <span>무료</span>
             </div>
             <Separator />
             <div class="flex justify-between items-center">
               <span class="font-bold">총 결제금액</span>
-              <span class="text-xl font-bold text-primary">
+              <span class="text-heading text-primary">
                 {{ formatPrice(order.totalAmount) }}
               </span>
             </div>
@@ -246,12 +281,12 @@ const getPaymentMethodLabel = (method: string): string => {
               class="pt-3 border-t mt-1 bg-destructive/5 -mx-6 px-6 pb-2"
             >
               <div
-                class="flex items-center gap-2 text-destructive font-bold text-sm mb-2"
+                class="flex items-center gap-2 text-destructive font-bold text-body mb-2"
               >
                 <AlertCircle class="w-4 h-4" />
                 주문 취소됨
               </div>
-              <div class="space-y-1 text-sm">
+              <div class="space-y-1 text-body">
                 <div class="flex justify-between">
                   <span class="text-muted-foreground">취소 일시</span>
                   <span>{{ formatDate(order.canceledAt) }}</span>
@@ -274,12 +309,12 @@ const getPaymentMethodLabel = (method: string): string => {
 
         <Card>
           <CardHeader class="pb-3">
-            <CardTitle class="flex items-center gap-2 text-base">
+            <CardTitle class="flex items-center gap-2 text-body">
               <MapPin class="w-4 h-4" />
               배송지 정보
             </CardTitle>
           </CardHeader>
-          <CardContent class="space-y-4 text-sm">
+          <CardContent class="space-y-4 text-body">
             <div>
               <p class="font-bold mb-1">{{ order.shippingName }}</p>
               <p class="text-muted-foreground">{{ order.shippingPhone }}</p>
@@ -304,7 +339,7 @@ const getPaymentMethodLabel = (method: string): string => {
               <div class="flex items-start gap-3">
                 <Truck class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
-                  <span class="block text-xs text-muted-foreground mb-0.5"
+                  <span class="block text-caption text-muted-foreground mb-0.5"
                     >배송 방법</span
                   >
                   <span class="font-medium">일반 택배 (무료)</span>
@@ -316,7 +351,7 @@ const getPaymentMethodLabel = (method: string): string => {
                   class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"
                 />
                 <div>
-                  <span class="block text-xs text-muted-foreground mb-0.5"
+                  <span class="block text-caption text-muted-foreground mb-0.5"
                     >배송 요청사항</span
                   >
                   <span class="font-medium text-foreground/90 break-keep">
@@ -332,7 +367,7 @@ const getPaymentMethodLabel = (method: string): string => {
                   class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"
                 />
                 <div>
-                  <span class="block text-xs text-muted-foreground mb-0.5"
+                  <span class="block text-caption text-muted-foreground mb-0.5"
                     >전체 운송장 번호</span
                   >
                   <span class="font-mono font-medium">{{
@@ -345,5 +380,14 @@ const getPaymentMethodLabel = (method: string): string => {
         </Card>
       </div>
     </div>
+
+    <!-- 주문 취소 다이얼로그 -->
+    <CancelOrderDialog
+      :open="cancelDialogOpen"
+      :product-name="cancelTargetItem?.productName"
+      :loading="cancelLoading"
+      @close="closeCancelDialog"
+      @confirm="handleConfirmCancel"
+    />
   </div>
 </template>

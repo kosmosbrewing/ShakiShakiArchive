@@ -44,7 +44,7 @@ onMounted(() => {
 <template>
   <section class="container py-12 sm:py-20 min-h-[60vh]">
     <div class="mb-10 text-center">
-      <h1 class="text-3xl font-bold tracking-tight mb-2">My Wishlist</h1>
+      <h1 class="text-heading font-bold tracking-tight mb-2">My Wishlist</h1>
       <p class="text-muted-foreground">
         관심 있는 상품을 모아두었습니다.
       </p>
@@ -61,7 +61,7 @@ onMounted(() => {
       <div class="bg-muted p-4 rounded-full mb-4">
         <ShoppingBag class="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 class="text-xl font-semibold mb-2">위시리스트가 비어있습니다.</h3>
+      <h3 class="text-heading mb-2">위시리스트가 비어있습니다.</h3>
       <p class="text-muted-foreground mb-6">
         마음에 드는 상품을 찾아 하트 버튼을 눌러보세요!
       </p>
@@ -108,7 +108,7 @@ onMounted(() => {
           >
             {{ item.product.name }}
           </h3>
-          <p class="text-lg font-bold">
+          <p class="text-heading">
             {{ formatPrice(item.product.price) }}
           </p>
         </CardContent>

@@ -138,7 +138,7 @@ onMounted(async () => {
   <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
     <div class="mb-8">
-      <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
+      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
         Profile Settings
       </h1>
     </div>
@@ -147,7 +147,7 @@ onMounted(async () => {
       <!-- 기본 정보 섹션 -->
       <Card>
         <CardHeader>
-          <CardTitle class="text-lg">기본 정보</CardTitle>
+          <CardTitle class="text-heading">기본 정보</CardTitle>
         </CardHeader>
         <CardContent class="space-y-5">
           <div class="space-y-2">
@@ -212,7 +212,7 @@ onMounted(async () => {
               type="checkbox"
               class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
-            <Label for="opt-in" class="text-sm font-normal cursor-pointer">
+            <Label for="opt-in" class="text-body font-normal cursor-pointer">
               이메일 수신 동의
             </Label>
           </div>
@@ -224,9 +224,9 @@ onMounted(async () => {
       <!-- 비밀번호 확인 섹션 -->
       <Card class="bg-muted/50">
         <CardHeader>
-          <CardTitle class="text-lg">
+          <CardTitle class="text-heading">
             비밀번호 확인
-            <span class="text-destructive text-sm font-normal ml-2">
+            <span class="text-destructive text-body font-normal ml-2">
               * 정보 수정을 위해 필수입니다.
             </span>
           </CardTitle>

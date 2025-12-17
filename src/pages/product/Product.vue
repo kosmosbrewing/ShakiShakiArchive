@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { Heart } from "lucide-vue-next"; // [신규] 하트 아이콘 추가
-import { useAuthStore } from "@/stores/auth"; // [신규] 인증 스토어
-import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api"; // [신규] API 함수
+import { Heart } from "lucide-vue-next";
+import { useAuthStore } from "@/stores/auth";
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api";
 
 // 1. 데이터 인터페이스
 interface productProps {
@@ -18,17 +18,10 @@ interface productProps {
 interface ProductApiResponse {
   id: number;
   imageUrl: string;
-  categoryId: string;
+  categoryId: number; // [변경] 백엔드에서 number로 오므로 타입 수정
   name: string;
   price: number;
 }
-
-const CATEGORY_MAP: Record<string, string> = {
-  outerwear: "e49b9124-af34-4c39-a9a0-24aac250f50e",
-  topwear: "9433bfeb-4597-4e18-a132-96765faa2c71",
-  bottomwear: "995c4d3b-4d65-4bc4-aca0-7a09ceae0d0a",
-  accessories: "e34c8fcd-6b4b-42f2-905c-0dae5ee39480",
-};
 
 const route = useRoute();
 const router = useRouter();
@@ -36,32 +29,34 @@ const authStore = useAuthStore();
 
 const productList = ref<productProps[]>([]);
 const loading = ref(false);
-
-// [신규] 위시리스트에 담긴 상품 ID 목록 (빠른 조회를 위해 Set 사용)
 const wishlistSet = ref<Set<number>>(new Set());
 
-// 상품 데이터 불러오기
+// [핵심] 상품 데이터 불러오기 (백엔드 필터링 적용)
 const fetchProductData = async () => {
   loading.value = true;
 
-  const categoryParam = Array.isArray(route.params.category)
-    ? route.params.category[0]
-    : route.params.category;
-
-  const currentCategory = categoryParam
-    ? categoryParam.trim().toLowerCase()
-    : "all";
-
   try {
-    const response = await axios.get<ProductApiResponse[]>("/api/products");
-    let rawData = response.data;
+    // 1. URL에서 카테고리 슬러그 추출 (예: 'outerwear')
+    const categoryParam = Array.isArray(route.params.category)
+      ? route.params.category[0]
+      : route.params.category;
 
-    if (currentCategory !== "all") {
-      const targetUUID = CATEGORY_MAP[currentCategory];
-      rawData = rawData.filter((item) => item.categoryId === targetUUID);
-    }
+    // 'all'이거나 없으면 undefined 처리 (백엔드가 전체 목록 반환)
+    const currentSlug =
+      !categoryParam || categoryParam === "all"
+        ? undefined
+        : categoryParam.trim().toLowerCase();
 
-    productList.value = rawData.map((item) => ({
+    // 2. 백엔드에 요청 (필터링은 서버가 담당)
+    // 요청 URL 예시: GET /api/products?category=outerwear
+    const response = await axios.get<ProductApiResponse[]>("/api/products", {
+      params: {
+        category: currentSlug,
+      },
+    });
+
+    // 3. 받아온 데이터를 그대로 화면용으로 변환
+    productList.value = response.data.map((item) => ({
       id: item.id,
       imageUrl: item.imageUrl,
       name: item.name,
@@ -73,18 +68,18 @@ const fetchProductData = async () => {
     }));
   } catch (error) {
     console.error("API Error:", error);
+    productList.value = []; // 에러 시 빈 목록
   } finally {
     loading.value = false;
   }
 };
 
-// [신규] 위시리스트 목록 불러오기 (로그인 시)
+// 위시리스트 목록 불러오기
 const loadWishlist = async () => {
   if (!authStore.isAuthenticated) return;
-  
+
   try {
     const items = await fetchWishlist();
-    // items는 [{ productId: 1, ... }, ...] 형태라고 가정
     const ids = items.map((item: any) => item.productId);
     wishlistSet.value = new Set(ids);
   } catch (error) {
@@ -92,12 +87,14 @@ const loadWishlist = async () => {
   }
 };
 
-// [신규] 위시리스트 추가/삭제 토글
+// 위시리스트 추가/삭제 토글
 const toggleWishlist = async (event: Event, productId: number) => {
-  event.stopPropagation(); // [중요] 상세 페이지 이동 방지
+  event.stopPropagation();
 
   if (!authStore.isAuthenticated) {
-    if (confirm("로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?")) {
+    if (
+      confirm("로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?")
+    ) {
       router.push("/login");
     }
     return;
@@ -105,15 +102,12 @@ const toggleWishlist = async (event: Event, productId: number) => {
 
   try {
     if (wishlistSet.value.has(productId)) {
-      // 이미 있으면 삭제
       await removeFromWishlist(productId);
       wishlistSet.value.delete(productId);
     } else {
-      // 없으면 추가
       await addToWishlist(productId);
       wishlistSet.value.add(productId);
     }
-    // 반응성을 위해 Set 재할당 (Vue 3 ref 특성)
     wishlistSet.value = new Set(wishlistSet.value);
   } catch (error) {
     console.error("위시리스트 처리 실패:", error);
@@ -127,11 +121,18 @@ const goToDetail = (id: number) => {
 
 onMounted(async () => {
   await fetchProductData();
-  // 상품 로드 후 위시리스트 상태 확인
   if (authStore.isAuthenticated) {
     await loadWishlist();
   }
 });
+
+// [중요] 카테고리가 바뀌면(URL 변경) 데이터를 다시 불러옴
+watch(
+  () => route.params.category,
+  () => {
+    fetchProductData();
+  }
+);
 </script>
 
 <template>
@@ -139,7 +140,21 @@ onMounted(async () => {
     <div
       class="mt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
     >
+      <div v-if="loading" class="col-span-full text-center py-20">
+        <div
+          class="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto"
+        ></div>
+      </div>
+
+      <div
+        v-else-if="productList.length === 0"
+        class="col-span-full text-center py-20 text-gray-500"
+      >
+        등록된 상품이 없습니다.
+      </div>
+
       <Card
+        v-else
         v-for="{ id, imageUrl, name, price } in productList"
         :key="id"
         class="bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg"
@@ -162,13 +177,17 @@ onMounted(async () => {
             >
               <Heart
                 class="w-5 h-5 transition-colors duration-200"
-                :class="wishlistSet.has(id) ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-gray-600'"
+                :class="
+                  wishlistSet.has(id)
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-gray-400 hover:text-gray-600'
+                "
               />
             </button>
           </div>
 
           <CardContent
-            class="text-sm py-6 pb-1 px-6 font-bold cursor-pointer hover:underline"
+            class="text-body py-6 pb-1 px-6 font-bold cursor-pointer hover:underline"
             @click="goToDetail(id)"
           >
             {{ name }}
@@ -179,7 +198,7 @@ onMounted(async () => {
           v-for="(position, index) in price"
           :key="index"
           :class="{
-            'pb-0 text-sm text-muted-foreground ': true,
+            'pb-0 text-body': true,
             'pb-4': index === price.length - 1,
           }"
         >

@@ -2,12 +2,12 @@
 // src/pages/OrderList.vue
 // 주문 내역 페이지 (수정됨: 간소화된 리스트 & 상세 이동 버튼 추가)
 
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
-import { useOrders } from "@/composables/useOrders";
+import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { formatDate, formatPrice } from "@/lib/formatters";
-import type { OrderItem } from "@/types/api";
+import type { Order, OrderItem } from "@/types/api";
 
 // 공통 컴포넌트
 import {
@@ -15,12 +15,13 @@ import {
   EmptyState,
   ProductThumbnail,
   OrderStatusBadge,
+  CancelOrderDialog,
 } from "@/components/common";
 
 // Shadcn UI 컴포넌트
-import { Card, CardContent, CardHeader } from "@/components/ui/card"; // CardFooter 제거됨
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-vue-next"; // 화살표 아이콘
+import { ChevronRight } from "lucide-vue-next";
 
 const router = useRouter();
 
@@ -30,8 +31,16 @@ useAuthGuard();
 // 주문 목록 로직
 const { orders, loading, loadOrders } = useOrders();
 
+// 주문 취소 훅
+const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
+
+// 취소 다이얼로그 상태
+const cancelDialogOpen = ref(false);
+const cancelTargetOrder = ref<Order | null>(null);
+const cancelTargetItem = ref<OrderItem | null>(null);
+
 // 주문 상세 이동
-const goToOrderDetail = (orderId: number) => {
+const goToOrderDetail = (orderId: string | number) => {
   router.push(`/orderdetail/${orderId}`);
 };
 
@@ -43,12 +52,43 @@ const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
 };
 
-// 액션 핸들러 (이전 단계 코드 유지)
-const handleCancelOrder = async (orderId: number, item: OrderItem) => {
-  if (confirm(`'${item.productName}' 주문을 취소하시겠습니까?`)) {
-    alert("주문 취소 요청이 접수되었습니다. (기능 준비중)");
+// 취소 다이얼로그 열기
+const openCancelDialog = (order: Order, item: OrderItem) => {
+  cancelTargetOrder.value = order;
+  cancelTargetItem.value = item;
+  cancelDialogOpen.value = true;
+};
+
+// 취소 다이얼로그 닫기
+const closeCancelDialog = () => {
+  cancelDialogOpen.value = false;
+  cancelTargetOrder.value = null;
+  cancelTargetItem.value = null;
+};
+
+// 주문 취소 확인 핸들러
+const handleConfirmCancel = async (reason: string) => {
+  if (!cancelTargetOrder.value) return;
+
+  const result = await cancelOrder(cancelTargetOrder.value.id, reason);
+
+  if (result) {
+    // 취소 성공 시 주문 목록 갱신
+    await loadOrders();
+    closeCancelDialog();
+
+    // 환불 정보가 있으면 알림
+    if (result.refund) {
+      alert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
+    } else {
+      alert("주문이 취소되었습니다.");
+    }
+  } else {
+    alert("주문 취소에 실패했습니다. 다시 시도해주세요.");
   }
 };
+
+// 배송 조회 핸들러
 const handleTrackShipment = (item: OrderItem) => {
   if (!item.trackingNumber) {
     alert("아직 운송장 번호가 등록되지 않았습니다.");
@@ -68,7 +108,7 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-8">
-      <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
+      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
         Order List
       </h1>
     </div>
@@ -92,10 +132,10 @@ onMounted(() => {
           class="bg-muted/30 py-3 px-6 flex flex-row items-center justify-between border-b"
         >
           <div class="flex items-center gap-2">
-            <span class="font-bold text-lg text-foreground">
+            <span class="font-bold text-heading text-foreground">
               {{ formatDate(order.createdAt) }}
             </span>
-            <span class="text-muted-foreground text-sm hidden sm:inline-block">
+            <span class="text-muted-foreground text-body hidden sm:inline-block">
               주문
             </span>
           </div>
@@ -103,7 +143,7 @@ onMounted(() => {
           <Button
             variant="ghost"
             size="sm"
-            class="text-sm text-muted-foreground hover:text-foreground h-8 px-2"
+            class="text-body text-muted-foreground hover:text-foreground h-8 px-2"
             @click="goToOrderDetail(order.id)"
           >
             주문 상세
@@ -126,7 +166,7 @@ onMounted(() => {
               <div>
                 <div class="flex justify-between items-start mb-1 gap-2">
                   <h3
-                    class="font-bold text-foreground text-lg cursor-pointer hover:underline line-clamp-2"
+                    class="font-bold text-foreground text-heading cursor-pointer hover:underline line-clamp-2"
                     @click="router.push(`/productDetail/${item.productId}`)"
                   >
                     {{ item.productName }}
@@ -134,11 +174,11 @@ onMounted(() => {
                   <OrderStatusBadge :status="item.status" class="shrink-0" />
                 </div>
 
-                <p class="text-sm text-muted-foreground mb-2">
+                <p class="text-body text-muted-foreground mb-2">
                   {{ item.options || "옵션 없음" }}
                 </p>
 
-                <p class="text-sm font-medium">
+                <p class="text-body font-medium">
                   {{ formatPrice(item.productPrice) }} / {{ item.quantity }}개
                 </p>
               </div>
@@ -151,8 +191,8 @@ onMounted(() => {
                     v-if="canCancel(item.status)"
                     variant="outline"
                     size="sm"
-                    class="text-xs h-8"
-                    @click="handleCancelOrder(order.id, item)"
+                    class="text-caption h-8"
+                    @click="openCancelDialog(order, item)"
                   >
                     주문취소
                   </Button>
@@ -161,7 +201,7 @@ onMounted(() => {
                     v-if="canTrack(item.status)"
                     variant="secondary"
                     size="sm"
-                    class="text-xs h-8"
+                    class="text-caption h-8"
                     @click="handleTrackShipment(item)"
                   >
                     배송조회
@@ -173,5 +213,14 @@ onMounted(() => {
         </CardContent>
       </Card>
     </div>
+
+    <!-- 주문 취소 다이얼로그 -->
+    <CancelOrderDialog
+      :open="cancelDialogOpen"
+      :product-name="cancelTargetItem?.productName"
+      :loading="cancelLoading"
+      @close="closeCancelDialog"
+      @confirm="handleConfirmCancel"
+    />
   </div>
 </template>

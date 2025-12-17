@@ -1,4 +1,4 @@
-/* 1. 최상단에 폰트 임포트 추가 */
+/* 1. Pretendard 폰트 임포트 */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 @tailwind base;
@@ -9,84 +9,53 @@ html {
   scroll-behavior: smooth;
 }
 
-/* *=========== Theme Configuration =========== */
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 20 14.3% 4.1%;
 
+    /* [메인 컬러] #5F482F (Brown) */
+    --foreground: 31 34% 28%;
+
+    /* [서브 컬러] #6E584C (Muted Brown) */
+    --muted-foreground: 21 18% 45%;
+
+    /* [메인] 관리자용 진한 검정 (#171717) */
+    --admin-foreground: 0 0% 9%;
+
+    /* ▼ [추가] 관리자용 연한 회색 (Neutral Gray: #737373) */
+    /* HSL: 0(Hue) 0%(Saturation) 45%(Lightness) */
+    --admin-muted-foreground: 0 0% 45%;
+
+    /* UI Colors (카드, 팝오버 등 배경은 흰색 유지) */
     --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
-
+    --card-foreground: 31 34% 28%;
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
-
-    /* ▼ [수정됨] 버튼 메인 색상 (#DE7BA3 -> HSL 변환) */
+    --popover-foreground: 31 34% 28%;
     --primary: 336 60% 68%;
-    --primary-foreground: 0 0% 100%; /* 버튼 위 글자색 (흰색) */
-
+    --primary-foreground: 0 0% 100%;
     --secondary: 60 4.8% 95.9%;
-    --secondary-foreground: 24 9.8% 10%;
-
+    --secondary-foreground: 31 34% 28%;
     --muted: 60 4.8% 95.9%;
-    --muted-foreground: 25 5.3% 44.7%;
-
     --accent: 60 4.8% 95.9%;
-    --accent-foreground: 24 9.8% 10%;
-
+    --accent-foreground: 31 34% 28%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 60 9.1% 97.8%;
-
     --border: 20 5.9% 90%;
     --input: 20 5.9% 90%;
-
-    /* ▼ [수정됨] 포커스 링 색상도 메인 색상과 맞춤 */
     --ring: 336 60% 68%;
     --radius: 0.5rem;
   }
 
-  .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 60 9.1% 97.8%;
-
-    --card: 24 9.8% 8%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 60 9.1% 97.8%;
-
-    /* ▼ [수정됨] 다크모드 버튼 색상 (동일하게 적용) */
-    --primary: 336 60% 68%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 9.1% 97.8%;
-
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 60 9.1% 97.8%;
-
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 60 9.1% 97.8%;
-
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 336 60% 68%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
+  /* 기본 폰트 설정 
+    - Tailwind Config의 'sans'가 자동으로 적용됩니다.
+    - 기본 컬러와 렌더링 최적화만 적용합니다.
+  */
   body {
-    /* ▼ [수정됨] 폰트 적용, 글자색(#5F482F), 사이즈 축소(text-sm) */
-    @apply bg-background text-xs text-[#5F482F];
-    font-family: "Pretendard Variable", Pretendard, -apple-system,
-      BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI",
-      "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic",
-      "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    @apply bg-background text-foreground antialiased;
   }
 }
+
+/* [참고] 기존에 있던 .text-heading, .text-body 등의 클래스는 
+  이제 tailwind.config.js의 theme 설정을 통해
+  text-h1, text-body 등의 유틸리티 클래스로 대체됩니다.
+*/

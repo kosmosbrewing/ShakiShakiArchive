@@ -60,7 +60,7 @@ const handleLoad = () => {
       class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400"
     >
       <ImageOff class="w-8 h-8 mb-1" />
-      <span class="text-xs">No Image</span>
+      <span class="text-caption">No Image</span>
     </div>
   </div>
 </template>

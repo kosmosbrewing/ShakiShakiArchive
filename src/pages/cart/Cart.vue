@@ -69,7 +69,7 @@ onMounted(() => {
 <template>
   <div class="max-w-6xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-8">
-      <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
+      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
         Shopping Cart
       </h1>
     </div>
@@ -113,7 +113,7 @@ onMounted(() => {
 
                 <p
                   v-if="item.variant"
-                  class="text-sm text-muted-foreground mt-1"
+                  class="text-body text-muted-foreground mt-1"
                 >
                   옵션: {{ item.variant.size }}
                   <span v-if="item.variant.color"
@@ -141,23 +141,23 @@ onMounted(() => {
       <div class="lg:col-span-1">
         <Card class="sticky top-24">
           <CardHeader>
-            <CardTitle class="text-lg">Order Summary</CardTitle>
+            <CardTitle class="text-heading">Order Summary</CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div class="flex justify-between text-sm">
+            <div class="flex justify-between text-body">
               <span class="text-muted-foreground">상품 금액</span>
               <span class="text-foreground">{{
                 formatPrice(totalProductPrice)
               }}</span>
             </div>
-            <div class="flex justify-between text-sm">
+            <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
               <span class="text-foreground">0원 (무료배송)</span>
             </div>
 
             <Separator />
 
-            <div class="flex justify-between text-lg font-bold">
+            <div class="flex justify-between text-heading">
               <span class="text-foreground">총 결제 금액</span>
               <span class="text-foreground">{{
                 formatPrice(totalProductPrice)

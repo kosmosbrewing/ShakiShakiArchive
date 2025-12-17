@@ -86,19 +86,17 @@ onMounted(async () => {
 <template>
   <div class="max-w-7xl mx-auto px-4 py-12">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-2xl font-bold text-gray-900">주문/배송 관리</h1>
+      <h1 class="text-admin font-bold">주문/배송 관리</h1>
       <button
         @click="loadData"
-        class="px-3 py-2 border rounded hover:bg-gray-50 text-sm"
+        class="px-3 py-2 border rounded hover:bg-gray-50 text-admin"
       >
         새로고침
       </button>
     </div>
 
     <div v-if="loading" class="text-center py-20">
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto"
-      ></div>
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto"></div>
     </div>
 
     <div v-else class="space-y-8">
@@ -110,8 +108,8 @@ onMounted(async () => {
         <div
           class="bg-gray-50 px-6 py-4 border-b flex flex-wrap justify-between items-center gap-4"
         >
-          <div class="flex items-center gap-4 text-sm">
-            <span class="font-bold text-lg">주문번호 #{{ order.id }}</span>
+          <div class="flex items-center gap-4 text-admin">
+            <span class="font-bold text-admin">주문번호 #{{ order.id }}</span>
             <span class="text-gray-500">{{ formatDate(order.createdAt) }}</span>
             <span class="text-gray-400">|</span>
             <span class="font-medium">{{ order.shippingName }}</span>
@@ -123,7 +121,7 @@ onMounted(async () => {
         </div>
 
         <div class="p-0 overflow-x-auto">
-          <table class="w-full text-left text-sm">
+          <table class="w-full text-left text-admin">
             <thead class="bg-white border-b text-gray-500">
               <tr>
                 <th class="px-6 py-3 w-1/3">상품명 / 옵션</th>
@@ -140,7 +138,7 @@ onMounted(async () => {
                 class="hover:bg-gray-50"
               >
                 <td class="px-6 py-4">
-                  <div class="font-medium text-gray-900">
+                  <div class="font-medium text-admin">
                     {{ item.productName }}
                   </div>
                 </td>

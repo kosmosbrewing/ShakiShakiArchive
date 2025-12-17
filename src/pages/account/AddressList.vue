@@ -36,7 +36,7 @@ onMounted(() => {
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
     <div class="mb-8">
-      <h1 class="text-sm font-bold uppercase tracking-widest text-foreground">
+      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
         Address Book
       </h1>
     </div>

@@ -193,7 +193,7 @@ onMounted(async () => {
       >
         <CardContent class="p-6">
           <div class="flex justify-between items-start gap-4 mb-2">
-            <h1 class="text-3xl font-bold text-foreground">
+            <h1 class="text-heading text-foreground">
               {{ productData.product.value.name }}
             </h1>
 
@@ -214,19 +214,19 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-end gap-2 mb-8">
-            <span class="text-2xl font-bold text-foreground">
+            <span class="text-heading text-foreground">
               {{ formatPrice(productData.product.value.price) }}
             </span>
             <span
               v-if="productData.product.value.originalPrice"
-              class="text-lg text-muted-foreground line-through mb-1"
+              class="text-heading text-muted-foreground line-through mb-1"
             >
               {{ formatPrice(productData.product.value.originalPrice) }}
             </span>
           </div>
 
           <div v-if="productData.variants.value.length > 0" class="mb-8">
-            <label class="block text-sm font-bold text-foreground mb-3"
+            <label class="block text-body font-bold text-foreground mb-3"
               >Size</label
             >
             <div class="flex flex-wrap gap-2">
@@ -259,7 +259,7 @@ onMounted(async () => {
                 variantSelection.needsVariantSelection.value,
             }"
           >
-            <label class="block text-sm font-bold text-foreground mb-3"
+            <label class="block text-body font-bold text-foreground mb-3"
               >Quantity</label
             >
             <QuantitySelector
@@ -272,7 +272,7 @@ onMounted(async () => {
             <Button
               @click="handleAddToCart"
               :disabled="variantSelection.needsVariantSelection.value"
-              class="w-full h-14 text-lg font-bold"
+              class="w-full h-14 text-heading"
               size="lg"
             >
               {{
@@ -290,7 +290,7 @@ onMounted(async () => {
               <button
                 @click="setTab('description')"
                 :class="[
-                  'flex-1 py-4 text-sm font-bold uppercase tracking-wide transition-colors relative',
+                  'flex-1 py-4 text-body font-bold uppercase tracking-wide transition-colors relative',
                   activeTab === 'description'
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -305,7 +305,7 @@ onMounted(async () => {
               <button
                 @click="setTab('size')"
                 :class="[
-                  'flex-1 py-4 text-sm font-bold uppercase tracking-wide transition-colors relative',
+                  'flex-1 py-4 text-body font-bold uppercase tracking-wide transition-colors relative',
                   activeTab === 'size'
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -322,7 +322,7 @@ onMounted(async () => {
             <div class="py-8 min-h-[200px]">
               <div v-show="activeTab === 'description'" class="animate-fade-in">
                 <p
-                  class="text-muted-foreground whitespace-pre-line leading-relaxed text-sm"
+                  class="text-muted-foreground whitespace-pre-line leading-relaxed text-body"
                 >
                   {{ productData.product.value.description }}
                 </p>
@@ -331,9 +331,11 @@ onMounted(async () => {
               <div v-show="activeTab === 'size'" class="animate-fade-in">
                 <div v-if="sizeMeasurements.hasSizeData.value">
                   <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-center whitespace-nowrap">
+                    <table
+                      class="w-full text-body text-center whitespace-nowrap"
+                    >
                       <thead
-                        class="bg-muted text-xs text-muted-foreground uppercase"
+                        class="bg-muted text-caption text-muted-foreground uppercase"
                       >
                         <tr>
                           <th
@@ -376,13 +378,13 @@ onMounted(async () => {
                       </tbody>
                     </table>
                   </div>
-                  <p class="mt-4 text-xs text-muted-foreground text-right">
+                  <p class="mt-4 text-caption text-muted-foreground text-right">
                     * 단위: cm / 측정 방법에 따라 오차가 있을 수 있습니다.
                   </p>
                 </div>
                 <Card v-else class="py-10 text-center">
                   <CardContent>
-                    <p class="text-muted-foreground text-sm">
+                    <p class="text-muted-foreground text-body">
                       등록된 상세 사이즈 정보가 없습니다.
                     </p>
                   </CardContent>

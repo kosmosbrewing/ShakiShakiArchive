@@ -55,9 +55,9 @@ const handleSubmit = () => {
     <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div>
         <div class="mb-4">
-          <h2 class="text-lg text-primary mb-2 tracking-wider">Contact</h2>
+          <h2 class="text-heading text-primary mb-2 tracking-wider">Contact</h2>
 
-          <h2 class="text-3xl md:text-4xl font-bold">Connect With Us</h2>
+          <h2 class="text-heading font-bold">Connect With Us</h2>
         </div>
         <p class="mb-8 text-muted-foreground lg:w-5/6">
           Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum
@@ -108,7 +108,7 @@ const handleSubmit = () => {
 
       <!-- form -->
       <Card class="bg-muted/60 dark:bg-card">
-        <CardHeader class="text-primary text-2xl"> </CardHeader>
+        <CardHeader class="text-primary text-heading"> </CardHeader>
         <CardContent>
           <form @submit.prevent="handleSubmit" class="grid gap-4">
             <div class="flex flex-col md:flex-row gap-8">

@@ -9,3 +9,4 @@ export { default as OrderStatusBadge } from "./OrderStatusBadge.vue";
 export { default as AddressCard } from "./AddressCard.vue";
 export { default as AddressForm } from "./AddressForm.vue";
 export { default as PhoneInput } from "./PhoneInput.vue";
+export { default as CancelOrderDialog } from "./CancelOrderDialog.vue";

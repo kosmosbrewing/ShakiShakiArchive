@@ -118,7 +118,7 @@ const deliveryMessageOptions = [
         @change="
           updateField('message', ($event.target as HTMLSelectElement).value)
         "
-        class="w-full border border-border rounded p-3 text-sm bg-background text-foreground"
+        class="w-full border border-border rounded p-3 text-body bg-background text-foreground"
       >
         <option
           v-for="opt in deliveryMessageOptions"
@@ -154,7 +154,7 @@ const deliveryMessageOptions = [
       />
       <Label
         for="saveDefault"
-        class="text-sm font-normal cursor-pointer text-muted-foreground"
+        class="text-body font-normal cursor-pointer text-muted-foreground"
       >
         이 배송지를 기본 배송지로 저장
       </Label>

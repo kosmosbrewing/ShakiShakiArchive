@@ -6,7 +6,6 @@ import { useAuthStore } from "@/stores/auth";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
-import Product from "@/components/Product.vue";
 
 // Auth (인증)
 import { Login, Signup } from "@/pages/auth";
@@ -15,7 +14,7 @@ import { Login, Signup } from "@/pages/auth";
 import { Account, Modify, AddressList } from "@/pages/account";
 
 // Product (상품)
-import { ProductDetail } from "@/pages/product";
+import { Product, ProductDetail } from "@/pages/product";
 
 // Order (주문)
 import { Order, OrderList, OrderDetail, Checkout } from "@/pages/order";
@@ -27,7 +26,7 @@ import { Cart } from "@/pages/cart";
 import { WishList } from "@/pages/wishlist";
 
 // Admin (관리자)
-import { Admin, ProductAdmin, CategoryAdmin, OrderAdmin } from "@/pages/admin";
+import { ProductAdmin, CategoryAdmin, OrderAdmin } from "@/pages/admin";
 
 // Static (정적 페이지)
 import { About, Contact } from "@/pages/static";
@@ -65,7 +64,11 @@ const routes = [
 
   // 상품 관련
   { path: "/product/:category", name: "Product", component: Product },
-  { path: "/productDetail/:id", name: "ProductDetail", component: ProductDetail },
+  {
+    path: "/productDetail/:id",
+    name: "ProductDetail",
+    component: ProductDetail,
+  },
 
   // 장바구니
   { path: "/cart", name: "Cart", component: Cart },
@@ -104,12 +107,6 @@ const routes = [
   { path: "/about", name: "About", component: About },
 
   // 관리자 페이지
-  {
-    path: "/admin",
-    name: "Admin",
-    component: Admin,
-    meta: { requiresAuth: true, requiresAdmin: true },
-  },
   {
     path: "/admin/products",
     name: "ProductAdmin",

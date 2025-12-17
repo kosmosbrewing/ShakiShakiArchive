@@ -40,7 +40,7 @@ const statusConfig = computed(() => {
 
 <template>
   <span 
-    class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium"
+    class="inline-flex items-center rounded-full border px-3 py-1 text-caption font-medium"
     :class="statusConfig.class"
     :data-testid="`badge-order-status-${status}`"
   >

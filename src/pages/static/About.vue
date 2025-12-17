@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent class="lg:w-[80%] text-xl text-muted-foreground">
+          <CardContent class="lg:w-[80%] text-heading text-muted-foreground">
             Join our vibrant Discord community! Connect, share, and grow with
             like-minded enthusiasts. Click to dive in! 🚀
           </CardContent>

@@ -29,7 +29,7 @@ const authStore = useAuthStore();
 
 // Composables
 const { cartItems, shippingFee, totalAmount, loadCart } = useCart();
-const { addresses, hasDefaultAddress, loadAddresses } = useAddresses();
+const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
 
@@ -125,9 +125,7 @@ const handlePayment = async () => {
       shippingPostalCode: shippingForm.form.zipCode,
       shippingAddress: shippingForm.form.address,
       shippingDetailAddress: shippingForm.form.detailAddress,
-      shippingRequestNote: shippingForm.form.requestNote,
-      paymentProvider: paymentProvider.value,
-      totalAmount: totalAmount.value,
+      shippingRequestNote: shippingForm.finalRequestNote.value,
     });
 
     if (!orderData) throw new Error("주문 생성 실패");
@@ -177,7 +175,7 @@ const saveDefaultAddressIfNeeded = async () => {
         zipCode: shippingForm.form.zipCode,
         address: shippingForm.form.address,
         detailAddress: shippingForm.form.detailAddress,
-        requestNote: shippingForm.form.requestNote,
+        requestNote: shippingForm.finalRequestNote.value,
         isDefault: true,
       });
     } catch (e) {
@@ -194,7 +192,7 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-8 border-b pb-4">
-      <h1 class="text-2xl font-bold tracking-tight text-foreground">
+      <h1 class="text-heading font-bold tracking-tight text-foreground">
         주문 / 결제
       </h1>
     </div>
@@ -205,7 +203,7 @@ onMounted(() => {
       <div class="lg:col-span-2 space-y-8">
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg">배송지 정보</CardTitle>
+            <CardTitle class="text-heading">배송지 정보</CardTitle>
           </CardHeader>
           <CardContent class="space-y-6">
             <div class="flex flex-wrap gap-2 p-1 bg-muted/50 rounded-lg">
@@ -215,7 +213,7 @@ onMounted(() => {
                 @click="deliveryMode = mode as any"
                 :disabled="mode === 'saved' && addresses.length === 0"
                 :class="[
-                  'flex-1 py-2 text-sm font-medium rounded-md transition-all',
+                  'flex-1 py-2 text-body font-medium rounded-md transition-all',
                   deliveryMode === mode
                     ? 'bg-background shadow text-foreground'
                     : 'text-muted-foreground hover:text-foreground disabled:opacity-50',
@@ -277,17 +275,17 @@ onMounted(() => {
                 </div>
 
                 <div class="flex-1 min-w-0">
-                  <h3 class="text-sm font-bold truncate">
+                  <h3 class="text-body font-bold truncate">
                     {{ item.product?.name }}
                   </h3>
-                  <p class="text-xs text-muted-foreground mt-1">
+                  <p class="text-caption text-muted-foreground mt-1">
                     옵션: {{ item.variant?.size || "-" }}
                     <span v-if="item.variant?.color"
                       >/ {{ item.variant?.color }}</span
                     >
                   </p>
                   <div class="flex justify-between items-end mt-2">
-                    <span class="text-sm">수량 {{ item.quantity }}개</span>
+                    <span class="text-body">수량 {{ item.quantity }}개</span>
                     <span class="font-bold">
                       {{
                         formatPrice(Number(item.product?.price) * item.quantity)
@@ -305,20 +303,20 @@ onMounted(() => {
         <div class="sticky top-24 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle class="text-lg">최종 결제 금액</CardTitle>
+              <CardTitle class="text-heading">최종 결제 금액</CardTitle>
             </CardHeader>
             <CardContent class="space-y-3">
-              <div class="flex justify-between text-sm">
+              <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">총 상품 금액</span>
                 <span>{{ formatPrice(totalAmount - shippingFee) }}</span>
               </div>
-              <div class="flex justify-between text-sm">
+              <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">배송비</span>
                 <span>{{ formatPrice(shippingFee) }}</span>
               </div>
               <div class="border-t pt-3 flex justify-between items-center">
-                <span class="font-bold text-lg">합계</span>
-                <span class="font-bold text-xl text-primary">{{
+                <span class="font-bold text-heading">합계</span>
+                <span class="font-bold text-heading text-primary">{{
                   formatPrice(totalAmount)
                 }}</span>
               </div>
@@ -327,7 +325,7 @@ onMounted(() => {
 
           <Card>
             <CardHeader>
-              <CardTitle class="text-lg">결제 수단</CardTitle>
+              <CardTitle class="text-heading">결제 수단</CardTitle>
             </CardHeader>
             <CardContent>
               <div class="grid grid-cols-2 gap-3">
@@ -348,7 +346,7 @@ onMounted(() => {
                     class="h-8 w-auto mb-2 object-contain"
                   />
                   <span
-                    class="text-sm font-bold"
+                    class="text-body font-bold"
                     :class="
                       paymentProvider === method.value
                         ? 'text-primary'
@@ -364,13 +362,13 @@ onMounted(() => {
 
           <Button
             @click="handlePayment"
-            class="w-full h-14 text-lg font-bold shadow-lg"
+            class="w-full h-14 text-heading shadow-lg"
             size="lg"
           >
             {{ formatPrice(totalAmount) }} 결제하기
           </Button>
 
-          <p class="text-xs text-center text-muted-foreground">
+          <p class="text-caption text-center text-muted-foreground">
             위 주문 내용을 확인하였으며 결제에 동의합니다.
           </p>
         </div>
@@ -388,7 +386,7 @@ onMounted(() => {
         <CardHeader
           class="flex flex-row items-center justify-between border-b py-4"
         >
-          <CardTitle class="text-lg">배송지 목록</CardTitle>
+          <CardTitle class="text-heading">배송지 목록</CardTitle>
           <Button
             variant="ghost"
             size="icon"
