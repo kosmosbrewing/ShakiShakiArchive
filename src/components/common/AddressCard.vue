@@ -20,7 +20,7 @@ withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: "edit", address: DeliveryAddress): void;
-  (e: "delete", id: number): void;
+  (e: "delete", id: string): void; // UUID
   (e: "select", address: DeliveryAddress): void;
 }>();
 </script>

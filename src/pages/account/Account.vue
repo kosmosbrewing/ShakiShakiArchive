@@ -8,8 +8,21 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrderStats } from "@/composables/useOrders";
 import { useWishlistCount } from "@/composables/useWishlist";
 
+// 아이콘
+import {
+  Package,
+  Heart,
+  User,
+  MapPin,
+  ChevronRight,
+  Settings,
+  ShoppingBag,
+  Truck,
+  CheckCircle,
+} from "lucide-vue-next";
+
 // Shadcn UI 컴포넌트
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 const router = useRouter();
@@ -38,6 +51,35 @@ const goToCategoryAdmin = () => router.push("/admin/categories");
 const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
 
+// 메뉴 아이템 정의
+const menuItems = [
+  {
+    label: "주문 내역",
+    description: "주문 및 배송 현황 확인",
+    icon: Package,
+    action: goToOrderList,
+  },
+  {
+    label: "위시리스트",
+    description: "관심 상품 목록",
+    icon: Heart,
+    action: goToWishlist,
+    badge: wishlistCount,
+  },
+  {
+    label: "회원 정보 수정",
+    description: "개인정보 및 비밀번호 변경",
+    icon: User,
+    action: goToModify,
+  },
+  {
+    label: "배송지 관리",
+    description: "배송지 추가 및 수정",
+    icon: MapPin,
+    action: goToAddress,
+  },
+];
+
 onMounted(async () => {
   // 사용자 정보 로드
   if (!authStore.user) {
@@ -53,127 +95,188 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-12">
-      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
-        My Page
-      </h1>
+  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
+    <!-- 페이지 제목 -->
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">마이페이지</h3>
     </div>
 
-    <div class="text-center text-heading mb-10 text-foreground">
-      <span class="font-bold">{{ userName }}님</span>은
-      <span class="font-bold">일반회원</span>입니다.
-    </div>
-
-    <Card class="mb-16">
-      <CardContent class="flex justify-between text-center py-6 px-4 md:px-10">
-        <div
-          @click="goToOrderList"
-          class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
-        >
-          <div class="text-caption text-muted-foreground mb-3">입금전</div>
-          <div class="text-heading text-foreground">
-            {{ orderCounts.pending }}
+    <!-- 사용자 인사 -->
+    <Card class="mb-6">
+      <CardContent class="py-6">
+        <div class="flex items-center gap-4">
+          <div
+            class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
+          >
+            <User class="w-7 h-7 text-primary" />
           </div>
-        </div>
-
-        <div
-          @click="goToOrderList"
-          class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
-        >
-          <div class="text-caption text-muted-foreground mb-3">배송준비중</div>
-          <div class="text-heading text-foreground">
-            {{ orderCounts.preparing }}
-          </div>
-        </div>
-
-        <div
-          @click="goToOrderList"
-          class="flex-1 border-r border-border last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
-        >
-          <div class="text-caption text-muted-foreground mb-3">배송중</div>
-          <div class="text-heading text-foreground">
-            {{ orderCounts.shipped }}
-          </div>
-        </div>
-
-        <div
-          @click="goToOrderList"
-          class="flex-1 last:border-0 cursor-pointer hover:opacity-70 transition-opacity"
-        >
-          <div class="text-caption text-muted-foreground mb-3">배송완료</div>
-          <div class="text-heading text-foreground">
-            {{ orderCounts.delivered }}
+          <div>
+            <p class="text-heading font-bold text-foreground">
+              {{ userName }}님, 안녕하세요!
+            </p>
+            <p class="text-body text-muted-foreground">일반회원</p>
           </div>
         </div>
       </CardContent>
     </Card>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
-      <Button
-        variant="outline"
-        @click="goToOrderList"
-        class="h-16 text-body font-medium"
-      >
-        ORDER
-      </Button>
-
-      <Button
-        variant="outline"
-        @click="goToWishlist"
-        class="h-16 text-body font-medium"
-      >
-        <span>WISHLIST</span>
-        &nbsp;
-        <span
-          v-if="wishlistCount > 0"
-          class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground transition-all group-hover:bg-primary/90"
+    <!-- 주문 현황 -->
+    <Card class="mb-6">
+      <CardHeader class="pb-2">
+        <CardTitle class="text-heading flex items-center gap-2">
+          주문 현황
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          class="grid grid-cols-4 gap-2 cursor-pointer"
+          @click="goToOrderList"
         >
-          {{ wishlistCount }}
-        </span>
-      </Button>
+          <div
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+            >
+              <Package class="w-5 h-5 text-primary" />
+            </div>
+            <span class="text-caption mb-1">입금전</span>
+            <span class="text-body font-bold text-foreground">
+              {{ orderCounts.pending }}
+            </span>
+          </div>
 
-      <Button
-        variant="outline"
-        @click="goToModify"
-        class="h-16 text-body font-medium"
-      >
-        PROFILE
-      </Button>
+          <div
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+            >
+              <Settings class="w-5 h-5 text-primary" />
+            </div>
+            <span class="text-caption mb-1">배송준비중</span>
+            <span class="text-body font-bold text-foreground">
+              {{ orderCounts.preparing }}
+            </span>
+          </div>
 
-      <Button
-        variant="outline"
-        @click="goToAddress"
-        class="h-16 text-body font-medium"
-      >
-        ADDRESS
-      </Button>
-    </div>
+          <div
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+            >
+              <Truck class="w-5 h-5 text-primary" />
+            </div>
+            <span class="text-caption mb-1">배송중</span>
+            <span class="text-body font-bold text-foreground">
+              {{ orderCounts.shipped }}
+            </span>
+          </div>
 
-    <div v-if="authStore.user?.isAdmin" class="border-t border-border pt-8">
-      <div class="text-body text-admin font-bold uppercase mb-4">
-        Admin Menu
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          size="sm"
-          @click="goToCategoryAdmin"
-          class="bg-admin hover:bg-gray-800 text-white"
-        >
-          카테고리 관리
-        </Button>
-        <Button variant="default" size="sm" @click="goToProductAdmin">
-          상품 관리
-        </Button>
-        <Button
-          size="sm"
-          @click="goToOrderAdmin"
-          class="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          주문 관리
-        </Button>
-      </div>
-    </div>
+          <div
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+            >
+              <CheckCircle class="w-5 h-5 text-primary" />
+            </div>
+            <span class="text-caption mb-1">배송완료</span>
+            <span class="text-body font-bold text-foreground">
+              {{ orderCounts.delivered }}
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- 메뉴 목록 -->
+    <Card class="mb-6">
+      <CardHeader class="pb-2">
+        <CardTitle class="text-heading">나의 쇼핑</CardTitle>
+      </CardHeader>
+      <CardContent class="p-0">
+        <div class="divide-y divide-border">
+          <button
+            v-for="item in menuItems"
+            :key="item.label"
+            @click="item.action"
+            class="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
+          >
+            <div class="flex items-center gap-4 pl-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-body font-medium text-foreground">
+                    {{ item.label }}
+                  </span>
+                  <span
+                    v-if="item.badge && item.badge.value > 0"
+                    class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground"
+                  >
+                    {{ item.badge.value }}
+                  </span>
+                </div>
+                <p class="text-caption text-muted-foreground">
+                  {{ item.description }}
+                </p>
+              </div>
+            </div>
+            <ChevronRight class="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- 관리자 메뉴 -->
+    <Card v-if="authStore.user?.isAdmin">
+      <CardHeader class="pb-2">
+        <CardTitle class="text-heading flex items-center gap-2">
+          관리자 메뉴
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <Button
+            variant="outline"
+            @click="goToCategoryAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-gray-900 flex items-center justify-center"
+            >
+              <Settings class="w-4 h-4 text-white" />
+            </div>
+            카테고리 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToProductAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-primary flex items-center justify-center"
+            >
+              <Package class="w-4 h-4 text-primary-foreground" />
+            </div>
+            상품 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToOrderAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center"
+            >
+              <ShoppingBag class="w-4 h-4 text-white" />
+            </div>
+            주문 관리
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>

@@ -7,12 +7,7 @@ import { AlertCircle, Loader2 } from "lucide-vue-next"; // Loader2 아이콘 추
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
@@ -103,28 +98,31 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <section id="contact" class="container max-w-[550px] py-10 pt-20">
-    <Card class="bg-muted/5 dark:bg-card">
-      <CardHeader class="text-primary text-center text-md">로그인</CardHeader>
+  <section
+    id="contact"
+    class="max-w-md mx-auto items-center justify-center py-24 sm:py-16"
+  >
+    <div class="mb-6 text-center">
+      <h3 class="text-heading text-primary mb-2 tracking-wider">LOGIN</h3>
+    </div>
+    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
       <CardContent>
-        <form @submit.prevent="handleSubmit" class="grid gap-4">
-          <div class="flex flex-col w-full gap-1.5">
-            <label for="user-id" class="sr-only">아이디 (이메일)</label>
+        <form @submit.prevent="handleSubmit" class="grid gap-4 mt-4 mb-2">
+          <div class="flex flex-col w-full gap-1.5 pt-10">
             <Input
               id="user-id"
               type="text"
-              placeholder="아이디 또는 이메일을 입력하세요"
+              placeholder="이메일"
               v-model="loginForm.id"
               :disabled="isLoading"
             />
           </div>
 
           <div class="flex flex-col w-full gap-1.5">
-            <label for="user-password" class="sr-only">비밀번호</label>
             <Input
               id="user-password"
               type="password"
-              placeholder="비밀번호를 입력하세요"
+              placeholder="비밀번호"
               v-model="loginForm.password"
               :disabled="isLoading"
             />
@@ -164,18 +162,29 @@ const handleSubmit = async () => {
             </AlertDescription>
           </Alert>
 
-          <Button class="w-full" type="submit" :disabled="isLoading">
+          <Button class="w-full mt-3" type="submit" :disabled="isLoading">
             <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
             {{ isLoading ? "로그인 중..." : "로그인" }}
           </Button>
 
           <router-link to="/signup" class="w-full">
-            <Button class="w-full" :disabled="isLoading">회원가입</Button>
+            <Button class="w-full" :disabled="isLoading">네이버 로그인</Button>
           </router-link>
         </form>
       </CardContent>
-
-      <CardFooter></CardFooter>
     </Card>
+
+    <p class="text-center mt-4">
+      <router-link to="/signup" class="text-primary hover:underline font-medium"
+        >비밀번호를 잊으셨나요?</router-link
+      >
+    </p>
+
+    <p class="text-center mt-2 text-muted-foreground">
+      계정이 없으신가요?
+      <router-link to="/signup" class="text-primary hover:underline font-medium"
+        >가입하기</router-link
+      >
+    </p>
   </section>
 </template>

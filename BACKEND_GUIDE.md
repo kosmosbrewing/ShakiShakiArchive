@@ -43,6 +43,7 @@ server/
 │   ├── wishlist.routes.ts      # 위시리스트 API (/api/wishlist/*)
 │   ├── address.routes.ts       # 배송지 API (/api/user/addresses/*)
 │   ├── variant.routes.ts       # 상품 옵션 API (/api/variants/*)
+│   ├── search.routes.ts        # 주소/키워드 검색 API (/api/search/*)
 │   └── admin/
 │       ├── index.ts            # 관리자 라우트 통합
 │       ├── product.routes.ts   # 관리자 상품 관리
@@ -81,6 +82,7 @@ shared/
 | 비밀번호 해싱 | bcryptjs                                        |
 | 검증          | Zod + drizzle-zod                               |
 | 결제          | 토스페이먼츠 (네이버페이/카카오페이 확장 가능)  |
+| 주소 검색     | 카카오 로컬 API                                 |
 | 빌드 도구     | esbuild + tsx                                   |
 
 ---
@@ -154,7 +156,7 @@ app.post("/api/admin/products", isAuthenticated, isAdmin, async (req, res) => {
 // (모든 요청에 자동 적용됨)
 ```
 
-### Express 타입 확장
+#### Express 타입 확장
 
 ```typescript
 // server/types/index.ts
@@ -162,7 +164,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: number;
+        id: string; // UUID
         email: string;
         isAdmin: boolean;
       };
@@ -172,7 +174,7 @@ declare global {
 
 declare module "express-session" {
   interface SessionData {
-    userId: number;
+    userId: string; // UUID
     oauthState?: string; // OAuth CSRF 방지용
   }
 }
@@ -184,9 +186,11 @@ declare module "express-session" {
 
 ### ERD (주요 테이블)
 
+> **Note**: UUID를 사용하는 테이블은 `id (PK, UUID)`로 표시됩니다.
+
 ```
 users (사용자)
-├── id (PK, serial)
+├── id (PK, UUID) - 자동 생성
 ├── email (unique, required)
 ├── passwordHash (nullable - 소셜 로그인 사용자는 비밀번호 없음)
 ├── userName (required)
@@ -199,13 +203,13 @@ users (사용자)
 ├── createdAt, updatedAt
 
 categories (카테고리)
-├── id (PK)
+├── id (PK, integer) - 직접 입력 가능
 ├── name, slug (unique)
 ├── description, imageUrl
 └── createdAt
 
 products (상품)
-├── id (PK)
+├── id (PK, UUID) - 자동 생성
 ├── name, slug (unique)
 ├── description
 ├── price, originalPrice
@@ -215,14 +219,14 @@ products (상품)
 └── createdAt, updatedAt
 
 productVariants (상품 옵션)
-├── id (PK)
-├── productId (FK → products.id, cascade)
+├── id (PK, serial)
+├── productId (FK → products.id, UUID, cascade)
 ├── size, color, sku (unique)
 ├── price, stockQuantity, isAvailable
 └── createdAt, updatedAt
 
 productSizeMeasurements (사이즈별 실측)
-├── id (PK)
+├── id (PK, serial)
 ├── productVariantId (FK → productVariants.id, cascade)
 ├── totalLength, shoulderWidth, chestSection
 ├── sleeveLength, waistSection, hipSection, thighSection
@@ -230,8 +234,8 @@ productSizeMeasurements (사이즈별 실측)
 └── createdAt
 
 orders (주문)
-├── id (PK)
-├── userId (FK → users.id)
+├── id (PK, UUID) - 자동 생성
+├── userId (FK → users.id, UUID)
 ├── totalAmount, status
 ├── shippingName, shippingPhone
 ├── shippingPostalCode, shippingAddress
@@ -246,16 +250,16 @@ orders (주문)
 └── createdAt, updatedAt
 
 orderItems (주문 상품)
-├── id (PK)
-├── orderId (FK → orders.id, cascade)
-├── productId (FK → products.id)
+├── id (PK, serial)
+├── orderId (FK → orders.id, UUID, cascade)
+├── productId (FK → products.id, UUID)
 ├── productName, productPrice, options, quantity
 ├── status, trackingNumber - 개별 상품 상태 관리
 └── createdAt
 
 deliveryAddresses (배송지 관리)
-├── id (PK)
-├── userId (FK → users.id, cascade)
+├── id (PK, UUID) - 자동 생성
+├── userId (FK → users.id, UUID, cascade)
 ├── recipient, phone, zipCode
 ├── address, detailAddress
 ├── requestNote - 배송 요청사항
@@ -263,23 +267,32 @@ deliveryAddresses (배송지 관리)
 └── createdAt
 
 wishlistItems (위시리스트)
-├── id (PK)
-├── userId (FK → users.id, cascade)
-├── productId (FK → products.id, cascade)
+├── id (PK, UUID) - 자동 생성
+├── userId (FK → users.id, UUID, cascade)
+├── productId (FK → products.id, UUID, cascade)
 └── createdAt
 
 cartItems (장바구니)
-├── id (PK)
-├── userId (FK → users.id, cascade)
-├── productId (FK → products.id, cascade)
-├── variantId (FK → productVariants.id, nullable)
+├── id (PK, UUID) - 자동 생성
+├── userId (FK → users.id, UUID, cascade)
+├── productId (FK → products.id, UUID, cascade)
+├── variantId (FK → productVariants.id, serial, nullable)
 ├── quantity
 └── createdAt, updatedAt
 
 sessions (세션 저장소)
-├── sid (PK)
+├── sid (PK, varchar)
 ├── sess (jsonb)
 └── expire
+
+emailVerifications (이메일 인증코드)
+├── id (PK, serial)
+├── email (required)
+├── code (6자리 인증코드)
+├── type ('signup', 'password_reset')
+├── verified (default: false)
+├── expiresAt (만료 시간)
+└── createdAt
 ```
 
 ### 주문 상태 (OrderStatus)
@@ -300,14 +313,62 @@ type OrderStatus =
 
 ### 인증 API
 
-| 메서드 | 경로                 | 인증 | 설명             |
-| ------ | -------------------- | ---- | ---------------- |
-| POST   | `/api/auth/signup`   | 없음 | 회원가입         |
-| POST   | `/api/auth/login`    | 없음 | 로그인           |
-| POST   | `/api/auth/logout`   | 없음 | 로그아웃         |
-| GET    | `/api/auth/user`     | 필요 | 현재 사용자 정보 |
-| PUT    | `/api/auth/user`     | 필요 | 사용자 정보 수정 |
-| PUT    | `/api/auth/password` | 필요 | 비밀번호 변경    |
+| 메서드 | 경로                           | 인증 | 설명                        |
+| ------ | ------------------------------ | ---- | --------------------------- |
+| POST   | `/api/auth/signup`             | 없음 | 회원가입 (이메일 인증 필수) |
+| POST   | `/api/auth/login`              | 없음 | 로그인                      |
+| POST   | `/api/auth/logout`             | 없음 | 로그아웃                    |
+| GET    | `/api/auth/user`               | 필요 | 현재 사용자 정보            |
+| PUT    | `/api/auth/user`               | 필요 | 사용자 정보 수정            |
+| PUT    | `/api/auth/password`           | 필요 | 비밀번호 변경               |
+| POST   | `/api/auth/send-verification`  | 없음 | 이메일 인증코드 발송        |
+| POST   | `/api/auth/verify-email`       | 없음 | 이메일 인증코드 확인        |
+| GET    | `/api/auth/check-verification` | 없음 | 이메일 인증 상태 확인       |
+
+#### 이메일 인증 흐름
+
+```
+1. POST /api/auth/send-verification (인증코드 발송)
+   └─ 6자리 인증코드 이메일 발송 (10분 유효)
+
+2. POST /api/auth/verify-email (인증코드 확인)
+   └─ 인증코드 검증 및 인증 완료 처리
+
+3. POST /api/auth/signup (회원가입)
+   └─ 이메일 인증 완료 후에만 회원가입 가능
+```
+
+#### 이메일 인증코드 발송 요청
+
+```typescript
+POST /api/auth/send-verification
+{
+  "email": "user@example.com",
+  "type": "signup"  // 'signup' | 'password_reset'
+}
+
+// 응답
+{
+  "message": "인증코드가 발송되었습니다"
+}
+```
+
+#### 이메일 인증코드 확인 요청
+
+```typescript
+POST /api/auth/verify-email
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "type": "signup"
+}
+
+// 응답
+{
+  "message": "이메일이 인증되었습니다",
+  "verified": true
+}
+```
 
 ### OAuth API (소셜 로그인)
 
@@ -325,6 +386,64 @@ type OrderStatus =
 | GET    | `/api/products/:id/variants` | 상품 옵션 목록                  |
 | GET    | `/api/categories`            | 카테고리 목록                   |
 | GET    | `/api/variants`              | 상품 옵션 전체 목록             |
+| GET    | `/api/search/address`        | 카카오 주소 검색                |
+| GET    | `/api/search/keyword`        | 카카오 키워드(장소) 검색        |
+
+#### 주소 검색 API
+
+```typescript
+// GET /api/search/address
+// Query Parameters:
+{
+  "query": "강남역",      // 필수: 검색 키워드
+  "page": 1,             // 선택: 페이지 번호 (1-45, 기본값: 1)
+  "size": 10             // 선택: 페이지당 결과 수 (1-30, 기본값: 10)
+}
+
+// 응답
+{
+  "results": [
+    {
+      "addressName": "서울 강남구 역삼동",
+      "roadAddress": "서울 강남구 테헤란로 123 (역삼빌딩)",
+      "jibunAddress": "서울 강남구 역삼동 123-45",
+      "zonecode": "06134",
+      "buildingName": "역삼빌딩",
+      "x": "127.028166",
+      "y": "37.500678"
+    }
+  ],
+  "totalCount": 100,
+  "isEnd": false
+}
+```
+
+```typescript
+// GET /api/search/keyword
+// Query Parameters:
+{
+  "query": "스타벅스 강남",  // 필수: 검색 키워드
+  "page": 1,                // 선택: 페이지 번호 (1-45, 기본값: 1)
+  "size": 10                // 선택: 페이지당 결과 수 (1-15, 기본값: 10)
+}
+
+// 응답
+{
+  "results": [
+    {
+      "placeName": "스타벅스 강남역점",
+      "addressName": "서울 강남구 역삼동 123-45",
+      "roadAddressName": "서울 강남구 테헤란로 123",
+      "phone": "02-123-4567",
+      "categoryName": "음식점 > 카페",
+      "x": "127.028166",
+      "y": "37.500678"
+    }
+  ],
+  "totalCount": 50,
+  "isEnd": false
+}
+```
 
 ### 보호된 API (인증 필요)
 
@@ -528,44 +647,61 @@ if (paymentProvider === "toss") {
 
 ### 주요 메서드
 
+> **Note**: UUID를 사용하는 테이블의 id 파라미터는 `string` 타입입니다.
+
 ```typescript
 interface IStorage {
-  // 사용자
-  getUser(id: number): Promise<User | undefined>;
+  // 사용자 (UUID 기반)
+  getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByNaverId(naverId: string): Promise<User | undefined>;
-  createUser(user: UpsertUser): Promise<User>;
-  updateUser(id: number, data: UserUpdateData): Promise<User | undefined>;
+  createUser(user: Omit<UpsertUser, "id">): Promise<User>;
+  updateUser(id: string, data: Partial<UpsertUser>): Promise<User | undefined>;
 
-  // 상품
-  getProducts(options?): Promise<Product[]>;
-  getProduct(id: number): Promise<Product | undefined>;
+  // 상품 (UUID 기반)
+  getProducts(filters?: { search?: string; categoryId?: number }): Promise<Product[]>;
+  getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
-  updateProduct(
-    id: number,
-    data: Partial<InsertProduct>
-  ): Promise<Product | undefined>;
-  deleteProduct(id: number): Promise<boolean>;
+  updateProduct(id: string, data: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<void>;
 
-  // 주문
-  createOrder(
-    userId: number,
-    orderData,
-    items: OrderItemCreateData[]
-  ): Promise<Order>;
-  getOrder(id: number): Promise<Order | undefined>;
-  getOrderByExternalOrderId(
-    externalOrderId: string
-  ): Promise<Order | undefined>;
-  getUserOrders(userId: number): Promise<Order[]>;
-  updateOrderStatus(
-    id: number,
-    statusUpdate: OrderStatusUpdate
-  ): Promise<Order | undefined>;
-  updateOrderPayment(id: number, paymentData): Promise<Order | undefined>;
-  cancelOrderPayment(id: number, cancelData): Promise<Order | undefined>;
+  // 상품 옵션 (productId는 UUID, variant id는 serial)
+  getProductVariants(productId: string): Promise<ProductVariant[]>;
+  getProductVariant(id: number): Promise<ProductVariant | undefined>;
+  createProductVariant(variant: InsertProductVariant): Promise<ProductVariant>;
 
-  // 장바구니, 위시리스트, 배송지 등...
+  // 주문 (UUID 기반)
+  createOrder(order: InsertOrder, items: OrderItemCreateData[]): Promise<string>; // UUID 반환
+  getOrder(orderId: string): Promise<(Order & { orderItems: ... }) | undefined>;
+  getOrderByExternalOrderId(externalOrderId: string): Promise<Order | undefined>;
+  getOrders(userId: string): Promise<Order[]>;
+  updateOrderStatus(orderId: string, status: string, trackingNumber?: string): Promise<Order | undefined>;
+  updateOrderPayment(orderId: string, paymentData): Promise<Order | undefined>;
+  cancelOrderPayment(orderId: string, cancelData): Promise<Order | undefined>;
+
+  // 장바구니 (UUID 기반)
+  getCartItems(userId: string): Promise<(CartItem & { product: Product })[]>;
+  addCartItem(item: InsertCartItem): Promise<CartItem>;
+  updateCartItem(id: string, quantity: number): Promise<CartItem | undefined>;
+  deleteCartItem(id: string): Promise<void>;
+  clearCart(userId: string): Promise<void>;
+
+  // 위시리스트 (UUID 기반)
+  getWishlistItems(userId: string): Promise<(WishlistItem & { product: Product })[]>;
+  addWishlistItem(userId: string, productId: string): Promise<WishlistItem>;
+  deleteWishlistItem(userId: string, productId: string): Promise<void>;
+
+  // 배송지 (UUID 기반)
+  getDeliveryAddresses(userId: string): Promise<DeliveryAddress[]>;
+  createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
+  updateDeliveryAddress(id: string, userId: string, address: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress | undefined>;
+  deleteDeliveryAddress(id: string, userId: string): Promise<void>;
+
+  // 이메일 인증
+  createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
+  getValidVerification(email: string, code: string, type: string): Promise<EmailVerification | undefined>;
+  markVerificationAsUsed(id: number): Promise<void>;
+  isEmailVerified(email: string, type: string): Promise<boolean>;
 }
 ```
 
@@ -646,6 +782,20 @@ naverpay: {
 | `NAVER_CLIENT_SECRET` | 네이버 개발자 앱 Client Secret |
 | `NAVER_CALLBACK_URL`  | 네이버 OAuth 콜백 URL          |
 
+### 카카오 API (주소 검색)
+
+| 변수명               | 설명                      |
+| -------------------- | ------------------------- |
+| `KAKAO_REST_API_KEY` | 카카오 개발자 REST API 키 |
+
+### Resend (이메일 발송)
+
+| 변수명            | 설명                                               |
+| ----------------- | -------------------------------------------------- |
+| `RESEND_API_KEY`  | Resend API 키                                      |
+| `EMAIL_FROM`      | 발신자 이메일 주소 (기본값: `noreply@example.com`) |
+| `EMAIL_FROM_NAME` | 발신자 이름 (기본값: `ShakiShaki`)                 |
+
 ---
 
 ## 문제 해결
@@ -679,7 +829,13 @@ psql $DATABASE_URL -c "SELECT 1"
 - 결제 금액 일치 여부 확인 (서버 vs 클라이언트)
 - `externalOrderId` 형식 확인 (6-64자)
 
-### 5. 관리자 권한 부여
+### 5. 주소 검색 실패
+
+- `KAKAO_REST_API_KEY` 환경 변수 확인
+- 카카오 개발자 콘솔에서 API 활성화 확인
+- 요청 쿼리 파라미터 형식 확인 (`query` 필수)
+
+### 6. 관리자 권한 부여
 
 ```sql
 UPDATE users SET is_admin = true WHERE email = 'admin@example.com';
@@ -691,7 +847,7 @@ UPDATE users SET is_admin = true WHERE email = 'admin@example.com';
 npx tsx server/scripts/create-admin.ts
 ```
 
-### 6. 스키마 변경 후 적용
+### 7. 스키마 변경 후 적용
 
 ```bash
 # 타입 체크
@@ -726,7 +882,42 @@ npm run db:push
 
 ## 변경 이력
 
-### 2025-12-16 (최신)
+### 2025-12-18 (최신)
+
+**UUID Primary Key 도입**
+
+- 주요 테이블 PK를 serial에서 UUID로 변경
+  - `users`, `products`, `cartItems`, `orders`, `deliveryAddresses`, `wishlistItems`
+- UUID 자동 생성 (defaultRandom)
+- 타입 정의 변경: `id: number` → `id: string`
+- Express Request, SessionData 타입 업데이트
+
+**카카오 주소 검색 API 추가**
+
+- `server/routes/search.routes.ts` 추가
+- `/api/search/address` - 주소 검색 API
+- `/api/search/keyword` - 키워드(장소) 검색 API
+- 카카오 로컬 API 연동
+
+**환경 변수 추가**
+
+- `KAKAO_REST_API_KEY` - 카카오 REST API 키
+
+### 2025-12-17
+
+**이메일 인증 기능 추가**
+
+- 회원가입 시 이메일 인증코드 발송 필수
+- Resend 이메일 서비스 연동
+- `server/services/email.service.ts` 추가
+- `emailVerifications` 테이블 추가
+- 인증 API 추가: `send-verification`, `verify-email`, `check-verification`
+
+**환경 변수 추가**
+
+- `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`
+
+### 2025-12-16
 
 **소셜 로그인 지원**
 
@@ -761,6 +952,7 @@ npm run db:push
 - [Zod 문서](https://zod.dev/)
 - [토스페이먼츠 API 문서](https://docs.tosspayments.com/)
 - [네이버 로그인 API 문서](https://developers.naver.com/docs/login/api/)
+- [카카오 로컬 API 문서](https://developers.kakao.com/docs/latest/ko/local/dev-guide)
 - [Neon PostgreSQL 문서](https://neon.tech/docs/)
 
 ---

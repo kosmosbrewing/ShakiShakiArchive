@@ -190,11 +190,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-8 border-b pb-4">
-      <h1 class="text-heading font-bold tracking-tight text-foreground">
-        주문 / 결제
-      </h1>
+  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">ORDER</h3>
+      <p class="text-body text-muted-foreground pt-1">결제 내용</p>
     </div>
 
     <LoadingSpinner v-if="loading" />
@@ -254,7 +253,7 @@ onMounted(() => {
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg"
+            <CardTitle class="text-heading"
               >주문 상품 ({{ cartItems.length }}개)</CardTitle
             >
           </CardHeader>
@@ -263,7 +262,7 @@ onMounted(() => {
               <div
                 v-for="item in cartItems"
                 :key="item.id"
-                class="flex gap-4 p-4 items-start"
+                class="flex gap-4 pl-4 pr-7 pb-4 items-start"
               >
                 <div
                   class="w-20 h-24 bg-muted rounded overflow-hidden shrink-0 border border-border"
@@ -360,14 +359,9 @@ onMounted(() => {
             </CardContent>
           </Card>
 
-          <Button
-            @click="handlePayment"
-            class="w-full h-14 text-heading shadow-lg"
-            size="lg"
-          >
+          <Button @click="handlePayment" class="w-full" size="lg">
             {{ formatPrice(totalAmount) }} 결제하기
           </Button>
-
           <p class="text-caption text-center text-muted-foreground">
             위 주문 내용을 확인하였으며 결제에 동의합니다.
           </p>

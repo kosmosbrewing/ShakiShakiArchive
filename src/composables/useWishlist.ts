@@ -35,7 +35,7 @@ export function useWishlist() {
   };
 
   // 위시리스트에 추가
-  const addItem = async (productId: number) => {
+  const addItem = async (productId: string) => {
     try {
       await addToWishlist(productId);
       return true;
@@ -46,7 +46,7 @@ export function useWishlist() {
   };
 
   // 위시리스트에서 삭제
-  const removeItem = async (productId: number, confirmMessage?: string) => {
+  const removeItem = async (productId: string, confirmMessage?: string) => {
     if (confirmMessage && !confirm(confirmMessage)) return false;
 
     try {
@@ -62,7 +62,7 @@ export function useWishlist() {
   };
 
   // 특정 상품이 위시리스트에 있는지 확인
-  const isInWishlist = (productId: number) => {
+  const isInWishlist = (productId: string) => {
     return wishlistItems.value.some((item) => item.productId === productId);
   };
 
@@ -87,7 +87,7 @@ export function useWishlist() {
 /**
  * 위시리스트 토글 (상품 상세 페이지용)
  */
-export function useWishlistToggle(productId: Ref<number> | number) {
+export function useWishlistToggle(productId: Ref<string> | string) {
   const isWishlisted = ref(false);
   const loading = ref(false);
 
@@ -95,7 +95,7 @@ export function useWishlistToggle(productId: Ref<number> | number) {
   const checkStatus = async () => {
     try {
       const items = await fetchWishlist();
-      const pid = typeof productId === "number" ? productId : productId.value;
+      const pid = typeof productId === "string" ? productId : productId.value;
       isWishlisted.value = items.some((item: WishlistItem) => item.productId === pid);
     } catch (e) {
       console.error("위시리스트 확인 실패:", e);
@@ -105,7 +105,7 @@ export function useWishlistToggle(productId: Ref<number> | number) {
   // 위시리스트 토글
   const toggle = async () => {
     loading.value = true;
-    const pid = typeof productId === "number" ? productId : productId.value;
+    const pid = typeof productId === "string" ? productId : productId.value;
 
     try {
       if (isWishlisted.value) {

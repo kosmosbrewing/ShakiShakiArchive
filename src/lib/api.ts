@@ -181,14 +181,14 @@ export async function fetchWishlist(): Promise<any[]> {
   return apiRequest("/api/wishlist");
 }
 
-export async function addToWishlist(productId: number): Promise<any> {
+export async function addToWishlist(productId: string): Promise<any> {
   return apiRequest("/api/wishlist", {
     method: "POST",
     body: JSON.stringify({ productId }),
   });
 }
 
-export async function removeFromWishlist(productId: number): Promise<void> {
+export async function removeFromWishlist(productId: string): Promise<void> {
   return apiRequest(`/api/wishlist/${productId}`, {
     method: "DELETE",
   });
@@ -247,7 +247,7 @@ export async function createDeliveryAddress(data: {
   });
 }
 
-export async function deleteDeliveryAddress(addressId: number): Promise<void> {
+export async function deleteDeliveryAddress(addressId: string): Promise<void> {
   return apiRequest(`/api/user/addresses/${addressId}`, {
     method: "DELETE",
   });

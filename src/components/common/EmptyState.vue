@@ -4,8 +4,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-vue-next";
 
 interface Props {
+  header: string;
   message: string;
   buttonText?: string;
   buttonLink?: string;
@@ -26,19 +28,17 @@ const emit = defineEmits<{
 <template>
   <Card class="text-center py-16">
     <CardContent>
-      <!-- 아이콘 슬롯 -->
-      <div v-if="$slots.icon" class="mb-4 flex justify-center">
-        <slot name="icon" />
-      </div>
-
       <!-- 메시지 -->
-      <p class="text-muted-foreground mb-6">{{ message }}</p>
+      <h3 class="text-heading mb-2">{{ header }}</h3>
+      <p class="text-body text-muted-foreground mb-6">{{ message }}</p>
 
       <!-- 버튼 (링크 또는 이벤트) -->
       <router-link v-if="buttonLink" :to="buttonLink">
-        <Button variant="outline">{{ buttonText }}</Button>
+        <Button size="lg"
+          >{{ buttonText }} <ArrowRight class="ml-2 w-4 h-4"
+        /></Button>
       </router-link>
-      <Button v-else-if="buttonText" variant="outline" @click="emit('action')">
+      <Button v-else-if="buttonText" size="lg" @click="emit('action')">
         {{ buttonText }}
       </Button>
 

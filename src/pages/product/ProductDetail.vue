@@ -37,8 +37,8 @@ const productData = useProduct();
 const { requireAuth } = useAuthCheck();
 const { addItem } = useCart();
 
-// 상품 ID
-const productId = computed(() => Number(route.params.id));
+// 상품 ID (UUID)
+const productId = computed(() => String(route.params.id));
 
 // variant 선택
 const variantSelection = useVariantSelection(productData.variants);
@@ -79,10 +79,10 @@ const handleAddToCart = async () => {
     return;
   }
 
-  // 1) 상품 ID 변환
-  const pid = Number(productData.product.value!.id);
+  // 1) 상품 ID (UUID)
+  const pid = productData.product.value!.id;
 
-  // 2) 옵션 ID 변환
+  // 2) 옵션 ID 변환 (serial)
   const rawVariantId = variantSelection.selectedVariantId.value;
   const vid = rawVariantId ? Number(rawVariantId) : undefined;
 
@@ -101,7 +101,7 @@ const handleAddToCart = async () => {
 
   // API 호출 (비회원은 내부적으로 localStorage 사용)
   const success = await addItem({
-    productId: pid,
+    productId: pid, // UUID
     variantId: vid,
     quantity: qty,
     productInfo: productInfo, // [추가] 상품 상세 정보 전달
@@ -136,7 +136,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
+  <div
+    class="w-full px-5 mx-auto py-12 sm:py-16 sm:w-11/12 sm:px-0 max-w-screen-xl top-5 z-40"
+  >
     <LoadingSpinner
       v-if="productData.loading.value || !productData.product.value"
     />
@@ -193,7 +195,7 @@ onMounted(async () => {
       >
         <CardContent class="p-6">
           <div class="flex justify-between items-start gap-4 mb-2">
-            <h1 class="text-heading text-foreground">
+            <h1 class="text-heading text-foreground font-bold leading-loose">
               {{ productData.product.value.name }}
             </h1>
 
@@ -206,28 +208,28 @@ onMounted(async () => {
                 class="w-6 h-6 transition-colors duration-200"
                 :class="
                   wishlistToggle.isWishlisted.value
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400 group-hover:text-red-400'
+                    ? 'fill-primary text-primary'
+                    : 'text-muted-foreground group-hover:text-primary'
                 "
               />
             </button>
           </div>
 
-          <div class="flex items-end gap-2 mb-8">
-            <span class="text-heading text-foreground">
+          <div class="flex items-end gap-2 mb-8 -translate-y-3">
+            <span class="text-body text-foreground">
               {{ formatPrice(productData.product.value.price) }}
             </span>
             <span
               v-if="productData.product.value.originalPrice"
-              class="text-heading text-muted-foreground line-through mb-1"
+              class="text-caption text-muted-foreground/50 line-through mb-1"
             >
               {{ formatPrice(productData.product.value.originalPrice) }}
             </span>
           </div>
 
           <div v-if="productData.variants.value.length > 0" class="mb-8">
-            <label class="block text-body font-bold text-foreground mb-3"
-              >Size</label
+            <label class="block text-body font-semibold text-foreground mb-2"
+              >사이즈</label
             >
             <div class="flex flex-wrap gap-2">
               <Button
@@ -268,11 +270,11 @@ onMounted(async () => {
             />
           </div>
 
-          <div class="mb-8">
+          <div class="mb-6">
             <Button
               @click="handleAddToCart"
               :disabled="variantSelection.needsVariantSelection.value"
-              class="w-full h-14 text-heading"
+              class="w-full"
               size="lg"
             >
               {{
@@ -285,12 +287,12 @@ onMounted(async () => {
 
           <Separator />
 
-          <div class="mt-6">
+          <div class="mt-4">
             <div class="flex border-b border-border">
               <button
                 @click="setTab('description')"
                 :class="[
-                  'flex-1 py-4 text-body font-bold uppercase tracking-wide transition-colors relative',
+                  'flex-1 py-4 text-body font-semibold uppercase tracking-wide transition-colors relative',
                   activeTab === 'description'
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -305,7 +307,7 @@ onMounted(async () => {
               <button
                 @click="setTab('size')"
                 :class="[
-                  'flex-1 py-4 text-body font-bold uppercase tracking-wide transition-colors relative',
+                  'flex-1 py-4 text-body font-semibold uppercase tracking-wide transition-colors relative',
                   activeTab === 'size'
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -322,7 +324,7 @@ onMounted(async () => {
             <div class="py-8 min-h-[200px]">
               <div v-show="activeTab === 'description'" class="animate-fade-in">
                 <p
-                  class="text-muted-foreground whitespace-pre-line leading-relaxed text-body"
+                  class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption"
                 >
                   {{ productData.product.value.description }}
                 </p>
@@ -339,14 +341,14 @@ onMounted(async () => {
                       >
                         <tr>
                           <th
-                            class="px-4 py-3 font-bold border-b border-border bg-muted text-left w-20"
+                            class="px-4 py-3 text-caption font-semibold border-b border-border bg-muted text-center w-20"
                           >
                             Size
                           </th>
                           <th
                             v-for="col in sizeMeasurements.activeColumns.value"
                             :key="col.key"
-                            class="px-4 py-3 font-medium border-b border-border"
+                            class="px-4 py-3 text-caption font-semibold border-b border-border"
                           >
                             {{ col.label }}
                           </th>
@@ -359,7 +361,7 @@ onMounted(async () => {
                           :key="idx"
                         >
                           <td
-                            class="px-4 py-3 font-bold text-left bg-muted/50 text-foreground"
+                            class="px-4 py-3 text-caption bg-muted/50 text-foreground"
                           >
                             {{ data.variantSize }}
                           </td>

@@ -41,7 +41,7 @@ module.exports = {
           { lineHeight: "1.35", fontWeight: "600" },
         ],
         // H3: 카드/모달 제목 (18px, SemiBold)
-        h3: [
+        heading: [
           "1.125rem", // 18px
           { lineHeight: "1.4", fontWeight: "600" },
         ],

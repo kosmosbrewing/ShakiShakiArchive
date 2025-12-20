@@ -65,7 +65,7 @@ export function useCart() {
 
   // [수정] 장바구니 추가
   const addItem = async (params: {
-    productId: number;
+    productId: string; // UUID
     variantId?: number;
     quantity: number;
     productInfo?: any; // [추가] 비회원용 상품 정보 (이미지, 가격 등)
@@ -143,7 +143,7 @@ export function useCart() {
 
   // [수정] 아이템 삭제
   const removeItem = async (
-    itemId: number,
+    itemId: string, // UUID
     confirmMessage = "삭제하시겠습니까?"
   ) => {
     if (!confirm(confirmMessage)) return false;

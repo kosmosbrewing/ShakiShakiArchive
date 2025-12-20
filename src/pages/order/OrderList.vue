@@ -8,6 +8,7 @@ import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
+import { getDayName } from "@/lib/utils";
 
 // 공통 컴포넌트
 import {
@@ -79,7 +80,11 @@ const handleConfirmCancel = async (reason: string) => {
 
     // 환불 정보가 있으면 알림
     if (result.refund) {
-      alert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
+      alert(
+        `주문이 취소되었습니다.\n환불 금액: ${formatPrice(
+          result.refund.cancelAmount
+        )}`
+      );
     } else {
       alert("주문이 취소되었습니다.");
     }
@@ -107,16 +112,16 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-8">
-      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
-        Order List
-      </h1>
+    <div class="mb-6 border-b pb-3">
+      <div>
+        <h3 class="text-heading text-primary tracking-wider">주문 목록</h3>
+      </div>
     </div>
-
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
       v-else-if="orders.length === 0"
+      header="주문내역"
       message="주문 내역이 없습니다."
       button-text="쇼핑하러 가기"
       button-link="/product/all"
@@ -132,18 +137,16 @@ onMounted(() => {
           class="bg-muted/30 py-3 px-6 flex flex-row items-center justify-between border-b"
         >
           <div class="flex items-center gap-2">
-            <span class="font-bold text-heading text-foreground">
+            <span class="font-semibold text-heading text-foreground">
               {{ formatDate(order.createdAt) }}
-            </span>
-            <span class="text-muted-foreground text-body hidden sm:inline-block">
-              주문
+              ({{ getDayName(order.createdAt) }})
             </span>
           </div>
 
           <Button
             variant="ghost"
             size="sm"
-            class="text-body text-muted-foreground hover:text-foreground h-8 px-2"
+            class="text-body text-muted-foreground font-semibold hover:text-foreground h-8 px-2"
             @click="goToOrderDetail(order.id)"
           >
             주문 상세
@@ -166,7 +169,7 @@ onMounted(() => {
               <div>
                 <div class="flex justify-between items-start mb-1 gap-2">
                   <h3
-                    class="font-bold text-foreground text-heading cursor-pointer hover:underline line-clamp-2"
+                    class="font-bold text-foreground text-body cursor-pointer hover:underline line-clamp-2"
                     @click="router.push(`/productDetail/${item.productId}`)"
                   >
                     {{ item.productName }}
@@ -174,12 +177,12 @@ onMounted(() => {
                   <OrderStatusBadge :status="item.status" class="shrink-0" />
                 </div>
 
-                <p class="text-body text-muted-foreground mb-2">
-                  {{ item.options || "옵션 없음" }}
+                <p class="text-body text-muted-foreground mb-1">
+                  {{ item.options || "옵션 없음" }} / {{ item.quantity }}개
                 </p>
 
-                <p class="text-body font-medium">
-                  {{ formatPrice(item.productPrice) }} / {{ item.quantity }}개
+                <p class="text-body text-foreground font-medium">
+                  {{ formatPrice(item.productPrice) }}
                 </p>
               </div>
 

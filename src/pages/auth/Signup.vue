@@ -10,15 +10,10 @@ import {
   Mail,
   KeyRound,
 } from "lucide-vue-next";
-
+import { PhoneInput } from "@/components/common";
 // UI Components
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,7 +28,9 @@ const formData = reactive({
   password: "",
   confirmPassword: "",
   userName: "",
-  phone: "",
+  phone1: "010",
+  phone2: "",
+  phone3: "",
   zipCode: "",
   address: "",
   detailAddress: "",
@@ -88,7 +85,12 @@ const handleSignup = async () => {
     errorMessage.value = "이메일 인증을 완료해주세요.";
     return;
   }
-  if (!formData.userName || !formData.phone) {
+  if (
+    !formData.userName ||
+    !formData.phone1 ||
+    formData.phone2 ||
+    formData.phone3
+  ) {
     errorMessage.value = "필수 정보를 모두 입력해주세요.";
     return;
   }
@@ -107,7 +109,10 @@ const handleSignup = async () => {
       email: formData.email,
       password: formData.password,
       userName: formData.userName,
-      phone: formData.phone,
+      phone1: formData.phone1,
+      phone2: formData.phone2,
+      phone3: formData.phone3,
+
       zipCode: formData.zipCode,
       address: formData.address,
       detailAddress: formData.detailAddress,
@@ -126,212 +131,211 @@ const handleSignup = async () => {
 </script>
 
 <template>
-  <section id="signup" class="container py-24 sm:py-16">
-    <div class="max-w-lg mx-auto">
-      <div class="mb-8 text-center">
-        <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
-        <p class="mt-2 text-muted-foreground">
-          이미 계정이 있으신가요?
-          <router-link
-            to="/login"
-            class="text-primary hover:underline font-medium"
-            >로그인하기</router-link
+  <section
+    id="signup"
+    class="max-w-md mx-auto items-center justify-center py-24 sm:py-16"
+  >
+    <div class="mb-6 text-center">
+      <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
+    </div>
+
+    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+      <CardContent>
+        <form @submit.prevent="handleSignup" class="grid gap-6">
+          <div class="flex flex-col gap-1.5 mt-6">
+            <Label for="email"
+              >이메일 <span class="text-red-500">*</span></Label
+            >
+            <div class="flex gap-2">
+              <Input
+                id="email"
+                type="email"
+                placeholder="example@email.com"
+                v-model="formData.email"
+                :disabled="verificationState.isVerified"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                @click="sendVerificationCode"
+                :disabled="
+                  verificationState.isVerified ||
+                  verificationState.isLoading ||
+                  !formData.email
+                "
+                class="w-28 shrink-0"
+              >
+                <Loader2
+                  v-if="verificationState.isLoading"
+                  class="animate-spin h-4 w-4 mr-2"
+                />
+                <Mail
+                  v-else-if="!verificationState.isVerified"
+                  class="w-4 h-4 mr-2"
+                />
+                <span v-if="verificationState.isLoading">전송중</span>
+                <span v-else-if="verificationState.isVerified">완료</span>
+                <span v-else>인증요청</span>
+              </Button>
+            </div>
+          </div>
+
+          <div
+            v-if="verificationState.isSent && !verificationState.isVerified"
+            class="flex flex-col gap-1.5 animate-in slide-in-from-top-2"
           >
-        </p>
-      </div>
-
-      <Card class="bg-muted/60 dark:bg-card">
-        <CardHeader></CardHeader>
-        <CardContent>
-          <form @submit.prevent="handleSignup" class="grid gap-6">
-            <div class="flex flex-col gap-1.5">
-              <Label for="email"
-                >이메일 <span class="text-red-500">*</span></Label
-              >
-              <div class="flex gap-2">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@email.com"
-                  v-model="formData.email"
-                  :disabled="verificationState.isVerified"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  @click="sendVerificationCode"
-                  :disabled="
-                    verificationState.isVerified ||
-                    verificationState.isLoading ||
-                    !formData.email
-                  "
-                  class="w-28 shrink-0"
-                >
-                  <Loader2
-                    v-if="verificationState.isLoading"
-                    class="animate-spin h-4 w-4 mr-2"
-                  />
-                  <Mail
-                    v-else-if="!verificationState.isVerified"
-                    class="w-4 h-4 mr-2"
-                  />
-                  <span v-if="verificationState.isLoading">전송중</span>
-                  <span v-else-if="verificationState.isVerified">완료</span>
-                  <span v-else>인증요청</span>
-                </Button>
-              </div>
-            </div>
-
-            <div
-              v-if="verificationState.isSent && !verificationState.isVerified"
-              class="flex flex-col gap-1.5 animate-in slide-in-from-top-2"
-            >
-              <Label for="code">인증번호</Label>
-              <div class="flex gap-2">
-                <Input
-                  id="code"
-                  type="text"
-                  placeholder="인증번호 6자리"
-                  v-model="verificationState.code"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  class="w-28 shrink-0"
-                  @click="verifyCode"
-                >
-                  <KeyRound class="w-4 h-4 mr-2" /> 확인
-                </Button>
-              </div>
-              <p class="text-caption text-muted-foreground">테스트 코드: 123456</p>
-            </div>
-
-            <Alert
-              v-if="verificationState.isVerified"
-              class="bg-green-50 text-green-700 border-green-200 py-2"
-            >
-              <CheckCircle2 class="h-4 w-4" />
-              <AlertTitle class="ml-2 text-body font-medium"
-                >이메일 인증 완료</AlertTitle
-              >
-            </Alert>
-
-            <div class="flex flex-col gap-1.5">
-              <Label for="password"
-                >비밀번호 <span class="text-red-500">*</span></Label
-              >
+            <Label for="code">인증번호</Label>
+            <div class="flex gap-2">
               <Input
-                id="password"
-                type="password"
-                placeholder="8자 이상"
-                v-model="formData.password"
-              />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="confirmPassword"
-                >비밀번호 확인 <span class="text-red-500">*</span></Label
-              >
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="비밀번호 재입력"
-                v-model="formData.confirmPassword"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <Label for="userName"
-                >이름 <span class="text-red-500">*</span></Label
-              >
-              <Input
-                id="userName"
+                id="code"
                 type="text"
-                placeholder="실명 입력"
-                v-model="formData.userName"
+                placeholder="인증번호 6자리"
+                v-model="verificationState.code"
               />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="phone"
-                >휴대전화 <span class="text-red-500">*</span></Label
+              <Button
+                type="button"
+                variant="outline"
+                class="w-28 shrink-0"
+                @click="verifyCode"
               >
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="010-1234-5678"
-                v-model="formData.phone"
-              />
+                <KeyRound class="w-4 h-4 mr-2" /> 확인
+              </Button>
             </div>
-            <div class="flex flex-col gap-2">
-              <Label>주소</Label>
-              <div class="flex gap-2">
-                <Input
-                  v-model="formData.zipCode"
-                  placeholder="우편번호"
-                  readonly
-                  class="bg-gray/50"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  class="w-28 shrink-0"
-                  @click="openAddressSearch"
-                >
-                  <Search class="w-4 h-4 mr-2" /> 주소검색
-                </Button>
-              </div>
+            <p class="text-caption text-muted-foreground">
+              테스트 코드: 123456
+            </p>
+          </div>
 
+          <Alert
+            v-if="verificationState.isVerified"
+            class="bg-green-50 text-green-700 border-green-200 py-2"
+          >
+            <CheckCircle2 class="h-4 w-4" />
+            <AlertTitle class="ml-2 text-body font-medium"
+              >이메일 인증 완료</AlertTitle
+            >
+          </Alert>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="password"
+              >비밀번호 <span class="text-red-500">*</span></Label
+            >
+            <Input
+              id="password"
+              type="password"
+              placeholder="8자 이상"
+              v-model="formData.password"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="confirmPassword"
+              >비밀번호 확인 <span class="text-red-500">*</span></Label
+            >
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="비밀번호 재입력"
+              v-model="formData.confirmPassword"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="userName"
+              >이름 <span class="text-red-500">*</span></Label
+            >
+            <Input
+              id="userName"
+              type="text"
+              placeholder="실명 입력"
+              v-model="formData.userName"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="phone"
+              >휴대전화 <span class="text-red-500">*</span></Label
+            >
+            <PhoneInput
+              v-model:phone1="formData.phone1"
+              v-model:phone2="formData.phone2"
+              v-model:phone3="formData.phone3"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <Label>주소</Label>
+            <div class="flex gap-2">
               <Input
-                v-model="formData.address"
-                placeholder="기본 주소"
+                v-model="formData.zipCode"
+                placeholder="우편번호"
                 readonly
                 class="bg-gray/50"
               />
-
-              <Input
-                v-model="formData.detailAddress"
-                :disabled="!formData.address"
-                :placeholder="
-                  formData.address
-                    ? '상세 주소를 입력해주세요'
-                    : '주소 검색 후 입력 가능합니다'
-                "
-                class="disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            <div class="flex items-center space-x-2 mt-2">
-              <input
-                id="email-opt-in"
-                type="checkbox"
-                v-model="formData.emailOptIn"
-                class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <label
-                for="email-opt-in"
-                class="text-body font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              <Button
+                type="button"
+                variant="outline"
+                class="w-28 shrink-0"
+                @click="openAddressSearch"
               >
-                [선택] 이벤트 및 할인 소식 이메일 수신 동의
-              </label>
+                <Search class="w-4 h-4 mr-2" /> 주소검색
+              </Button>
             </div>
 
-            <Alert v-if="errorMessage" variant="destructive">
-              <AlertCircle class="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{{ errorMessage }}</AlertDescription>
-            </Alert>
+            <Input
+              v-model="formData.address"
+              placeholder="기본 주소"
+              readonly
+              class="bg-gray/50"
+            />
 
-            <Button
-              type="submit"
-              class="w-full mt-2"
-              :disabled="isSubmitting || !verificationState.isVerified"
+            <Input
+              v-model="formData.detailAddress"
+              :disabled="!formData.address"
+              :placeholder="
+                formData.address
+                  ? '상세 주소를 입력해주세요'
+                  : '주소 검색 후 입력 가능합니다'
+              "
+              class="disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          <div class="flex items-center space-x-2 mt-2">
+            <input
+              id="email-opt-in"
+              type="checkbox"
+              v-model="formData.emailOptIn"
+              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label
+              for="email-opt-in"
+              class="text-body font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
-              {{ isSubmitting ? "처리 중..." : "회원가입 완료" }}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter></CardFooter>
-      </Card>
-    </div>
+              [선택] 이벤트 및 할인 소식 이메일 수신 동의
+            </label>
+          </div>
+
+          <Alert v-if="errorMessage" variant="destructive">
+            <AlertCircle class="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{{ errorMessage }}</AlertDescription>
+          </Alert>
+
+          <Button
+            type="submit"
+            class="w-full mt-2"
+            :disabled="isSubmitting || !verificationState.isVerified"
+          >
+            <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+            {{ isSubmitting ? "처리 중..." : "회원가입 완료" }}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <p class="text-center text-muted-foreground mt-4">
+      이미 계정이 있으신가요?
+      <router-link to="/login" class="text-primary hover:underline font-medium"
+        >로그인하기</router-link
+      >
+    </p>
   </section>
 </template>

@@ -23,7 +23,7 @@ const handleEdit = (address: DeliveryAddress) => {
 };
 
 // 배송지 삭제
-const handleDelete = (id: number) => {
+const handleDelete = (id: string) => {
   removeAddress(id);
 };
 
@@ -35,10 +35,8 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
-    <div class="mb-8">
-      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
-        Address Book
-      </h1>
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">배송지 관리</h3>
     </div>
 
     <!-- 로딩 스피너 -->
@@ -47,7 +45,10 @@ onMounted(() => {
     <!-- 빈 배송지 목록 -->
     <EmptyState
       v-else-if="addresses.length === 0"
+      header="배송지정보"
       message="등록된 배송지가 없습니다."
+      button-text="회원정보 가기"
+      button-link="/account"
     />
 
     <!-- 배송지 목록 -->

@@ -131,13 +131,13 @@ onUnmounted(() => {
 <template>
   <header
     :class="{
-      'shadow-light': mode === 'light',
-      'w-[95%] lg:w-[90%] max-w-screen-2xl top-5 mx-auto sticky z-40 rounded-2xl flex items-center p-4 bg-card shadow-md transition-all duration-300': true,
+      'w-11/12 max-w-screen-2xl top-5 mx-auto sticky z-40 shadow-light border-zinc-200 rounded-2xl flex items-center p-4 bg-card shadow-md transition-all duration-300': true,
     }"
     :style="{
       backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.9)',
     }"
   >
+    <!-- Mobile -->
     <div
       class="relative flex items-center justify-between lg:hidden w-full h-10"
     >
@@ -159,7 +159,7 @@ onUnmounted(() => {
                 <img
                   src="@/assets/logo03.png"
                   alt="Logo"
-                  class="h-6 w-auto ml-1 mt-5"
+                  class="h-10 w-auto ml-1 mt-10 object-contain"
                 />
               </SheetTitle>
             </SheetHeader>
@@ -169,13 +169,19 @@ onUnmounted(() => {
                 v-for="route in categoryRoutes"
                 :key="route.label"
                 :to="route.path"
-                class="text-body font-medium hover:text-primary transition-colors py-3"
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3"
                 @click="isOpen = false"
               >
                 {{ route.label }}
               </RouterLink>
+              <Button
+                variant="ghost"
+                class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
+                @click="handleInstagram"
+              >
+                INSTAGRAM
+              </Button>
             </div>
-
             <div class="flex-1"></div>
 
             <div class="flex justify-end p-2 mt-2">
@@ -222,24 +228,11 @@ onUnmounted(() => {
         <img
           src="@/assets/logo01.png"
           alt="Logo"
-          class="h-10 w-auto object-contain"
+          class="h-8 w-auto object-contain"
         />
       </div>
 
       <div class="flex items-center justify-end gap-1 z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          class="h-8 w-8 hover:bg-transparent p-1"
-          @click="handleInstagram"
-        >
-          <img
-            :src="instagramIcon"
-            alt="Instagram"
-            class="w-full h-full object-contain"
-          />
-        </Button>
-
         <Button
           variant="ghost"
           size="icon"
@@ -276,6 +269,7 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Desktop -->
     <div
       class="hidden lg:grid grid-cols-[1fr_auto_1fr] items-center w-full gap-4"
     >
@@ -285,10 +279,13 @@ onUnmounted(() => {
           :key="label"
           as-child
           variant="ghost"
-          class="h-9 px-3 text-caption font-medium hover:bg-muted/50"
+          class="h-9 pl-1 px-2.5 text-caption font-medium hover:bg-muted/10 tracking-wider"
         >
-          <RouterLink :to="path">
-            <span>{{ label }}</span>
+          <RouterLink
+            :to="path"
+            class="hover:text-primary transition-colors tracking-wider py-3"
+          >
+            <span class="text-caption">{{ label }}</span>
           </RouterLink>
         </Button>
       </div>
@@ -342,7 +339,7 @@ onUnmounted(() => {
               <img :src="cartIcon" alt="Cart" class="w-6 h-6 object-contain" />
               <span
                 v-if="cartItemCount > 0"
-                class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+                class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
               >
                 {{ cartItemCount }}
               </span>

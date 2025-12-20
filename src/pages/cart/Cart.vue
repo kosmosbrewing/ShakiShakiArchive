@@ -67,17 +67,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-8">
-      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
-        Shopping Cart
-      </h1>
+  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+    <!-- 페이지 제목 -->
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">CART</h3>
+      <p class="text-body text-muted-foreground pt-1">
+        관심 있는 상품을 모아두었습니다.
+      </p>
     </div>
 
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
       v-else-if="isEmpty"
+      header="장바구니가 비어있습니다."
       message="장바구니에 담긴 상품이 없습니다."
       button-text="쇼핑하러 가기"
       button-link="/product/all"
@@ -159,7 +162,7 @@ onMounted(() => {
 
             <div class="flex justify-between text-heading">
               <span class="text-foreground">총 결제 금액</span>
-              <span class="text-foreground">{{
+              <span class="text-primary">{{
                 formatPrice(totalProductPrice)
               }}</span>
             </div>

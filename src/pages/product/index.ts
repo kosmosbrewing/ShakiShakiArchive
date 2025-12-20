@@ -2,4 +2,5 @@
 // 상품 관련 페이지
 
 export { default as Product } from "./Product.vue";
+export { default as ProductHome } from "./ProductHome.vue";
 export { default as ProductDetail } from "./ProductDetail.vue";

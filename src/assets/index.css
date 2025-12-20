@@ -17,7 +17,7 @@ html {
     --foreground: 31 34% 28%;
 
     /* [서브 컬러] #6E584C (Muted Brown) */
-    --muted-foreground: 21 18% 45%;
+    --muted-foreground: 20 13% 44%;
 
     /* [메인] 관리자용 진한 검정 (#171717) */
     --admin-foreground: 0 0% 9%;
@@ -31,7 +31,7 @@ html {
     --card-foreground: 31 34% 28%;
     --popover: 0 0% 100%;
     --popover-foreground: 31 34% 28%;
-    --primary: 336 60% 68%;
+    --primary: 335 56% 63%;
     --primary-foreground: 0 0% 100%;
     --secondary: 60 4.8% 95.9%;
     --secondary-foreground: 31 34% 28%;

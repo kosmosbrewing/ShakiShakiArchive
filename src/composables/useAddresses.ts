@@ -55,7 +55,7 @@ export function useAddresses() {
   };
 
   // 배송지 삭제
-  const removeAddress = async (id: number, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
+  const removeAddress = async (id: string, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
     if (!confirm(confirmMessage)) return false;
 
     try {

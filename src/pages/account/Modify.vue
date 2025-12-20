@@ -66,7 +66,8 @@ const openAddressSearch = () => {
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
   if (!form.userName) return alert("이름을 입력해주세요.");
-  if (!form.password) return alert("정보를 수정하려면 비밀번호를 입력해주세요.");
+  if (!form.password)
+    return alert("정보를 수정하려면 비밀번호를 입력해주세요.");
   if (form.password !== form.confirmPassword) {
     return alert("비밀번호가 일치하지 않습니다.");
   }
@@ -98,7 +99,8 @@ const handleUpdateProfile = async () => {
     form.password = "";
     form.confirmPassword = "";
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "정보 수정 실패";
+    const errorMessage =
+      error instanceof Error ? error.message : "정보 수정 실패";
     if (errorMessage.includes("401") || errorMessage.includes("비밀번호")) {
       alert("비밀번호가 올바르지 않습니다.");
     } else {
@@ -135,12 +137,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
-    <!-- 페이지 타이틀 -->
-    <div class="mb-8">
-      <h1 class="text-body font-bold uppercase tracking-widest text-foreground">
-        Profile Settings
-      </h1>
+  <div class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
+    <!-- 페이지 제목 -->
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">회원정보 수정</h3>
     </div>
 
     <form @submit.prevent="handleUpdateProfile" class="space-y-8">
@@ -149,6 +149,7 @@ onMounted(async () => {
         <CardHeader>
           <CardTitle class="text-heading">기본 정보</CardTitle>
         </CardHeader>
+
         <CardContent class="space-y-5">
           <div class="space-y-2">
             <Label for="email">이메일</Label>
@@ -167,15 +168,6 @@ onMounted(async () => {
           </div>
 
           <div class="space-y-2">
-            <Label>휴대전화</Label>
-            <PhoneInput
-              v-model:phone1="form.phone1"
-              v-model:phone2="form.phone2"
-              v-model:phone3="form.phone3"
-            />
-          </div>
-
-          <div class="space-y-2">
             <Label>주소</Label>
             <div class="space-y-2">
               <div class="flex gap-2">
@@ -186,7 +178,11 @@ onMounted(async () => {
                   placeholder="우편번호"
                   class="w-32 bg-muted"
                 />
-                <Button type="button" variant="outline" @click="openAddressSearch">
+                <Button
+                  type="button"
+                  variant="outline"
+                  @click="openAddressSearch"
+                >
                   주소검색
                 </Button>
               </div>
@@ -203,6 +199,15 @@ onMounted(async () => {
                 placeholder="상세 주소 입력"
               />
             </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label>휴대전화</Label>
+            <PhoneInput
+              v-model:phone1="form.phone1"
+              v-model:phone2="form.phone2"
+              v-model:phone3="form.phone3"
+            />
           </div>
 
           <div class="flex items-center space-x-2">
@@ -222,7 +227,7 @@ onMounted(async () => {
       <Separator />
 
       <!-- 비밀번호 확인 섹션 -->
-      <Card class="bg-muted/50">
+      <Card>
         <CardHeader>
           <CardTitle class="text-heading">
             비밀번호 확인
@@ -255,7 +260,7 @@ onMounted(async () => {
       </Card>
 
       <!-- 제출 버튼 -->
-      <div class="pt-4 text-right">
+      <div class="text-right">
         <Button type="submit" :disabled="isLoading" size="lg">
           {{ isLoading ? "처리중..." : "정보 수정 완료" }}
         </Button>
@@ -263,7 +268,7 @@ onMounted(async () => {
     </form>
 
     <!-- 회원 탈퇴 -->
-    <div class="mt-16 pt-8 border-t border-border flex justify-end">
+    <div class="mt-16 pt-3 border-t border-border flex justify-end">
       <Button
         variant="ghost"
         size="sm"

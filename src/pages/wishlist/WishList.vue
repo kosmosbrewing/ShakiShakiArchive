@@ -12,7 +12,7 @@ import { formatPrice } from "@/lib/formatters";
 import { Trash2, ShoppingBag, ArrowRight } from "lucide-vue-next";
 
 // 공통 컴포넌트
-import { LoadingSpinner } from "@/components/common";
+import { LoadingSpinner, EmptyState } from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -24,15 +24,16 @@ const router = useRouter();
 useAuthGuard();
 
 // 위시리스트 로직
-const { wishlistItems, loading, isEmpty, loadWishlist, removeItem } = useWishlist();
+const { wishlistItems, loading, isEmpty, loadWishlist, removeItem } =
+  useWishlist();
 
 // 상품 상세 페이지로 이동
-const goToDetail = (productId: number) => {
+const goToDetail = (productId: string) => {
   router.push(`/productDetail/${productId}`);
 };
 
 // 아이템 삭제
-const handleDelete = (productId: number) => {
+const handleDelete = (productId: string) => {
   removeItem(productId, "정말 위시리스트에서 삭제하시겠습니까?");
 };
 
@@ -42,10 +43,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="container py-12 sm:py-20 min-h-[60vh]">
-    <div class="mb-10 text-center">
-      <h1 class="text-heading font-bold tracking-tight mb-2">My Wishlist</h1>
-      <p class="text-muted-foreground">
+  <section class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+    <!-- 페이지 제목 -->
+    <div class="mb-6 border-b pb-3">
+      <h3 class="text-heading text-primary tracking-wider">MY WISHLIST</h3>
+      <p class="text-body text-muted-foreground pt-1">
         관심 있는 상품을 모아두었습니다.
       </p>
     </div>
@@ -53,22 +55,13 @@ onMounted(() => {
     <!-- 로딩 스피너 -->
     <LoadingSpinner v-if="loading" />
 
-    <!-- 빈 위시리스트 -->
-    <div
+    <EmptyState
       v-else-if="isEmpty"
-      class="flex flex-col items-center justify-center py-20 text-center border rounded-lg bg-muted/10"
-    >
-      <div class="bg-muted p-4 rounded-full mb-4">
-        <ShoppingBag class="w-8 h-8 text-muted-foreground" />
-      </div>
-      <h3 class="text-heading mb-2">위시리스트가 비어있습니다.</h3>
-      <p class="text-muted-foreground mb-6">
-        마음에 드는 상품을 찾아 하트 버튼을 눌러보세요!
-      </p>
-      <Button @click="router.push('/')" size="lg">
-        쇼핑하러 가기 <ArrowRight class="ml-2 w-4 h-4" />
-      </Button>
-    </div>
+      header="위시리스트가 비어있습니다."
+      message="마음에 드는 상품을 찾아 하트 버튼을 눌러보세요!"
+      button-text="쇼핑하러 가기"
+      button-link="/product/all"
+    />
 
     <!-- 위시리스트 그리드 -->
     <div
@@ -103,24 +96,19 @@ onMounted(() => {
         <!-- 상품 정보 -->
         <CardContent class="p-4 flex-1 flex flex-col gap-2">
           <h3
-            class="font-medium truncate cursor-pointer hover:underline"
+            class="text-body text-foreground font-semibold truncate cursor-pointer"
             @click="goToDetail(item.productId)"
           >
             {{ item.product.name }}
           </h3>
-          <p class="text-heading">
+          <p class="text-body text-foreground">
             {{ formatPrice(item.product.price) }}
           </p>
         </CardContent>
 
         <!-- 삭제 버튼 -->
         <CardFooter class="p-4 pt-0 flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            class="text-muted-foreground hover:text-red-500 hover:border-red-200 hover:bg-red-50 w-full sm:w-auto"
-            @click="handleDelete(item.productId)"
-          >
+          <Button size="sm" @click="handleDelete(item.productId)">
             <Trash2 class="w-4 h-4 mr-2" /> 삭제
           </Button>
         </CardFooter>

@@ -24,13 +24,13 @@ const prefixOptions = ["010", "011", "016", "017", "018", "019"];
 
 <template>
   <div class="flex items-center gap-2 w-full">
-    <div class="relative">
+    <div class="flex-1">
       <select
         :value="phone1"
         @change="
           emit('update:phone1', ($event.target as HTMLSelectElement).value)
         "
-        class="flex h-10 w-[90px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        class="w-full h-10 text-center items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <option v-for="opt in prefixOptions" :key="opt" :value="opt">
           {{ opt }}

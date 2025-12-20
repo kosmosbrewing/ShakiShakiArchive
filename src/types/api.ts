@@ -33,7 +33,7 @@ export interface User {
 
 // 상품 정보
 export interface Product {
-  id: number;
+  id: string; // UUID
   name: string;
   price: string;
   originalPrice?: string;
@@ -49,8 +49,8 @@ export interface Product {
 
 // 상품 옵션(사이즈/색상)
 export interface ProductVariant {
-  id: number;
-  productId: number;
+  id: number; // serial (옵션은 serial 유지)
+  productId: string; // UUID
   size: string;
   color?: string;
   stockQuantity: number;
@@ -73,10 +73,10 @@ export interface SizeMeasurement {
 
 // 장바구니 아이템
 export interface CartItem {
-  id: number;
-  userId: number;
-  productId: number;
-  variantId?: number;
+  id: string; // UUID
+  userId: string; // UUID
+  productId: string; // UUID
+  variantId?: number; // serial (옵션은 serial 유지)
   quantity: number;
   product: Product;
   variant?: ProductVariant;
@@ -84,9 +84,9 @@ export interface CartItem {
 
 // 주문 아이템
 export interface OrderItem {
-  id: number;
-  orderId: number;
-  productId: number;
+  id: number; // serial
+  orderId: string; // UUID
+  productId: string; // UUID
   productName: string;
   productPrice: string;
   options?: string; // 옵션 정보 (사이즈/색상 등)
@@ -99,8 +99,8 @@ export interface OrderItem {
 
 // 주문 정보
 export interface Order {
-  id: string;
-  userId: number;
+  id: string; // UUID
+  userId: string; // UUID
   totalAmount: string;
   status: OrderStatus;
   // 배송 정보
@@ -128,8 +128,8 @@ export interface Order {
 
 // 배송지 정보
 export interface DeliveryAddress {
-  id: number;
-  userId: number;
+  id: string; // UUID
+  userId: string; // UUID
   recipient: string;
   phone: string;
   zipCode: string;
@@ -142,9 +142,9 @@ export interface DeliveryAddress {
 
 // 위시리스트 아이템
 export interface WishlistItem {
-  id: number;
-  userId: number;
-  productId: number;
+  id: string; // UUID
+  userId: string; // UUID
+  productId: string; // UUID
   createdAt: string;
   product: Product;
 }
@@ -190,7 +190,7 @@ export interface CreateOrderRequest {
 
 // 주문 생성 응답 타입
 export interface CreateOrderResponse {
-  orderId: number;
+  orderId: string; // UUID
   externalOrderId: string; // PG사 주문번호
   orderName: string; // "상품명 외 N건"
   amount: number;

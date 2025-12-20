@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// src/pages/product/Product.vue
-// 상품 목록 페이지 컴포넌트
+// src/pages/product/ProductHome.vue
+// 홈 히어로 섹션용 상품 목록 컴포넌트
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, onMounted, watch } from "vue";
@@ -137,76 +137,70 @@ watch(
 </script>
 
 <template>
-  <section class="w-11/12 max-w-screen-2xl mx-auto py-4 sm:py-8">
-    <div
-      class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6"
+  <div class="grid grid-cols-2 gap-4 sm:gap-6">
+    <!-- 로딩 상태 -->
+    <LoadingSpinner v-if="loading" class="col-span-full" />
+
+    <!-- 빈 상태 -->
+    <EmptyState
+      v-else-if="productList.length === 0"
+      header="상품 없음"
+      message="등록된 상품이 없습니다."
+      class="col-span-full"
+    />
+
+    <!-- 상품 카드 목록 -->
+    <Card
+      v-else
+      v-for="{ id, imageUrl, name, price } in productList"
+      :key="id"
+      class="bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
     >
-      <!-- 로딩 상태 -->
-      <LoadingSpinner v-if="loading" class="col-span-full" />
+      <CardHeader class="p-0 gap-0">
+        <div
+          class="h-full overflow-hidden cursor-pointer relative"
+          @click="goToDetail(id)"
+        >
+          <img
+            :src="imageUrl"
+            :alt="name"
+            class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+          />
 
-      <!-- 빈 상태 -->
-      <EmptyState
-        v-else-if="productList.length === 0"
-        header="상품 없음"
-        message="등록된 상품이 없습니다."
-        button-text="홈으로 이동"
-        button-link="/"
-        class="col-span-full"
-      />
-
-      <!-- 상품 카드 목록 -->
-      <Card
-        v-else
-        v-for="{ id, imageUrl, name, price } in productList"
-        :key="id"
-        class="bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
-      >
-        <CardHeader class="p-0 gap-0">
-          <div
-            class="h-full overflow-hidden cursor-pointer relative"
-            @click="goToDetail(id)"
+          <!-- 위시리스트 버튼 -->
+          <button
+            @click="toggleWishlist($event, id)"
+            class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
+            title="위시리스트 담기"
           >
-            <img
-              :src="imageUrl"
-              :alt="name"
-              class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+            <Heart
+              class="w-5 h-5 transition-colors duration-200"
+              :class="
+                wishlistSet.has(id)
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
             />
+          </button>
+        </div>
 
-            <!-- 위시리스트 버튼 -->
-            <button
-              @click="toggleWishlist($event, id)"
-              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
-              title="위시리스트 담기"
-            >
-              <Heart
-                class="w-5 h-5 transition-colors duration-200"
-                :class="
-                  wishlistSet.has(id)
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-muted-foreground hover:text-foreground'
-                "
-              />
-            </button>
-          </div>
-
-          <!-- 상품명 -->
-          <CardContent
-            class="py-4 pb-1 px-4 cursor-pointer hover:underline line-clamp-2"
-            @click="goToDetail(id)"
-          >
-            <span class="text-caption font-semibold text-foreground">
-              {{ name }}</span
-            >
-          </CardContent>
-        </CardHeader>
-
-        <!-- 가격 -->
-        <CardContent class="pb-4 px-4">
-          <span class="text-caption text-muted-foreground">
-            {{ formatPrice(price) }}</span
+        <!-- 상품명 -->
+        <CardContent
+          class="py-4 pb-1 px-4 cursor-pointer hover:underline line-clamp-2"
+          @click="goToDetail(id)"
+        >
+          <span class="text-caption font-semibold text-foreground">
+            {{ name }}</span
           >
         </CardContent>
-      </Card>
-    </div>
-  </section>
+      </CardHeader>
+
+      <!-- 가격 -->
+      <CardContent class="pb-4 px-4 text-caption t">
+        <span class="text-caption text-muted-foreground">
+          {{ formatPrice(price) }}</span
+        >
+      </CardContent>
+    </Card>
+  </div>
 </template>
