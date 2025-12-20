@@ -130,10 +130,9 @@ const getPaymentMethodLabel = (method: string): string => {
 
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-4 border-b pb-3 flex justify-between items-end">
-      <div>
-        <h3 class="text-heading text-primary tracking-wider mb-1">주문 상세</h3>
-      </div>
+    <div class="mb-6">
+      <h3 class="text-heading text-primary tracking-wider mb-3">주문 상세</h3>
+      <Separator></Separator>
     </div>
 
     <div class="mb-5">

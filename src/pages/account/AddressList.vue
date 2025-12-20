@@ -8,7 +8,7 @@ import { useAddresses } from "@/composables/useAddresses";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState, AddressCard } from "@/components/common";
-
+import { Separator } from "@/components/ui/separator";
 import type { DeliveryAddress } from "@/types/api";
 
 // 인증 체크
@@ -35,8 +35,9 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
-    <div class="mb-6 border-b pb-3">
-      <h3 class="text-heading text-primary tracking-wider">배송지 관리</h3>
+    <div class="mb-6">
+      <h3 class="text-heading text-primary tracking-wider mb-3">배송지 관리</h3>
+      <Separator></Separator>
     </div>
 
     <!-- 로딩 스피너 -->

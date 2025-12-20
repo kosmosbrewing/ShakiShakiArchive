@@ -7,7 +7,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useOrderStats } from "@/composables/useOrders";
 import { useWishlistCount } from "@/composables/useWishlist";
-
+import { Separator } from "@/components/ui/separator";
 // 아이콘
 import {
   Package,
@@ -97,8 +97,9 @@ onMounted(async () => {
 <template>
   <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6 border-b pb-3">
-      <h3 class="text-heading text-primary tracking-wider">마이페이지</h3>
+    <div class="mb-6">
+      <h3 class="text-heading text-primary tracking-wider mb-3">마이페이지</h3>
+      <Separator></Separator>
     </div>
 
     <!-- 사용자 인사 -->
@@ -116,6 +117,57 @@ onMounted(async () => {
             </p>
             <p class="text-body text-muted-foreground">일반회원</p>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- 관리자 메뉴 -->
+    <Card v-if="authStore.user?.isAdmin" class="mb-6">
+      <CardHeader class="pb-2">
+        <CardTitle class="text-heading flex items-center gap-2">
+          관리자 메뉴
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <Button
+            variant="outline"
+            @click="goToCategoryAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-gray-900 flex items-center justify-center"
+            >
+              <Settings class="w-4 h-4 text-white" />
+            </div>
+            카테고리 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToProductAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-primary flex items-center justify-center"
+            >
+              <Package class="w-4 h-4 text-primary-foreground" />
+            </div>
+            상품 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToOrderAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center"
+            >
+              <ShoppingBag class="w-4 h-4 text-white" />
+            </div>
+            주문 관리
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -224,57 +276,6 @@ onMounted(async () => {
             </div>
             <ChevronRight class="w-5 h-5 text-muted-foreground" />
           </button>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- 관리자 메뉴 -->
-    <Card v-if="authStore.user?.isAdmin">
-      <CardHeader class="pb-2">
-        <CardTitle class="text-heading flex items-center gap-2">
-          관리자 메뉴
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-          <Button
-            variant="outline"
-            @click="goToCategoryAdmin"
-            class="h-12 justify-start gap-3"
-          >
-            <div
-              class="w-8 h-8 rounded bg-gray-900 flex items-center justify-center"
-            >
-              <Settings class="w-4 h-4 text-white" />
-            </div>
-            카테고리 관리
-          </Button>
-
-          <Button
-            variant="outline"
-            @click="goToProductAdmin"
-            class="h-12 justify-start gap-3"
-          >
-            <div
-              class="w-8 h-8 rounded bg-primary flex items-center justify-center"
-            >
-              <Package class="w-4 h-4 text-primary-foreground" />
-            </div>
-            상품 관리
-          </Button>
-
-          <Button
-            variant="outline"
-            @click="goToOrderAdmin"
-            class="h-12 justify-start gap-3"
-          >
-            <div
-              class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center"
-            >
-              <ShoppingBag class="w-4 h-4 text-white" />
-            </div>
-            주문 관리
-          </Button>
         </div>
       </CardContent>
     </Card>

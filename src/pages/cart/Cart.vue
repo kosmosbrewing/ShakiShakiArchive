@@ -69,11 +69,12 @@ onMounted(() => {
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6 border-b pb-3">
+    <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">CART</h3>
-      <p class="text-body text-muted-foreground pt-1">
+      <p class="text-body text-muted-foreground pt-1 mb-3">
         관심 있는 상품을 모아두었습니다.
       </p>
+      <Separator></Separator>
     </div>
 
     <LoadingSpinner v-if="loading" />

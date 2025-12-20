@@ -155,15 +155,15 @@ onMounted(async () => {
 
             <button
               @click.stop="handleToggleWishlist"
-              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm lg:hidden"
+              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-md shadow-light lg:hidden"
               title="위시리스트 담기"
             >
               <Heart
                 class="w-6 h-6 transition-colors duration-200"
                 :class="
                   wishlistToggle.isWishlisted.value
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400'
+                    ? 'fill-primary text-primary'
+                    : 'text-muted-foreground group-hover:text-primary'
                 "
               />
             </button>
@@ -194,8 +194,10 @@ onMounted(async () => {
         class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24 h-fit w-full"
       >
         <CardContent class="p-6">
-          <div class="flex justify-between items-start gap-4 mb-2">
-            <h1 class="text-heading text-foreground font-bold leading-loose">
+          <div class="flex justify-between items-start gap-4 mb-1">
+            <h1
+              class="text-heading text-foreground font-semibold leading-loose"
+            >
               {{ productData.product.value.name }}
             </h1>
 
@@ -215,7 +217,7 @@ onMounted(async () => {
             </button>
           </div>
 
-          <div class="flex items-end gap-2 mb-8 -translate-y-3">
+          <div class="flex items-end gap-2 mb-3 -translate-y-3">
             <span class="text-body text-foreground">
               {{ formatPrice(productData.product.value.price) }}
             </span>
@@ -227,7 +229,9 @@ onMounted(async () => {
             </span>
           </div>
 
-          <div v-if="productData.variants.value.length > 0" class="mb-8">
+          <Separator class="-translate-y-4"></Separator>
+
+          <div v-if="productData.variants.value.length > 0" class="mb-6">
             <label class="block text-body font-semibold text-foreground mb-2"
               >사이즈</label
             >
@@ -262,7 +266,7 @@ onMounted(async () => {
             }"
           >
             <label class="block text-body font-bold text-foreground mb-3"
-              >Quantity</label
+              >수량</label
             >
             <QuantitySelector
               v-model="variantSelection.quantity.value"
@@ -285,7 +289,7 @@ onMounted(async () => {
             </Button>
           </div>
 
-          <Separator />
+          <Separator></Separator>
 
           <div class="mt-4">
             <div class="flex border-b border-border">
@@ -313,7 +317,7 @@ onMounted(async () => {
                     : 'text-muted-foreground hover:text-foreground',
                 ]"
               >
-                Size Guide
+                Size
                 <span
                   v-if="activeTab === 'size'"
                   class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"

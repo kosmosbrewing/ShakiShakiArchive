@@ -31,6 +31,7 @@ import {
   RotateCcw,
   Image as ImageIcon,
 } from "lucide-vue-next";
+import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -440,11 +441,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-12">
-    <div class="mb-8 border-b pb-3 flex justify-between items-end">
+  <div class="w-11/12 max-w-screen-2xl mx-auto py-24 sm:py-16">
+    <div class="flex justify-between items-end">
       <div>
         <h3 class="text-heading text-admin tracking-wider">상품 관리</h3>
-        <p class="text-body text-admin-muted mt-1">
+        <p class="text-body text-admin-muted mt-1 mb-3">
           총
           <span class="text-body text-admin font-bold">{{
             products.length
@@ -454,12 +455,12 @@ onMounted(async () => {
       </div>
       <button
         @click="openCreateProductModal"
-        class="bg-admin text-body text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium gap-2"
+        class="mb-2 bg-admin text-body text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium gap-2"
       >
         + 새 상품 등록
       </button>
     </div>
-
+    <Separator class="mb-6"></Separator>
     <div v-if="isLoading" class="text-center py-20">
       <div
         class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"
@@ -479,7 +480,7 @@ onMounted(async () => {
                 <th class="px-6 py-5 text-center">판매가</th>
                 <th class="px-6 py-5 text-center">상태</th>
                 <th class="px-6 py-5 text-center">관리 도구</th>
-                <th class="px-6 py-5 text-right">작업</th>
+                <th class="px-6 py-5 text-right pr-10">작업</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -506,22 +507,22 @@ onMounted(async () => {
                   </div>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-body font-bold text-admin">
+                  <div class="text-body text-admin">
                     {{ product.name }}
                   </div>
                   <div
-                    class="text-tiny text-admin-muted bg-muted inline-block px-1.5 py-0.5 rounded mt-1 font-mono"
+                    class="text-caption text-admin-muted bg-muted inline-block py-0.5 rounded mt-1 font-mono"
                   >
                     {{ product.slug }}
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
-                  <div class="text-body font-bold text-primary">
+                  <div class="text-body text-admin">
                     {{ Number(product.price).toLocaleString() }}원
                   </div>
                   <div
                     v-if="product.originalPrice"
-                    class="text-tiny text-admin-muted line-through opacity-50"
+                    class="text-caption text-admin-muted line-through opacity-50"
                   >
                     {{ Number(product.originalPrice).toLocaleString() }}원
                   </div>
@@ -533,7 +534,7 @@ onMounted(async () => {
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-700'
                     "
-                    class="px-3 py-1 rounded-full text-tiny font-bold"
+                    class="px-3 py-1 rounded-full text-caption font-bold"
                   >
                     {{ product.isAvailable ? "판매중" : "중단" }}
                   </span>
@@ -542,13 +543,13 @@ onMounted(async () => {
                   <div class="flex justify-center gap-2">
                     <button
                       @click="openVariantManager(product)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-tiny font-bold text-admin hover:bg-muted transition-all shadow-sm"
+                      class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-caption font-bold text-admin hover:bg-muted transition-all shadow-sm"
                     >
                       <Settings class="w-3.5 h-3.5" /> 옵션
                     </button>
                     <button
                       @click="openSizeManager(product)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-100 rounded-lg text-tiny font-bold text-green-700 hover:bg-green-100 transition-all shadow-sm"
+                      class="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-100 rounded-lg text-caption font-bold text-green-700 hover:bg-green-100 transition-all shadow-sm"
                     >
                       <Ruler class="w-3.5 h-3.5" /> 사이즈
                     </button>
@@ -603,13 +604,16 @@ onMounted(async () => {
         class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
-          <div class="flex justify-between items-center mb-8 border-b pb-4">
-            <h2 class="text-h2 font-bold text-primary tracking-tight">
+          <div class="flex justify-between items-end">
+            <h2
+              class="text-heading font-semibold text-admin tracking-wide mb-3"
+            >
               {{ isEditMode ? "상품 정보 수정" : "신규 상품 등록" }}
             </h2>
+
             <button
               @click="isProductModalOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors"
+              class="text-admin-muted hover:text-admin transition-colors mb-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -628,9 +632,9 @@ onMounted(async () => {
               </svg>
             </button>
           </div>
-
+          <Separator></Separator>
           <form @submit.prevent="handleSaveProduct" class="space-y-6">
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-2 gap-6 mt-6">
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
@@ -721,22 +725,10 @@ onMounted(async () => {
                 <input
                   v-model="productForm.imageUrl"
                   type="text"
-                  class="form-input-custom"
+                  class="form-input-custom-small"
                   placeholder="https://example.com/main.jpg"
                   required
                 />
-              </div>
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >추가 이미지 (콤마로 구분)</label
-                >
-                <textarea
-                  v-model="productForm.imagesStr"
-                  rows="2"
-                  class="form-input-custom resize-none"
-                  placeholder="url1, url2..."
-                ></textarea>
               </div>
               <div>
                 <label
@@ -746,27 +738,40 @@ onMounted(async () => {
                 </label>
                 <textarea
                   v-model="productForm.detailImagesStr"
-                  rows="2"
-                  class="form-input-custom resize-none"
+                  rows="1"
+                  s
+                  class="form-input-custom-small resize-none"
                   placeholder="상세 이미지 url을 입력하세요"
                   required
                 ></textarea>
               </div>
-            </div>
+              <div>
+                <label
+                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
+                >
+                  상품 설명 <span class="text-red-500">*</span>
+                </label>
+                <textarea
+                  v-model="productForm.description"
+                  rows="4"
+                  class="form-input-custom-small resize-none"
+                  placeholder="상품에 대한 상세한 설명을 입력하세요"
+                  required
+                ></textarea>
+              </div>
 
-            <div>
-              <label
-                class="block text-body text-admin font-semibold mb-2 ml-0.5"
-              >
-                상품 설명 <span class="text-red-500">*</span>
-              </label>
-              <textarea
-                v-model="productForm.description"
-                rows="4"
-                class="form-input-custom resize-none"
-                placeholder="상품에 대한 상세한 설명을 입력하세요"
-                required
-              ></textarea>
+              <div>
+                <label
+                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
+                  >추가 이미지 (콤마로 구분)</label
+                >
+                <textarea
+                  v-model="productForm.imagesStr"
+                  rows="2"
+                  class="form-input-custom-small resize-none"
+                  placeholder="url1, url2..."
+                ></textarea>
+              </div>
             </div>
 
             <div
@@ -806,17 +811,20 @@ onMounted(async () => {
         class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
-          <div class="flex justify-between items-center mb-8 border-b pb-4">
-            <h2 class="text-h2 font-bold text-primary tracking-tight">
+          <div class="flex justify-between items-end">
+            <h2
+              class="text-heading font-semibold text-admin tracking-wider mb-3"
+            >
               {{
                 isEditMode
                   ? "옵션 수정 : " + currentProduct?.name
                   : "신규 옵션 추가"
               }}
             </h2>
+
             <button
               @click="isVariantModalOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors"
+              class="text-admin-muted hover:text-admin transition-colors mb-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -835,6 +843,7 @@ onMounted(async () => {
               </svg>
             </button>
           </div>
+          <Separator class="mb-6"></Separator>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div
@@ -872,7 +881,7 @@ onMounted(async () => {
                     v-model="variantForm.sku"
                     type="text"
                     disabled
-                    class="form-input-custom bg-muted/50 cursor-not-allowed opacity-70 font-mono text-tiny"
+                    class="text-caption form-input-custom bg-muted/50 cursor-not-allowed opacity-70"
                   />
                 </div>
 
@@ -964,7 +973,7 @@ onMounted(async () => {
                     class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
                   >
                     <tr>
-                      <th class="px-6 py-4">SKU</th>
+                      <th class="px-6 py-4">재고관리코드(SKU)</th>
                       <th class="px-6 py-4">옵션 상세</th>
                       <th class="px-6 py-4 text-center">재고</th>
                       <th class="px-6 py-4 text-right">작업</th>
@@ -977,19 +986,18 @@ onMounted(async () => {
                       :class="{ 'bg-primary/5': variant.id === variantForm.id }"
                       class="hover:bg-muted/20 transition-colors group"
                     >
-                      <td
-                        class="px-6 py-4 font-mono text-tiny text-admin-muted"
-                      >
+                      <td class="px-6 py-4 text-tiny text-admin-muted">
                         {{ variant.sku }}
                       </td>
                       <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
-                          <span class="text-body font-bold text-admin">{{
-                            variant.size
-                          }}</span>
+                          <span
+                            class="text-caption font-semibold text-admin-muted"
+                            >{{ variant.size }}</span
+                          >
                           <span
                             v-if="variant.color"
-                            class="text-caption text-admin-muted"
+                            class="text-caption font-semibold text-admin-muted"
                             >/ {{ variant.color }}</span
                           >
                           <span
@@ -999,7 +1007,9 @@ onMounted(async () => {
                           >
                         </div>
                       </td>
-                      <td class="px-6 py-4 text-center font-bold text-primary">
+                      <td
+                        class="px-6 py-4 text-center font-semibold text-caption text-admin-muted"
+                      >
                         {{ variant.stockQuantity }}
                       </td>
                       <td class="px-6 py-4 text-right">
@@ -1079,21 +1089,17 @@ onMounted(async () => {
         class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
-          <div class="flex justify-between items-center mb-8 border-b pb-4">
+          <div class="flex justify-between items-end">
             <div>
-              <h2 class="text-h2 font-bold text-primary tracking-tight">
-                실측 사이즈 관리
+              <h2
+                class="text-heading font-semibold text-admin tracking-wide mb-3"
+              >
+                사이즈 관리
               </h2>
-              <p class="text-caption text-admin-muted mt-1 font-medium">
-                상품:
-                <span class="text-admin font-bold">{{
-                  currentProduct?.name
-                }}</span>
-              </p>
             </div>
             <button
               @click="isSizeManagerOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors"
+              class="text-admin-muted hover:text-admin transition-colors mb-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1112,12 +1118,16 @@ onMounted(async () => {
               </svg>
             </button>
           </div>
-
+          <Separator></Separator>
           <div class="mb-10">
+            <p class="text-body text-admin-muted mt-3">
+              상품:
+              <span class="text-admin-muted">{{ currentProduct?.name }}</span>
+            </p>
             <label
-              class="text-tiny font-bold text-admin-muted uppercase tracking-tighter block mb-3 ml-0.5"
+              class="text-body text-admin-muted uppercase tracking-tighter block mb-1 mt-3"
             >
-              측정할 사이즈 옵션 선택
+              사이즈 옵션 선택
             </label>
             <div v-if="variants.length > 0" class="flex flex-wrap gap-2">
               <button
@@ -1131,12 +1141,10 @@ onMounted(async () => {
                     : 'bg-white text-admin-muted border-border hover:bg-muted',
                 ]"
               >
-                {{ v.size }}
-                <span
-                  v-if="v.color"
-                  class="opacity-60 text-tiny ml-1 font-normal"
-                  >({{ v.color }})</span
-                >
+                <span class="text-caption">
+                  {{ v.size }}
+                </span>
+                <span class="text-caption"> ({{ v.color }})</span>
               </button>
             </div>
             <div
@@ -1171,20 +1179,20 @@ onMounted(async () => {
               class="bg-muted/30 p-6 rounded-2xl border border-border shadow-inner"
             >
               <div class="flex items-center gap-2 mb-5">
+                <div class="text-body font-semibold text-admin-muted">
+                  사이즈 상세 수치 입력
+                </div>
                 <span
-                  class="bg-primary text-white text-tiny font-bold px-2 py-0.5 rounded"
+                  class="bg-primary text-white text-caption font-bold px-1 py-0.5 rounded"
                   >{{ currentVariant.size }}</span
                 >
-                <h4 class="text-body font-bold text-admin">
-                  사이즈 상세 수치 입력
-                </h4>
               </div>
 
               <form @submit.prevent="handleSaveMeasurement" class="space-y-6">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div v-for="field in measurementFields" :key="field.id">
                     <label
-                      class="block text-tiny font-bold text-admin-muted mb-1.5 ml-1"
+                      class="block text-caption font-bold text-admin-muted mb-1.5 ml-1"
                     >
                       {{ field.label }} (cm)
                     </label>
@@ -1214,7 +1222,7 @@ onMounted(async () => {
                   </button>
                   <button
                     type="submit"
-                    class="px-8 py-2.5 bg-green-600 text-white rounded-xl text-body font-bold hover:bg-green-700 shadow-md shadow-green-600/10 transition-all flex items-center gap-2"
+                    class="px-8 py-2.5 bg-admin text-white rounded-xl text-body font-bold hover:bg-green-700 shadow-md shadow-green-600/10 transition-all flex items-center gap-2"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1258,11 +1266,13 @@ onMounted(async () => {
                     :key="m.id"
                     class="hover:bg-muted/20 transition-colors"
                   >
-                    <td class="px-6 py-4 font-bold">{{ m.totalLength }}</td>
-                    <td class="px-6 py-4">{{ m.shoulderWidth }}</td>
-                    <td class="px-6 py-4">{{ m.chestSection }}</td>
-                    <td class="px-6 py-4">{{ m.sleeveLength }}</td>
-                    <td class="px-6 py-4 text-tiny text-admin-muted">
+                    <td class="px-6 py-4 text-caption">{{ m.totalLength }}</td>
+                    <td class="px-6 py-4 text-caption">
+                      {{ m.shoulderWidth }}
+                    </td>
+                    <td class="px-6 py-4 text-caption">{{ m.chestSection }}</td>
+                    <td class="px-6 py-4 text-caption">{{ m.sleeveLength }}</td>
+                    <td class="px-6 py-4 text-caption">
                       {{ m.waistSection }} / {{ m.hipSection }} /
                       {{ m.thighSection }}
                     </td>
@@ -1340,6 +1350,6 @@ onMounted(async () => {
   @apply w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
 }
 .form-input-custom-small {
-  @apply w-full border border-border rounded-xl p-2.5 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
+  @apply w-full border border-border rounded-xl p-2.5 text-caption text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
 }
 </style>

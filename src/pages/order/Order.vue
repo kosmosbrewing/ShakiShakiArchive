@@ -17,7 +17,7 @@ import { LoadingSpinner, AddressCard, AddressForm } from "@/components/common";
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import { Separator } from "@/components/ui/separator";
 import type { DeliveryAddress, User } from "@/types/api";
 
 // [이미지 Import]
@@ -191,9 +191,10 @@ onMounted(() => {
 
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-6 border-b pb-3">
+    <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">ORDER</h3>
-      <p class="text-body text-muted-foreground pt-1">결제 내용</p>
+      <p class="text-body text-muted-foreground pt-1 mb-3">결제 내용</p>
+      <Separator></Separator>
     </div>
 
     <LoadingSpinner v-if="loading" />
@@ -362,7 +363,9 @@ onMounted(() => {
           <Button @click="handlePayment" class="w-full" size="lg">
             {{ formatPrice(totalAmount) }} 결제하기
           </Button>
-          <p class="text-caption text-center text-muted-foreground">
+          <p
+            class="text-caption text-center text-muted-foreground -translate-y-3"
+          >
             위 주문 내용을 확인하였으며 결제에 동의합니다.
           </p>
         </div>

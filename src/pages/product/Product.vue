@@ -175,37 +175,34 @@ watch(
             <!-- 위시리스트 버튼 -->
             <button
               @click="toggleWishlist($event, id)"
-              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
+              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md shadow-light"
               title="위시리스트 담기"
             >
               <Heart
                 class="w-5 h-5 transition-colors duration-200"
                 :class="
                   wishlistSet.has(id)
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'fill-primary text-primary'
+                    : 'text-muted-foreground group-hover:text-primary'
                 "
               />
             </button>
           </div>
-
+          <div class="flex border-b border-border"></div>
           <!-- 상품명 -->
           <CardContent
-            class="py-4 pb-1 px-4 cursor-pointer hover:underline line-clamp-2"
+            class="py-3 px-4 cursor-pointer hover:underline line-clamp-2"
             @click="goToDetail(id)"
           >
-            <span class="text-caption font-semibold text-foreground">
-              {{ name }}</span
+            <span class="text-caption text-foreground"> {{ name }}</span>
+          </CardContent>
+          <!-- 가격 -->
+          <CardContent class="pb-2 px-4 -translate-y-3">
+            <span class="text-caption text-muted-foreground/80">
+              {{ formatPrice(price) }}</span
             >
           </CardContent>
         </CardHeader>
-
-        <!-- 가격 -->
-        <CardContent class="pb-4 px-4">
-          <span class="text-caption text-muted-foreground">
-            {{ formatPrice(price) }}</span
-          >
-        </CardContent>
       </Card>
     </div>
   </section>

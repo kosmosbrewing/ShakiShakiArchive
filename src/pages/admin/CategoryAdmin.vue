@@ -13,6 +13,7 @@ import {
 // 아이콘 및 UI 컴포넌트 (디자인 통일용)
 import { Settings, Package, Plus, Trash2, Edit3 } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -134,22 +135,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-8 border-b pb-3 flex justify-between items-end">
+  <div class="max-w-4xl mx-auto px-4 py-24 sm:py-16">
+    <div class="flex justify-between items-end">
       <div>
         <h3 class="text-heading text-admin tracking-wider">카테고리 관리</h3>
-        <p class="text-caption text-admin-muted mt-1">
+        <p class="text-caption text-admin-muted mt-1 mb-3">
           상품 분류 체계를 구성하고 관리합니다.
         </p>
       </div>
       <button
         @click="openCreateModal"
-        class="bg-admin text-white px-4 py-2 rounded-md hover:opacity-90 transition-all text-body font-medium flex items-center gap-2 shadow-sm"
+        class="mb-2 bg-admin text-white px-4 py-2 rounded-md hover:opacity-90 transition-all text-body font-medium flex items-center gap-2 shadow-sm"
       >
         <Plus class="w-4 h-4" />
         <span>추가</span>
       </button>
     </div>
+    <Separator class="mb-6"></Separator>
 
     <div v-if="isLoading" class="text-center py-20">
       <div

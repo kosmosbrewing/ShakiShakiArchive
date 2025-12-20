@@ -139,8 +139,11 @@ onMounted(async () => {
 <template>
   <div class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6 border-b pb-3">
-      <h3 class="text-heading text-primary tracking-wider">회원정보 수정</h3>
+    <div class="mb-6">
+      <h3 class="text-heading text-primary tracking-wider mb-3">
+        회원정보 수정
+      </h3>
+      <Separator></Separator>
     </div>
 
     <form @submit.prevent="handleUpdateProfile" class="space-y-8">

@@ -3,19 +3,15 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
-
+import { getDayName } from "@/lib/utils";
 // UI 컴포넌트 및 아이콘
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   ShoppingBag,
-  Package,
-  Truck,
   User,
-  Search,
   RotateCcw,
-  ChevronRight,
   Calendar,
-  Phone,
   MapPin,
 } from "lucide-vue-next";
 
@@ -94,22 +90,24 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-10 border-b pb-3 flex justify-between items-end">
+  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <div class="flex justify-between items-end">
       <div>
-        <h3 class="text-h1 text-primary tracking-wider">주문/배송 관리</h3>
-        <p class="text-caption text-admin-muted mt-1 font-medium">
-          전체 주문 현황을 파악하고 배송 상태를 관리합니다.
+        <h3 class="text-heading text-admin tracking-wider">주문/배송 관리</h3>
+        <p class="text-body text-admin-muted pt-1 mb-3">
+          관심 있는 상품을 모아두었습니다.
         </p>
       </div>
+
       <button
         @click="loadData"
-        class="flex items-center gap-2 px-4 py-2.5 bg-white border border-border rounded-xl text-body font-bold text-admin hover:bg-muted transition-all shadow-sm"
+        class="flex items-center gap-2 px-4 py-2.5 bg-white border border-border rounded-xl text-body font-bold text-admin hover:bg-muted transition-all shadow-sm mb-2"
       >
         <RotateCcw class="w-4 h-4" />
         <span>새로고침</span>
       </button>
     </div>
+    <Separator class="mb-6"></Separator>
 
     <div v-if="loading" class="text-center py-32">
       <div
@@ -130,36 +128,43 @@ onMounted(async () => {
             <div class="flex items-center gap-6">
               <div class="flex flex-col">
                 <span
-                  class="text-tiny font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
-                  >Order Number</span
+                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  >주문번호</span
                 >
-                <span class="text-h3 font-bold text-admin"
+                <span class="text-caption font-semibold text-admin-muted"
                   >#{{ order.id }}</span
                 >
               </div>
               <div class="h-8 w-px bg-border hidden sm:block"></div>
               <div class="flex flex-col">
                 <span
-                  class="text-tiny font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
-                  >Order Date</span
+                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  >주문일자</span
                 >
-                <div class="flex items-center gap-1.5 text-body text-admin">
+                <div
+                  class="flex items-center gap-1.5 text-caption text-admin-muted font-semibold"
+                >
                   <Calendar class="w-3.5 h-3.5 opacity-50" />
-                  {{ formatDate(order.createdAt) }}
+                  {{ formatDate(order.createdAt) }}({{
+                    getDayName(order.createdAt)
+                  }})
                 </div>
               </div>
               <div class="h-8 w-px bg-border hidden sm:block"></div>
               <div class="flex flex-col">
                 <span
-                  class="text-tiny font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
-                  >Customer</span
+                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  >주문자</span
                 >
                 <div
                   class="flex items-center gap-1.5 text-body text-admin font-bold"
                 >
                   <User class="w-3.5 h-3.5 opacity-50" />
-                  {{ order.shippingName }}
-                  <span class="text-admin-muted font-normal text-caption ml-1"
+                  <span class="text-caption text-admin-muted font-semibold">{{
+                    order.shippingName
+                  }}</span>
+
+                  <span class="text-caption text-admin-muted ml-1"
                     >({{ order.shippingPhone }})</span
                   >
                 </div>
@@ -167,10 +172,10 @@ onMounted(async () => {
             </div>
             <div class="text-right">
               <span
-                class="text-tiny font-bold text-primary uppercase tracking-tighter block mb-0.5"
-                >Total Amount</span
+                class="text-body font-semibold text-admin uppercase tracking-tighter block mb-0.5"
+                >총액</span
               >
-              <span class="text-h3 font-bold text-primary"
+              <span class="text-body font-semibold text-admin"
                 >{{ Number(order.totalAmount).toLocaleString() }}원</span
               >
             </div>
@@ -180,7 +185,7 @@ onMounted(async () => {
         <CardContent class="p-0 overflow-x-auto">
           <table class="w-full text-left border-collapse min-w-[900px]">
             <thead
-              class="bg-white border-b text-caption font-bold text-admin-muted uppercase tracking-tight"
+              class="bg-white border-l border-r text-caption font-bold text-admin-muted uppercase tracking-tight shadow-sm shadow-light"
             >
               <tr>
                 <th class="px-8 py-4 w-24">이미지</th>
@@ -215,11 +220,11 @@ onMounted(async () => {
                   </div>
                 </td>
                 <td class="px-8 py-5">
-                  <div class="text-body font-bold text-admin">
+                  <div class="text-body text-admin">
                     {{ item.productName }}
                   </div>
                   <div
-                    class="text-tiny text-admin-muted mt-1 bg-muted/50 inline-block px-2 py-0.5 rounded"
+                    class="text-caption text-admin-muted mt-1 bg-muted/50 inline-block py-0.5 rounded"
                   >
                     {{ item.options || "기본 옵션" }}
                   </div>
@@ -227,12 +232,10 @@ onMounted(async () => {
 
                 <td class="px-8 py-5 text-center">
                   <div class="text-body text-admin">
-                    <span class="font-bold text-primary">{{
-                      item.quantity
-                    }}</span
+                    <span class="text-admin">{{ item.quantity }}</span
                     >개
                   </div>
-                  <div class="text-tiny text-admin-muted mt-0.5">
+                  <div class="text-caption text-admin-muted mt-0.5">
                     {{ Number(item.productPrice).toLocaleString() }}원
                   </div>
                 </td>
@@ -241,7 +244,7 @@ onMounted(async () => {
                   <select
                     v-model="item.status"
                     :class="[
-                      'inline-flex items-center border rounded-xl px-3 py-1.5 text-tiny font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
+                      'inline-flex items-center border rounded-xl px-3 py-1.5 text-caption font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
                       getStatusClass(item.status),
                     ]"
                   >
@@ -249,6 +252,7 @@ onMounted(async () => {
                       v-for="opt in statusOptions"
                       :key="opt.value"
                       :value="opt.value"
+                      class="text-center"
                     >
                       {{ opt.label }}
                     </option>
@@ -260,14 +264,14 @@ onMounted(async () => {
                     v-model="item.trackingNumber"
                     type="text"
                     placeholder="운송장 입력"
-                    class="w-full max-w-[160px] border border-border rounded-xl px-3 py-1.5 text-tiny text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
+                    class="w-full max-w-[160px] border border-border rounded-xl px-3 py-1.5 text-caption text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
                   />
                 </td>
 
                 <td class="px-8 py-5 text-right">
                   <button
                     @click="handleSaveItem(item)"
-                    class="bg-admin text-white px-5 py-2 rounded-xl text-tiny font-bold hover:opacity-90 transition-all shadow-md shadow-admin/10"
+                    class="bg-admin text-white px-5 py-2 rounded-xl text-caption font-bold hover:opacity-90 transition-all shadow-md shadow-admin/10"
                   >
                     저장
                   </button>
