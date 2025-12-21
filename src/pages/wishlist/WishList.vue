@@ -9,7 +9,7 @@ import { useWishlist } from "@/composables/useWishlist";
 import { formatPrice } from "@/lib/formatters";
 
 // 아이콘
-import { Trash2, ShoppingBag, ArrowRight } from "lucide-vue-next";
+import { Trash2 } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState } from "@/components/common";

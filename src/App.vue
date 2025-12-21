@@ -32,7 +32,11 @@ onUnmounted(() => {
     class="cursor-follower"
     :style="{ transform: `translate(${mouseX + 15}px, ${mouseY + 15}px)` }"
   >
-    <img src="@/assets/cursor.png" alt="cursor" width="140" height="38" />
+    <img
+      src="@/assets/cursor.png"
+      alt="cursor"
+      class="w-20 md:w-[120px] object-contain"
+    />
   </div>
   <Navbar />
   <router-view :key="$route.fullPath" />
@@ -42,18 +46,14 @@ onUnmounted(() => {
 <style>
 /* 5. 따라다니는 이미지 스타일 설정 */
 .cursor-follower {
-  position: fixed; /* 화면에 고정 */
+  position: fixed;
   top: 0;
   left: 0;
-  width: 140px;
-  height: 38px;
-  pointer-events: none; /* [핵심] 마우스 클릭이 이미지를 통과해서 뒤에 있는 버튼이 눌리게 함 */
-  z-index: 9999; /* 모든 요소보다 위에 표시 */
+  /* width, height 제거 -> 내부 img 크기에 맞춰짐 */
+  pointer-events: none;
+  z-index: 9999;
 
-  /* 부드럽게 따라오게 하려면 아래 transition 주석을 해제하세요 */
   transition: transform 0.05s ease-out;
-
-  /* 시스템 커서는 기본값으로 유지 */
   cursor: default;
 }
 

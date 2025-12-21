@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
                 src="@/assets/logo02.png"
                 alt="ShakiShaki Archive Logo"
                 class="w-32 md:w-40 object-contain"
+                draggable="false"
               />
             </a>
           </div>

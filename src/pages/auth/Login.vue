@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue";
-import { useRouter } from "vue-router"; // 1. 라우터 훅 추가
+import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { getNaverLoginUrl } from "@/lib/api";
 import axios from "axios";
-import { AlertCircle, Loader2 } from "lucide-vue-next"; // Loader2 아이콘 추가 (UI에 사용됨)
+import { AlertCircle, Loader2, Search } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import Separator from "@/components/ui/separator/Separator.vue";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
 interface loginProps {
@@ -28,6 +30,7 @@ const invalidInputForm = ref<boolean>(false);
 const loginError = ref<string | null>(null); // 로그인 에러 메시지
 const isLoading = ref<boolean>(false); // 로딩 상태 관리
 const isAuthenticated = ref<boolean>(false); // 인증 성공 상태
+const isNaverLoading = ref<boolean>(false); // 네이버 로그인 로딩 상태
 
 // 커스텀 Axios 인스턴스 생성
 const apiClient = axios.create({
@@ -95,6 +98,110 @@ const handleSubmit = async () => {
     console.error("로그인 실패:", loginError.value, error);
   }
 };
+
+// OAuth 메시지 수신 여부 추적
+let oauthMessageReceived = false;
+
+/**
+ * 네이버 소셜 로그인 처리
+ * 팝업 창을 열어 OAuth 인증 진행
+ */
+const handleNaverLogin = () => {
+  isNaverLoading.value = true;
+  loginError.value = null;
+  invalidInputForm.value = false;
+  oauthMessageReceived = false;
+
+  // 팝업 창 크기 및 위치 계산
+  const width = 500;
+  const height = 600;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+
+  // 팝업 창 열기
+  const popup = window.open(
+    getNaverLoginUrl(),
+    "naverLogin",
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+  );
+
+  // 팝업이 차단된 경우 처리
+  if (!popup || popup.closed) {
+    isNaverLoading.value = false;
+    loginError.value = "팝업이 차단되었습니다. 팝업 차단을 해제해주세요.";
+    invalidInputForm.value = true;
+    return;
+  }
+
+  // 팝업 창 닫힘 감지 (폴링)
+  const checkPopupClosed = setInterval(async () => {
+    if (popup.closed) {
+      clearInterval(checkPopupClosed);
+
+      // postMessage를 받지 못하고 팝업이 닫힌 경우
+      // (사용자가 취소했거나 연결 오류 발생)
+      if (!oauthMessageReceived) {
+        // 혹시 로그인이 완료되었는지 확인
+        try {
+          await authStore.loadUser();
+          if (authStore.isAuthenticated) {
+            // 로그인 성공
+            isNaverLoading.value = false;
+            isAuthenticated.value = true;
+            router.replace("/");
+            return;
+          }
+        } catch {
+          // 사용자 정보 로드 실패 - 무시
+        }
+
+        // 로그인되지 않음 - 조용히 로딩 상태만 해제 (취소로 간주)
+        isNaverLoading.value = false;
+      }
+    }
+  }, 500);
+};
+
+// 팝업에서 보내는 메시지 수신
+const handleOAuthMessage = async (event: MessageEvent) => {
+  // 보안: 허용된 origin에서 온 메시지만 처리
+  const allowedOrigins = [
+    window.location.origin,
+    import.meta.env.VITE_API_URL || "http://localhost:5000",
+  ];
+
+  if (!allowedOrigins.includes(event.origin)) {
+    return;
+  }
+
+  // OAuth 로그인 성공 메시지 처리
+  if (event.data?.type === "OAUTH_SUCCESS") {
+    oauthMessageReceived = true;
+    isNaverLoading.value = false;
+    isAuthenticated.value = true;
+
+    // 사용자 정보 로드 후 홈으로 이동
+    await authStore.loadUser();
+    router.replace("/");
+  }
+
+  // OAuth 로그인 실패 메시지 처리
+  if (event.data?.type === "OAUTH_ERROR") {
+    oauthMessageReceived = true;
+    isNaverLoading.value = false;
+    invalidInputForm.value = true;
+    loginError.value = event.data.message || "네이버 로그인에 실패했습니다.";
+  }
+};
+
+// 컴포넌트 마운트 시 메시지 리스너 등록
+onMounted(() => {
+  window.addEventListener("message", handleOAuthMessage);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("message", handleOAuthMessage);
+});
 </script>
 
 <template>
@@ -164,12 +271,53 @@ const handleSubmit = async () => {
 
           <Button class="w-full mt-3" type="submit" :disabled="isLoading">
             <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-            {{ isLoading ? "로그인 중..." : "로그인" }}
+            <span class="text-[16px] tracking-tight">
+              {{ isLoading ? "로그인 중..." : "로그인" }}
+            </span>
           </Button>
 
-          <router-link to="/signup" class="w-full">
-            <Button class="w-full" :disabled="isLoading">네이버 로그인</Button>
-          </router-link>
+          <div class="relative my-1">
+            <div class="absolute inset-0 flex items-center">
+              <Separator></Separator>
+            </div>
+            <div class="relative flex justify-center text-xs uppercase">
+              <span
+                class="bg-background px-2 text-caption text-muted-foreground"
+                >또는</span
+              >
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            :class="[
+              'w-full h-11',
+              'bg-[#03A94D] hover:bg-[#03A94D]/90 font-medium',
+            ]"
+            :disabled="isLoading || isNaverLoading"
+            @click="handleNaverLogin"
+          >
+            <Loader2 v-if="isNaverLoading" class="h-5 w-5 animate-spin" />
+
+            <template v-else>
+              <div class="inline-flex items-center leading-none text-white">
+                <svg
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  class="w-4 h-4 block"
+                  preserveAspectRatio="xMinYMid meet"
+                >
+                  <path
+                    d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
+                  />
+                </svg>
+                <span class="text-[16px] tracking-tight ml-2 text-white"
+                  >네이버 로그인</span
+                >
+              </div>
+            </template>
+          </Button>
         </form>
       </CardContent>
     </Card>

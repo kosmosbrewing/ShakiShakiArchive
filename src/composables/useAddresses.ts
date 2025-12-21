@@ -5,6 +5,7 @@ import { ref, computed, reactive, onMounted, watch, type Ref } from "vue";
 import {
   fetchDeliveryAddresses,
   createDeliveryAddress,
+  updateDeliveryAddress,
   deleteDeliveryAddress,
 } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
@@ -54,6 +55,21 @@ export function useAddresses() {
     }
   };
 
+  // 배송지 수정
+  const editAddress = async (
+    id: string,
+    addressData: Partial<Omit<DeliveryAddress, "id" | "userId" | "createdAt">>
+  ) => {
+    try {
+      await updateDeliveryAddress(id, addressData);
+      await loadAddresses(); // 목록 갱신
+      return true;
+    } catch (e) {
+      console.error("배송지 수정 실패:", e);
+      return false;
+    }
+  };
+
   // 배송지 삭제
   const removeAddress = async (id: string, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
     if (!confirm(confirmMessage)) return false;
@@ -77,6 +93,7 @@ export function useAddresses() {
     defaultAddress,
     loadAddresses,
     addAddress,
+    editAddress,
     removeAddress,
   };
 }

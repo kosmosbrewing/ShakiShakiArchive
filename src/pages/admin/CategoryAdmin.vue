@@ -11,8 +11,8 @@ import {
 } from "@/lib/api";
 
 // 아이콘 및 UI 컴포넌트 (디자인 통일용)
-import { Settings, Package, Plus, Trash2, Edit3 } from "lucide-vue-next";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, Plus, Trash2, Edit3 } from "lucide-vue-next";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();

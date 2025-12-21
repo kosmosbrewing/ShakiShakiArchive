@@ -9,26 +9,17 @@ import {
   deleteProduct,
   fetchCategories,
   fetchAdminProductVariants,
-  createProductVariant,
-  updateProductVariant,
-  deleteProductVariant,
   fetchSizeMeasurements,
-  createSizeMeasurement,
-  updateSizeMeasurement,
-  deleteSizeMeasurement,
 } from "@/lib/api";
 
 // UI 컴포넌트 및 아이콘
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Package,
   Plus,
   Trash2,
   Edit3,
   Settings,
   Ruler,
-  ChevronRight,
-  Search,
   RotateCcw,
   Image as ImageIcon,
 } from "lucide-vue-next";
@@ -47,7 +38,6 @@ const isProductModalOpen = ref(false);
 const isVariantModalOpen = ref(false);
 const isSizeManagerOpen = ref(false);
 const isEditMode = ref(false);
-const isMeasurementEditMode = ref(false);
 const errorMessage = ref("");
 
 // 페이지네이션
@@ -223,41 +213,6 @@ const openVariantManager = async (product: any) => {
   isVariantModalOpen.value = true;
 };
 
-const handleEditVariant = (variant: any) => {
-  isEditMode.value = true;
-  Object.assign(variantForm, { ...variant });
-};
-
-const handleSaveVariant = async () => {
-  try {
-    if (!variantForm.size || !variantForm.sku)
-      return alert("필수 항목을 입력하세요.");
-    if (isEditMode.value)
-      await updateProductVariant(
-        currentProduct.value.id,
-        variantForm.id,
-        variantForm
-      );
-    else await createProductVariant(currentProduct.value.id, variantForm);
-    await loadVariants(currentProduct.value.id);
-    Object.assign(variantForm, initialVariantForm);
-    isEditMode.value = false;
-  } catch (error: any) {
-    alert(error.message);
-  }
-};
-
-const handleDeleteVariant = async (variantId: string) => {
-  if (confirm("옵션을 삭제하시겠습니까?")) {
-    try {
-      await deleteProductVariant(currentProduct.value.id, variantId);
-      await loadVariants(currentProduct.value.id);
-    } catch (e: any) {
-      alert(e.message);
-    }
-  }
-};
-
 const openSizeManager = async (product: any) => {
   currentProduct.value = product;
   await loadVariants(product.id);
@@ -269,29 +224,6 @@ const selectVariantForSize = async (variant: any) => {
   currentVariant.value = variant;
   Object.assign(measurementForm, initialMeasurementForm);
   await loadMeasurements(variant.id);
-};
-
-const handleSaveMeasurement = async () => {
-  try {
-    const payload = {
-      ...measurementForm,
-      totalLength: String(measurementForm.totalLength),
-      shoulderWidth: String(measurementForm.shoulderWidth),
-      chestSection: String(measurementForm.chestSection),
-      sleeveLength: String(measurementForm.sleeveLength),
-      waistSection: String(measurementForm.waistSection),
-      hipSection: String(measurementForm.hipSection),
-      thighSection: String(measurementForm.thighSection),
-    };
-    if (isMeasurementEditMode.value)
-      await updateSizeMeasurement(measurementForm.id, payload);
-    else await createSizeMeasurement(currentVariant.value.id, payload);
-    await loadMeasurements(currentVariant.value.id);
-    Object.assign(measurementForm, initialMeasurementForm);
-    isMeasurementEditMode.value = false;
-  } catch (error: any) {
-    alert(error.message);
-  }
 };
 
 watch(

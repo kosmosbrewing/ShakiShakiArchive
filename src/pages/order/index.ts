@@ -5,3 +5,4 @@ export { default as Order } from "./Order.vue";
 export { default as OrderList } from "./OrderList.vue";
 export { default as OrderDetail } from "./OrderDetail.vue";
 export { default as Checkout } from "./Checkout.vue";
+export { default as PaymentCallback } from "./PaymentCallback.vue";
