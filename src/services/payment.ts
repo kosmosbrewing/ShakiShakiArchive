@@ -248,3 +248,64 @@ export function getPaymentMethodLabel(method: PaymentMethod): string {
   };
   return labels[method] || method;
 }
+
+// ------------------------------------------------------------------
+// 네이버페이 SDK (팝업 결제 방식)
+// ------------------------------------------------------------------
+
+/**
+ * 네이버페이 결제 요청 데이터
+ */
+export interface NaverPayOpenRequest {
+  merchantPayKey: string; // 가맹점 주문 ID
+  productName: string; // 상품명
+  productCount: string; // 상품 수량
+  totalPayAmount: string; // 총 결제 금액
+  taxScopeAmount: string; // 과세 대상 금액
+  taxExScopeAmount: string; // 면세 대상 금액
+  returnUrl: string; // 결제 완료 후 리다이렉트 URL
+}
+
+/**
+ * 네이버페이 SDK 인스턴스 타입
+ */
+export interface NaverPayInstance {
+  open: (request: NaverPayOpenRequest) => void;
+}
+
+/**
+ * 네이버페이 SDK 초기화
+ * @param clientId - 네이버페이 클라이언트 ID
+ * @param chainId - 네이버페이 체인 ID (merchantId)
+ * @param mode - 환경 ("development" | "production")
+ */
+export function initNaverPay(
+  clientId: string,
+  chainId: string,
+  mode: "development" | "production" = "development"
+): NaverPayInstance | null {
+  const Naver = (window as any).Naver;
+
+  if (!Naver?.Pay?.create) {
+    console.error("네이버페이 SDK가 로드되지 않았습니다.");
+    return null;
+  }
+
+  return Naver.Pay.create({
+    mode,
+    clientId,
+    chainId,
+  });
+}
+
+/**
+ * 네이버페이 팝업 결제 요청
+ * @param naverPay - 네이버페이 SDK 인스턴스
+ * @param request - 결제 요청 데이터
+ */
+export function requestNaverPayPopup(
+  naverPay: NaverPayInstance,
+  request: NaverPayOpenRequest
+): void {
+  naverPay.open(request);
+}

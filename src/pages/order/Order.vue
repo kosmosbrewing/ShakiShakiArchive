@@ -11,9 +11,10 @@ import { useCreateOrder } from "@/composables/useOrders";
 import { formatPrice } from "@/lib/formatters";
 import {
   createDeliveryAddress,
-  reserveNaverPayment,
   getPaymentClientKey,
+  getNaverPayClientInfo,
 } from "@/lib/api";
+import { initNaverPay } from "@/services/payment";
 
 // 공통 컴포넌트
 import {
@@ -215,20 +216,49 @@ const processTossPayment = async (orderData: any) => {
   }
 };
 
-// [네이버페이] 결제 로직
+// [네이버페이] 결제 로직 (SDK 팝업 방식)
 const processNaverPayment = async (orderData: any) => {
   try {
-    // 1. 네이버페이 결제 예약
-    const reserveResult = await reserveNaverPayment(orderData.orderId);
+    // 1. 네이버페이 클라이언트 정보 가져오기
+    const { clientId, merchantId, mode } = await getNaverPayClientInfo();
 
-    // 2. 기본 배송지 저장 (결제 전에 저장)
+    // 2. 네이버페이 SDK 초기화
+    const naverPayMode = mode === "prod" ? "production" : "development";
+    const naverPay = initNaverPay(clientId, merchantId, naverPayMode);
+
+    if (!naverPay) {
+      throw new Error("네이버페이 SDK가 로드되지 않았습니다.");
+    }
+
+    // 3. 주문명 생성
+    const firstProductName = cartItems.value[0]?.product?.name || "상품";
+    const productName =
+      cartItems.value.length > 1
+        ? `${firstProductName} 외 ${cartItems.value.length - 1}건`
+        : firstProductName;
+
+    // 4. 상품 수량 계산
+    const productCount = cartItems.value.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+
+    // 5. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 3. 네이버페이 결제 페이지로 리다이렉트
-    window.location.href = reserveResult.paymentUrl;
+    // 6. 네이버페이 결제 팝업 호출
+    naverPay.open({
+      merchantPayKey: orderData.orderId,
+      productName: productName,
+      productCount: String(productCount),
+      totalPayAmount: String(totalAmount.value),
+      taxScopeAmount: String(totalAmount.value), // 전체 금액을 과세 대상으로
+      taxExScopeAmount: "0", // 면세 대상 금액 없음
+      returnUrl: `${window.location.origin}/payment/callback?provider=naverpay`,
+    });
   } catch (err: any) {
-    console.error("네이버페이 결제 예약 오류", err);
-    throw new Error(err.message || "네이버페이 결제 예약에 실패했습니다.");
+    console.error("네이버페이 결제 오류", err);
+    throw new Error(err.message || "네이버페이 결제 호출에 실패했습니다.");
   }
 };
 

@@ -19,12 +19,27 @@ import {
 } from "@/lib/api";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Trash2,
   Edit3,
   Settings,
   Ruler,
   Image as ImageIcon,
+  Plus,
+  X,
+  Check,
+  PlusCircle,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
@@ -441,12 +456,10 @@ onMounted(async () => {
           >개 상품
         </p>
       </div>
-      <button
-        @click="openCreateProductModal"
-        class="mb-2 bg-admin text-body text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium gap-2"
-      >
-        + 새 상품 등록
-      </button>
+      <Button @click="openCreateProductModal" class="mb-2 gap-2">
+        <Plus class="w-4 h-4" />
+        새 상품 등록
+      </Button>
     </div>
     <Separator class="mb-6"></Separator>
     <div v-if="isLoading" class="text-center py-20">
@@ -529,34 +542,42 @@ onMounted(async () => {
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex justify-center gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       @click="openVariantManager(product)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-caption font-bold text-admin hover:bg-muted transition-all shadow-sm"
+                      class="gap-1.5"
                     >
                       <Settings class="w-3.5 h-3.5" /> 옵션
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       @click="openSizeManager(product)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-100 rounded-lg text-caption font-bold text-green-700 hover:bg-green-100 transition-all shadow-sm"
+                      class="gap-1.5 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
                     >
                       <Ruler class="w-3.5 h-3.5" /> 사이즈
-                    </button>
+                    </Button>
                   </div>
                 </td>
                 <td class="px-6 py-4 text-right">
                   <div class="flex justify-end gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       @click="openEditProductModal(product)"
-                      class="p-2.5 text-admin-muted hover:text-primary transition-colors"
+                      class="text-muted-foreground hover:text-primary"
                     >
-                      <Edit3 class="w-4.5 h-4.5" />
-                    </button>
-                    <button
+                      <Edit3 class="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       @click="handleDeleteProduct(product.id)"
-                      class="p-2.5 text-admin-muted hover:text-destructive transition-colors"
+                      class="text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 class="w-4.5 h-4.5" />
-                    </button>
+                      <Trash2 class="w-4 h-4" />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -567,19 +588,16 @@ onMounted(async () => {
           v-if="totalPages > 1"
           class="p-6 bg-muted/20 flex justify-center gap-2 border-t"
         >
-          <button
+          <Button
             v-for="p in totalPages"
             :key="p"
             @click="changePage(p)"
-            :class="[
-              'h-10 w-10 rounded-xl text-sm font-bold transition-all',
-              currentPage === p
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'bg-white border text-admin-muted hover:bg-muted',
-            ]"
+            :variant="currentPage === p ? 'default' : 'outline'"
+            size="icon"
+            class="h-10 w-10"
           >
             {{ p }}
-          </button>
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -599,54 +617,36 @@ onMounted(async () => {
               {{ isEditMode ? "상품 정보 수정" : "신규 상품 등록" }}
             </h2>
 
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               @click="isProductModalOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors mb-2"
+              class="mb-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-x w-6 h-6"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
+              <X class="w-5 h-5" />
+            </Button>
           </div>
           <Separator></Separator>
           <form @submit.prevent="handleSaveProduct" class="space-y-6">
             <div class="grid grid-cols-2 gap-6 mt-6">
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   상품명 <span class="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   v-model="productForm.name"
                   type="text"
-                  class="form-input-custom"
                   placeholder="상품명을 입력하세요"
                   required
                 />
               </div>
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   Slug (URL용) <span class="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   v-model="productForm.slug"
                   type="text"
-                  class="form-input-custom"
                   placeholder="예: oversize-wool-coat"
                   required
                 />
@@ -654,52 +654,43 @@ onMounted(async () => {
             </div>
 
             <div class="grid grid-cols-3 gap-6">
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   판매 가격 <span class="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   v-model.number="productForm.price"
                   type="number"
-                  class="form-input-custom"
                   placeholder="0"
                   required
                 />
               </div>
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >원래 가격</label
-                >
-                <input
+              <div class="space-y-2">
+                <Label class="text-admin">원래 가격</Label>
+                <Input
                   v-model.number="productForm.originalPrice"
                   type="number"
-                  class="form-input-custom"
                   placeholder="0"
                 />
               </div>
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   카테고리 <span class="text-red-500">*</span>
-                </label>
-                <select
-                  v-model="productForm.categoryId"
-                  class="form-input-custom"
-                  required
-                >
-                  <option value="" disabled>선택하세요</option>
-                  <option
-                    v-for="cat in categories"
-                    :key="cat.id"
-                    :value="cat.id"
-                  >
-                    {{ cat.name }}
-                  </option>
-                </select>
+                </Label>
+                <Select v-model="productForm.categoryId">
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="cat in categories"
+                      :key="cat.id"
+                      :value="String(cat.id)"
+                    >
+                      {{ cat.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -722,19 +713,17 @@ onMounted(async () => {
               />
 
               <!-- 상품 설명 -->
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   상품 설명 <span class="text-red-500">*</span>
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   v-model="productForm.description"
                   rows="4"
-                  class="form-input-custom-small resize-none"
+                  class="resize-none"
                   placeholder="상품에 대한 상세한 설명을 입력하세요"
                   required
-                ></textarea>
+                />
               </div>
 
               <!-- 추가 이미지 업로드 -->
@@ -757,19 +746,16 @@ onMounted(async () => {
             <div
               class="flex justify-end gap-3 pt-6 border-t border-border mt-4"
             >
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 @click="isProductModalOpen = false"
-                class="px-6 py-3 border border-border rounded-xl text-admin-muted font-bold hover:bg-muted transition-all"
               >
                 취소
-              </button>
-              <button
-                type="submit"
-                class="px-10 py-3 bg-primary text-white rounded-xl font-bold hover:opacity-90 shadow-md shadow-primary/20 transition-all"
-              >
+              </Button>
+              <Button type="submit">
                 {{ isEditMode ? "수정 내용 저장" : "상품 등록하기" }}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -795,26 +781,14 @@ onMounted(async () => {
               }}
             </h2>
 
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               @click="isVariantModalOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors mb-2"
+              class="mb-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-x w-6 h-6"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
+              <X class="w-5 h-5" />
+            </Button>
           </div>
           <Separator class="mb-6"></Separator>
 
@@ -825,76 +799,46 @@ onMounted(async () => {
               <h4
                 class="text-body font-bold text-admin mb-5 flex items-center gap-2"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="lucide lucide-plus-circle text-primary"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 12h8" />
-                  <path d="M12 8v8" />
-                </svg>
+                <PlusCircle class="w-[18px] h-[18px] text-primary" />
                 {{ isEditMode ? "옵션 정보 수정" : "옵션 신규 등록" }}
               </h4>
 
               <form @submit.prevent="handleSaveVariant" class="space-y-5">
-                <div>
-                  <label
-                    class="block text-caption font-bold text-admin-muted mb-1.5 ml-0.5"
-                    >재고관리코드 (SKU)</label
-                  >
-                  <input
+                <div class="space-y-2">
+                  <Label class="text-muted-foreground">재고관리코드 (SKU)</Label>
+                  <Input
                     v-model="variantForm.sku"
                     type="text"
                     disabled
-                    class="text-caption form-input-custom bg-muted/50 cursor-not-allowed opacity-70"
+                    class="bg-muted/50 cursor-not-allowed opacity-70"
                   />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      class="block text-caption font-bold text-admin-muted mb-1.5 ml-0.5"
-                      >사이즈 *</label
-                    >
-                    <input
+                  <div class="space-y-2">
+                    <Label class="text-muted-foreground">사이즈 *</Label>
+                    <Input
                       v-model="variantForm.size"
                       type="text"
-                      class="form-input-custom"
                       placeholder="예: S, FREE"
                       required
                     />
                   </div>
-                  <div>
-                    <label
-                      class="block text-caption font-bold text-admin-muted mb-1.5 ml-0.5"
-                      >색상 *</label
-                    >
-                    <input
+                  <div class="space-y-2">
+                    <Label class="text-muted-foreground">색상 *</Label>
+                    <Input
                       v-model="variantForm.color"
                       type="text"
-                      class="form-input-custom"
                       placeholder="예: Black"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label
-                    class="block text-caption font-bold text-admin-muted mb-1.5 ml-0.5"
-                    >현재 재고 수량</label
-                  >
-                  <input
+                <div class="space-y-2">
+                  <Label class="text-muted-foreground">현재 재고 수량</Label>
+                  <Input
                     v-model.number="variantForm.stockQuantity"
                     type="number"
-                    class="form-input-custom"
                     placeholder="0"
                   />
                 </div>
@@ -906,33 +850,29 @@ onMounted(async () => {
                     id="isAvailable"
                     class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
                   />
-                  <label
-                    for="isAvailable"
-                    class="text-caption font-semibold text-admin cursor-pointer"
-                    >즉시 판매 가능함</label
-                  >
+                  <Label for="isAvailable" class="cursor-pointer">
+                    즉시 판매 가능함
+                  </Label>
                 </div>
 
                 <div class="pt-2 space-y-2">
-                  <button
-                    type="submit"
-                    class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-md shadow-primary/10 hover:opacity-90 transition-all"
-                  >
+                  <Button type="submit" class="w-full">
                     {{ isEditMode ? "수정 내용 저장" : "옵션 추가하기" }}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     v-if="isEditMode"
                     type="button"
+                    variant="outline"
+                    class="w-full"
                     @click="
                       () => {
                         isEditMode = false;
                         Object.assign(variantForm, initialVariantForm);
                       }
                     "
-                    class="w-full bg-white border border-border text-admin-muted py-3 rounded-xl text-caption font-bold hover:bg-muted transition-all"
                   >
                     취소하고 새로 등록
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -987,53 +927,22 @@ onMounted(async () => {
                       </td>
                       <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-1">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             @click="handleEditVariant(variant)"
-                            class="p-2 text-admin-muted hover:text-primary transition-colors"
-                            title="수정"
+                            class="h-8 w-8 text-muted-foreground hover:text-primary"
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              class="lucide lucide-edit-3"
-                            >
-                              <path d="M12 20h9" />
-                              <path
-                                d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                              />
-                            </svg>
-                          </button>
-                          <button
+                            <Edit3 class="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             @click="handleDeleteVariant(variant.id)"
-                            class="p-2 text-admin-muted hover:text-destructive transition-colors"
-                            title="삭제"
+                            class="h-8 w-8 text-muted-foreground hover:text-destructive"
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              class="lucide lucide-trash-2"
-                            >
-                              <path d="M3 6h18" />
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                              <line x1="10" x2="10" y1="11" y2="17" />
-                              <line x1="14" x2="14" y1="11" y2="17" />
-                            </svg>
-                          </button>
+                            <Trash2 class="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -1070,26 +979,14 @@ onMounted(async () => {
                 사이즈 관리
               </h2>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               @click="isSizeManagerOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors mb-2"
+              class="mb-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-x w-6 h-6"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
+              <X class="w-5 h-5" />
+            </Button>
           </div>
           <Separator></Separator>
           <div class="mb-10">
@@ -1103,22 +1000,16 @@ onMounted(async () => {
               사이즈 옵션 선택
             </label>
             <div v-if="variants.length > 0" class="flex flex-wrap gap-2">
-              <button
+              <Button
                 v-for="v in variants"
                 :key="v.id"
                 @click="selectVariantForSize(v)"
-                :class="[
-                  'px-5 py-2.5 rounded-xl text-body font-bold border transition-all shadow-sm',
-                  currentVariant?.id === v.id
-                    ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-105'
-                    : 'bg-white text-admin-muted border-border hover:bg-muted',
-                ]"
+                :variant="currentVariant?.id === v.id ? 'default' : 'outline'"
+                :class="currentVariant?.id === v.id ? 'scale-105' : ''"
               >
-                <span class="text-caption">
-                  {{ v.size }}
-                </span>
-                <span class="text-caption"> ({{ v.color }})</span>
-              </button>
+                <span class="text-caption">{{ v.size }}</span>
+                <span class="text-caption ml-1">({{ v.color }})</span>
+              </Button>
             </div>
             <div
               v-else
@@ -1163,56 +1054,41 @@ onMounted(async () => {
 
               <form @submit.prevent="handleSaveMeasurement" class="space-y-6">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div v-for="field in measurementFields" :key="field.id">
-                    <label
-                      class="block text-caption font-bold text-admin-muted mb-1.5 ml-1"
-                    >
+                  <div
+                    v-for="field in measurementFields"
+                    :key="field.id"
+                    class="space-y-2"
+                  >
+                    <Label class="text-muted-foreground">
                       {{ field.label }} (cm)
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       v-model.number="measurementForm[field.id]"
                       type="number"
                       step="0.1"
-                      class="form-input-custom-small"
                       placeholder="0.0"
                     />
                   </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                  <button
+                  <Button
                     v-if="isMeasurementEditMode"
                     type="button"
+                    variant="ghost"
                     @click="
                       () => {
                         isMeasurementEditMode = false;
                         Object.assign(measurementForm, initialMeasurementForm);
                       }
                     "
-                    class="px-4 py-2 text-caption font-bold text-admin-muted hover:bg-muted rounded-lg transition-colors"
                   >
                     취소
-                  </button>
-                  <button
-                    type="submit"
-                    class="px-8 py-2.5 bg-admin text-white rounded-xl text-body font-bold hover:bg-green-700 shadow-md shadow-green-600/10 transition-all flex items-center gap-2"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      class="lucide lucide-check"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
+                  </Button>
+                  <Button type="submit" class="gap-2">
+                    <Check class="w-4 h-4" />
                     {{ isMeasurementEditMode ? "수정 완료" : "수치 등록하기" }}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -1251,51 +1127,22 @@ onMounted(async () => {
                     </td>
                     <td class="px-6 py-4 text-right">
                       <div class="flex justify-end gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           @click="handleEditMeasurement(m)"
-                          class="p-2 text-admin-muted hover:text-primary transition-colors"
+                          class="h-8 w-8 text-muted-foreground hover:text-primary"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="lucide lucide-edit-3"
-                          >
-                            <path d="M12 20h9" />
-                            <path
-                              d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                            />
-                          </svg>
-                        </button>
-                        <button
+                          <Edit3 class="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           @click="handleDeleteMeasurement(m.id)"
-                          class="p-2 text-admin-muted hover:text-destructive transition-colors"
+                          class="h-8 w-8 text-muted-foreground hover:text-destructive"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="lucide lucide-trash-2"
-                          >
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                            <line x1="10" x2="10" y1="11" y2="17" />
-                            <line x1="14" x2="14" y1="11" y2="17" />
-                          </svg>
-                        </button>
+                          <Trash2 class="w-4 h-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>

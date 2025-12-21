@@ -6,6 +6,8 @@ import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 // UI 컴포넌트 및 아이콘
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   ShoppingBag,
@@ -13,6 +15,7 @@ import {
   RotateCcw,
   Calendar,
   MapPin,
+  Image as ImageIcon,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -99,13 +102,10 @@ onMounted(async () => {
         </p>
       </div>
 
-      <button
-        @click="loadData"
-        class="flex items-center gap-2 px-4 py-2.5 bg-white border border-border rounded-xl text-body font-bold text-admin hover:bg-muted transition-all shadow-sm mb-2"
-      >
+      <Button variant="outline" @click="loadData" class="mb-2 gap-2">
         <RotateCcw class="w-4 h-4" />
-        <span>새로고침</span>
-      </button>
+        새로고침
+      </Button>
     </div>
     <Separator class="mb-6"></Separator>
 
@@ -260,21 +260,18 @@ onMounted(async () => {
                 </td>
 
                 <td class="px-8 py-5 text-center">
-                  <input
+                  <Input
                     v-model="item.trackingNumber"
                     type="text"
                     placeholder="운송장 입력"
-                    class="w-full max-w-[160px] border border-border rounded-xl px-3 py-1.5 text-caption text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
+                    class="w-full max-w-[160px]"
                   />
                 </td>
 
                 <td class="px-8 py-5 text-right">
-                  <button
-                    @click="handleSaveItem(item)"
-                    class="bg-admin text-white px-5 py-2 rounded-xl text-caption font-bold hover:opacity-90 transition-all shadow-md shadow-admin/10"
-                  >
+                  <Button size="sm" @click="handleSaveItem(item)">
                     저장
-                  </button>
+                  </Button>
                 </td>
               </tr>
             </tbody>

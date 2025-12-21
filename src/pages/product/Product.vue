@@ -11,6 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api";
 import { LoadingSpinner, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
+import { Separator } from "@/components/ui/separator";
 
 // 1. 데이터 인터페이스
 interface ProductItem {
@@ -189,7 +190,7 @@ watch(
               />
             </button>
           </div>
-          <div class="flex border-b border-border"></div>
+          <Separator></Separator>
           <!-- 상품명 -->
           <CardContent
             class="py-3 px-4 cursor-pointer hover:underline line-clamp-2"

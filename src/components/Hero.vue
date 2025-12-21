@@ -20,29 +20,27 @@ const marqueeImages = [marquee1, marquee2, marquee3, marquee4];
 </script>
 
 <template>
-  <section class="w-11/12 mx-auto px-4 py-8 sm:py-12">
-    <div class="grid grid-cols-1 lg:grid-cols-2 items-start gap-8 lg:gap-12">
+  <section class="w-11/12 max-w-screen-2xl mx-auto pt-8 sm:pt-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 mx-auto">
       <!-- 로고 이미지 영역 -->
-      <div class="flex flex-col items-center justify-start">
-        <div class="w-full max-w-md lg:max-w-lg xl:max-w-xl sticky top-24">
-          <img
-            src="@/assets/logo04.png"
-            alt="ShakiShaki Archive Logo"
-            class="w-full h-auto object-contain rounded-2xl shadow-md"
-            draggable="false"
-          />
-        </div>
+      <div class="flex justify-center lg:justify-end">
+        <img
+          src="@/assets/hero.jpeg"
+          alt="ShakiShaki Archive Logo"
+          class="object-contain rounded-2xl shadow-md"
+          draggable="false"
+        />
       </div>
 
       <!-- 상품 목록 영역 -->
-      <div class="w-full">
+      <div class="flex items-center justify-center lg:justify-start">
         <ProductHome />
       </div>
     </div>
   </section>
 
-  <section id="sponsors" class="max-w-[75%] mx-auto pb-24 sm:pb-32">
-    <div class="mx-auto mt-16">
+  <section id="sponsors" class="max-w-[75%] mx-auto pb-2">
+    <div class="mx-auto mt-6 lg:mt-10">
       <Marquee
         class="gap-[3rem]"
         :pauseOnHover="true"
@@ -54,7 +52,7 @@ const marqueeImages = [marquee1, marquee2, marquee3, marquee4];
           :key="index"
           :src="img"
           alt="marquee Logo"
-          class="min-w-[60px] object-contain"
+          class="min-w-[40px] object-contain"
           draggable="false"
         />
       </Marquee>

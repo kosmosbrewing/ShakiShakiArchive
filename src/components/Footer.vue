@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 </script>
 
 <template>
-  <footer class="w-11/12 max-w-screen-2xl mx-auto py-8 sm:py-12">
+  <footer class="w-11/12 max-w-screen-2xl mx-auto py-2 pb-8">
     <Card>
       <CardContent class="p-6 sm:p-10">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
