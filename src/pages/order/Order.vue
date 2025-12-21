@@ -9,10 +9,19 @@ import { useCart } from "@/composables/useCart";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
 import { formatPrice } from "@/lib/formatters";
-import { createDeliveryAddress } from "@/lib/api";
+import {
+  createDeliveryAddress,
+  reserveNaverPayment,
+  getPaymentClientKey,
+} from "@/lib/api";
 
 // 공통 컴포넌트
-import { LoadingSpinner, AddressCard, AddressForm } from "@/components/common";
+import {
+  LoadingSpinner,
+  AddressCard,
+  AddressForm,
+  AddressSearchModal,
+} from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +45,7 @@ const { submitOrder } = useCreateOrder();
 // 상태
 const loading = ref(false);
 const isAddressModalOpen = ref(false);
+const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
 const paymentProvider = ref<"toss" | "naverpay">("toss");
 
@@ -97,10 +107,16 @@ const selectAddressFromModal = (addr: DeliveryAddress) => {
   isAddressModalOpen.value = false;
 };
 
-// 주소 검색
+// 주소 검색 모달 열기
 const openAddressSearch = () => {
-  shippingForm.form.zipCode = "06236";
-  shippingForm.form.address = "서울 강남구 테헤란로 123";
+  isAddressSearchOpen.value = true;
+};
+
+// 주소 선택 핸들러
+const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+  shippingForm.form.zipCode = address.zonecode;
+  shippingForm.form.address = address.address;
+  shippingForm.form.detailAddress = ""; // 상세 주소 초기화
 };
 
 // 결제 처리 핸들러
@@ -145,24 +161,75 @@ const handlePayment = async () => {
 // [토스페이먼츠] 결제 로직
 const processTossPayment = async (orderData: any) => {
   try {
-    alert(
-      `[MVP 테스트] 토스페이 결제가 완료되었습니다.\n주문번호: ${orderData.id}`
-    );
+    // 1. 클라이언트 키 가져오기
+    const { clientKey } = await getPaymentClientKey();
+
+    // 2. 토스페이먼츠 SDK 초기화 (window 객체에서 가져옴)
+    const TossPayments = (window as any).TossPayments;
+    if (!TossPayments) {
+      throw new Error("토스페이먼츠 SDK가 로드되지 않았습니다.");
+    }
+
+    const tossPayments = TossPayments(clientKey);
+
+    // 3. customerKey 생성 (회원: 유저ID, 비회원: 주문ID 기반)
+    const customerKey = authStore.user?.id
+      ? `user_${authStore.user.id}`
+      : `guest_${orderData.orderId}`;
+
+    // 4. 주문명 생성 (첫 번째 상품명 + 외 n개)
+    const firstProductName = cartItems.value[0]?.product?.name || "상품";
+    const orderName =
+      cartItems.value.length > 1
+        ? `${firstProductName} 외 ${cartItems.value.length - 1}건`
+        : firstProductName;
+
+    // 5. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
-    router.push("/account");
-  } catch (err) {
+
+    // 6. 결제 요청
+    const payment = tossPayments.payment({ customerKey });
+
+    await payment.requestPayment({
+      method: "CARD", // 카드 결제 (토스페이 선택 시 다양한 결제수단 제공)
+      amount: {
+        currency: "KRW",
+        value: totalAmount.value,
+      },
+      orderId: orderData.orderId, // 백엔드에서 생성한 주문 ID
+      orderName: orderName,
+      successUrl: `${window.location.origin}/payment/callback?result=success`,
+      failUrl: `${window.location.origin}/payment/callback?result=fail`,
+      customerEmail: authStore.user?.email || undefined,
+      customerName: shippingForm.form.recipient,
+      customerMobilePhone: shippingForm.fullPhone.value.replace(/-/g, ""),
+    });
+  } catch (err: any) {
     console.error("토스 결제 오류", err);
-    alert("토스 결제 창 호출 실패");
+    // 사용자가 결제 취소한 경우는 별도 처리
+    if (err.code === "USER_CANCEL") {
+      alert("결제가 취소되었습니다.");
+    } else {
+      throw new Error(err.message || "토스 결제 창 호출에 실패했습니다.");
+    }
   }
 };
 
 // [네이버페이] 결제 로직
 const processNaverPayment = async (orderData: any) => {
-  alert(
-    `[MVP 테스트] 네이버페이 결제가 완료되었습니다.\n주문번호: ${orderData.id}`
-  );
-  await saveDefaultAddressIfNeeded();
-  router.push("/account");
+  try {
+    // 1. 네이버페이 결제 예약
+    const reserveResult = await reserveNaverPayment(orderData.orderId);
+
+    // 2. 기본 배송지 저장 (결제 전에 저장)
+    await saveDefaultAddressIfNeeded();
+
+    // 3. 네이버페이 결제 페이지로 리다이렉트
+    window.location.href = reserveResult.paymentUrl;
+  } catch (err: any) {
+    console.error("네이버페이 결제 예약 오류", err);
+    throw new Error(err.message || "네이버페이 결제 예약에 실패했습니다.");
+  }
 };
 
 // 기본 배송지 저장 헬퍼 함수
@@ -271,6 +338,7 @@ onMounted(() => {
                   <img
                     :src="item.product?.imageUrl"
                     class="w-full h-full object-cover"
+                    draggable="false"
                   />
                 </div>
 
@@ -344,6 +412,7 @@ onMounted(() => {
                     :src="method.icon"
                     :alt="method.label"
                     class="h-8 w-auto mb-2 object-contain"
+                    draggable="false"
                   />
                   <span
                     class="text-body font-bold"
@@ -405,5 +474,12 @@ onMounted(() => {
         </CardContent>
       </Card>
     </div>
+
+    <!-- 주소 검색 모달 -->
+    <AddressSearchModal
+      :open="isAddressSearchOpen"
+      @close="isAddressSearchOpen = false"
+      @select="handleAddressSelect"
+    />
   </div>
 </template>

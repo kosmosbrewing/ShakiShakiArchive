@@ -20,18 +20,14 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Package,
-  Plus,
   Trash2,
   Edit3,
   Settings,
   Ruler,
-  ChevronRight,
-  Search,
-  RotateCcw,
   Image as ImageIcon,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
+import { ImageUploader } from "@/components/admin";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -68,8 +64,8 @@ const initialProductForm = {
   stockQuantity: 0,
   categoryId: "",
   imageUrl: "",
-  imagesStr: "",
-  detailImagesStr: "",
+  images: [] as string[], // 상품 이미지 배열
+  detailImages: [] as string[], // 상세 이미지 배열
   isAvailable: true,
 };
 const productForm = reactive({ ...initialProductForm });
@@ -181,10 +177,8 @@ const openEditProductModal = (product: any) => {
     ...product,
     price: Number(product.price),
     originalPrice: Number(product.originalPrice || 0),
-    imagesStr: product.images ? product.images.join(", ") : "",
-    detailImagesStr: product.detailImages
-      ? product.detailImages.join(", ")
-      : "",
+    images: product.images || [],
+    detailImages: product.detailImages || [],
   });
   errorMessage.value = "";
   isProductModalOpen.value = true;
@@ -213,14 +207,8 @@ const handleSaveProduct = async () => {
       stockQuantity: productForm.stockQuantity,
       categoryId: productForm.categoryId,
       imageUrl: productForm.imageUrl,
-      images: productForm.imagesStr
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s),
-      detailImages: productForm.detailImagesStr
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s),
+      images: productForm.images,
+      detailImages: productForm.detailImages,
       isAvailable: productForm.isAvailable,
     };
 
@@ -716,35 +704,24 @@ onMounted(async () => {
             </div>
 
             <div class="space-y-6">
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
-                  대표 이미지 URL <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="productForm.imageUrl"
-                  type="text"
-                  class="form-input-custom-small"
-                  placeholder="https://example.com/main.jpg"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
-                  상세 이미지 (콤마로 구분) <span class="text-red-500">*</span>
-                </label>
-                <textarea
-                  v-model="productForm.detailImagesStr"
-                  rows="1"
-                  s
-                  class="form-input-custom-small resize-none"
-                  placeholder="상세 이미지 url을 입력하세요"
-                  required
-                ></textarea>
-              </div>
+              <!-- 대표 이미지 업로드 -->
+              <ImageUploader
+                v-model="productForm.imageUrl"
+                type="single"
+                label="대표 이미지"
+                :required="true"
+              />
+
+              <!-- 상세 이미지 업로드 -->
+              <ImageUploader
+                v-model="productForm.detailImages"
+                type="details"
+                label="상세 이미지"
+                :required="true"
+                :max-files="10"
+              />
+
+              <!-- 상품 설명 -->
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
@@ -760,18 +737,14 @@ onMounted(async () => {
                 ></textarea>
               </div>
 
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >추가 이미지 (콤마로 구분)</label
-                >
-                <textarea
-                  v-model="productForm.imagesStr"
-                  rows="2"
-                  class="form-input-custom-small resize-none"
-                  placeholder="url1, url2..."
-                ></textarea>
-              </div>
+              <!-- 추가 이미지 업로드 -->
+              <ImageUploader
+                v-model="productForm.images"
+                type="multiple"
+                label="추가 이미지 (선택)"
+                :required="false"
+                :max-files="10"
+              />
             </div>
 
             <div

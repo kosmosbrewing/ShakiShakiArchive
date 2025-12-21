@@ -2,6 +2,7 @@
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { sendVerification, verifyEmail } from "@/lib/api";
 import {
   Loader2,
   CheckCircle2,
@@ -43,32 +44,63 @@ const verificationState = reactive({
   isVerified: false,
   code: "",
   isLoading: false,
-  serverCode: "123456",
+  isVerifying: false,
+  errorMessage: "",
 });
 
 // 3. UI 상태
 const isSubmitting = ref(false);
 const errorMessage = ref("");
 
+// 인증코드 발송
 const sendVerificationCode = async () => {
   if (!formData.email || !formData.email.includes("@")) {
-    alert("유효한 이메일을 입력해주세요.");
+    verificationState.errorMessage = "유효한 이메일을 입력해주세요.";
     return;
   }
+
   verificationState.isLoading = true;
-  setTimeout(() => {
-    verificationState.isLoading = false;
+  verificationState.errorMessage = "";
+
+  try {
+    await sendVerification(formData.email, "signup");
     verificationState.isSent = true;
-    alert(`[개발용] 인증번호: ${verificationState.serverCode}`);
-  }, 1000);
+    verificationState.errorMessage = "";
+  } catch (error: any) {
+    verificationState.errorMessage =
+      error.message || "인증코드 발송에 실패했습니다.";
+  } finally {
+    verificationState.isLoading = false;
+  }
 };
 
-const verifyCode = () => {
-  if (verificationState.code === verificationState.serverCode) {
-    verificationState.isVerified = true;
-    errorMessage.value = "";
-  } else {
-    alert("인증번호가 일치하지 않습니다.");
+// 인증코드 확인
+const verifyCode = async () => {
+  if (!verificationState.code || verificationState.code.length !== 6) {
+    verificationState.errorMessage = "6자리 인증코드를 입력해주세요.";
+    return;
+  }
+
+  verificationState.isVerifying = true;
+  verificationState.errorMessage = "";
+
+  try {
+    const response = await verifyEmail(
+      formData.email,
+      verificationState.code,
+      "signup"
+    );
+    if (response.verified) {
+      verificationState.isVerified = true;
+      verificationState.errorMessage = "";
+    } else {
+      verificationState.errorMessage = "인증번호가 일치하지 않습니다.";
+    }
+  } catch (error: any) {
+    verificationState.errorMessage =
+      error.message || "인증 확인에 실패했습니다.";
+  } finally {
+    verificationState.isVerifying = false;
   }
 };
 
@@ -173,11 +205,21 @@ const handleSignup = async () => {
                   v-else-if="!verificationState.isVerified"
                   class="w-4 h-4 mr-2"
                 />
+                <CheckCircle2 v-else class="w-4 h-4 mr-2" />
                 <span v-if="verificationState.isLoading">전송중</span>
                 <span v-else-if="verificationState.isVerified">완료</span>
+                <span v-else-if="verificationState.isSent">재전송</span>
                 <span v-else>인증요청</span>
               </Button>
             </div>
+            <p
+              v-if="
+                verificationState.errorMessage && !verificationState.isSent
+              "
+              class="text-caption text-red-500"
+            >
+              {{ verificationState.errorMessage }}
+            </p>
           </div>
 
           <div
@@ -190,19 +232,36 @@ const handleSignup = async () => {
                 id="code"
                 type="text"
                 placeholder="인증번호 6자리"
+                maxlength="6"
                 v-model="verificationState.code"
+                :disabled="verificationState.isVerifying"
               />
               <Button
                 type="button"
                 variant="outline"
                 class="w-28 shrink-0"
                 @click="verifyCode"
+                :disabled="
+                  verificationState.isVerifying ||
+                  verificationState.code.length !== 6
+                "
               >
-                <KeyRound class="w-4 h-4 mr-2" /> 확인
+                <Loader2
+                  v-if="verificationState.isVerifying"
+                  class="animate-spin h-4 w-4 mr-2"
+                />
+                <KeyRound v-else class="w-4 h-4 mr-2" />
+                {{ verificationState.isVerifying ? "확인중" : "확인" }}
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">
-              테스트 코드: 123456
+              이메일로 발송된 6자리 인증번호를 입력해주세요.
+            </p>
+            <p
+              v-if="verificationState.errorMessage"
+              class="text-caption text-red-500"
+            >
+              {{ verificationState.errorMessage }}
             </p>
           </div>
 

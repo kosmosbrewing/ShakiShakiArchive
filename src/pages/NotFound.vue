@@ -1,20 +1,14 @@
+<script setup lang="ts">
+import { EmptyState } from "@/components/common";
+</script>
+
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background">
-    <div class="text-center">
-      <img :src="notfound" alt="notfound" class="w-40 h-40 object-contain" />
-      <p class="text-heading mb-8">페이지를 찾을 수 없습니다</p>
-      <RouterLink
-        to="/"
-        data-testid="link-home"
-        class="px-6 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors inline-block"
-      >
-        홈으로 돌아가기
-      </RouterLink>
-    </div>
+  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+    <EmptyState
+      header="페이지를 찾을 수 없습니다"
+      message="호출한 주소를 확인해주세요"
+      button-text="홈으로 돌아가기"
+      button-link="/"
+    />
   </div>
 </template>
-
-<script setup lang="ts">
-import { RouterLink } from "vue-router";
-import notfound from "@/assets/cursor.png";
-</script>

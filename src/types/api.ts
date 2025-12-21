@@ -215,6 +215,36 @@ export interface CancelPaymentRequest {
   cancelAmount?: number; // 부분 취소 시
 }
 
+// ------------------------------------------------------------------
+// 네이버페이 관련 타입
+// ------------------------------------------------------------------
+
+// 네이버페이 결제 예약 요청
+export interface NaverPayReserveRequest {
+  orderId: string; // 주문 UUID
+}
+
+// 네이버페이 결제 예약 응답
+export interface NaverPayReserveResponse {
+  message: string;
+  reserveId: string; // 네이버페이 예약 ID
+  paymentUrl: string; // 결제 페이지 URL
+}
+
+// 네이버페이 결제 상태 응답
+export interface NaverPayStatusResponse {
+  status: string;
+  order: Order;
+  paymentId?: string;
+}
+
+// 네이버페이 클라이언트 정보 응답
+export interface NaverPayClientInfoResponse {
+  clientId: string;
+  merchantId: string;
+  mode: "dev" | "prod";
+}
+
 // 카테고리 타입
 export interface Category {
   id: number;
@@ -223,4 +253,116 @@ export interface Category {
   description?: string;
   imageUrl?: string;
   createdAt: string;
+}
+
+// ------------------------------------------------------------------
+// 이메일 인증 관련 타입
+// ------------------------------------------------------------------
+
+// 이메일 인증 타입 ('signup' | 'password_reset')
+export type EmailVerificationType = "signup" | "password_reset";
+
+// 인증코드 발송 요청
+export interface SendVerificationRequest {
+  email: string;
+  type: EmailVerificationType;
+}
+
+// 인증코드 발송 응답
+export interface SendVerificationResponse {
+  message: string;
+}
+
+// 인증코드 확인 요청
+export interface VerifyEmailRequest {
+  email: string;
+  code: string;
+  type: EmailVerificationType;
+}
+
+// 인증코드 확인 응답
+export interface VerifyEmailResponse {
+  message: string;
+  verified: boolean;
+}
+
+// 인증 상태 확인 응답
+export interface CheckVerificationResponse {
+  verified: boolean;
+}
+
+// ------------------------------------------------------------------
+// 주소 검색 관련 타입 (카카오 로컬 API)
+// ------------------------------------------------------------------
+
+// 주소 검색 결과 아이템
+export interface AddressSearchResult {
+  addressName: string; // 전체 지번 주소
+  roadAddress: string; // 전체 도로명 주소
+  jibunAddress: string; // 지번 주소 상세
+  zonecode: string; // 우편번호
+  buildingName: string; // 건물명
+  x: string; // 경도
+  y: string; // 위도
+}
+
+// 주소 검색 응답
+export interface AddressSearchResponse {
+  results: AddressSearchResult[];
+  totalCount: number;
+  isEnd: boolean;
+}
+
+// 키워드(장소) 검색 결과 아이템
+export interface KeywordSearchResult {
+  placeName: string; // 장소명
+  addressName: string; // 지번 주소
+  roadAddressName: string; // 도로명 주소
+  phone: string; // 전화번호
+  categoryName: string; // 카테고리명
+  x: string; // 경도
+  y: string; // 위도
+}
+
+// 키워드 검색 응답
+export interface KeywordSearchResponse {
+  results: KeywordSearchResult[];
+  totalCount: number;
+  isEnd: boolean;
+}
+
+// ------------------------------------------------------------------
+// 이미지 업로드 관련 타입 (Cloudinary)
+// ------------------------------------------------------------------
+
+// 업로드된 이미지 정보
+export interface UploadedImage {
+  url: string; // Cloudinary 이미지 URL
+  publicId: string; // Cloudinary public ID (삭제 시 사용)
+  width: number; // 이미지 너비
+  height: number; // 이미지 높이
+}
+
+// 단일 이미지 업로드 응답
+export interface ImageUploadResponse {
+  message: string;
+  image: UploadedImage;
+}
+
+// 다중 이미지 업로드 응답
+export interface ImagesUploadResponse {
+  message: string;
+  images: UploadedImage[];
+}
+
+// 이미지 삭제 응답
+export interface ImageDeleteResponse {
+  message: string;
+  deleted: boolean;
+}
+
+// 다중 이미지 삭제 응답
+export interface ImagesDeleteResponse {
+  message: string;
+  deleted: string[]; // 삭제된 publicId 목록
 }

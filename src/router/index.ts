@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import Home from "@/components/Home.vue";
 
 // Auth (인증)
-import { Login, Signup } from "@/pages/auth";
+import { Login, Signup, OAuthCallback } from "@/pages/auth";
 
 // Account (계정)
 import { Account, Modify, AddressList } from "@/pages/account";
@@ -17,7 +17,7 @@ import { Account, Modify, AddressList } from "@/pages/account";
 import { Product, ProductDetail } from "@/pages/product";
 
 // Order (주문)
-import { Order, OrderList, OrderDetail, Checkout } from "@/pages/order";
+import { Order, OrderList, OrderDetail, Checkout, PaymentCallback } from "@/pages/order";
 
 // Cart (장바구니)
 import { Cart } from "@/pages/cart";
@@ -41,6 +41,7 @@ const routes = [
   // 인증 관련
   { path: "/login", name: "Login", component: Login },
   { path: "/signup", name: "Signup", component: Signup },
+  { path: "/oauth/callback", name: "OAuthCallback", component: OAuthCallback },
 
   // 계정 관련
   {
@@ -93,6 +94,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   { path: "/checkout", name: "Checkout", component: Checkout },
+  { path: "/payment/callback", name: "PaymentCallback", component: PaymentCallback },
 
   // 위시리스트
   {

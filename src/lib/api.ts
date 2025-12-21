@@ -6,6 +6,21 @@ import type {
   ConfirmPaymentRequest,
   ConfirmPaymentResponse,
   CancelPaymentRequest,
+  SendVerificationRequest,
+  SendVerificationResponse,
+  VerifyEmailRequest,
+  VerifyEmailResponse,
+  CheckVerificationResponse,
+  EmailVerificationType,
+  AddressSearchResponse,
+  KeywordSearchResponse,
+  NaverPayReserveResponse,
+  NaverPayStatusResponse,
+  NaverPayClientInfoResponse,
+  ImageUploadResponse,
+  ImagesUploadResponse,
+  ImageDeleteResponse,
+  ImagesDeleteResponse,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -69,6 +84,11 @@ export async function logout(): Promise<void> {
   return apiRequest("/api/auth/logout", { method: "POST" });
 }
 
+// 네이버 소셜 로그인 URL 반환
+export function getNaverLoginUrl(): string {
+  return `${API_BASE}/api/oauth/naver/login`;
+}
+
 // 현재 사용자 정보 가져오기
 export async function fetchCurrentUser(): Promise<User> {
   return apiRequest<User>("/api/auth/user");
@@ -76,7 +96,7 @@ export async function fetchCurrentUser(): Promise<User> {
 
 // 내 정보 수정
 export async function updateMyInfo(data: {
-  userName?: string; // [수정] firstName/lastName -> userName
+  userName?: string;
   phone?: string;
   zipCode?: string;
   address?: string;
@@ -84,7 +104,7 @@ export async function updateMyInfo(data: {
   emailOptIn?: boolean;
 }): Promise<any> {
   return apiRequest("/api/auth/user", {
-    method: "PATCH",
+    method: "PUT", // 백엔드 명세에 맞게 PUT으로 변경
     body: JSON.stringify(data),
   });
 }
@@ -105,6 +125,80 @@ export async function withdrawUser(): Promise<void> {
   return apiRequest("/api/auth/user", {
     method: "DELETE",
   });
+}
+
+// ------------------------------------------------------------------
+// [1-1] 이메일 인증 (Email Verification)
+// ------------------------------------------------------------------
+
+// 이메일 인증코드 발송
+export async function sendVerification(
+  email: string,
+  type: EmailVerificationType = "signup"
+): Promise<SendVerificationResponse> {
+  return apiRequest<SendVerificationResponse>("/api/auth/send-verification", {
+    method: "POST",
+    body: JSON.stringify({ email, type } as SendVerificationRequest),
+  });
+}
+
+// 이메일 인증코드 확인
+export async function verifyEmail(
+  email: string,
+  code: string,
+  type: EmailVerificationType = "signup"
+): Promise<VerifyEmailResponse> {
+  return apiRequest<VerifyEmailResponse>("/api/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ email, code, type } as VerifyEmailRequest),
+  });
+}
+
+// 이메일 인증 상태 확인
+export async function checkVerification(
+  email: string,
+  type: EmailVerificationType = "signup"
+): Promise<CheckVerificationResponse> {
+  const params = new URLSearchParams({ email, type });
+  return apiRequest<CheckVerificationResponse>(
+    `/api/auth/check-verification?${params.toString()}`
+  );
+}
+
+// ------------------------------------------------------------------
+// [1-2] 주소 검색 (카카오 로컬 API)
+// ------------------------------------------------------------------
+
+// 주소 검색
+export async function searchAddress(
+  query: string,
+  page: number = 1,
+  size: number = 10
+): Promise<AddressSearchResponse> {
+  const params = new URLSearchParams({
+    query,
+    page: page.toString(),
+    size: size.toString(),
+  });
+  return apiRequest<AddressSearchResponse>(
+    `/api/search/address?${params.toString()}`
+  );
+}
+
+// 키워드(장소) 검색
+export async function searchKeyword(
+  query: string,
+  page: number = 1,
+  size: number = 10
+): Promise<KeywordSearchResponse> {
+  const params = new URLSearchParams({
+    query,
+    page: page.toString(),
+    size: size.toString(),
+  });
+  return apiRequest<KeywordSearchResponse>(
+    `/api/search/keyword?${params.toString()}`
+  );
 }
 
 // ------------------------------------------------------------------
@@ -220,7 +314,15 @@ export async function fetchOrder(orderId: number | string): Promise<Order> {
 export async function cancelOrder(
   orderId: number | string,
   data: CancelPaymentRequest
-): Promise<{ message: string; order: Order; refund?: { cancelAmount: number; refundableAmount: number; canceledAt: string } }> {
+): Promise<{
+  message: string;
+  order: Order;
+  refund?: {
+    cancelAmount: number;
+    refundableAmount: number;
+    canceledAt: string;
+  };
+}> {
   return apiRequest(`/api/orders/${orderId}/cancel`, {
     method: "POST",
     body: JSON.stringify(data),
@@ -243,6 +345,25 @@ export async function createDeliveryAddress(data: {
 }): Promise<any> {
   return apiRequest("/api/user/addresses", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 배송지 수정
+export async function updateDeliveryAddress(
+  addressId: string,
+  data: {
+    recipient?: string;
+    phone?: string;
+    zipCode?: string;
+    address?: string;
+    detailAddress?: string;
+    requestNote?: string;
+    isDefault?: boolean;
+  }
+): Promise<any> {
+  return apiRequest(`/api/user/addresses/${addressId}`, {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 }
@@ -447,6 +568,48 @@ export async function getPaymentStatus(
   );
 }
 
+// ------------------------------------------------------------------
+// [6-2] 네이버페이 (NaverPay)
+// ------------------------------------------------------------------
+
+// 네이버페이 클라이언트 정보 조회
+export async function getNaverPayClientInfo(): Promise<NaverPayClientInfoResponse> {
+  return apiRequest<NaverPayClientInfoResponse>(
+    "/api/payments/naverpay/client-info"
+  );
+}
+
+// 네이버페이 결제 예약
+export async function reserveNaverPayment(
+  orderId: string
+): Promise<NaverPayReserveResponse> {
+  return apiRequest<NaverPayReserveResponse>("/api/payments/naverpay/reserve", {
+    method: "POST",
+    body: JSON.stringify({ orderId }),
+  });
+}
+
+// 네이버페이 결제 상태 조회
+export async function getNaverPaymentStatus(
+  orderId: string
+): Promise<NaverPayStatusResponse> {
+  return apiRequest<NaverPayStatusResponse>(
+    `/api/payments/naverpay/${orderId}/status`
+  );
+}
+
+// 네이버페이 결제 취소
+export async function cancelNaverPayment(
+  orderId: string,
+  cancelReason: string,
+  cancelAmount?: number
+): Promise<Order> {
+  return apiRequest<Order>(`/api/payments/naverpay/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ cancelReason, cancelAmount }),
+  });
+}
+
 // --- 관리자 결제 관리 ---
 export async function getAdminPaymentDetail(
   orderId: number | string
@@ -461,5 +624,84 @@ export async function adminCancelPayment(
   return apiRequest(`/api/admin/payments/${orderId}/cancel`, {
     method: "POST",
     body: JSON.stringify({ cancelReason }),
+  });
+}
+
+// ------------------------------------------------------------------
+// [7] 이미지 업로드 (Admin Only - Cloudinary)
+// ------------------------------------------------------------------
+
+// 파일 업로드용 공통 함수 (FormData 사용)
+async function uploadFile<T>(endpoint: string, formData: FormData): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    body: formData, // Content-Type은 자동으로 multipart/form-data로 설정됨
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// 단일 상품 이미지 업로드
+export async function uploadProductImage(
+  file: File
+): Promise<ImageUploadResponse> {
+  const formData = new FormData();
+  formData.append("image", file);
+  return uploadFile<ImageUploadResponse>("/api/admin/images/product", formData);
+}
+
+// 여러 상품 이미지 업로드 (최대 10개)
+export async function uploadProductImages(
+  files: File[]
+): Promise<ImagesUploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("images", file);
+  });
+  return uploadFile<ImagesUploadResponse>(
+    "/api/admin/images/products",
+    formData
+  );
+}
+
+// 상품 상세 이미지 업로드 (최대 10개)
+export async function uploadProductDetailImages(
+  files: File[]
+): Promise<ImagesUploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("images", file);
+  });
+  return uploadFile<ImagesUploadResponse>(
+    "/api/admin/images/product-details",
+    formData
+  );
+}
+
+// 단일 이미지 삭제
+export async function deleteImage(
+  publicId: string
+): Promise<ImageDeleteResponse> {
+  return apiRequest<ImageDeleteResponse>("/api/admin/images", {
+    method: "DELETE",
+    body: JSON.stringify({ publicId }),
+  });
+}
+
+// 여러 이미지 삭제
+export async function deleteImages(
+  publicIds: string[]
+): Promise<ImagesDeleteResponse> {
+  return apiRequest<ImagesDeleteResponse>("/api/admin/images/bulk", {
+    method: "DELETE",
+    body: JSON.stringify({ publicIds }),
   });
 }

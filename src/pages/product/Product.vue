@@ -170,6 +170,7 @@ watch(
               :src="imageUrl"
               :alt="name"
               class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+              draggable="false"
             />
 
             <!-- 위시리스트 버튼 -->

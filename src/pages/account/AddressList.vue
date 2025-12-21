@@ -2,24 +2,97 @@
 // src/pages/AddressList.vue
 // 배송지 관리 페이지
 
-import { onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useAuthGuard } from "@/composables/useAuthGuard";
-import { useAddresses } from "@/composables/useAddresses";
+import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 
 // 공통 컴포넌트
-import { LoadingSpinner, EmptyState, AddressCard } from "@/components/common";
+import {
+  LoadingSpinner,
+  EmptyState,
+  AddressCard,
+  AddressForm,
+  AddressSearchModal,
+} from "@/components/common";
 import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { DeliveryAddress } from "@/types/api";
 
 // 인증 체크
 useAuthGuard();
 
 // 배송지 목록 로직
-const { addresses, loading, loadAddresses, removeAddress } = useAddresses();
+const { addresses, loading, loadAddresses, editAddress, removeAddress } =
+  useAddresses();
 
-// 배송지 수정 (준비 중)
+// 수정 폼 관리
+const shippingForm = useShippingForm();
+
+// 수정 모달 상태
+const isEditModalOpen = ref(false);
+const isAddressSearchOpen = ref(false);
+const editingAddress = ref<DeliveryAddress | null>(null);
+const isSaving = ref(false);
+
+// 배송지 수정 모달 열기
 const handleEdit = (address: DeliveryAddress) => {
-  alert(`'${address.recipient}'님의 배송지 수정 기능을 준비 중입니다.`);
+  editingAddress.value = address;
+  shippingForm.fillFromAddress(address);
+  isEditModalOpen.value = true;
+};
+
+// 모달 닫기
+const closeEditModal = () => {
+  isEditModalOpen.value = false;
+  editingAddress.value = null;
+  shippingForm.clearForm();
+};
+
+// 주소 검색 모달 열기
+const openAddressSearch = () => {
+  isAddressSearchOpen.value = true;
+};
+
+// 주소 선택 핸들러
+const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+  shippingForm.form.zipCode = address.zonecode;
+  shippingForm.form.address = address.address;
+  shippingForm.form.detailAddress = ""; // 상세 주소 초기화
+};
+
+// 배송지 수정 저장
+const handleSaveEdit = async () => {
+  if (!editingAddress.value) return;
+
+  if (!shippingForm.isValid.value) {
+    alert("필수 항목을 모두 입력해주세요.");
+    return;
+  }
+
+  isSaving.value = true;
+
+  const success = await editAddress(editingAddress.value.id, {
+    recipient: shippingForm.form.recipient,
+    phone: shippingForm.fullPhone.value,
+    zipCode: shippingForm.form.zipCode,
+    address: shippingForm.form.address,
+    detailAddress: shippingForm.form.detailAddress,
+    requestNote:
+      shippingForm.form.message === "self"
+        ? shippingForm.form.customMessage
+        : shippingForm.form.message,
+    isDefault: shippingForm.form.saveDefault,
+  });
+
+  isSaving.value = false;
+
+  if (success) {
+    alert("배송지가 수정되었습니다.");
+    closeEditModal();
+  } else {
+    alert("배송지 수정에 실패했습니다.");
+  }
 };
 
 // 배송지 삭제
@@ -62,5 +135,64 @@ onMounted(() => {
         @delete="handleDelete"
       />
     </div>
+
+    <!-- 배송지 수정 모달 -->
+    <div
+      v-if="isEditModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      @click.self="closeEditModal"
+    >
+      <Card
+        class="w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200"
+      >
+        <CardHeader
+          class="flex flex-row items-center justify-between border-b py-4"
+        >
+          <CardTitle class="text-heading">배송지 수정</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="closeEditModal"
+            class="h-8 w-8 rounded-full"
+          >
+            ✕
+          </Button>
+        </CardHeader>
+        <CardContent class="overflow-y-auto p-6 flex-1">
+          <AddressForm
+            :form="shippingForm.form"
+            :show-save-default="true"
+            :show-delivery-message="true"
+            @update:form="Object.assign(shippingForm.form, $event)"
+            @search-address="openAddressSearch"
+          />
+
+          <div class="flex gap-3 mt-6 pt-4 border-t">
+            <Button
+              variant="outline"
+              class="flex-1"
+              @click="closeEditModal"
+              :disabled="isSaving"
+            >
+              취소
+            </Button>
+            <Button
+              class="flex-1"
+              @click="handleSaveEdit"
+              :disabled="isSaving || !shippingForm.isValid.value"
+            >
+              {{ isSaving ? "저장 중..." : "저장" }}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- 주소 검색 모달 -->
+    <AddressSearchModal
+      :open="isAddressSearchOpen"
+      @close="isAddressSearchOpen = false"
+      @select="handleAddressSelect"
+    />
   </div>
 </template>

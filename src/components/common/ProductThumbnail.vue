@@ -49,6 +49,7 @@ const sizeClasses = {
       :src="imageUrl"
       class="w-full h-full object-cover"
       alt="Product Image"
+      draggable="false"
     />
     <div
       v-else

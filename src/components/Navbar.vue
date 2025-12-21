@@ -160,6 +160,7 @@ onUnmounted(() => {
                   src="@/assets/logo03.png"
                   alt="Logo"
                   class="h-10 w-auto ml-1 mt-10 object-contain"
+                  draggable="false"
                 />
               </SheetTitle>
             </SheetHeader>
@@ -197,6 +198,7 @@ onUnmounted(() => {
                   :src="logoutIcon"
                   alt="Logout"
                   class="w-6 h-6 object-contain"
+                  draggable="false"
                 />
               </Button>
 
@@ -213,6 +215,7 @@ onUnmounted(() => {
                     :src="loginIcon"
                     alt="Login"
                     class="w-6 h-6 object-contain"
+                    draggable="false"
                   />
                 </RouterLink>
               </Button>
@@ -229,6 +232,7 @@ onUnmounted(() => {
           src="@/assets/logo01.png"
           alt="Logo"
           class="h-8 w-auto object-contain"
+          draggable="false"
         />
       </div>
 
@@ -243,6 +247,7 @@ onUnmounted(() => {
             :src="accountIcon"
             alt="Account"
             class="w-full h-full object-contain"
+            draggable="false"
           />
         </Button>
 
@@ -257,6 +262,7 @@ onUnmounted(() => {
               :src="cartIcon"
               alt="Cart"
               class="w-full h-full object-contain"
+              draggable="false"
             />
             <span
               v-if="cartItemCount > 0"
@@ -298,6 +304,7 @@ onUnmounted(() => {
           src="@/assets/logo01.png"
           alt="Logo"
           class="h-10 w-auto min-w-[120px] object-contain hover:opacity-80 transition-opacity"
+          draggable="false"
         />
       </div>
 
@@ -312,6 +319,7 @@ onUnmounted(() => {
             :src="instagramIcon"
             alt="Instagram"
             class="w-5 h-5 object-contain"
+            draggable="false"
           />
         </Button>
 
@@ -325,6 +333,7 @@ onUnmounted(() => {
             :src="accountIcon"
             alt="Account"
             class="w-5 h-5 object-contain"
+            draggable="false"
           />
         </Button>
 
@@ -336,7 +345,12 @@ onUnmounted(() => {
         >
           <RouterLink to="/cart">
             <div class="relative inline-block">
-              <img :src="cartIcon" alt="Cart" class="w-6 h-6 object-contain" />
+              <img
+                :src="cartIcon"
+                alt="Cart"
+                class="w-6 h-6 object-contain"
+                draggable="false"
+              />
               <span
                 v-if="cartItemCount > 0"
                 class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
@@ -358,6 +372,7 @@ onUnmounted(() => {
               :src="logoutIcon"
               alt="Logout"
               class="w-5 h-5 object-contain"
+              draggable="false"
             />
           </Button>
         </template>
@@ -374,6 +389,7 @@ onUnmounted(() => {
                 :src="loginIcon"
                 alt="Login"
                 class="w-5 h-5 object-contain"
+                draggable="false"
               />
             </RouterLink>
           </Button>
