@@ -27,6 +27,14 @@ import { LoadingSpinner, QuantitySelector } from "@/components/common";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const route = useRoute();
 const router = useRouter();
@@ -281,20 +289,15 @@ onMounted(async () => {
               </div>
             </div>
 
+            <!-- 사이즈 선택 후에만 수량 선택기 표시 -->
             <div
-              class="mb-6 transition-opacity duration-200"
-              :class="{
-                'opacity-40 pointer-events-none':
-                  variantSelection.needsVariantSelection.value,
-              }"
+              v-if="!variantSelection.needsVariantSelection.value"
+              class="mb-6 animate-fade-in"
             >
               <label class="block text-body font-semibold text-foreground mb-2"
                 >수량</label
               >
-              <QuantitySelector
-                v-model="variantSelection.quantity.value"
-                :disabled="variantSelection.needsVariantSelection.value"
-              />
+              <QuantitySelector v-model="variantSelection.quantity.value" />
             </div>
 
             <div class="mb-6">
@@ -363,54 +366,43 @@ onMounted(async () => {
                 <div v-show="activeTab === 'size'" class="animate-fade-in">
                   <div v-if="sizeMeasurements.hasSizeData.value">
                     <div class="overflow-x-auto">
-                      <table
-                        class="w-full text-body text-center whitespace-nowrap"
-                      >
-                        <thead
-                          class="bg-muted text-caption text-muted-foreground uppercase"
-                        >
-                          <tr>
-                            <th
-                              class="px-4 py-3 text-caption font-semibold border-b border-border bg-muted text-center w-20"
-                            >
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead class="w-20 text-center">
                               Size
-                            </th>
-                            <th
-                              v-for="col in sizeMeasurements.activeColumns
-                                .value"
+                            </TableHead>
+                            <TableHead
+                              v-for="col in sizeMeasurements.activeColumns.value"
                               :key="col.key"
-                              class="px-4 py-3 text-caption font-semibold border-b border-border"
+                              class="text-center"
                             >
                               {{ col.label }}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-border">
-                          <tr
-                            v-for="(data, idx) in sizeMeasurements.allSizeData
-                              .value"
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow
+                            v-for="(data, idx) in sizeMeasurements.allSizeData.value"
                             :key="idx"
                           >
-                            <td
-                              class="px-4 py-3 text-caption bg-muted/50 text-foreground"
-                            >
+                            <TableCell class="font-medium text-center">
                               {{ data.variantSize }}
-                            </td>
-                            <td
-                              v-for="col in sizeMeasurements.activeColumns
-                                .value"
+                            </TableCell>
+                            <TableCell
+                              v-for="col in sizeMeasurements.activeColumns.value"
                               :key="col.key"
-                              class="px-4 py-3 text-muted-foreground"
+                              class="text-center text-muted-foreground"
                             >
                               {{
                                 formatSizeValue(
                                   data[col.key as keyof typeof data] as number
                                 )
                               }}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
                     </div>
                     <p
                       class="mt-4 text-caption text-muted-foreground text-right"

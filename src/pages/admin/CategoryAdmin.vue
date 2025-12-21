@@ -11,8 +11,12 @@ import {
 } from "@/lib/api";
 
 // 아이콘 및 UI 컴포넌트 (디자인 통일용)
-import { Package, Plus, Trash2, Edit3 } from "lucide-vue-next";
+import { Package, Plus, Trash2, Edit3, X } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();
@@ -143,13 +147,10 @@ onMounted(async () => {
           상품 분류 체계를 구성하고 관리합니다.
         </p>
       </div>
-      <button
-        @click="openCreateModal"
-        class="mb-2 bg-admin text-white px-4 py-2 rounded-md hover:opacity-90 transition-all text-body font-medium flex items-center gap-2 shadow-sm"
-      >
+      <Button @click="openCreateModal" class="mb-2 gap-2">
         <Plus class="w-4 h-4" />
-        <span>추가</span>
-      </button>
+        추가
+      </Button>
     </div>
     <Separator class="mb-6"></Separator>
 
@@ -216,20 +217,22 @@ onMounted(async () => {
                 </td>
                 <td class="px-6 py-4 text-right">
                   <div class="flex justify-end gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       @click="openEditModal(category)"
-                      class="p-2 text-admin-muted hover:text-primary transition-colors"
-                      title="수정"
+                      class="text-muted-foreground hover:text-primary"
                     >
                       <Edit3 class="w-4 h-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       @click="handleDelete(category.id)"
-                      class="p-2 text-admin-muted hover:text-destructive transition-colors"
-                      title="삭제"
+                      class="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 class="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -257,58 +260,46 @@ onMounted(async () => {
             <h2 class="text-heading font-bold text-admin tracking-tight">
               {{ isEditMode ? "카테고리 정보 수정" : "새 카테고리 등록" }}
             </h2>
-            <button
-              @click="isModalOpen = false"
-              class="text-admin-muted hover:text-admin transition-colors"
-            >
-              <Plus class="w-6 h-6 rotate-45" />
-            </button>
+            <Button variant="ghost" size="icon" @click="isModalOpen = false">
+              <X class="w-5 h-5" />
+            </Button>
           </div>
 
           <form @submit.prevent="handleSave" class="space-y-6">
-            <div>
-              <label
-                class="block text-body text-admin font-semibold mb-2 ml-0.5"
-              >
+            <div class="space-y-2">
+              <Label class="text-admin">
                 카테고리명 <span class="text-red-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 v-model="formData.name"
                 type="text"
-                class="w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
                 placeholder="예: Outerwear"
                 required
               />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   Category ID (숫자) <span class="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   v-model="formData.categoryId"
                   @input="handleNumericInput"
                   @blur="handleIdBlur"
                   type="text"
-                  class="w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
                   placeholder="1"
                   required
                 />
               </div>
 
-              <div>
-                <label
-                  class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >
+              <div class="space-y-2">
+                <Label class="text-admin">
                   Slug (URL용) <span class="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   v-model="formData.slug"
                   type="text"
-                  class="w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
                   placeholder="outerwear"
                 />
               </div>
@@ -321,28 +312,21 @@ onMounted(async () => {
               </p>
             </div>
 
-            <div>
-              <label
-                class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >설명</label
-              >
-              <textarea
+            <div class="space-y-2">
+              <Label class="text-admin">설명</Label>
+              <Textarea
                 v-model="formData.description"
                 rows="3"
-                class="w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none transition-all shadow-sm"
+                class="resize-none"
                 placeholder="카테고리에 대한 간략한 설명을 입력하세요"
-              ></textarea>
+              />
             </div>
 
-            <div>
-              <label
-                class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >이미지 URL</label
-              >
-              <input
+            <div class="space-y-2">
+              <Label class="text-admin">이미지 URL</Label>
+              <Input
                 v-model="formData.imageUrl"
                 type="text"
-                class="w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
                 placeholder="https://example.com/image.jpg"
               />
             </div>
@@ -357,19 +341,16 @@ onMounted(async () => {
             <div
               class="flex justify-end gap-3 pt-6 mt-4 border-t border-border"
             >
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 @click="isModalOpen = false"
-                class="px-6 py-3 border border-border rounded-xl text-admin-muted hover:bg-muted transition-all text-body font-medium"
               >
                 취소
-              </button>
-              <button
-                type="submit"
-                class="px-8 py-3 bg-admin text-white rounded-xl hover:opacity-90 transition-all text-body font-bold shadow-md shadow-primary/20"
-              >
+              </Button>
+              <Button type="submit">
                 {{ isEditMode ? "저장하기" : "등록하기" }}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

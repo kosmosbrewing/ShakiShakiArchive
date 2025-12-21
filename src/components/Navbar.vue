@@ -17,6 +17,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+// 장바구니 Sheet 컴포넌트
+import CartSheet from "@/components/CartSheet.vue";
+
 // 이미지 에셋 Import
 import instagramIcon from "@/assets/instagram.png";
 import accountIcon from "@/assets/account.png";
@@ -32,6 +35,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const { isAuthenticated } = storeToRefs(authStore);
 const isOpen = ref<boolean>(false);
+const cartSheetOpen = ref<boolean>(false);
 const cartItemCount = ref(0);
 
 // 카테고리 메뉴 (동적 로드)
@@ -115,7 +119,7 @@ const handleAccountClick = () => {
 
 const handleCartClick = () => {
   isOpen.value = false;
-  router.push("/cart");
+  cartSheetOpen.value = true;
 };
 
 onMounted(async () => {
@@ -340,25 +344,23 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          as-child
           class="relative hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
+          @click="handleCartClick"
         >
-          <RouterLink to="/cart">
-            <div class="relative inline-block">
-              <img
-                :src="cartIcon"
-                alt="Cart"
-                class="w-6 h-6 object-contain"
-                draggable="false"
-              />
-              <span
-                v-if="cartItemCount > 0"
-                class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
-              >
-                {{ cartItemCount }}
-              </span>
-            </div>
-          </RouterLink>
+          <div class="relative inline-block">
+            <img
+              :src="cartIcon"
+              alt="Cart"
+              class="w-6 h-6 object-contain"
+              draggable="false"
+            />
+            <span
+              v-if="cartItemCount > 0"
+              class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+            >
+              {{ cartItemCount }}
+            </span>
+          </div>
         </Button>
 
         <template v-if="isAuthenticated">
@@ -397,6 +399,9 @@ onUnmounted(() => {
       </div>
     </div>
   </header>
+
+  <!-- 장바구니 Sheet -->
+  <CartSheet v-model:open="cartSheetOpen" />
 </template>
 
 <style scoped>
