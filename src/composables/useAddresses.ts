@@ -57,7 +57,7 @@ export function useAddresses() {
 
   // 배송지 수정
   const editAddress = async (
-    id: string,
+    id: string | number,
     addressData: Partial<Omit<DeliveryAddress, "id" | "userId" | "createdAt">>
   ) => {
     try {
@@ -71,12 +71,13 @@ export function useAddresses() {
   };
 
   // 배송지 삭제
-  const removeAddress = async (id: string, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
+  const removeAddress = async (id: string | number, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
     if (!confirm(confirmMessage)) return false;
 
     try {
       await deleteDeliveryAddress(id);
-      addresses.value = addresses.value.filter((addr) => addr.id !== id);
+      // 타입 불일치 방지를 위해 문자열로 비교
+      addresses.value = addresses.value.filter((addr) => String(addr.id) !== String(id));
       return true;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "삭제 실패";

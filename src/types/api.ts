@@ -95,6 +95,7 @@ export interface OrderItem {
   trackingNumber?: string;
   product?: Product;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // 주문 정보
@@ -365,4 +366,46 @@ export interface ImageDeleteResponse {
 export interface ImagesDeleteResponse {
   message: string;
   deleted: string[]; // 삭제된 publicId 목록
+}
+
+// ------------------------------------------------------------------
+// 사이트 이미지 관련 타입 (Hero, Marquee)
+// ------------------------------------------------------------------
+
+// 사이트 이미지 타입
+export type SiteImageType = "hero" | "marquee";
+
+// 사이트 이미지 정보
+export interface SiteImage {
+  id: number;
+  type: SiteImageType;
+  imageUrl: string;
+  linkUrl?: string; // 클릭 시 이동할 URL (선택)
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 사이트 이미지 생성 요청
+export interface CreateSiteImageRequest {
+  type: SiteImageType;
+  imageUrl: string;
+  linkUrl?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+// 사이트 이미지 수정 요청
+export interface UpdateSiteImageRequest {
+  imageUrl?: string;
+  linkUrl?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+// 사이트 이미지 순서 변경 요청
+export interface ReorderSiteImagesRequest {
+  type: SiteImageType;
+  imageIds: number[];
 }

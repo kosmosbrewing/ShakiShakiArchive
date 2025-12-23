@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { Heart, Search } from "lucide-vue-next";
+import { Heart } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api";
 import { LoadingSpinner, EmptyState } from "@/components/common";

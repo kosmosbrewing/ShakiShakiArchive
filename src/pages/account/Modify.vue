@@ -116,9 +116,9 @@ const handleWithdraw = async () => {
   if (prompt("탈퇴하려면 '탈퇴'를 입력하세요.") === "탈퇴") {
     try {
       await withdrawUser();
-      await authStore.handleLogout();
       alert("탈퇴되었습니다.");
-      router.push("/");
+      // 로그아웃 처리 (새로고침으로 홈 이동)
+      await authStore.handleLogout();
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "탈퇴 실패";
       alert(errorMessage);

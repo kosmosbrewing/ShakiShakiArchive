@@ -25,7 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
           <!-- 회사 정보 영역 -->
           <div class="md:col-span-3 space-y-4">
             <div class="space-y-1">
-              <p class="text-body text-foreground font-medium">
+              <p class="text-caption text-muted-foreground">
                 샤키샤키 아카이브(ShakiShaki Archive) | CEO : 손유진
               </p>
               <p class="text-caption text-muted-foreground">

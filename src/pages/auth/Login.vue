@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl } from "@/lib/api";
 import axios from "axios";
-import { AlertCircle, Loader2, Search } from "lucide-vue-next";
+import { AlertCircle, Loader2 } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

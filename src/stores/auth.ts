@@ -24,20 +24,33 @@ export const useAuthStore = defineStore("auth", () => {
       const guestCart = JSON.parse(guestCartJson);
 
       if (Array.isArray(guestCart) && guestCart.length > 0) {
+        let successCount = 0;
+        let failCount = 0;
+
         // 순차 처리로 안정적인 병합
         for (const item of guestCart) {
+          // productId는 UUID 문자열, variantId는 숫자 또는 undefined
           const payload = {
-            productId: Number(item.productId),
-            variantId: item.variantId ? Number(item.variantId) : undefined,
-            quantity: Number(item.quantity),
+            productId: item.productId,
+            variantId: item.variantId ?? undefined,
+            quantity: Number(item.quantity) || 1,
           };
+
+          // 유효성 검증
+          if (!payload.productId) {
+            console.warn("   ⚠️ [Migration] productId 누락, 건너뜀");
+            failCount++;
+            continue;
+          }
 
           try {
             await addToCart(payload);
-            console.log(`   ✅ [Migration] 병합 성공: ID ${payload.productId}`);
+            successCount++;
+            console.log(`   ✅ [Migration] 병합 성공: ${payload.productId}`);
           } catch (reqError: any) {
+            failCount++;
             console.warn(
-              `   ⚠️ [Migration] 병합 실패 (ID: ${payload.productId}):`,
+              `   ⚠️ [Migration] 병합 실패 (${payload.productId}):`,
               reqError.message
             );
           }
@@ -45,13 +58,17 @@ export const useAuthStore = defineStore("auth", () => {
 
         // 병합 시도 후 로컬 데이터 삭제
         localStorage.removeItem("guest_cart");
-        console.log("🗑️ [Migration] 로컬 장바구니 데이터 삭제 완료");
+        console.log(
+          `🗑️ [Migration] 완료 (성공: ${successCount}, 실패: ${failCount})`
+        );
 
         // 변경 사항 전파
         window.dispatchEvent(new Event("cart-updated"));
       }
     } catch (parseError) {
       console.error("❌ [Migration] JSON 파싱 오류:", parseError);
+      // 파싱 실패한 데이터는 삭제
+      localStorage.removeItem("guest_cart");
     }
   }
 
@@ -93,10 +110,54 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function handleLogout() {
-    await logout();
+  /**
+   * 로그아웃 처리 (보안 강화)
+   * @param options.reload - 페이지 새로고침 여부 (기본값: true)
+   */
+  async function handleLogout(options: { reload?: boolean } = { reload: true }) {
+    try {
+      // 1. 서버에 로그아웃 요청 (세션/쿠키 무효화)
+      await logout();
+    } catch (err) {
+      // 서버 요청 실패해도 클라이언트 정리는 진행
+      console.error("로그아웃 서버 요청 실패:", err);
+    }
+
+    // 2. Pinia 상태 초기화
     user.value = null;
+    error.value = null;
+    isLoading.value = false;
+
+    // 3. 민감한 로컬 스토리지 데이터 정리
+    const sensitiveKeys = [
+      "guest_cart",
+      "auth_token",
+      "refresh_token",
+      "user_data",
+      "session_data",
+    ];
+    sensitiveKeys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // 무시
+      }
+    });
+
+    // 4. 세션 스토리지 전체 정리
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      // 무시
+    }
+
+    // 5. 장바구니 업데이트 이벤트 발생
     window.dispatchEvent(new Event("cart-updated"));
+
+    // 6. 페이지 새로고침으로 메모리 상태 완전 초기화
+    if (options.reload) {
+      window.location.href = "/";
+    }
   }
 
   async function register(data: any) {

@@ -21,6 +21,11 @@ import type {
   ImagesUploadResponse,
   ImageDeleteResponse,
   ImagesDeleteResponse,
+  SiteImage,
+  SiteImageType,
+  CreateSiteImageRequest,
+  UpdateSiteImageRequest,
+  ReorderSiteImagesRequest,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -331,7 +336,8 @@ export async function cancelOrder(
 
 // --- 배송지 (Address Book) ---
 export async function fetchDeliveryAddresses(): Promise<any[]> {
-  return apiRequest("/api/user/addresses");
+  const response = await apiRequest<{ addresses: any[] } | any[]>("/api/user/addresses");
+  return Array.isArray(response) ? response : response.addresses || [];
 }
 
 export async function createDeliveryAddress(data: {
@@ -351,7 +357,7 @@ export async function createDeliveryAddress(data: {
 
 // 배송지 수정
 export async function updateDeliveryAddress(
-  addressId: string,
+  addressId: string | number,
   data: {
     recipient?: string;
     phone?: string;
@@ -363,12 +369,12 @@ export async function updateDeliveryAddress(
   }
 ): Promise<any> {
   return apiRequest(`/api/user/addresses/${addressId}`, {
-    method: "PUT",
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
 
-export async function deleteDeliveryAddress(addressId: string): Promise<void> {
+export async function deleteDeliveryAddress(addressId: string | number): Promise<void> {
   return apiRequest(`/api/user/addresses/${addressId}`, {
     method: "DELETE",
   });
@@ -443,11 +449,11 @@ export async function deleteProductVariant(
   });
 }
 
-// --- 사이즈 측정 정보 관리 ---
+// --- 사이즈 측정 정보 조회 (공개 API) ---
 export async function fetchSizeMeasurements(
   variantId: number | string
 ): Promise<any[]> {
-  return apiRequest(`/api/admin/variants/${variantId}/measurements`);
+  return apiRequest(`/api/variants/${variantId}/measurements`);
 }
 
 export async function createSizeMeasurement(
@@ -704,4 +710,101 @@ export async function deleteImages(
     method: "DELETE",
     body: JSON.stringify({ publicIds }),
   });
+}
+
+// ------------------------------------------------------------------
+// [8] 사이트 이미지 (Hero, Marquee) - Public API
+// ------------------------------------------------------------------
+
+// 활성화된 전체 사이트 이미지 조회
+export async function fetchSiteImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images");
+  return response.images || [];
+}
+
+// Hero 이미지만 조회
+export async function fetchHeroImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images/hero");
+  return response.images || [];
+}
+
+// Marquee 이미지만 조회
+export async function fetchMarqueeImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images/marquee");
+  return response.images || [];
+}
+
+// ------------------------------------------------------------------
+// [8-1] 사이트 이미지 관리 (Admin Only)
+// ------------------------------------------------------------------
+
+// 전체 이미지 목록 조회 (관리자용 - 비활성화 포함)
+export async function fetchAdminSiteImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>("/api/admin/site-images");
+  return response.images || [];
+}
+
+// 이미지 상세 조회
+export async function fetchAdminSiteImage(id: number): Promise<SiteImage> {
+  return apiRequest<SiteImage>(`/api/admin/site-images/${id}`);
+}
+
+// 이미지 추가
+export async function createSiteImage(
+  data: CreateSiteImageRequest
+): Promise<{ message: string; image: SiteImage }> {
+  return apiRequest<{ message: string; image: SiteImage }>(
+    "/api/admin/site-images",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+// 이미지 수정
+export async function updateSiteImage(
+  id: number,
+  data: UpdateSiteImageRequest
+): Promise<{ message: string; image: SiteImage }> {
+  return apiRequest<{ message: string; image: SiteImage }>(
+    `/api/admin/site-images/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+// 이미지 삭제
+export async function deleteSiteImage(
+  id: number
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/api/admin/site-images/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// 이미지 순서 변경
+export async function reorderSiteImages(
+  data: ReorderSiteImagesRequest
+): Promise<{ message: string; images: SiteImage[] }> {
+  return apiRequest<{ message: string; images: SiteImage[] }>(
+    "/api/admin/site-images/reorder",
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+// 사이트 이미지 업로드 (Hero/Marquee용)
+export async function uploadSiteImage(
+  file: File,
+  type: SiteImageType
+): Promise<ImageUploadResponse> {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("type", type);
+  return uploadFile<ImageUploadResponse>("/api/admin/images/site", formData);
 }

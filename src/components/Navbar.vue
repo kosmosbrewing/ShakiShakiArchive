@@ -96,8 +96,8 @@ watch(route, () => {
 
 const handleLogout = async () => {
   isOpen.value = false;
+  // auth store에서 새로고침까지 처리함
   await authStore.handleLogout();
-  router.push("/");
 };
 
 const handleInstagram = () => {

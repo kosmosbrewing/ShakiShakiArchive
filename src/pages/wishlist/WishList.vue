@@ -47,7 +47,7 @@ onMounted(() => {
   <section class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 제목 -->
     <div class="mb-6">
-      <h3 class="text-heading text-primary tracking-wider">MY WISHLIST</h3>
+      <h3 class="text-heading text-primary tracking-wider">위시리스트</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">
         관심 있는 상품을 모아두었습니다.
       </p>
