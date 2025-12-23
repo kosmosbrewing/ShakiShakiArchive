@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   Truck,
   CheckCircle,
+  Image,
 } from "lucide-vue-next";
 
 // Shadcn UI 컴포넌트
@@ -42,7 +43,13 @@ const userName = computed(() => {
 
 // 페이지 이동 함수들
 const goToModify = () => router.push("/modify");
-const goToOrderList = () => router.push("/orderlist");
+const goToOrderList = (status?: string) => {
+  if (status) {
+    router.push({ path: "/orderlist", query: { status } });
+  } else {
+    router.push("/orderlist");
+  }
+};
 const goToWishlist = () => router.push("/wishlist");
 const goToAddress = () => router.push("/addresslist");
 
@@ -50,6 +57,7 @@ const goToAddress = () => router.push("/addresslist");
 const goToCategoryAdmin = () => router.push("/admin/categories");
 const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
+const goToSiteImageAdmin = () => router.push("/admin/site-images");
 
 // 메뉴 아이템 정의
 const menuItems = [
@@ -57,7 +65,7 @@ const menuItems = [
     label: "주문 내역",
     description: "주문 및 배송 현황 확인",
     icon: Package,
-    action: goToOrderList,
+    action: () => goToOrderList(), // 전체 주문 목록 (필터 없음)
   },
   {
     label: "위시리스트",
@@ -67,14 +75,14 @@ const menuItems = [
     badge: wishlistCount,
   },
   {
-    label: "회원 정보 수정",
+    label: "회원정보 수정",
     description: "개인정보 및 비밀번호 변경",
     icon: User,
     action: goToModify,
   },
   {
     label: "배송지 관리",
-    description: "배송지 추가 및 수정",
+    description: "배송지 수정 및 삭제",
     icon: MapPin,
     action: goToAddress,
   },
@@ -129,7 +137,7 @@ onMounted(async () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
           <Button
             variant="outline"
             @click="goToCategoryAdmin"
@@ -166,7 +174,20 @@ onMounted(async () => {
             >
               <ShoppingBag class="w-4 h-4 text-white" />
             </div>
-            주문 관리
+            주문/배송 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToSiteImageAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-purple-600 flex items-center justify-center"
+            >
+              <Image class="w-4 h-4 text-white" />
+            </div>
+            사이트 이미지 관리
           </Button>
         </div>
       </CardContent>
@@ -180,12 +201,10 @@ onMounted(async () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div
-          class="grid grid-cols-4 gap-2 cursor-pointer"
-          @click="goToOrderList"
-        >
-          <div
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+        <div class="grid grid-cols-4 gap-2">
+          <button
+            @click="goToOrderList('pending')"
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
@@ -196,10 +215,11 @@ onMounted(async () => {
             <span class="text-body font-bold text-foreground">
               {{ orderCounts.pending }}
             </span>
-          </div>
+          </button>
 
-          <div
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          <button
+            @click="goToOrderList('preparing')"
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
@@ -210,10 +230,11 @@ onMounted(async () => {
             <span class="text-body font-bold text-foreground">
               {{ orderCounts.preparing }}
             </span>
-          </div>
+          </button>
 
-          <div
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          <button
+            @click="goToOrderList('shipped')"
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
@@ -224,10 +245,11 @@ onMounted(async () => {
             <span class="text-body font-bold text-foreground">
               {{ orderCounts.shipped }}
             </span>
-          </div>
+          </button>
 
-          <div
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors"
+          <button
+            @click="goToOrderList('delivered')"
+            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
@@ -238,7 +260,7 @@ onMounted(async () => {
             <span class="text-body font-bold text-foreground">
               {{ orderCounts.delivered }}
             </span>
-          </div>
+          </button>
         </div>
       </CardContent>
     </Card>

@@ -26,7 +26,7 @@ import { Cart } from "@/pages/cart";
 import { WishList } from "@/pages/wishlist";
 
 // Admin (관리자)
-import { ProductAdmin, CategoryAdmin, OrderAdmin } from "@/pages/admin";
+import { ProductAdmin, CategoryAdmin, OrderAdmin, SiteImageAdmin } from "@/pages/admin";
 
 // Static (정적 페이지)
 import { About, Contact } from "@/pages/static";
@@ -125,6 +125,12 @@ const routes = [
     path: "/admin/orders",
     name: "OrderAdmin",
     component: OrderAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: "/admin/site-images",
+    name: "SiteImageAdmin",
+    component: SiteImageAdmin,
     meta: { requiresAuth: true, requiresAdmin: true },
   },
 

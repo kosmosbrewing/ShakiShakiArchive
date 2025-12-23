@@ -2,8 +2,8 @@
 // src/pages/OrderList.vue
 // 주문 내역 페이지 (수정됨: 간소화된 리스트 & 상세 이동 버튼 추가)
 
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref, computed, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { formatDate, formatPrice } from "@/lib/formatters";
@@ -22,9 +22,10 @@ import {
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-vue-next";
+import { ChevronRight, X } from "lucide-vue-next";
 
 const router = useRouter();
+const route = useRoute();
 
 // 인증 체크
 useAuthGuard();
@@ -34,6 +35,84 @@ const { orders, loading, loadOrders } = useOrders();
 
 // 주문 취소 훅
 const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
+
+// 현재 필터 상태
+const currentFilter = ref<string | null>(null);
+
+// 상태 필터 레이블 매핑
+const statusLabels: Record<string, string> = {
+  pending: "입금전",
+  preparing: "배송준비중",
+  shipped: "배송중",
+  delivered: "배송완료 (최근 1주일)",
+};
+
+// 상태별 실제 status 값 매핑
+const statusMapping: Record<string, string[]> = {
+  pending: ["pending_payment"],
+  preparing: ["payment_confirmed", "preparing"],
+  shipped: ["shipped"],
+  delivered: ["delivered"],
+};
+
+// 1주일 전 날짜 계산
+const oneWeekAgo = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 7);
+  return date;
+};
+
+// 필터링된 주문 목록
+const filteredOrders = computed((): Order[] => {
+  if (!currentFilter.value) {
+    return orders.value;
+  }
+
+  const allowedStatuses = statusMapping[currentFilter.value] || [];
+  const weekAgo = oneWeekAgo();
+
+  const result: Order[] = [];
+
+  for (const order of orders.value) {
+    if (!order.orderItems) continue;
+
+    // 주문 아이템 필터링
+    const filteredItems = order.orderItems.filter((item) => {
+      // 상태 필터
+      if (!allowedStatuses.includes(item.status)) {
+        return false;
+      }
+      // 배송완료는 최근 1주일만
+      if (currentFilter.value === "delivered") {
+        const itemDate = new Date(item.updatedAt || item.createdAt || order.createdAt);
+        return itemDate >= weekAgo;
+      }
+      return true;
+    });
+
+    // 필터링된 아이템이 있는 주문만 추가
+    if (filteredItems.length > 0) {
+      result.push({ ...order, orderItems: filteredItems });
+    }
+  }
+
+  return result;
+});
+
+// 필터 해제
+const clearFilter = () => {
+  currentFilter.value = null;
+  router.replace({ path: "/orderlist" });
+};
+
+// 쿼리 파라미터 감시
+watch(
+  () => route.query.status,
+  (status) => {
+    currentFilter.value = status as string | null;
+  },
+  { immediate: true }
+);
 
 // 취소 다이얼로그 상태
 const cancelDialogOpen = ref(false);
@@ -114,22 +193,37 @@ onMounted(() => {
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6 border-b pb-3">
       <div>
-        <h3 class="text-heading text-primary tracking-wider">주문 목록</h3>
+        <h3 class="text-heading text-primary tracking-wider">주문 내역</h3>
       </div>
     </div>
+
+    <!-- 필터 표시 -->
+    <div v-if="currentFilter" class="mb-4 flex items-center gap-2">
+      <span class="text-body text-muted-foreground">필터:</span>
+      <Button
+        variant="secondary"
+        size="sm"
+        class="h-8 gap-1 pr-2"
+        @click="clearFilter"
+      >
+        {{ statusLabels[currentFilter] }}
+        <X class="w-4 h-4" />
+      </Button>
+    </div>
+
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
-      v-else-if="orders.length === 0"
+      v-else-if="filteredOrders.length === 0"
       header="주문내역"
-      message="주문 내역이 없습니다."
-      button-text="쇼핑하러 가기"
-      button-link="/product/all"
+      :message="currentFilter ? `${statusLabels[currentFilter]} 상태의 주문이 없습니다.` : '주문 내역이 없습니다.'"
+      :button-text="currentFilter ? '전체 주문 보기' : '쇼핑하러 가기'"
+      :button-link="currentFilter ? '/orderlist' : '/product/all'"
     />
 
     <div v-else class="space-y-6">
       <Card
-        v-for="order in orders"
+        v-for="order in filteredOrders"
         :key="order.id"
         class="overflow-hidden border-border/60"
       >
