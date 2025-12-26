@@ -36,11 +36,6 @@ const heroImageList = computed(() => {
   return [{ url: fallbackHero, linkUrl: undefined }];
 });
 
-// 현재 표시할 히어로 이미지
-const currentHeroImage = computed(() => {
-  return heroImageList.value[currentHeroIndex.value] || heroImageList.value[0];
-});
-
 // Marquee 이미지 URL 배열 (폴백 포함)
 const marqueeImageUrls = computed(() => {
   if (marqueeImages.value.length > 0) {
