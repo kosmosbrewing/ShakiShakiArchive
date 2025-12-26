@@ -9,7 +9,7 @@ import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 
 // 공통 컴포넌트
-import { PhoneInput } from "@/components/common";
+import { PhoneInput, AddressSearchModal } from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 const router = useRouter();
 const authStore = useAuthStore();
 const isLoading = ref(false);
+const isAddressSearchOpen = ref(false);
 
 // 폼 데이터
 const form = reactive({
@@ -33,9 +34,17 @@ const form = reactive({
   address: "",
   detailAddress: "",
   emailOptIn: false,
-  password: "",
-  confirmPassword: "",
+  currentPassword: "", // 정보 수정용 현재 비밀번호
 });
+
+// 비밀번호 변경 폼
+const passwordForm = reactive({
+  currentPassword: "",
+  newPassword: "",
+  confirmNewPassword: "",
+});
+
+const isPasswordLoading = ref(false);
 
 // 사용자 정보로 폼 초기화
 const initializeForm = () => {
@@ -56,29 +65,31 @@ const initializeForm = () => {
   }
 };
 
-// 주소 검색 (API 연동 필요)
+// 주소 검색 모달 열기
 const openAddressSearch = () => {
-  alert("주소 검색 (API 연동 필요)");
-  form.zipCode = "12345";
-  form.address = "서울시 강남구 테헤란로 123";
+  isAddressSearchOpen.value = true;
+};
+
+// 주소 선택 핸들러
+const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+  form.zipCode = address.zonecode;
+  form.address = address.address;
+  form.detailAddress = ""; // 상세 주소 초기화
 };
 
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
   if (!form.userName) return alert("이름을 입력해주세요.");
-  if (!form.password)
-    return alert("정보를 수정하려면 비밀번호를 입력해주세요.");
-  if (form.password !== form.confirmPassword) {
-    return alert("비밀번호가 일치하지 않습니다.");
-  }
+  if (!form.currentPassword)
+    return alert("정보를 수정하려면 현재 비밀번호를 입력해주세요.");
 
   try {
     isLoading.value = true;
 
-    // 비밀번호 확인
+    // 비밀번호 확인 (현재 비밀번호를 동일하게 전송하여 검증)
     await changeMyPassword({
-      currentPassword: form.password,
-      newPassword: form.password,
+      currentPassword: form.currentPassword,
+      newPassword: form.currentPassword,
     });
 
     // 정보 업데이트
@@ -96,8 +107,7 @@ const handleUpdateProfile = async () => {
     alert("회원 정보가 수정되었습니다.");
 
     // 비밀번호 필드 초기화
-    form.password = "";
-    form.confirmPassword = "";
+    form.currentPassword = "";
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "정보 수정 실패";
@@ -108,6 +118,51 @@ const handleUpdateProfile = async () => {
     }
   } finally {
     isLoading.value = false;
+  }
+};
+
+// 비밀번호 변경
+const handleChangePassword = async () => {
+  if (!passwordForm.currentPassword) {
+    return alert("현재 비밀번호를 입력해주세요.");
+  }
+  if (!passwordForm.newPassword) {
+    return alert("새 비밀번호를 입력해주세요.");
+  }
+  if (passwordForm.newPassword.length < 8) {
+    return alert("새 비밀번호는 8자 이상이어야 합니다.");
+  }
+  if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+    return alert("새 비밀번호가 일치하지 않습니다.");
+  }
+  if (passwordForm.currentPassword === passwordForm.newPassword) {
+    return alert("현재 비밀번호와 다른 비밀번호를 입력해주세요.");
+  }
+
+  try {
+    isPasswordLoading.value = true;
+
+    await changeMyPassword({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+
+    alert("비밀번호가 변경되었습니다.");
+
+    // 폼 초기화
+    passwordForm.currentPassword = "";
+    passwordForm.newPassword = "";
+    passwordForm.confirmNewPassword = "";
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "비밀번호 변경 실패";
+    if (errorMessage.includes("401") || errorMessage.includes("비밀번호")) {
+      alert("현재 비밀번호가 올바르지 않습니다.");
+    } else {
+      alert("오류 발생: " + errorMessage);
+    }
+  } finally {
+    isPasswordLoading.value = false;
   }
 };
 
@@ -229,11 +284,11 @@ onMounted(async () => {
 
       <Separator />
 
-      <!-- 비밀번호 확인 섹션 -->
+      <!-- 현재 비밀번호 확인 섹션 (정보 수정용) -->
       <Card>
         <CardHeader>
           <CardTitle class="text-heading">
-            비밀번호 확인
+            현재 비밀번호 확인
             <span class="text-destructive text-body font-normal ml-2">
               * 정보 수정을 위해 필수입니다.
             </span>
@@ -241,22 +296,12 @@ onMounted(async () => {
         </CardHeader>
         <CardContent class="space-y-5">
           <div class="space-y-2">
-            <Label for="password">비밀번호</Label>
+            <Label for="currentPassword">현재 비밀번호</Label>
             <Input
-              id="password"
-              v-model="form.password"
+              id="currentPassword"
+              v-model="form.currentPassword"
               type="password"
-              placeholder="비밀번호 입력"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="confirmPassword">비밀번호 확인</Label>
-            <Input
-              id="confirmPassword"
-              v-model="form.confirmPassword"
-              type="password"
-              placeholder="비밀번호 재입력"
+              placeholder="현재 비밀번호 입력"
             />
           </div>
         </CardContent>
@@ -266,6 +311,54 @@ onMounted(async () => {
       <div class="text-right">
         <Button type="submit" :disabled="isLoading" size="lg">
           {{ isLoading ? "처리중..." : "정보 수정 완료" }}
+        </Button>
+      </div>
+    </form>
+
+    <Separator class="my-8" />
+
+    <!-- 비밀번호 변경 섹션 (별도 폼) -->
+    <form @submit.prevent="handleChangePassword" class="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-heading">비밀번호 변경</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-5">
+          <div class="space-y-2">
+            <Label for="pwCurrentPassword">현재 비밀번호</Label>
+            <Input
+              id="pwCurrentPassword"
+              v-model="passwordForm.currentPassword"
+              type="password"
+              placeholder="현재 비밀번호 입력"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <Label for="newPassword">새 비밀번호</Label>
+            <Input
+              id="newPassword"
+              v-model="passwordForm.newPassword"
+              type="password"
+              placeholder="새 비밀번호 입력 (8자 이상)"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <Label for="confirmNewPassword">새 비밀번호 확인</Label>
+            <Input
+              id="confirmNewPassword"
+              v-model="passwordForm.confirmNewPassword"
+              type="password"
+              placeholder="새 비밀번호 재입력"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div class="text-right">
+        <Button type="submit" :disabled="isPasswordLoading" size="lg">
+          {{ isPasswordLoading ? "처리중..." : "비밀번호 변경" }}
         </Button>
       </div>
     </form>
@@ -281,5 +374,12 @@ onMounted(async () => {
         회원 탈퇴하기
       </Button>
     </div>
+
+    <!-- 주소 검색 모달 -->
+    <AddressSearchModal
+      :open="isAddressSearchOpen"
+      @close="isAddressSearchOpen = false"
+      @select="handleAddressSelect"
+    />
   </div>
 </template>

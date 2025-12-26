@@ -23,4 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.production
+.env.production.example
+.env.local
 dev.sh
+deploy-s3.sh
+.claudeignore

@@ -20,6 +20,7 @@ import {
   Truck,
   CheckCircle,
   Image,
+  MessageCircle,
 } from "lucide-vue-next";
 
 // Shadcn UI 컴포넌트
@@ -52,9 +53,11 @@ const goToOrderList = (status?: string) => {
 };
 const goToWishlist = () => router.push("/wishlist");
 const goToAddress = () => router.push("/addresslist");
+const goToMyInquiries = () => router.push("/my-inquiries");
 
 // 관리자용 페이지 이동
 const goToCategoryAdmin = () => router.push("/admin/categories");
+const goToInquiryAdmin = () => router.push("/inquiry"); // 관리자는 전체 문의 목록으로
 const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
 const goToSiteImageAdmin = () => router.push("/admin/site-images");
@@ -85,6 +88,12 @@ const menuItems = [
     description: "배송지 수정 및 삭제",
     icon: MapPin,
     action: goToAddress,
+  },
+  {
+    label: "내 문의 내역",
+    description: "Q&A 문의 및 답변 확인",
+    icon: MessageCircle,
+    action: goToMyInquiries,
   },
 ];
 
@@ -188,6 +197,19 @@ onMounted(async () => {
               <Image class="w-4 h-4 text-white" />
             </div>
             사이트 이미지 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToInquiryAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-teal-600 flex items-center justify-center"
+            >
+              <MessageCircle class="w-4 h-4 text-white" />
+            </div>
+            문의 관리
           </Button>
         </div>
       </CardContent>
