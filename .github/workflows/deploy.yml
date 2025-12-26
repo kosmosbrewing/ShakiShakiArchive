@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   deploy:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       # 3. 의존성 설치
       - name: Install dependencies
@@ -45,7 +45,7 @@ jobs:
       # 6. S3에 빌드 파일 업로드
       - name: Deploy to S3
         run: |
-          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
             --delete
 
       # CloudFront 추가 시 아래 주석 해제
