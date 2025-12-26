@@ -26,6 +26,12 @@ import type {
   CreateSiteImageRequest,
   UpdateSiteImageRequest,
   ReorderSiteImagesRequest,
+  Inquiry,
+  InquiryReply,
+  CreateInquiryRequest,
+  InquiryListParams,
+  CreateReplyRequest,
+  UpdateInquiryStatusRequest,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -91,7 +97,15 @@ export async function logout(): Promise<void> {
 
 // 네이버 소셜 로그인 URL 반환
 export function getNaverLoginUrl(): string {
-  return `${API_BASE}/api/oauth/naver/login`;
+  // 캐시 방지를 위한 타임스탬프 추가
+  const timestamp = Date.now();
+  // 로그인 후 돌아올 페이지 저장
+  // 인증 관련 페이지(/login, /signup 등)에서는 홈으로 이동
+  const currentPath = window.location.pathname;
+  const authPaths = ["/login", "/signup", "/forgot-password", "/auth"];
+  const isAuthPage = authPaths.some(path => currentPath.startsWith(path));
+  const returnUrl = encodeURIComponent(isAuthPage ? "/" : currentPath || "/");
+  return `${API_BASE}/api/oauth/naver/login?t=${timestamp}&returnUrl=${returnUrl}`;
 }
 
 // 현재 사용자 정보 가져오기
@@ -121,6 +135,17 @@ export async function changeMyPassword(data: {
 }): Promise<any> {
   return apiRequest("/api/auth/password", {
     method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+// 비밀번호 재설정 (비로그인 상태에서 이메일 인증 후 사용)
+export async function resetPassword(data: {
+  email: string;
+  newPassword: string;
+}): Promise<any> {
+  return apiRequest("/api/auth/reset-password", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 }
@@ -807,4 +832,71 @@ export async function uploadSiteImage(
   formData.append("image", file);
   formData.append("type", type);
   return uploadFile<ImageUploadResponse>("/api/admin/images/site", formData);
+}
+
+// ------------------------------------------------------------------
+// [9] 문의하기 (Q&A Inquiries)
+// ------------------------------------------------------------------
+
+// 문의 목록 조회
+export async function fetchInquiries(
+  params?: InquiryListParams
+): Promise<Inquiry[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.productId) searchParams.append("productId", params.productId);
+  if (params?.type) searchParams.append("type", params.type);
+  if (params?.status) searchParams.append("status", params.status);
+
+  const queryString = searchParams.toString();
+  const url = queryString ? `/api/inquiries?${queryString}` : "/api/inquiries";
+  return apiRequest<Inquiry[]>(url);
+}
+
+// 내 문의 목록 조회
+export async function fetchMyInquiries(): Promise<Inquiry[]> {
+  return apiRequest<Inquiry[]>("/api/inquiries/my/list");
+}
+
+// 문의 상세 조회
+export async function fetchInquiry(id: string): Promise<Inquiry> {
+  return apiRequest<Inquiry>(`/api/inquiries/${id}`);
+}
+
+// 문의 등록
+export async function createInquiry(
+  data: CreateInquiryRequest
+): Promise<Inquiry> {
+  return apiRequest<Inquiry>("/api/inquiries", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 문의 삭제
+export async function deleteInquiry(id: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/api/inquiries/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// 답변 등록 (관리자)
+export async function createInquiryReply(
+  inquiryId: string,
+  data: CreateReplyRequest
+): Promise<InquiryReply> {
+  return apiRequest<InquiryReply>(`/api/inquiries/${inquiryId}/replies`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 문의 상태 변경 (관리자)
+export async function updateInquiryStatus(
+  id: string,
+  data: UpdateInquiryStatusRequest
+): Promise<Inquiry> {
+  return apiRequest<Inquiry>(`/api/inquiries/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }

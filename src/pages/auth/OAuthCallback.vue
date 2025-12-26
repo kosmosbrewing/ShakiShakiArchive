@@ -24,6 +24,9 @@ onMounted(async () => {
   // 팝업 창 여부 확인 (window.opener가 존재하고 닫히지 않았는지)
   isPopup.value = !!(window.opener && !window.opener.closed);
 
+  // returnUrl 파라미터 확인 (로그인 전 페이지로 돌아가기 위함)
+  const returnUrl = (route.query.returnUrl as string) || "/";
+
   try {
     // URL에서 에러 파라미터 확인
     const error = route.query.error as string;
@@ -37,21 +40,20 @@ onMounted(async () => {
     if (authStore.isAuthenticated) {
       status.value = "success";
 
-      // 팝업 창인 경우: 부모 창에 메시지 전송 후 창 닫기
+      // 팝업 창인 경우: 부모 창에 메시지 전송 후 창 닫기 (하위 호환성 유지)
       if (isPopup.value && window.opener) {
         window.opener.postMessage(
           { type: "OAUTH_SUCCESS" },
           window.location.origin
         );
-        // 잠시 대기 후 창 닫기 (사용자에게 성공 상태를 보여주기 위해)
         setTimeout(() => {
           window.close();
         }, 1000);
       } else {
-        // 일반 리다이렉트: 홈으로 이동
+        // 일반 리다이렉트: returnUrl 또는 홈으로 이동
         setTimeout(() => {
-          router.replace("/");
-        }, 1500);
+          router.replace(returnUrl);
+        }, 1000);
       }
     } else {
       throw new Error("로그인 처리에 실패했습니다. 다시 시도해주세요.");
@@ -60,7 +62,7 @@ onMounted(async () => {
     status.value = "error";
     errorMessage.value = error.message || "알 수 없는 오류가 발생했습니다.";
 
-    // 팝업 창인 경우: 부모 창에 에러 메시지 전송
+    // 팝업 창인 경우: 부모 창에 에러 메시지 전송 (하위 호환성 유지)
     if (isPopup.value && window.opener) {
       window.opener.postMessage(
         { type: "OAUTH_ERROR", message: errorMessage.value },

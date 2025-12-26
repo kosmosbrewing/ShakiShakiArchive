@@ -409,3 +409,84 @@ export interface ReorderSiteImagesRequest {
   type: SiteImageType;
   imageIds: number[];
 }
+
+// ------------------------------------------------------------------
+// 문의하기 관련 타입 (Q&A Inquiries)
+// ------------------------------------------------------------------
+
+// 문의 유형
+export type InquiryType = "product" | "shipping" | "exchange" | "other";
+
+// 문의 상태
+export type InquiryStatus = "pending" | "answered" | "closed";
+
+// 문의 작성자 정보 (마스킹 처리됨)
+export interface InquiryUser {
+  id: string;
+  email: string; // 마스킹 처리된 이메일
+  userName: string; // 마스킹 처리된 이름
+}
+
+// 문의 관련 상품 정보
+export interface InquiryProduct {
+  id: string;
+  name: string;
+  price?: string;
+  imageUrl?: string;
+}
+
+// 문의 답변
+export interface InquiryReply {
+  id: number;
+  inquiryId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    userName: string;
+  };
+}
+
+// 문의 정보
+export interface Inquiry {
+  id: string;
+  userId: string;
+  productId?: string;
+  type: InquiryType;
+  title: string;
+  content: string;
+  isPrivate: boolean;
+  status: InquiryStatus;
+  createdAt: string;
+  updatedAt: string;
+  user?: InquiryUser;
+  product?: InquiryProduct;
+  replies?: InquiryReply[];
+}
+
+// 문의 생성 요청
+export interface CreateInquiryRequest {
+  productId?: string;
+  type: InquiryType;
+  title: string;
+  content: string;
+  isPrivate: boolean;
+}
+
+// 문의 목록 조회 파라미터
+export interface InquiryListParams {
+  productId?: string;
+  type?: InquiryType;
+  status?: InquiryStatus;
+}
+
+// 답변 생성 요청
+export interface CreateReplyRequest {
+  content: string;
+}
+
+// 상태 변경 요청
+export interface UpdateInquiryStatusRequest {
+  status: InquiryStatus;
+}

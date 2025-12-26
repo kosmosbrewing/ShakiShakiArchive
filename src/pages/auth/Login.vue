@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl } from "@/lib/api";
@@ -18,7 +18,7 @@ interface loginProps {
   password: string; // 비밀번호
 }
 
-const router = useRouter(); // 2. 라우터 인스턴스 생성
+const router = useRouter();
 const authStore = useAuthStore();
 
 const loginForm = reactive<loginProps>({
@@ -99,109 +99,18 @@ const handleSubmit = async () => {
   }
 };
 
-// OAuth 메시지 수신 여부 추적
-let oauthMessageReceived = false;
-
 /**
  * 네이버 소셜 로그인 처리
- * 팝업 창을 열어 OAuth 인증 진행
+ * 현재 창에서 직접 리다이렉트하여 자연스러운 UX 제공
  */
 const handleNaverLogin = () => {
   isNaverLoading.value = true;
   loginError.value = null;
   invalidInputForm.value = false;
-  oauthMessageReceived = false;
 
-  // 팝업 창 크기 및 위치 계산
-  const width = 500;
-  const height = 600;
-  const left = window.screenX + (window.outerWidth - width) / 2;
-  const top = window.screenY + (window.outerHeight - height) / 2;
-
-  // 팝업 창 열기
-  const popup = window.open(
-    getNaverLoginUrl(),
-    "naverLogin",
-    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-  );
-
-  // 팝업이 차단된 경우 처리
-  if (!popup || popup.closed) {
-    isNaverLoading.value = false;
-    loginError.value = "팝업이 차단되었습니다. 팝업 차단을 해제해주세요.";
-    invalidInputForm.value = true;
-    return;
-  }
-
-  // 팝업 창 닫힘 감지 (폴링)
-  const checkPopupClosed = setInterval(async () => {
-    if (popup.closed) {
-      clearInterval(checkPopupClosed);
-
-      // postMessage를 받지 못하고 팝업이 닫힌 경우
-      // (사용자가 취소했거나 연결 오류 발생)
-      if (!oauthMessageReceived) {
-        // 혹시 로그인이 완료되었는지 확인
-        try {
-          await authStore.loadUser();
-          if (authStore.isAuthenticated) {
-            // 로그인 성공
-            isNaverLoading.value = false;
-            isAuthenticated.value = true;
-            router.replace("/");
-            return;
-          }
-        } catch {
-          // 사용자 정보 로드 실패 - 무시
-        }
-
-        // 로그인되지 않음 - 조용히 로딩 상태만 해제 (취소로 간주)
-        isNaverLoading.value = false;
-      }
-    }
-  }, 500);
+  // 팝업 없이 현재 창에서 바로 네이버 로그인 페이지로 이동
+  window.location.href = getNaverLoginUrl();
 };
-
-// 팝업에서 보내는 메시지 수신
-const handleOAuthMessage = async (event: MessageEvent) => {
-  // 보안: 허용된 origin에서 온 메시지만 처리
-  const allowedOrigins = [
-    window.location.origin,
-    import.meta.env.VITE_API_URL || "http://localhost:5000",
-  ];
-
-  if (!allowedOrigins.includes(event.origin)) {
-    return;
-  }
-
-  // OAuth 로그인 성공 메시지 처리
-  if (event.data?.type === "OAUTH_SUCCESS") {
-    oauthMessageReceived = true;
-    isNaverLoading.value = false;
-    isAuthenticated.value = true;
-
-    // 사용자 정보 로드 후 홈으로 이동
-    await authStore.loadUser();
-    router.replace("/");
-  }
-
-  // OAuth 로그인 실패 메시지 처리
-  if (event.data?.type === "OAUTH_ERROR") {
-    oauthMessageReceived = true;
-    isNaverLoading.value = false;
-    invalidInputForm.value = true;
-    loginError.value = event.data.message || "네이버 로그인에 실패했습니다.";
-  }
-};
-
-// 컴포넌트 마운트 시 메시지 리스너 등록
-onMounted(() => {
-  window.addEventListener("message", handleOAuthMessage);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("message", handleOAuthMessage);
-});
 </script>
 
 <template>
@@ -323,7 +232,7 @@ onUnmounted(() => {
     </Card>
 
     <p class="text-center mt-4">
-      <router-link to="/signup" class="text-primary hover:underline font-medium"
+      <router-link to="/forgot-password" class="text-primary hover:underline font-medium"
         >비밀번호를 잊으셨나요?</router-link
       >
     </p>

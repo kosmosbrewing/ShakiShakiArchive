@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import Home from "@/components/Home.vue";
 
 // Auth (인증)
-import { Login, Signup, OAuthCallback } from "@/pages/auth";
+import { Login, Signup, OAuthCallback, ForgotPassword } from "@/pages/auth";
 
 // Account (계정)
 import { Account, Modify, AddressList } from "@/pages/account";
@@ -24,6 +24,9 @@ import { Cart } from "@/pages/cart";
 
 // Wishlist (위시리스트)
 import { WishList } from "@/pages/wishlist";
+
+// Inquiry (문의하기)
+import { InquiryList, InquiryCreate, InquiryDetail, MyInquiries } from "@/pages/inquiry";
 
 // Admin (관리자)
 import { ProductAdmin, CategoryAdmin, OrderAdmin, SiteImageAdmin } from "@/pages/admin";
@@ -41,6 +44,7 @@ const routes = [
   // 인증 관련
   { path: "/login", name: "Login", component: Login },
   { path: "/signup", name: "Signup", component: Signup },
+  { path: "/forgot-password", name: "ForgotPassword", component: ForgotPassword },
   { path: "/oauth/callback", name: "OAuthCallback", component: OAuthCallback },
 
   // 계정 관련
@@ -107,6 +111,22 @@ const routes = [
   // 정적 페이지
   { path: "/contact", name: "Contact", component: Contact },
   { path: "/about", name: "About", component: About },
+
+  // 문의하기 (Q&A)
+  { path: "/inquiry", name: "InquiryList", component: InquiryList },
+  {
+    path: "/inquiry/create",
+    name: "InquiryCreate",
+    component: InquiryCreate,
+    meta: { requiresAuth: true },
+  },
+  { path: "/inquiry/:id", name: "InquiryDetail", component: InquiryDetail },
+  {
+    path: "/my-inquiries",
+    name: "MyInquiries",
+    component: MyInquiries,
+    meta: { requiresAuth: true },
+  },
 
   // 관리자 페이지
   {
