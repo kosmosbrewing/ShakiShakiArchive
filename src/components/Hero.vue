@@ -5,8 +5,8 @@ import { ref, computed, onMounted } from "vue";
 import { ProductHome } from "@/pages/product";
 import { Marquee } from "@selemondev/vue3-marquee";
 import "@selemondev/vue3-marquee/dist/style.css";
-import { fetchHeroImages, fetchMarqueeImages } from "@/lib/api";
-import type { SiteImage } from "@/types/api";
+import { useSiteImageStore } from "@/stores/siteImage";
+import { storeToRefs } from "pinia";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 // 폴백 이미지 (API 실패 시 사용)
@@ -16,10 +16,11 @@ import fallbackMarquee2 from "@/assets/marquee02.png";
 import fallbackMarquee3 from "@/assets/marquee03.png";
 import fallbackMarquee4 from "@/assets/marquee04.png";
 
-// 상태
-const heroImages = ref<SiteImage[]>([]);
-const marqueeImages = ref<SiteImage[]>([]);
-const isLoading = ref(true);
+// 스토어
+const siteImageStore = useSiteImageStore();
+const { heroImages, marqueeImages } = storeToRefs(siteImageStore);
+
+// 슬라이드 상태
 const currentHeroIndex = ref(0);
 const prevHeroIndex = ref(0); // 이전 인덱스 추적
 const slideDirection = ref<"next" | "prev">("next"); // 슬라이드 방향
@@ -111,20 +112,13 @@ const getSlideClass = (index: number) => {
   }
 };
 
-// 데이터 로드
+// 데이터 로드 (스토어의 캐싱 활용)
 onMounted(async () => {
   try {
-    const [heroData, marqueeData] = await Promise.all([
-      fetchHeroImages(),
-      fetchMarqueeImages(),
-    ]);
-    heroImages.value = heroData;
-    marqueeImages.value = marqueeData;
+    await siteImageStore.loadSiteImages();
   } catch (error) {
     console.error("사이트 이미지 로드 실패:", error);
     // 에러 시 폴백 이미지 사용 (기본값)
-  } finally {
-    isLoading.value = false;
   }
 });
 </script>

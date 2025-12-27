@@ -17,7 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  type AlertType,
+} from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -52,6 +57,11 @@ const verificationState = reactive({
 const isSubmitting = ref(false);
 const errorMessage = ref("");
 const isAddressSearchOpen = ref(false);
+
+// 4. Alert 상태
+const showAlert = ref(false);
+const alertMessage = ref("");
+const alertType = ref<AlertType>("success");
 
 // 인증코드 발송
 const sendVerificationCode = async () => {
@@ -158,8 +168,15 @@ const handleSignup = async () => {
       emailOptIn: formData.emailOptIn,
     });
 
-    alert("회원가입이 완료되었습니다!");
-    router.push("/login");
+    // 성공 Alert 표시
+    alertMessage.value = "회원가입이 완료되었습니다!";
+    alertType.value = "success";
+    showAlert.value = true;
+
+    // 잠시 후 로그인 페이지로 이동
+    setTimeout(() => {
+      router.push("/login");
+    }, 1500);
   } catch (error: any) {
     console.error(error);
     errorMessage.value = error.message || "회원가입 중 오류가 발생했습니다.";
@@ -409,6 +426,14 @@ const handleSignup = async () => {
       :open="isAddressSearchOpen"
       @close="isAddressSearchOpen = false"
       @select="handleAddressSelect"
+    />
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
     />
   </section>
 </template>

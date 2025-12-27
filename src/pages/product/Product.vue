@@ -3,13 +3,13 @@
 // 상품 목록 페이지 컴포넌트
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { Heart } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
-import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api";
-import { LoadingSpinner, EmptyState } from "@/components/common";
+import { useWishlistStore } from "@/stores/wishlist";
+import { ProductCardSkeleton, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 
@@ -32,10 +32,13 @@ interface ProductApiResponse {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const wishlistStore = useWishlistStore();
 
 const productList = ref<ProductItem[]>([]);
 const loading = ref(false);
-const wishlistSet = ref<Set<string>>(new Set()); // UUID Set
+
+// 위시리스트 Set (스토어에서 가져옴)
+const wishlistSet = computed(() => wishlistStore.productIdSet);
 
 // [핵심] 상품 데이터 불러오기 (백엔드 필터링 적용)
 const fetchProductData = async () => {
@@ -76,20 +79,7 @@ const fetchProductData = async () => {
   }
 };
 
-// 위시리스트 목록 불러오기
-const loadWishlist = async () => {
-  if (!authStore.isAuthenticated) return;
-
-  try {
-    const items = await fetchWishlist();
-    const ids = items.map((item: any) => item.productId);
-    wishlistSet.value = new Set(ids);
-  } catch (error) {
-    console.error("위시리스트 로드 실패:", error);
-  }
-};
-
-// 위시리스트 추가/삭제 토글
+// 위시리스트 추가/삭제 토글 (스토어 활용)
 const toggleWishlist = async (event: Event, productId: string) => {
   event.stopPropagation();
 
@@ -103,14 +93,7 @@ const toggleWishlist = async (event: Event, productId: string) => {
   }
 
   try {
-    if (wishlistSet.value.has(productId)) {
-      await removeFromWishlist(productId);
-      wishlistSet.value.delete(productId);
-    } else {
-      await addToWishlist(productId);
-      wishlistSet.value.add(productId);
-    }
-    wishlistSet.value = new Set(wishlistSet.value);
+    await wishlistStore.toggleItem(productId);
   } catch (error) {
     console.error("위시리스트 처리 실패:", error);
     alert("처리 중 오류가 발생했습니다.");
@@ -124,7 +107,7 @@ const goToDetail = (id: string) => {
 onMounted(async () => {
   await fetchProductData();
   if (authStore.isAuthenticated) {
-    await loadWishlist();
+    await wishlistStore.loadWishlist();
   }
 });
 
@@ -142,8 +125,8 @@ watch(
     <div
       class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6"
     >
-      <!-- 로딩 상태 -->
-      <LoadingSpinner v-if="loading" class="col-span-full" />
+      <!-- 로딩 상태: 스켈레톤 카드 표시 (4열 그리드에 맞게 8개) -->
+      <ProductCardSkeleton v-if="loading" :count="8" />
 
       <!-- 빈 상태 -->
       <EmptyState
@@ -158,9 +141,10 @@ watch(
       <!-- 상품 카드 목록 -->
       <Card
         v-else
-        v-for="{ id, imageUrl, name, price } in productList"
+        v-for="({ id, imageUrl, name, price }, idx) in productList"
         :key="id"
-        class="bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
+        class="product-card bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
+        :style="{ animationDelay: `${idx * 0.05}s` }"
       >
         <CardHeader class="p-0 gap-0">
           <div
@@ -209,3 +193,20 @@ watch(
     </div>
   </section>
 </template>
+
+<style scoped>
+.product-card {
+  animation: slideUp 0.3s ease-out both;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

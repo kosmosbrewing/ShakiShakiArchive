@@ -17,11 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Alert, type AlertType } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
+
+// Alert 상태
+const showAlert = ref(false);
+const alertMessage = ref("");
+const alertType = ref<AlertType>("success");
 
 // 폼 데이터
 const form = reactive({
@@ -79,9 +85,18 @@ const handleAddressSelect = (address: { zonecode: string; address: string }) => 
 
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
-  if (!form.userName) return alert("이름을 입력해주세요.");
-  if (!form.currentPassword)
-    return alert("정보를 수정하려면 현재 비밀번호를 입력해주세요.");
+  if (!form.userName) {
+    alertMessage.value = "이름을 입력해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
+  }
+  if (!form.currentPassword) {
+    alertMessage.value = "정보를 수정하려면 현재 비밀번호를 입력해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
+  }
 
   try {
     isLoading.value = true;
@@ -104,18 +119,23 @@ const handleUpdateProfile = async () => {
     });
 
     await authStore.loadUser();
-    alert("회원 정보가 수정되었습니다.");
+
+    // 성공 Alert 표시
+    alertMessage.value = "회원 정보가 수정되었습니다.";
+    alertType.value = "success";
+    showAlert.value = true;
 
     // 비밀번호 필드 초기화
     form.currentPassword = "";
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "정보 수정 실패";
-    if (errorMessage.includes("401") || errorMessage.includes("비밀번호")) {
-      alert("비밀번호가 올바르지 않습니다.");
+    const errMsg = error instanceof Error ? error.message : "정보 수정 실패";
+    if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
+      alertMessage.value = "비밀번호가 올바르지 않습니다.";
     } else {
-      alert("오류 발생: " + errorMessage);
+      alertMessage.value = "오류 발생: " + errMsg;
     }
+    alertType.value = "error";
+    showAlert.value = true;
   } finally {
     isLoading.value = false;
   }
@@ -124,19 +144,34 @@ const handleUpdateProfile = async () => {
 // 비밀번호 변경
 const handleChangePassword = async () => {
   if (!passwordForm.currentPassword) {
-    return alert("현재 비밀번호를 입력해주세요.");
+    alertMessage.value = "현재 비밀번호를 입력해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
   }
   if (!passwordForm.newPassword) {
-    return alert("새 비밀번호를 입력해주세요.");
+    alertMessage.value = "새 비밀번호를 입력해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
   }
   if (passwordForm.newPassword.length < 8) {
-    return alert("새 비밀번호는 8자 이상이어야 합니다.");
+    alertMessage.value = "새 비밀번호는 8자 이상이어야 합니다.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
   }
   if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
-    return alert("새 비밀번호가 일치하지 않습니다.");
+    alertMessage.value = "새 비밀번호가 일치하지 않습니다.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
   }
   if (passwordForm.currentPassword === passwordForm.newPassword) {
-    return alert("현재 비밀번호와 다른 비밀번호를 입력해주세요.");
+    alertMessage.value = "현재 비밀번호와 다른 비밀번호를 입력해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
+    return;
   }
 
   try {
@@ -147,20 +182,25 @@ const handleChangePassword = async () => {
       newPassword: passwordForm.newPassword,
     });
 
-    alert("비밀번호가 변경되었습니다.");
+    // 성공 Alert 표시
+    alertMessage.value = "비밀번호가 변경되었습니다.";
+    alertType.value = "success";
+    showAlert.value = true;
 
     // 폼 초기화
     passwordForm.currentPassword = "";
     passwordForm.newPassword = "";
     passwordForm.confirmNewPassword = "";
   } catch (error: unknown) {
-    const errorMessage =
+    const errMsg =
       error instanceof Error ? error.message : "비밀번호 변경 실패";
-    if (errorMessage.includes("401") || errorMessage.includes("비밀번호")) {
-      alert("현재 비밀번호가 올바르지 않습니다.");
+    if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
+      alertMessage.value = "현재 비밀번호가 올바르지 않습니다.";
     } else {
-      alert("오류 발생: " + errorMessage);
+      alertMessage.value = "오류 발생: " + errMsg;
     }
+    alertType.value = "error";
+    showAlert.value = true;
   } finally {
     isPasswordLoading.value = false;
   }
@@ -171,12 +211,21 @@ const handleWithdraw = async () => {
   if (prompt("탈퇴하려면 '탈퇴'를 입력하세요.") === "탈퇴") {
     try {
       await withdrawUser();
-      alert("탈퇴되었습니다.");
-      // 로그아웃 처리 (새로고침으로 홈 이동)
-      await authStore.handleLogout();
+
+      // 성공 Alert 표시
+      alertMessage.value = "탈퇴되었습니다.";
+      alertType.value = "success";
+      showAlert.value = true;
+
+      // 잠시 후 로그아웃 처리
+      setTimeout(async () => {
+        await authStore.handleLogout();
+      }, 1500);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "탈퇴 실패";
-      alert(errorMessage);
+      const errMsg = e instanceof Error ? e.message : "탈퇴 실패";
+      alertMessage.value = errMsg;
+      alertType.value = "error";
+      showAlert.value = true;
     }
   }
 };
@@ -380,6 +429,14 @@ onMounted(async () => {
       :open="isAddressSearchOpen"
       @close="isAddressSearchOpen = false"
       @select="handleAddressSelect"
+    />
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
     />
   </div>
 </template>

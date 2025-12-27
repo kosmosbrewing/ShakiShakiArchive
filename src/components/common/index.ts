@@ -11,3 +11,5 @@ export { default as AddressForm } from "./AddressForm.vue";
 export { default as AddressSearchModal } from "./AddressSearchModal.vue";
 export { default as PhoneInput } from "./PhoneInput.vue";
 export { default as CancelOrderDialog } from "./CancelOrderDialog.vue";
+export { default as ProductCardSkeleton } from "./ProductCardSkeleton.vue";
+export { default as ProductDetailSkeleton } from "./ProductDetailSkeleton.vue";

@@ -2,8 +2,8 @@
 // src/pages/ProductDetail.vue
 // 상품 상세 페이지
 
-import { computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import {
   useProduct,
@@ -21,7 +21,7 @@ import { formatPrice, formatSizeValue } from "@/lib/formatters";
 import { Heart } from "lucide-vue-next";
 
 // 공통 컴포넌트
-import { LoadingSpinner, QuantitySelector } from "@/components/common";
+import { ProductDetailSkeleton, QuantitySelector } from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,9 +35,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, type AlertType, ERROR_MESSAGES } from "@/components/ui/alert";
 
 const route = useRoute();
-const router = useRouter();
 const authStore = useAuthStore();
 
 // Composables
@@ -63,12 +63,19 @@ const gallery = useImageGallery(productData.galleryImages);
 // 위시리스트 토글
 const wishlistToggle = useWishlistToggle(productId);
 
+// Alert 상태
+const showAlert = ref(false);
+const alertMessage = ref("");
+const alertType = ref<AlertType>("success");
+
 // 위시리스트 토글 핸들러 (회원 전용 유지)
 const handleToggleWishlist = () => {
   requireAuth(async () => {
     const success = await wishlistToggle.toggle();
     if (!success) {
-      alert("처리 중 오류가 발생했습니다.");
+      alertMessage.value = ERROR_MESSAGES.serverError;
+      alertType.value = "error";
+      showAlert.value = true;
     }
   });
 };
@@ -77,13 +84,17 @@ const handleToggleWishlist = () => {
 const handleAddToCart = async () => {
   // 1. 옵션 선택 필수 체크
   if (variantSelection.needsVariantSelection.value) {
-    alert("옵션을 선택해주세요.");
+    alertMessage.value = "옵션을 선택해주세요.";
+    alertType.value = "error";
+    showAlert.value = true;
     return;
   }
 
   // 2. 재고 확인
   if (!variantSelection.isStockAvailable.value) {
-    alert("재고가 부족합니다.");
+    alertMessage.value = "재고가 부족합니다.";
+    alertType.value = "error";
+    showAlert.value = true;
     return;
   }
 
@@ -116,11 +127,13 @@ const handleAddToCart = async () => {
   });
 
   if (success) {
-    if (confirm("장바구니에 담았습니다. 장바구니로 이동하시겠습니까?")) {
-      router.push("/cart");
-    }
+    alertMessage.value = "장바구니에 담았습니다.";
+    alertType.value = "success";
+    showAlert.value = true;
   } else {
-    alert("장바구니 담기에 실패했습니다.");
+    alertMessage.value = "장바구니 담기에 실패했습니다.";
+    alertType.value = "error";
+    showAlert.value = true;
   }
 };
 
@@ -145,7 +158,8 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
-    <LoadingSpinner
+    <!-- 로딩 상태: 상세 페이지 스켈레톤 -->
+    <ProductDetailSkeleton
       v-if="productData.loading.value || !productData.product.value"
     />
 
@@ -209,16 +223,21 @@ onMounted(async () => {
             productData.product.value.detailImages &&
             productData.product.value.detailImages.length > 0
           "
-          class="space-y-0"
+          class="space-y-6 mt-6"
         >
-          <img
+          <div
             v-for="(detailImg, idx) in productData.product.value.detailImages"
             :key="`detail-${idx}`"
-            :src="detailImg"
-            class="w-full object-cover rounded-2xl"
-            draggable="false"
-            alt="Detail Description"
-          />
+            class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
+            :style="{ animationDelay: `${idx * 0.1}s` }"
+          >
+            <img
+              :src="detailImg"
+              class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+              draggable="false"
+              :alt="`상품 상세 이미지 ${idx + 1}`"
+            />
+          </div>
         </div>
       </div>
 
@@ -424,6 +443,14 @@ onMounted(async () => {
         </Card>
       </div>
     </div>
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
+    />
   </div>
 </template>
 
@@ -431,10 +458,26 @@ onMounted(async () => {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+.detail-image-wrapper {
+  animation: slideUp 0.6s ease-out both;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
   to {
     opacity: 1;

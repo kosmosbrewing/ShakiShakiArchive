@@ -17,7 +17,13 @@ import { Account, Modify, AddressList } from "@/pages/account";
 import { Product, ProductDetail } from "@/pages/product";
 
 // Order (주문)
-import { Order, OrderList, OrderDetail, Checkout, PaymentCallback } from "@/pages/order";
+import {
+  Order,
+  OrderList,
+  OrderDetail,
+  Checkout,
+  PaymentCallback,
+} from "@/pages/order";
 
 // Cart (장바구니)
 import { Cart } from "@/pages/cart";
@@ -26,13 +32,20 @@ import { Cart } from "@/pages/cart";
 import { WishList } from "@/pages/wishlist";
 
 // Inquiry (문의하기)
-import { InquiryList, InquiryCreate, InquiryDetail, MyInquiries } from "@/pages/inquiry";
+import {
+  InquiryList,
+  InquiryCreate,
+  InquiryDetail,
+  MyInquiries,
+} from "@/pages/inquiry";
 
 // Admin (관리자)
-import { ProductAdmin, CategoryAdmin, OrderAdmin, SiteImageAdmin } from "@/pages/admin";
-
-// Static (정적 페이지)
-import { About, Contact } from "@/pages/static";
+import {
+  ProductAdmin,
+  CategoryAdmin,
+  OrderAdmin,
+  SiteImageAdmin,
+} from "@/pages/admin";
 
 // 404 페이지
 import NotFound from "@/pages/NotFound.vue";
@@ -44,7 +57,11 @@ const routes = [
   // 인증 관련
   { path: "/login", name: "Login", component: Login },
   { path: "/signup", name: "Signup", component: Signup },
-  { path: "/forgot-password", name: "ForgotPassword", component: ForgotPassword },
+  {
+    path: "/forgot-password",
+    name: "ForgotPassword",
+    component: ForgotPassword,
+  },
   { path: "/oauth/callback", name: "OAuthCallback", component: OAuthCallback },
 
   // 계정 관련
@@ -98,7 +115,11 @@ const routes = [
     meta: { requiresAuth: true },
   },
   { path: "/checkout", name: "Checkout", component: Checkout },
-  { path: "/payment/callback", name: "PaymentCallback", component: PaymentCallback },
+  {
+    path: "/payment/callback",
+    name: "PaymentCallback",
+    component: PaymentCallback,
+  },
 
   // 위시리스트
   {
@@ -107,10 +128,6 @@ const routes = [
     component: WishList,
     meta: { requiresAuth: true },
   },
-
-  // 정적 페이지
-  { path: "/contact", name: "Contact", component: Contact },
-  { path: "/about", name: "About", component: About },
 
   // 문의하기 (Q&A)
   { path: "/inquiry", name: "InquiryList", component: InquiryList },
