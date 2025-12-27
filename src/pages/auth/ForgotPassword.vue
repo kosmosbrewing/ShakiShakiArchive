@@ -19,7 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  type AlertType,
+} from "@/components/ui/alert";
 
 const router = useRouter();
 
@@ -47,6 +52,11 @@ const verificationState = reactive({
 const isSubmitting = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
+
+// Alert 상태
+const showAlert = ref(false);
+const alertMessage = ref("");
+const alertType = ref<AlertType>("success");
 
 // 단계별 타이틀
 const stepTitle = computed(() => {
@@ -146,6 +156,11 @@ const handleResetPassword = async () => {
 
     successMessage.value = "비밀번호가 성공적으로 변경되었습니다.";
     currentStep.value = 4;
+
+    // 성공 Alert 표시
+    alertMessage.value = "비밀번호가 성공적으로 변경되었습니다.";
+    alertType.value = "success";
+    showAlert.value = true;
   } catch (error: any) {
     console.error(error);
     errorMessage.value =
@@ -348,5 +363,13 @@ const goToLogin = () => {
         로그인하기
       </router-link>
     </p>
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
+    />
   </section>
 </template>

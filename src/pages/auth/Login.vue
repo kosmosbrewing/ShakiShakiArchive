@@ -4,12 +4,19 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl } from "@/lib/api";
 import axios from "axios";
-import { AlertCircle, Loader2 } from "lucide-vue-next";
+import { Loader2, AlertCircle } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  type AlertType,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES,
+  getErrorMessageByStatus,
+} from "@/components/ui/alert";
 import Separator from "@/components/ui/separator/Separator.vue";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
@@ -31,6 +38,9 @@ const loginError = ref<string | null>(null); // 로그인 에러 메시지
 const isLoading = ref<boolean>(false); // 로딩 상태 관리
 const isAuthenticated = ref<boolean>(false); // 인증 성공 상태
 const isNaverLoading = ref<boolean>(false); // 네이버 로그인 로딩 상태
+const showAlert = ref<boolean>(false); // Alert 모달 표시 상태
+const alertMessage = ref<string>(""); // Alert 메시지
+const alertType = ref<AlertType>("success"); // Alert 타입 (success/error)
 
 // 커스텀 Axios 인스턴스 생성
 const apiClient = axios.create({
@@ -49,7 +59,10 @@ const handleSubmit = async () => {
 
   if (!loginForm.id || !loginForm.password) {
     invalidInputForm.value = true;
-    loginError.value = "아이디와 비밀번호를 모두 입력해주세요.";
+    loginError.value = ERROR_MESSAGES.inputError;
+    alertMessage.value = loginError.value;
+    alertType.value = "error";
+    showAlert.value = true;
     return;
   }
 
@@ -70,6 +83,11 @@ const handleSubmit = async () => {
     isLoading.value = false;
     isAuthenticated.value = true;
 
+    // Alert 표시
+    alertMessage.value = SUCCESS_MESSAGES.login;
+    alertType.value = "success";
+    showAlert.value = true;
+
     console.log("로그인 성공! 사용자 데이터:", response.data);
 
     // [수정됨] 6. 홈 화면으로 이동
@@ -83,33 +101,120 @@ const handleSubmit = async () => {
     invalidInputForm.value = true;
 
     if (axios.isAxiosError(error) && error.response) {
+      // 서버 응답 메시지 우선, 없으면 HTTP 상태 코드에 따른 기본 메시지
       const serverMessage = error.response.data?.message;
-
-      if (error.response.status === 401 && serverMessage) {
-        loginError.value = serverMessage;
-      } else {
-        loginError.value = `서버 오류 (${error.response.status}): 요청 처리에 실패했습니다.`;
-      }
-    } else {
       loginError.value =
-        "네트워크 연결 상태를 확인하거나 잠시 후 다시 시도해주세요.";
+        serverMessage || getErrorMessageByStatus(error.response.status);
+    } else {
+      // 네트워크 오류
+      loginError.value = ERROR_MESSAGES.network;
     }
+
+    // 에러 Alert 표시
+    alertMessage.value = ERROR_MESSAGES.serverError;
+    alertType.value = "error";
+    showAlert.value = true;
 
     console.error("로그인 실패:", loginError.value, error);
   }
 };
 
+// 모바일 환경 체크
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
 /**
  * 네이버 소셜 로그인 처리
- * 현재 창에서 직접 리다이렉트하여 자연스러운 UX 제공
+ * PC: 팝업 창으로 로그인
+ * 모바일: 리다이렉트 방식
  */
 const handleNaverLogin = () => {
   isNaverLoading.value = true;
   loginError.value = null;
   invalidInputForm.value = false;
 
-  // 팝업 없이 현재 창에서 바로 네이버 로그인 페이지로 이동
-  window.location.href = getNaverLoginUrl();
+  const naverLoginUrl = getNaverLoginUrl();
+
+  // 모바일: 리다이렉트 방식
+  if (isMobile()) {
+    window.location.href = naverLoginUrl;
+    return;
+  }
+
+  // PC: 팝업 창 방식
+  const width = 500;
+  const height = 600;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+
+  // 팝업 여부를 localStorage에 저장 (팝업 창과 공유)
+  localStorage.setItem("oauth_popup", "true");
+
+  const popup = window.open(
+    naverLoginUrl,
+    "naverLogin",
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+  );
+
+  // 팝업이 차단된 경우 리다이렉트로 대체
+  if (!popup) {
+    window.location.href = naverLoginUrl;
+    return;
+  }
+
+  // 팝업 창 닫힘 감지
+  const checkPopup = setInterval(() => {
+    if (popup.closed) {
+      clearInterval(checkPopup);
+      isNaverLoading.value = false;
+    }
+  }, 500);
+
+  // localStorage를 통한 OAuth 결과 수신 (storage 이벤트)
+  const handleStorageChange = async (event: StorageEvent) => {
+    if (event.key !== "oauth_result" || !event.newValue) return;
+
+    try {
+      const result = JSON.parse(event.newValue);
+      const { type, message } = result;
+
+      // 결과 처리 후 localStorage 정리
+      localStorage.removeItem("oauth_result");
+
+      if (type === "OAUTH_SUCCESS") {
+        clearInterval(checkPopup);
+        window.removeEventListener("storage", handleStorageChange);
+
+        await authStore.loadUser();
+
+        isNaverLoading.value = false;
+        alertMessage.value = SUCCESS_MESSAGES.login;
+        alertType.value = "success";
+        showAlert.value = true;
+
+        setTimeout(() => {
+          router.replace("/");
+        }, 1500);
+      } else if (type === "OAUTH_ERROR") {
+        clearInterval(checkPopup);
+        window.removeEventListener("storage", handleStorageChange);
+
+        isNaverLoading.value = false;
+        loginError.value = message || ERROR_MESSAGES.serverError;
+        invalidInputForm.value = true;
+        alertMessage.value = loginError.value ?? ERROR_MESSAGES.serverError;
+        alertType.value = "error";
+        showAlert.value = true;
+      }
+    } catch (e) {
+      console.error("OAuth 결과 파싱 오류:", e);
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
 };
 </script>
 
@@ -144,41 +249,16 @@ const handleNaverLogin = () => {
             />
           </div>
 
-          <Alert v-if="invalidInputForm" variant="destructive">
-            <AlertCircle class="w-4 h-4" />
-            <AlertTitle>로그인 실패</AlertTitle>
-            <AlertDescription>
-              {{
-                loginError || "로그인 처리 중 알 수 없는 오류가 발생했습니다."
-              }}
-            </AlertDescription>
-          </Alert>
-
-          <Alert
-            v-if="isAuthenticated"
-            variant="default"
-            class="bg-green-100 text-green-700 border-green-400"
+          <!-- 오류 상세 메시지 -->
+          <AlertDescription
+            v-if="invalidInputForm && loginError"
+            class="flex items-center text-primary mt-1"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <path d="M9 11l3 3L22 4" />
-            </svg>
-            <AlertTitle>성공</AlertTitle>
-            <AlertDescription>
-              로그인 성공! 잠시 후 이동합니다...
-            </AlertDescription>
-          </Alert>
+            <AlertCircle class="w-4 h-4 pr-1 flex-shrink-0" />
+            <div class="text-caption">{{ loginError }}</div>
+          </AlertDescription>
 
-          <Button class="w-full mt-3" type="submit" :disabled="isLoading">
+          <Button class="w-full mt-1" type="submit" :disabled="isLoading">
             <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
             <span class="text-[16px] tracking-tight">
               {{ isLoading ? "로그인 중..." : "로그인" }}
@@ -232,7 +312,9 @@ const handleNaverLogin = () => {
     </Card>
 
     <p class="text-center mt-4">
-      <router-link to="/forgot-password" class="text-primary hover:underline font-medium"
+      <router-link
+        to="/forgot-password"
+        class="text-primary hover:underline font-medium"
         >비밀번호를 잊으셨나요?</router-link
       >
     </p>
@@ -243,5 +325,13 @@ const handleNaverLogin = () => {
         >가입하기</router-link
       >
     </p>
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
+    />
   </section>
 </template>

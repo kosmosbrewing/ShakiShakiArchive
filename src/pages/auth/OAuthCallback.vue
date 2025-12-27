@@ -5,9 +5,15 @@
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { Loader2, CheckCircle, XCircle } from "lucide-vue-next";
+import { Loader2, XCircle } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Alert,
+  type AlertType,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES,
+} from "@/components/ui/alert";
 
 const router = useRouter();
 const route = useRoute();
@@ -20,9 +26,16 @@ const errorMessage = ref<string>("");
 // 팝업 창인지 확인
 const isPopup = ref<boolean>(false);
 
+// Alert 상태
+const showAlert = ref<boolean>(false);
+const alertMessage = ref<string>("");
+const alertType = ref<AlertType>("success");
+
 onMounted(async () => {
-  // 팝업 창 여부 확인 (window.opener가 존재하고 닫히지 않았는지)
-  isPopup.value = !!(window.opener && !window.opener.closed);
+  // 팝업 창 여부 확인 (localStorage로 확인)
+  isPopup.value = localStorage.getItem("oauth_popup") === "true";
+  // 확인 후 삭제
+  localStorage.removeItem("oauth_popup");
 
   // returnUrl 파라미터 확인 (로그인 전 페이지로 돌아가기 위함)
   const returnUrl = (route.query.returnUrl as string) || "/";
@@ -40,35 +53,55 @@ onMounted(async () => {
     if (authStore.isAuthenticated) {
       status.value = "success";
 
-      // 팝업 창인 경우: 부모 창에 메시지 전송 후 창 닫기 (하위 호환성 유지)
-      if (isPopup.value && window.opener) {
-        window.opener.postMessage(
-          { type: "OAUTH_SUCCESS" },
-          window.location.origin
+      // 팝업 창인 경우: localStorage를 통해 부모 창에 결과 전달
+      if (isPopup.value) {
+        // localStorage에 성공 결과 저장 (부모 창에서 storage 이벤트로 감지)
+        localStorage.setItem(
+          "oauth_result",
+          JSON.stringify({ type: "OAUTH_SUCCESS", timestamp: Date.now() })
         );
+        // 창 닫기
         setTimeout(() => {
           window.close();
-        }, 1000);
-      } else {
-        // 일반 리다이렉트: returnUrl 또는 홈으로 이동
-        setTimeout(() => {
-          router.replace(returnUrl);
-        }, 1000);
+        }, 100);
+        return;
       }
+
+      // 일반 리다이렉트: Alert 표시 후 홈으로 이동
+      alertMessage.value = SUCCESS_MESSAGES.login;
+      alertType.value = "success";
+      showAlert.value = true;
+
+      setTimeout(() => {
+        router.replace(returnUrl);
+      }, 1500);
     } else {
       throw new Error("로그인 처리에 실패했습니다. 다시 시도해주세요.");
     }
   } catch (error: any) {
     status.value = "error";
-    errorMessage.value = error.message || "알 수 없는 오류가 발생했습니다.";
+    errorMessage.value = error.message || ERROR_MESSAGES.serverError;
 
-    // 팝업 창인 경우: 부모 창에 에러 메시지 전송 (하위 호환성 유지)
-    if (isPopup.value && window.opener) {
-      window.opener.postMessage(
-        { type: "OAUTH_ERROR", message: errorMessage.value },
-        window.location.origin
+    // 팝업 창인 경우: localStorage를 통해 부모 창에 에러 전달
+    if (isPopup.value) {
+      localStorage.setItem(
+        "oauth_result",
+        JSON.stringify({
+          type: "OAUTH_ERROR",
+          message: errorMessage.value,
+          timestamp: Date.now(),
+        })
       );
+      setTimeout(() => {
+        window.close();
+      }, 100);
+      return;
     }
+
+    // 일반: Alert 표시
+    alertMessage.value = errorMessage.value;
+    alertType.value = "error";
+    showAlert.value = true;
   }
 });
 
@@ -104,43 +137,39 @@ const closePopup = () => {
 
 <template>
   <section class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
-    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+    <!-- 로딩 중일 때만 Card 표시 -->
+    <Card v-if="status === 'loading'" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
       <CardContent class="flex flex-col items-center justify-center py-12">
-        <!-- 로딩 상태 -->
-        <div v-if="status === 'loading'" class="text-center">
-          <Loader2 class="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <h2 class="text-lg font-semibold mb-2">로그인 처리 중...</h2>
-          <p class="text-muted-foreground text-sm">잠시만 기다려주세요.</p>
-        </div>
+        <Loader2 class="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+        <h2 class="text-lg font-semibold mb-2">로그인 처리 중...</h2>
+        <p class="text-muted-foreground text-sm">잠시만 기다려주세요.</p>
+      </CardContent>
+    </Card>
 
-        <!-- 성공 상태 -->
-        <div v-else-if="status === 'success'" class="text-center">
-          <CheckCircle class="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <h2 class="text-lg font-semibold mb-2">로그인 성공!</h2>
-          <p class="text-muted-foreground text-sm mb-4">
-            환영합니다, {{ authStore.user?.userName }}님
-          </p>
-          <p class="text-muted-foreground text-xs">
-            {{ isPopup ? "잠시 후 이 창이 닫힙니다..." : "잠시 후 홈으로 이동합니다..." }}
-          </p>
-        </div>
-
-        <!-- 에러 상태 -->
-        <div v-else-if="status === 'error'" class="text-center">
-          <XCircle class="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 class="text-lg font-semibold mb-2">로그인 실패</h2>
-          <p class="text-muted-foreground text-sm mb-6">{{ errorMessage }}</p>
-          <div class="flex gap-3 justify-center">
-            <template v-if="isPopup">
-              <Button @click="closePopup">창 닫기</Button>
-            </template>
-            <template v-else>
-              <Button variant="outline" @click="goToHome">홈으로</Button>
-              <Button @click="goToLogin">다시 로그인</Button>
-            </template>
-          </div>
+    <!-- 에러 시 Card와 버튼 표시 -->
+    <Card v-else-if="status === 'error'" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+      <CardContent class="flex flex-col items-center justify-center py-12">
+        <XCircle class="w-12 h-12 text-destructive mx-auto mb-4" />
+        <h2 class="text-lg font-semibold mb-2">로그인 실패</h2>
+        <p class="text-muted-foreground text-sm mb-6">{{ errorMessage }}</p>
+        <div class="flex gap-3 justify-center">
+          <template v-if="isPopup">
+            <Button @click="closePopup">창 닫기</Button>
+          </template>
+          <template v-else>
+            <Button variant="outline" @click="goToHome">홈으로</Button>
+            <Button @click="goToLogin">다시 로그인</Button>
+          </template>
         </div>
       </CardContent>
     </Card>
+
+    <!-- Alert 모달 (성공/오류) -->
+    <Alert
+      v-if="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      @close="showAlert = false"
+    />
   </section>
 </template>

@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useCategoryStore } from "@/stores/category";
+import { useCartStore } from "@/stores/cart";
 import { useColorMode } from "@vueuse/core";
 import { storeToRefs } from "pinia";
-import { fetchCart, fetchCategories } from "@/lib/api";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -33,54 +34,24 @@ mode.value = "light";
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const categoryStore = useCategoryStore();
+const cartStore = useCartStore();
+
 const { isAuthenticated } = storeToRefs(authStore);
+const { categoryRoutes } = storeToRefs(categoryStore);
+
 const isOpen = ref<boolean>(false);
 const cartSheetOpen = ref<boolean>(false);
-const cartItemCount = ref(0);
 
-// 카테고리 메뉴 (동적 로드)
-const categoryRoutes = ref([{ path: "/product/all", label: "ALL" }]);
+// 장바구니 카운트 (스토어에서 가져옴)
+const cartItemCount = computed(() => cartStore.itemCount);
 
-// [수정] 카테고리 데이터 로드 및 정렬 함수
-const loadCategories = async () => {
-  try {
-    const categories = await fetchCategories();
-
-    // [핵심] ID 기준 오름차순 정렬 (100 -> 200 -> 300)
-    // a.id가 b.id보다 작으면 앞으로 보냄
-    categories.sort((a: any, b: any) => {
-      return (a.id || 0) - (b.id || 0);
-    });
-
-    // DB의 slug와 name을 매핑
-    const dynamicRoutes = categories.map((cat: any) => ({
-      path: `/product/${cat.slug}`, // URL에 slug 사용
-      label: cat.name.toUpperCase(), // 메뉴명 대문자 변환
-    }));
-
-    // ALL 메뉴 뒤에 정렬된 카테고리 추가
-    categoryRoutes.value = [
-      { path: "/product/all", label: "ALL" },
-      ...dynamicRoutes,
-    ];
-  } catch (error) {
-    console.error("카테고리 로딩 실패:", error);
-  }
-};
-
-// 장바구니 카운트 업데이트
+// 장바구니 카운트 업데이트 (스토어 활용)
 const updateCartCount = async () => {
-  if (authStore.isAuthenticated) {
-    try {
-      const cartItems = await fetchCart();
-      cartItemCount.value = cartItems.length;
-    } catch (error) {
-      console.error("Cart fetch error:", error);
-      cartItemCount.value = 0;
-    }
-  } else {
-    const localCart = JSON.parse(localStorage.getItem("guest_cart") || "[]");
-    cartItemCount.value = localCart.length;
+  try {
+    await cartStore.loadCart();
+  } catch (error) {
+    console.error("Cart fetch error:", error);
   }
 };
 
@@ -123,7 +94,10 @@ const handleCartClick = () => {
 };
 
 onMounted(async () => {
-  await Promise.all([updateCartCount(), loadCategories()]);
+  await Promise.all([
+    cartStore.loadCart(),
+    categoryStore.loadCategories(),
+  ]);
   window.addEventListener("cart-updated", updateCartCount);
 });
 
