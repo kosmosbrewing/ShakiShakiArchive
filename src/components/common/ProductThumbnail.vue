@@ -3,6 +3,7 @@
 // 상품 이미지 썸네일 컴포넌트
 
 import { useRouter } from "vue-router";
+import { useOptimizedImage } from "@/composables";
 
 interface Props {
   imageUrl?: string;
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const router = useRouter();
+const { thumbnail } = useOptimizedImage();
 
 // 클릭 시 상품 상세 페이지로 이동
 const handleClick = () => {
@@ -46,9 +48,11 @@ const sizeClasses = {
   >
     <img
       v-if="imageUrl"
-      :src="imageUrl"
+      :src="thumbnail(imageUrl)"
       class="w-full h-full object-cover"
       alt="Product Image"
+      loading="lazy"
+      decoding="async"
       draggable="false"
     />
     <div

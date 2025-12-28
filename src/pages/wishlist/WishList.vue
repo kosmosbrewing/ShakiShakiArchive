@@ -5,7 +5,7 @@
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
-import { useWishlist } from "@/composables/useWishlist";
+import { useWishlist, useOptimizedImage } from "@/composables";
 import { formatPrice } from "@/lib/formatters";
 
 // 아이콘
@@ -27,6 +27,9 @@ useAuthGuard();
 // 위시리스트 로직
 const { wishlistItems, loading, isEmpty, loadWishlist, removeItem } =
   useWishlist();
+
+// 이미지 최적화
+const { card } = useOptimizedImage();
 
 // 상품 상세 페이지로 이동
 const goToDetail = (productId: string) => {
@@ -81,9 +84,11 @@ onMounted(() => {
           @click="goToDetail(item.productId)"
         >
           <img
-            :src="item.product.imageUrl || '/placeholder.png'"
+            :src="card(item.product.imageUrl || '/placeholder.png')"
             alt="Product Image"
             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
           />
 
           <!-- 품절 표시 -->

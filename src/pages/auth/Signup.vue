@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { sendVerification, verifyEmail } from "@/lib/api";
@@ -23,6 +23,13 @@ import {
   AlertTitle,
   type AlertType,
 } from "@/components/ui/alert";
+
+// Input refs
+const emailInputRef = ref<InstanceType<typeof Input> | null>(null);
+const passwordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const confirmPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
+const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -127,28 +134,61 @@ const handleAddressSelect = (address: { zonecode: string; address: string }) => 
   formData.detailAddress = ""; // 상세 주소 초기화
 };
 
+// 유효성 검사 및 Alert 표시 헬퍼
+const showValidationError = (message: string, focusRef?: any, isPhoneInput = false) => {
+  alertMessage.value = message;
+  alertType.value = "error";
+  showAlert.value = true;
+
+  if (focusRef) {
+    nextTick(() => {
+      if (isPhoneInput) {
+        focusRef.value?.focusFirst?.();
+      } else if (focusRef.value?.$el) {
+        focusRef.value.$el.focus();
+      } else if (focusRef.value?.focus) {
+        focusRef.value.focus();
+      }
+    });
+  }
+};
+
 const handleSignup = async () => {
   errorMessage.value = "";
 
+  // 이메일 인증 확인
   if (!verificationState.isVerified) {
-    errorMessage.value = "이메일 인증을 완료해주세요.";
+    showValidationError("이메일 인증을 완료해주세요.", emailInputRef);
     return;
   }
-  if (
-    !formData.userName ||
-    !formData.phone1 ||
-    formData.phone2 ||
-    formData.phone3
-  ) {
-    errorMessage.value = "필수 정보를 모두 입력해주세요.";
+
+  // 비밀번호 검증
+  if (!formData.password) {
+    showValidationError("비밀번호를 입력해주세요.", passwordInputRef);
     return;
   }
   if (formData.password.length < 8) {
-    errorMessage.value = "비밀번호는 최소 8자 이상이어야 합니다.";
+    showValidationError("비밀번호는 최소 8자 이상이어야 합니다.", passwordInputRef);
+    return;
+  }
+  if (!formData.confirmPassword) {
+    showValidationError("비밀번호 확인을 입력해주세요.", confirmPasswordInputRef);
     return;
   }
   if (formData.password !== formData.confirmPassword) {
-    errorMessage.value = "비밀번호가 일치하지 않습니다.";
+    showValidationError("비밀번호가 일치하지 않습니다.", confirmPasswordInputRef);
+    return;
+  }
+
+  // 이름 검증
+  if (!formData.userName.trim()) {
+    showValidationError("이름을 입력해주세요.", userNameInputRef);
+    return;
+  }
+
+  // 전화번호 검증
+  if (!formData.phone2 || !formData.phone3) {
+    showValidationError("휴대전화 번호를 입력해주세요.", phoneInputRef, true);
     return;
   }
 
@@ -204,6 +244,7 @@ const handleSignup = async () => {
             >
             <div class="flex gap-2">
               <Input
+                ref="emailInputRef"
                 id="email"
                 type="email"
                 placeholder="example@email.com"
@@ -304,6 +345,7 @@ const handleSignup = async () => {
               >비밀번호 <span class="text-red-500">*</span></Label
             >
             <Input
+              ref="passwordInputRef"
               id="password"
               type="password"
               placeholder="8자 이상"
@@ -315,6 +357,7 @@ const handleSignup = async () => {
               >비밀번호 확인 <span class="text-red-500">*</span></Label
             >
             <Input
+              ref="confirmPasswordInputRef"
               id="confirmPassword"
               type="password"
               placeholder="비밀번호 재입력"
@@ -327,6 +370,7 @@ const handleSignup = async () => {
               >이름 <span class="text-red-500">*</span></Label
             >
             <Input
+              ref="userNameInputRef"
               id="userName"
               type="text"
               placeholder="실명 입력"
@@ -338,6 +382,7 @@ const handleSignup = async () => {
               >휴대전화 <span class="text-red-500">*</span></Label
             >
             <PhoneInput
+              ref="phoneInputRef"
               v-model:phone1="formData.phone1"
               v-model:phone2="formData.phone2"
               v-model:phone3="formData.phone3"

@@ -2,6 +2,7 @@
 // src/components/common/PhoneInput.vue
 // 전화번호 3분할 입력 컴포넌트
 
+import { ref } from "vue";
 import { Input } from "@/components/ui/input";
 
 interface Props {
@@ -20,6 +21,16 @@ const emit = defineEmits<{
 
 // 첫 번째 자리 옵션
 const prefixOptions = ["010", "011", "016", "017", "018", "019"];
+
+// Input refs
+const phone2InputRef = ref<InstanceType<typeof Input> | null>(null);
+
+// 외부에서 첫 번째 입력 필드에 focus (phone2, 실제로 사용자가 입력하는 첫 번째 필드)
+const focusFirst = () => {
+  phone2InputRef.value?.$el?.focus();
+};
+
+defineExpose({ focusFirst });
 </script>
 
 <template>
@@ -41,6 +52,7 @@ const prefixOptions = ["010", "011", "016", "017", "018", "019"];
     <span class="text-muted-foreground">-</span>
 
     <Input
+      ref="phone2InputRef"
       :model-value="phone2"
       @update:model-value="emit('update:phone2', String($event))"
       type="text"

@@ -5,7 +5,6 @@
 import { watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
-import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/formatters";
 
 // 공통 컴포넌트
@@ -39,7 +38,6 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
-const authStore = useAuthStore();
 
 // 장바구니 로직
 const {
@@ -73,28 +71,10 @@ const goToProductDetail = (productId: number | string) => {
   router.push(`/productDetail/${productId}`);
 };
 
-// 주문 페이지로 이동
-const goToOrder = () => {
-  if (cartItems.value.length === 0) {
-    alert("장바구니가 비어있습니다.");
-    return;
-  }
-
-  // 비회원일 경우 로그인 페이지로 유도
-  if (!authStore.isAuthenticated) {
-    if (
-      confirm(
-        "주문을 위해 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?"
-      )
-    ) {
-      closeSheet();
-      router.push("/login");
-    }
-    return;
-  }
-
+// 장바구니 페이지로 이동
+const goToCart = () => {
   closeSheet();
-  router.push("/order");
+  router.push("/cart");
 };
 
 // 쇼핑 계속하기
@@ -239,7 +219,7 @@ const continueShopping = () => {
               formatPrice(totalProductPrice)
             }}</span>
           </div>
-          <Button @click="goToOrder" class="w-full" size="lg">
+          <Button @click="goToCart" class="w-full" size="lg">
             주문하기
           </Button>
           <div class="pt-1"></div>

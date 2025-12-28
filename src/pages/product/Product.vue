@@ -3,7 +3,8 @@
 // 상품 목록 페이지 컴포넌트
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { Heart } from "lucide-vue-next";
@@ -12,6 +13,7 @@ import { useWishlistStore } from "@/stores/wishlist";
 import { ProductCardSkeleton, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
+import { useOptimizedImage } from "@/composables";
 
 // 1. 데이터 인터페이스
 interface ProductItem {
@@ -33,12 +35,13 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
+const { card } = useOptimizedImage();
 
 const productList = ref<ProductItem[]>([]);
 const loading = ref(false);
 
-// 위시리스트 Set (스토어에서 가져옴)
-const wishlistSet = computed(() => wishlistStore.productIdSet);
+// 위시리스트 Set (스토어에서 반응성 유지)
+const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 
 // [핵심] 상품 데이터 불러오기 (백엔드 필터링 적용)
 const fetchProductData = async () => {
@@ -152,9 +155,11 @@ watch(
             @click="goToDetail(id)"
           >
             <img
-              :src="imageUrl"
+              :src="card(imageUrl)"
               :alt="name"
               class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+              loading="lazy"
+              decoding="async"
               draggable="false"
             />
 

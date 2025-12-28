@@ -43,6 +43,7 @@ import {
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
+import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -67,6 +68,12 @@ const itemsPerPage = 20;
 
 const currentProduct = ref<any>(null);
 const currentVariant = ref<any>(null); // 현재 선택된 변종 (사이즈 관리용)
+
+// 삭제 확인 다이얼로그 상태
+const showDeleteConfirm = ref(false);
+const deleteTargetId = ref<string>("");
+const deleteType = ref<"product" | "variant" | "measurement">("product");
+const deleteMessage = ref("");
 
 // --- 폼 데이터 (상품) ---
 const initialProductForm = {
@@ -241,15 +248,39 @@ const handleSaveProduct = async () => {
   }
 };
 
-const handleDeleteProduct = async (id: string) => {
-  if (confirm("정말 삭제하시겠습니까?")) {
-    try {
-      await deleteProduct(id);
+// 삭제 확인 다이얼로그 열기
+const openDeleteConfirm = (
+  type: "product" | "variant" | "measurement",
+  id: string,
+  message: string
+) => {
+  deleteType.value = type;
+  deleteTargetId.value = id;
+  deleteMessage.value = message;
+  showDeleteConfirm.value = true;
+};
+
+// 삭제 확인 후 실행
+const handleConfirmDelete = async () => {
+  showDeleteConfirm.value = false;
+  try {
+    if (deleteType.value === "product") {
+      await deleteProduct(deleteTargetId.value);
       await loadData();
-    } catch (e: any) {
-      alert(e.message);
+    } else if (deleteType.value === "variant" && currentProduct.value) {
+      await deleteProductVariant(currentProduct.value.id, deleteTargetId.value);
+      await loadVariants(currentProduct.value.id);
+    } else if (deleteType.value === "measurement" && currentVariant.value) {
+      await deleteSizeMeasurement(deleteTargetId.value);
+      await loadMeasurements(currentVariant.value.id);
     }
+  } catch (e: any) {
+    alert(e.message);
   }
+};
+
+const handleDeleteProduct = (id: string) => {
+  openDeleteConfirm("product", id, "정말 삭제하시겠습니까?");
 };
 
 // --- [모달 2] 변종(옵션) 관리 로직 ---
@@ -305,18 +336,9 @@ const handleSaveVariant = async () => {
 };
 
 // 2. 삭제 함수 수정
-const handleDeleteVariant = async (variantId: string) => {
-  if (!currentProduct.value) return; // 안전장치 추가
-
-  if (confirm("이 옵션을 삭제하시겠습니까?")) {
-    try {
-      await deleteProductVariant(currentProduct.value.id, variantId);
-
-      await loadVariants(currentProduct.value.id);
-    } catch (e: any) {
-      alert(e.message);
-    }
-  }
+const handleDeleteVariant = (variantId: string) => {
+  if (!currentProduct.value) return;
+  openDeleteConfirm("variant", variantId, "이 옵션을 삭제하시겠습니까?");
 };
 // --- [모달 3] 사이즈 관리 로직 (신규) ---
 const openSizeManager = async (product: any) => {
@@ -393,15 +415,8 @@ const handleSaveMeasurement = async () => {
   }
 };
 
-const handleDeleteMeasurement = async (id: string) => {
-  if (confirm("삭제하시겠습니까?")) {
-    try {
-      await deleteSizeMeasurement(id);
-      await loadMeasurements(currentVariant.value.id);
-    } catch (e: any) {
-      alert(e.message);
-    }
-  }
+const handleDeleteMeasurement = (id: string) => {
+  openDeleteConfirm("measurement", id, "삭제하시겠습니까?");
 };
 
 watch(
@@ -1161,6 +1176,19 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <Alert
+      v-if="showDeleteConfirm"
+      :confirm-mode="true"
+      confirm-variant="destructive"
+      :message="deleteMessage"
+      confirm-text="삭제"
+      cancel-text="취소"
+      @confirm="handleConfirmDelete"
+      @cancel="showDeleteConfirm = false"
+      @close="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

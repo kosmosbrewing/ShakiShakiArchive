@@ -3,7 +3,7 @@
 // 상품 상세 페이지
 
 import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import {
   useProduct,
@@ -15,6 +15,7 @@ import {
 import { useWishlistToggle } from "@/composables/useWishlist";
 import { useAuthCheck } from "@/composables/useAuthGuard";
 import { useCart } from "@/composables/useCart";
+import { useOptimizedImage } from "@/composables";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
 
 // 아이콘
@@ -38,12 +39,14 @@ import {
 import { Alert, type AlertType, ERROR_MESSAGES } from "@/components/ui/alert";
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 
 // Composables
 const productData = useProduct();
 const { requireAuth } = useAuthCheck();
 const { addItem } = useCart();
+const { detail, thumbnail } = useOptimizedImage();
 
 // 상품 ID (UUID)
 const productId = computed(() => String(route.params.id));
@@ -67,6 +70,16 @@ const wishlistToggle = useWishlistToggle(productId);
 const showAlert = ref(false);
 const alertMessage = ref("");
 const alertType = ref<AlertType>("success");
+
+// 장바구니 이동 확인 다이얼로그 상태
+const showCartConfirm = ref(false);
+
+// 중복 상품 추가 확인 다이얼로그 상태
+const showDuplicateConfirm = ref(false);
+const existingCartItem = ref<{ quantity: number } | null>(null);
+
+// 장바구니 composable (기존 상품 체크용)
+const cart = useCart();
 
 // 위시리스트 토글 핸들러 (회원 전용 유지)
 const handleToggleWishlist = () => {
@@ -105,6 +118,32 @@ const handleAddToCart = async () => {
   const rawVariantId = variantSelection.selectedVariantId.value;
   const vid = rawVariantId ? Number(rawVariantId) : undefined;
 
+  // 3. 장바구니 로드 후 기존 상품 체크
+  await cart.loadCart();
+  const existing = cart.cartItems.value.find(
+    (item) => item.productId === pid && item.variantId === vid
+  );
+
+  if (existing) {
+    // 기존 상품이 있으면 확인 다이얼로그 표시
+    existingCartItem.value = { quantity: existing.quantity };
+    showDuplicateConfirm.value = true;
+    return;
+  }
+
+  // 기존 상품이 없으면 바로 추가
+  await proceedAddToCart();
+};
+
+// 실제 장바구니 추가 처리
+const proceedAddToCart = async () => {
+  // 1) 상품 ID (UUID)
+  const pid = productData.product.value!.id;
+
+  // 2) 옵션 ID 변환 (serial)
+  const rawVariantId = variantSelection.selectedVariantId.value;
+  const vid = rawVariantId ? Number(rawVariantId) : undefined;
+
   // 3) 수량 변환
   const qty = Number(variantSelection.quantity.value);
 
@@ -127,14 +166,37 @@ const handleAddToCart = async () => {
   });
 
   if (success) {
-    alertMessage.value = "장바구니에 담았습니다.";
-    alertType.value = "success";
-    showAlert.value = true;
+    // 장바구니 이동 확인 다이얼로그 표시
+    showCartConfirm.value = true;
   } else {
     alertMessage.value = "장바구니 담기에 실패했습니다.";
     alertType.value = "error";
     showAlert.value = true;
   }
+};
+
+// 중복 상품 확인 후 추가
+const handleConfirmDuplicate = async () => {
+  showDuplicateConfirm.value = false;
+  existingCartItem.value = null;
+  await proceedAddToCart();
+};
+
+// 중복 상품 추가 취소
+const handleCancelDuplicate = () => {
+  showDuplicateConfirm.value = false;
+  existingCartItem.value = null;
+};
+
+// 장바구니로 이동
+const handleGoToCart = () => {
+  showCartConfirm.value = false;
+  router.push("/cart");
+};
+
+// 계속 쇼핑하기
+const handleContinueShopping = () => {
+  showCartConfirm.value = false;
 };
 
 // 데이터 로드
@@ -169,8 +231,10 @@ onMounted(async () => {
         <Card class="overflow-hidden">
           <div class="aspect-[3/4] bg-muted relative">
             <img
-              :src="gallery.currentImage.value"
+              :src="detail(gallery.currentImage.value)"
               class="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
               draggable="false"
               alt="Product Main Image"
             />
@@ -210,8 +274,10 @@ onMounted(async () => {
             ]"
           >
             <img
-              :src="img"
+              :src="thumbnail(img)"
               class="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
               draggable="false"
             />
           </button>
@@ -232,8 +298,10 @@ onMounted(async () => {
             :style="{ animationDelay: `${idx * 0.1}s` }"
           >
             <img
-              :src="detailImg"
+              :src="detail(detailImg)"
               class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+              loading="lazy"
+              decoding="async"
               draggable="false"
               :alt="`상품 상세 이미지 ${idx + 1}`"
             />
@@ -392,7 +460,8 @@ onMounted(async () => {
                               Size
                             </TableHead>
                             <TableHead
-                              v-for="col in sizeMeasurements.activeColumns.value"
+                              v-for="col in sizeMeasurements.activeColumns
+                                .value"
                               :key="col.key"
                               class="text-center"
                             >
@@ -402,14 +471,16 @@ onMounted(async () => {
                         </TableHeader>
                         <TableBody>
                           <TableRow
-                            v-for="(data, idx) in sizeMeasurements.allSizeData.value"
+                            v-for="(data, idx) in sizeMeasurements.allSizeData
+                              .value"
                             :key="idx"
                           >
                             <TableCell class="font-medium text-center">
                               {{ data.variantSize }}
                             </TableCell>
                             <TableCell
-                              v-for="col in sizeMeasurements.activeColumns.value"
+                              v-for="col in sizeMeasurements.activeColumns
+                                .value"
                               :key="col.key"
                               class="text-center text-muted-foreground"
                             >
@@ -450,6 +521,30 @@ onMounted(async () => {
       :type="alertType"
       :message="alertMessage"
       @close="showAlert = false"
+    />
+
+    <!-- 장바구니 이동 확인 다이얼로그 -->
+    <Alert
+      v-if="showCartConfirm"
+      :confirm-mode="true"
+      message="장바구니에 담았습니다. 이동하시겠습니까?"
+      confirm-text="장바구니로 이동"
+      cancel-text="계속 쇼핑하기"
+      @confirm="handleGoToCart"
+      @cancel="handleContinueShopping"
+      @close="showCartConfirm = false"
+    />
+
+    <!-- 중복 상품 추가 확인 다이얼로그 -->
+    <Alert
+      v-if="showDuplicateConfirm"
+      :confirm-mode="true"
+      :message="`이미 장바구니에 담긴 상품입니다.\n추가로 담으시겠습니까?`"
+      confirm-text="추가로 담기"
+      cancel-text="취소"
+      @confirm="handleConfirmDuplicate"
+      @cancel="handleCancelDuplicate"
+      @close="handleCancelDuplicate"
     />
   </div>
 </template>
