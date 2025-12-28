@@ -2,6 +2,7 @@
 // src/components/common/AddressForm.vue
 // 배송지 입력 폼 컴포넌트
 
+import { ref } from "vue";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,32 @@ const emit = defineEmits<{
   (e: "update:form", value: ShippingFormData): void;
   (e: "searchAddress"): void;
 }>();
+
+// Input refs
+const recipientInputRef = ref<InstanceType<typeof Input> | null>(null);
+const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
+const addressButtonRef = ref<HTMLButtonElement | null>(null);
+const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
+
+// 외부에서 특정 필드에 focus할 수 있도록 expose
+const focusField = (field: "recipient" | "phone" | "address" | "detailAddress") => {
+  switch (field) {
+    case "recipient":
+      recipientInputRef.value?.$el?.focus();
+      break;
+    case "phone":
+      phoneInputRef.value?.focusFirst?.();
+      break;
+    case "address":
+      addressButtonRef.value?.focus();
+      break;
+    case "detailAddress":
+      detailAddressInputRef.value?.$el?.focus();
+      break;
+  }
+};
+
+defineExpose({ focusField });
 
 // 폼 필드 업데이트 헬퍼
 const updateField = <K extends keyof ShippingFormData>(
@@ -51,6 +78,7 @@ const deliveryMessageOptions = [
       >
       <div class="flex items-center gap-2">
         <Input
+          ref="recipientInputRef"
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
           type="text"
@@ -74,6 +102,7 @@ const deliveryMessageOptions = [
             placeholder="우편번호"
           />
           <Button
+            ref="addressButtonRef"
             type="button"
             variant="outline"
             size="sm"
@@ -90,6 +119,7 @@ const deliveryMessageOptions = [
           class="bg-muted"
         />
         <Input
+          ref="detailAddressInputRef"
           :model-value="form.detailAddress"
           @update:model-value="updateField('detailAddress', String($event))"
           type="text"
@@ -103,6 +133,7 @@ const deliveryMessageOptions = [
         >휴대전화 <span class="text-destructive">*</span></Label
       >
       <PhoneInput
+        ref="phoneInputRef"
         :phone1="form.phone1"
         :phone2="form.phone2"
         :phone3="form.phone3"

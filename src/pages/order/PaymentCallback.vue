@@ -17,7 +17,8 @@ const route = useRoute();
 const status = ref<"loading" | "success" | "error">("loading");
 const errorMessage = ref<string>("");
 const orderInfo = ref<{
-  orderId?: string;
+  orderId?: string; // UUID (주문 상세 이동용)
+  externalOrderId?: string; // PG사 주문번호 (화면 표시용)
   orderName?: string;
   amount?: number;
   paymentMethod?: string;
@@ -42,13 +43,15 @@ onMounted(async () => {
         amount: Number(amount),
       });
 
-      if (confirmResult.success) {
+      // success 필드 또는 order가 있으면 성공으로 처리
+      if (confirmResult.success || confirmResult.order) {
         status.value = "success";
         orderInfo.value = {
-          orderId: confirmResult.order?.id || orderId,
+          orderId: confirmResult.order?.id, // UUID (주문 상세 이동용)
+          externalOrderId: confirmResult.order?.externalOrderId || orderId, // PG사 주문번호
           orderName: route.query.orderName as string,
           amount: Number(amount),
-          paymentMethod: "카드",
+          paymentMethod: confirmResult.order?.paymentProvider || "toss", // 백엔드에서 받은 paymentProvider 사용
         };
       } else {
         throw new Error("결제 승인에 실패했습니다.");
@@ -60,12 +63,13 @@ onMounted(async () => {
     }
   } else if (result === "success") {
     // 네이버페이 등 다른 결제 성공
+    const provider = route.query.provider as string;
     status.value = "success";
     orderInfo.value = {
-      orderId: orderId,
+      externalOrderId: orderId, // URL의 orderId는 이미 externalOrderId
       orderName: route.query.orderName as string,
       amount: amount ? Number(amount) : undefined,
-      paymentMethod: route.query.paymentMethod as string,
+      paymentMethod: provider || (route.query.paymentMethod as string), // paymentProvider 그대로 사용
     };
   } else if (result === "fail" || error) {
     // 결제 실패
@@ -77,6 +81,21 @@ onMounted(async () => {
     errorMessage.value = "잘못된 접근입니다.";
   }
 });
+
+// 결제 제공자(paymentProvider) 라벨 변환
+function getPaymentProviderLabel(provider: string): string {
+  const labels: Record<string, string> = {
+    toss: "토스페이먼츠",
+    tosspay: "토스페이",
+    naverpay: "네이버페이",
+    kakaopay: "카카오페이",
+    card: "신용/체크카드",
+    transfer: "계좌이체",
+    virtual_account: "가상계좌",
+    mobile_phone: "휴대폰 결제",
+  };
+  return labels[provider] || provider;
+}
 
 // 에러 코드에 따른 메시지 반환
 function getErrorMessage(errorCode: string): string {
@@ -137,12 +156,12 @@ const goToCart = () => {
 
           <!-- 주문 정보 -->
           <div
-            v-if="orderInfo.orderId"
+            v-if="orderInfo.externalOrderId || orderInfo.orderId"
             class="bg-muted/50 rounded-lg p-4 mb-6 text-left space-y-2"
           >
             <div class="flex justify-between text-sm">
               <span class="text-muted-foreground">주문번호</span>
-              <span class="font-mono text-xs">{{ orderInfo.orderId.slice(0, 8) }}...</span>
+              <span class="font-mono text-xs">{{ orderInfo.externalOrderId || orderInfo.orderId }}</span>
             </div>
             <div v-if="orderInfo.orderName" class="flex justify-between text-sm">
               <span class="text-muted-foreground">주문상품</span>
@@ -154,7 +173,7 @@ const goToCart = () => {
             </div>
             <div v-if="orderInfo.paymentMethod" class="flex justify-between text-sm">
               <span class="text-muted-foreground">결제수단</span>
-              <span>{{ orderInfo.paymentMethod }}</span>
+              <span>{{ getPaymentProviderLabel(orderInfo.paymentMethod) }}</span>
             </div>
           </div>
 

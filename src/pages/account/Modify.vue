@@ -2,7 +2,7 @@
 // src/pages/Modify.vue
 // 회원정보 수정 페이지
 
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
@@ -18,6 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, type AlertType } from "@/components/ui/alert";
+
+// Input refs - 기본 정보
+const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
+const currentPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+
+// Input refs - 비밀번호 변경
+const pwCurrentPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const newPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const confirmNewPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -83,18 +92,31 @@ const handleAddressSelect = (address: { zonecode: string; address: string }) => 
   form.detailAddress = ""; // 상세 주소 초기화
 };
 
+// 유효성 검사 및 Alert 표시 헬퍼
+const showValidationError = (message: string, focusRef?: any) => {
+  alertMessage.value = message;
+  alertType.value = "error";
+  showAlert.value = true;
+
+  if (focusRef) {
+    nextTick(() => {
+      if (focusRef.value?.$el) {
+        focusRef.value.$el.focus();
+      } else if (focusRef.value?.focus) {
+        focusRef.value.focus();
+      }
+    });
+  }
+};
+
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
-  if (!form.userName) {
-    alertMessage.value = "이름을 입력해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+  if (!form.userName.trim()) {
+    showValidationError("이름을 입력해주세요.", userNameInputRef);
     return;
   }
   if (!form.currentPassword) {
-    alertMessage.value = "정보를 수정하려면 현재 비밀번호를 입력해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("정보를 수정하려면 현재 비밀번호를 입력해주세요.", currentPasswordInputRef);
     return;
   }
 
@@ -144,33 +166,27 @@ const handleUpdateProfile = async () => {
 // 비밀번호 변경
 const handleChangePassword = async () => {
   if (!passwordForm.currentPassword) {
-    alertMessage.value = "현재 비밀번호를 입력해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("현재 비밀번호를 입력해주세요.", pwCurrentPasswordInputRef);
     return;
   }
   if (!passwordForm.newPassword) {
-    alertMessage.value = "새 비밀번호를 입력해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("새 비밀번호를 입력해주세요.", newPasswordInputRef);
     return;
   }
   if (passwordForm.newPassword.length < 8) {
-    alertMessage.value = "새 비밀번호는 8자 이상이어야 합니다.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("새 비밀번호는 8자 이상이어야 합니다.", newPasswordInputRef);
+    return;
+  }
+  if (!passwordForm.confirmNewPassword) {
+    showValidationError("새 비밀번호 확인을 입력해주세요.", confirmNewPasswordInputRef);
     return;
   }
   if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
-    alertMessage.value = "새 비밀번호가 일치하지 않습니다.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("새 비밀번호가 일치하지 않습니다.", confirmNewPasswordInputRef);
     return;
   }
   if (passwordForm.currentPassword === passwordForm.newPassword) {
-    alertMessage.value = "현재 비밀번호와 다른 비밀번호를 입력해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+    showValidationError("현재 비밀번호와 다른 비밀번호를 입력해주세요.", newPasswordInputRef);
     return;
   }
 
@@ -271,7 +287,7 @@ onMounted(async () => {
 
           <div class="space-y-2">
             <Label for="userName">이름</Label>
-            <Input id="userName" v-model="form.userName" type="text" />
+            <Input ref="userNameInputRef" id="userName" v-model="form.userName" type="text" />
           </div>
 
           <div class="space-y-2">
@@ -347,6 +363,7 @@ onMounted(async () => {
           <div class="space-y-2">
             <Label for="currentPassword">현재 비밀번호</Label>
             <Input
+              ref="currentPasswordInputRef"
               id="currentPassword"
               v-model="form.currentPassword"
               type="password"
@@ -376,6 +393,7 @@ onMounted(async () => {
           <div class="space-y-2">
             <Label for="pwCurrentPassword">현재 비밀번호</Label>
             <Input
+              ref="pwCurrentPasswordInputRef"
               id="pwCurrentPassword"
               v-model="passwordForm.currentPassword"
               type="password"
@@ -386,6 +404,7 @@ onMounted(async () => {
           <div class="space-y-2">
             <Label for="newPassword">새 비밀번호</Label>
             <Input
+              ref="newPasswordInputRef"
               id="newPassword"
               v-model="passwordForm.newPassword"
               type="password"
@@ -396,6 +415,7 @@ onMounted(async () => {
           <div class="space-y-2">
             <Label for="confirmNewPassword">새 비밀번호 확인</Label>
             <Input
+              ref="confirmNewPasswordInputRef"
               id="confirmNewPassword"
               v-model="passwordForm.confirmNewPassword"
               type="password"

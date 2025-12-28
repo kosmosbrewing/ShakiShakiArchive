@@ -113,18 +113,19 @@ const handleTrackShipment = (item: OrderItem) => {
   window.open(url, "_blank");
 };
 
-// [수정] 결제 수단 라벨 변환 (PG사 코드 대응)
-const getPaymentMethodLabel = (method: string): string => {
+// 결제 제공자(paymentProvider) 라벨 변환
+const getPaymentProviderLabel = (provider: string): string => {
   const labels: Record<string, string> = {
+    toss: "토스페이먼츠",
+    tosspay: "토스페이",
+    naverpay: "네이버페이",
+    kakaopay: "카카오페이",
     card: "신용/체크카드",
     transfer: "계좌이체",
     virtual_account: "가상계좌",
     mobile_phone: "휴대폰 결제",
-    naverpay: "네이버페이",
-    kakaopay: "카카오페이",
-    tosspay: "토스페이",
   };
-  return labels[method] || method; // 매핑되지 않은 경우 원본 출력
+  return labels[provider] || provider; // 매핑되지 않은 경우 원본 출력
 };
 </script>
 
@@ -139,7 +140,7 @@ const getPaymentMethodLabel = (method: string): string => {
       <p v-if="order" class="text-body text-foreground">
         {{ formatDate(order.createdAt) }}({{ getDayName(order.createdAt) }})
         <br />
-        주문번호: {{ order.id }}
+        주문번호: {{ order.externalOrderId || order.id }}
       </p>
     </div>
 
@@ -331,13 +332,13 @@ const getPaymentMethodLabel = (method: string): string => {
               </span>
             </div>
 
-            <div v-if="order.paymentMethod" class="pt-3 border-t space-y-2">
+            <div v-if="order.paymentProvider" class="pt-3 border-t space-y-2">
               <div class="flex justify-between text-sm items-center">
                 <span class="text-muted-foreground flex items-center gap-1">
                   결제 수단
                 </span>
                 <span class="font-medium">{{
-                  getPaymentMethodLabel(order.paymentMethod)
+                  getPaymentProviderLabel(order.paymentProvider)
                 }}</span>
               </div>
               <div v-if="order.paidAt" class="flex justify-between text-sm">

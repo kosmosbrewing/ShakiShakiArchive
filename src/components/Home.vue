@@ -1,6 +1,6 @@
 <template>
   <Hero />
-  <Product />\
+  <Product />
 </template>
 
 <script setup lang="ts">

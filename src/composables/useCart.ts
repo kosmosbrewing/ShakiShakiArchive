@@ -25,7 +25,7 @@ export function useCart() {
     }, 0);
   });
   const shippingFee = computed(() =>
-    totalProductPrice.value >= 50000 ? 0 : 3000
+    totalProductPrice.value >= 50000 ? 0 : 0
   );
   const totalAmount = computed(
     () => totalProductPrice.value + shippingFee.value

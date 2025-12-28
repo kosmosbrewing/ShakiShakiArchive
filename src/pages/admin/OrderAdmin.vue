@@ -132,7 +132,7 @@ onMounted(async () => {
                   >주문번호</span
                 >
                 <span class="text-caption font-semibold text-admin-muted"
-                  >#{{ order.id }}</span
+                  >{{ order.externalOrderId || order.id }}</span
                 >
               </div>
               <div class="h-8 w-px bg-border hidden sm:block"></div>

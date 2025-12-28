@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -27,6 +28,10 @@ const isLoading = ref(false);
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
 const errorMessage = ref("");
+
+// 삭제 확인 다이얼로그 상태
+const showDeleteConfirm = ref(false);
+const deleteTargetId = ref<string>("");
 
 const initialFormState = {
   id: "",
@@ -117,14 +122,18 @@ const handleSave = async () => {
   }
 };
 
-const handleDelete = async (id: string) => {
-  if (confirm("정말 이 카테고리를 삭제하시겠습니까?")) {
-    try {
-      await deleteCategory(id);
-      await loadData();
-    } catch (error: any) {
-      alert("삭제 실패: " + error.message);
-    }
+const handleDelete = (id: string) => {
+  deleteTargetId.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const handleConfirmDelete = async () => {
+  showDeleteConfirm.value = false;
+  try {
+    await deleteCategory(deleteTargetId.value);
+    await loadData();
+  } catch (error: any) {
+    alert("삭제 실패: " + error.message);
   }
 };
 
@@ -356,6 +365,19 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <Alert
+      v-if="showDeleteConfirm"
+      :confirm-mode="true"
+      confirm-variant="destructive"
+      message="정말 이 카테고리를 삭제하시겠습니까?"
+      confirm-text="삭제"
+      cancel-text="취소"
+      @confirm="handleConfirmDelete"
+      @cancel="showDeleteConfirm = false"
+      @close="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

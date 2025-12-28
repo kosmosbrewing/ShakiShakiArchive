@@ -113,7 +113,7 @@ export function useShippingForm() {
     phone3: "",
     message: "",
     customMessage: "",
-    saveDefault: false,
+    saveDefault: true,
   });
 
   // 폼 유효성 검사
@@ -152,7 +152,7 @@ export function useShippingForm() {
     form.phone3 = "";
     form.message = "";
     form.customMessage = "";
-    form.saveDefault = false;
+    form.saveDefault = true;
   };
 
   // 배송지 데이터로 폼 채우기
@@ -192,7 +192,7 @@ export function useShippingForm() {
     form.zipCode = user.zipCode || "";
     form.address = user.address || "";
     form.detailAddress = user.detailAddress || "";
-    form.saveDefault = false;
+    form.saveDefault = true;
 
     const phoneParts = parsePhone(user.phone || "");
     form.phone1 = phoneParts.part1;
@@ -226,7 +226,7 @@ export function useDeliveryMode(
   watch(deliveryMode, (newMode) => {
     if (newMode === "member" && user.value) {
       shippingForm.fillFromUser(user.value);
-      shippingForm.form.saveDefault = false;
+      shippingForm.form.saveDefault = true;
     } else if (newMode === "new") {
       shippingForm.clearForm();
     } else if (newMode === "saved") {

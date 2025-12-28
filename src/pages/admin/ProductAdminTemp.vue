@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Image as ImageIcon,
 } from "lucide-vue-next";
+import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -46,6 +47,10 @@ const itemsPerPage = 15;
 
 const currentProduct = ref<any>(null);
 const currentVariant = ref<any>(null);
+
+// 삭제 확인 다이얼로그 상태
+const showDeleteConfirm = ref(false);
+const deleteTargetId = ref<string>("");
 
 // --- 폼 데이터 초기화 ---
 const initialProductForm = {
@@ -194,14 +199,18 @@ const handleSaveProduct = async () => {
   }
 };
 
-const handleDeleteProduct = async (id: string) => {
-  if (confirm("정말 삭제하시겠습니까?")) {
-    try {
-      await deleteProduct(id);
-      await loadData();
-    } catch (e: any) {
-      alert(e.message);
-    }
+const handleDeleteProduct = (id: string) => {
+  deleteTargetId.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const handleConfirmDelete = async () => {
+  showDeleteConfirm.value = false;
+  try {
+    await deleteProduct(deleteTargetId.value);
+    await loadData();
+  } catch (e: any) {
+    alert(e.message);
   }
 };
 
@@ -589,6 +598,19 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <Alert
+      v-if="showDeleteConfirm"
+      :confirm-mode="true"
+      confirm-variant="destructive"
+      message="정말 삭제하시겠습니까?"
+      confirm-text="삭제"
+      cancel-text="취소"
+      @confirm="handleConfirmDelete"
+      @cancel="showDeleteConfirm = false"
+      @close="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

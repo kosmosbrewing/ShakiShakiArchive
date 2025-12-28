@@ -93,6 +93,7 @@ export interface OrderItem {
   quantity: number;
   status: OrderStatus;
   trackingNumber?: string;
+  paymentMethod?: "toss" | "naverpay"; // 결제 수단
   product?: Product;
   createdAt?: string;
   updatedAt?: string;
@@ -187,6 +188,7 @@ export interface CreateOrderRequest {
   shippingAddress: string;
   shippingDetailAddress?: string; // 상세 주소 (NEW)
   shippingRequestNote?: string; // 배송 요청사항 (NEW)
+  paymentMethod?: "toss" | "naverpay"; // 결제 수단
 }
 
 // 주문 생성 응답 타입

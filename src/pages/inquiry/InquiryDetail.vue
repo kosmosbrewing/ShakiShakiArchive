@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Lock, Loader2, Trash2, User } from "lucide-vue-next";
+import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const route = useRoute();
@@ -42,6 +43,7 @@ const replyLoading = ref(false);
 const deleteLoading = ref(false);
 const statusLoading = ref(false);
 const replyContent = ref("");
+const showDeleteConfirm = ref(false);
 
 // 문의 유형 레이블
 const typeLabels: Record<InquiryType, string> = {
@@ -137,13 +139,12 @@ const handleStatusChange = async (newStatus: string) => {
 
 // 삭제 확인
 const confirmDelete = () => {
-  if (confirm("정말로 이 문의를 삭제하시겠습니까?\n삭제된 문의는 복구할 수 없습니다.")) {
-    handleDelete();
-  }
+  showDeleteConfirm.value = true;
 };
 
 // 문의 삭제
 const handleDelete = async () => {
+  showDeleteConfirm.value = false;
   deleteLoading.value = true;
   try {
     await deleteInquiry(inquiryId.value);
@@ -340,5 +341,19 @@ onMounted(() => {
         목록으로 돌아가기
       </Button>
     </div>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <Alert
+      v-if="showDeleteConfirm"
+      :confirm-mode="true"
+      confirm-variant="destructive"
+      message="정말로 이 문의를 삭제하시겠습니까?
+삭제된 문의는 복구할 수 없습니다."
+      confirm-text="삭제"
+      cancel-text="취소"
+      @confirm="handleDelete"
+      @cancel="showDeleteConfirm = false"
+      @close="showDeleteConfirm = false"
+    />
   </div>
 </template>

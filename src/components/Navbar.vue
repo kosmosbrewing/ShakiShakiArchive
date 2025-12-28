@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCategoryStore } from "@/stores/category";
@@ -39,17 +39,15 @@ const cartStore = useCartStore();
 
 const { isAuthenticated } = storeToRefs(authStore);
 const { categoryRoutes } = storeToRefs(categoryStore);
+const { itemCount: cartItemCount } = storeToRefs(cartStore);
 
 const isOpen = ref<boolean>(false);
 const cartSheetOpen = ref<boolean>(false);
 
-// 장바구니 카운트 (스토어에서 가져옴)
-const cartItemCount = computed(() => cartStore.itemCount);
-
-// 장바구니 카운트 업데이트 (스토어 활용)
+// 장바구니 카운트 업데이트 (스토어 활용, 강제 새로고침)
 const updateCartCount = async () => {
   try {
-    await cartStore.loadCart();
+    await cartStore.loadCart(true);
   } catch (error) {
     console.error("Cart fetch error:", error);
   }
@@ -63,6 +61,13 @@ watch(isAuthenticated, async () => {
 watch(route, () => {
   isOpen.value = false;
   updateCartCount();
+});
+
+// CartSheet 닫힐 때 카운트 동기화
+watch(cartSheetOpen, (isOpen) => {
+  if (!isOpen) {
+    updateCartCount();
+  }
 });
 
 const handleLogout = async () => {

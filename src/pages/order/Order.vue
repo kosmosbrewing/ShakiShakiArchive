@@ -28,6 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Alert } from "@/components/ui/alert";
 import type { DeliveryAddress, User } from "@/types/api";
 
 // [이미지 Import]
@@ -50,6 +51,13 @@ const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
 const paymentProvider = ref<"toss" | "naverpay">("toss");
 
+// 유효성 검사 상태
+const showValidationAlert = ref(false);
+const validationMessage = ref("");
+
+// AddressForm ref
+const addressFormRef = ref<InstanceType<typeof AddressForm> | null>(null);
+
 // [결제 수단 옵션] icon에 import한 이미지 변수 할당
 const paymentMethods = [
   { label: "토스페이", value: "toss", icon: tossLogo },
@@ -60,7 +68,7 @@ const paymentMethods = [
 watch(deliveryMode, (newMode) => {
   if (newMode === "member" && authStore.user) {
     shippingForm.fillFromUser(authStore.user as User);
-    shippingForm.form.saveDefault = false;
+    shippingForm.form.saveDefault = true;
   } else if (newMode === "new") {
     shippingForm.clearForm();
   } else if (newMode === "saved") {
@@ -114,21 +122,51 @@ const openAddressSearch = () => {
 };
 
 // 주소 선택 핸들러
-const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+const handleAddressSelect = (address: {
+  zonecode: string;
+  address: string;
+}) => {
   shippingForm.form.zipCode = address.zonecode;
   shippingForm.form.address = address.address;
   shippingForm.form.detailAddress = ""; // 상세 주소 초기화
 };
 
+// 유효성 검사 및 Alert 표시 헬퍼
+const showValidationError = (
+  message: string,
+  focusField?: "recipient" | "phone" | "address" | "detailAddress"
+) => {
+  validationMessage.value = message;
+  showValidationAlert.value = true;
+  if (focusField) {
+    // Alert가 닫힌 후 해당 필드에 focus
+    setTimeout(() => {
+      addressFormRef.value?.focusField(focusField);
+    }, 100);
+  }
+};
+
 // 결제 처리 핸들러
 const handlePayment = async () => {
-  if (!shippingForm.isValid.value) {
-    alert("배송 정보를 모두 입력해주세요 (수령인, 연락처, 주소).");
+  // 필수 항목 개별 유효성 검사
+  if (!shippingForm.form.recipient.trim()) {
+    showValidationError("수령인을 입력해주세요.", "recipient");
     return;
   }
-  if (!shippingForm.form.detailAddress) {
-    if (!confirm("상세 주소가 입력되지 않았습니다. 계속 진행하시겠습니까?"))
-      return;
+
+  if (!shippingForm.form.phone2 || !shippingForm.form.phone3) {
+    showValidationError("연락처를 입력해주세요.", "phone");
+    return;
+  }
+
+  if (!shippingForm.form.zipCode || !shippingForm.form.address) {
+    showValidationError("주소를 검색해주세요.", "address");
+    return;
+  }
+
+  if (!shippingForm.form.detailAddress.trim()) {
+    showValidationError("상세 주소를 입력해주세요.", "detailAddress");
+    return;
   }
 
   if (!confirm(`${formatPrice(totalAmount.value)}을 결제하시겠습니까?`)) return;
@@ -143,6 +181,7 @@ const handlePayment = async () => {
       shippingAddress: shippingForm.form.address,
       shippingDetailAddress: shippingForm.form.detailAddress,
       shippingRequestNote: shippingForm.finalRequestNote.value,
+      paymentMethod: paymentProvider.value, // 결제 수단 추가
     });
 
     if (!orderData) throw new Error("주문 생성 실패");
@@ -197,7 +236,7 @@ const processTossPayment = async (orderData: any) => {
         currency: "KRW",
         value: totalAmount.value,
       },
-      orderId: orderData.orderId, // 백엔드에서 생성한 주문 ID
+      orderId: orderData.externalOrderId, // PG사에서 사용할 주문번호 (SHAKI_... 형식)
       orderName: orderName,
       successUrl: `${window.location.origin}/payment/callback?result=success`,
       failUrl: `${window.location.origin}/payment/callback?result=fail`,
@@ -248,7 +287,7 @@ const processNaverPayment = async (orderData: any) => {
 
     // 6. 네이버페이 결제 팝업 호출
     naverPay.open({
-      merchantPayKey: orderData.orderId,
+      merchantPayKey: orderData.externalOrderId, // PG사에서 사용할 주문번호
       productName: productName,
       productCount: String(productCount),
       totalPayAmount: String(totalAmount.value),
@@ -340,6 +379,7 @@ onMounted(() => {
             </div>
 
             <AddressForm
+              ref="addressFormRef"
               class="text-left [&_label]:text-left"
               :form="shippingForm.form"
               :show-save-default="deliveryMode !== 'saved'"
@@ -434,8 +474,8 @@ onMounted(() => {
                   :class="[
                     'flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all',
                     paymentProvider === method.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50',
+                      ? 'border-primary'
+                      : 'border-border',
                   ]"
                 >
                   <img
@@ -510,6 +550,15 @@ onMounted(() => {
       :open="isAddressSearchOpen"
       @close="isAddressSearchOpen = false"
       @select="handleAddressSelect"
+    />
+
+    <!-- 유효성 검사 Alert -->
+    <Alert
+      v-if="showValidationAlert"
+      type="error"
+      :message="validationMessage"
+      :duration="2000"
+      @close="showValidationAlert = false"
     />
   </div>
 </template>

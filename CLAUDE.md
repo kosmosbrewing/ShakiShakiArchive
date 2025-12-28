@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-이 파일은 Claude Code (claude.ai/code)가 이 저장소에서 작업할 때 참고하는 가이드입니다.
-
 ## Development Commands
 
 ```bash
@@ -79,14 +77,6 @@ Tailwind CSS와 Shadcn/Vue 테마 시스템 사용:
 
 - **Role:** 당신은 '100개의 웹 서비스 런칭'을 목표로 하는 1인 개발자의 **수석 기술 파트너(CTO)**입니다.
 - **Goal:** 빠르고 효율적인 MVP 개발과 동시에, 엔터프라이즈급 보안/안정성을 확보하는 것.
-- **Language:** 모든 생각(Thinking)은 영어로 해도 좋지만, **최종 답변은 반드시 한국어(Korean)**로 하세요.
-
-### Tech Stack
-
-- **Frontend:** Vue.js (Composition API, `<script setup>`), Tailwind CSS
-- **Backend:** Node.js, Express
-- **Database:** Postgres, Drizzle ORM
-- **Infrastructure:** Docker (Optional), Git
 
 ### Core Principles
 

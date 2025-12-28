@@ -2,7 +2,7 @@
 // src/pages/Cart.vue
 // 장바구니 페이지
 
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 // import { useAuthGuard } from "@/composables/useAuthGuard"; // [삭제] 비회원 접근 허용
 import { useCart } from "@/composables/useCart";
@@ -61,9 +61,24 @@ const goToOrder = () => {
   router.push("/order");
 };
 
+// 인증 상태 로딩 완료 후 장바구니 로드
 onMounted(() => {
-  loadCart();
+  // 이미 인증 상태 확인이 완료된 경우 바로 로드
+  if (!authStore.isLoading) {
+    loadCart();
+  }
 });
+
+// 인증 상태 로딩 중이었다면, 완료 후 장바구니 로드
+watch(
+  () => authStore.isLoading,
+  (isLoading, wasLoading) => {
+    // 로딩이 완료된 시점 (true -> false)
+    if (wasLoading && !isLoading) {
+      loadCart();
+    }
+  }
+);
 </script>
 
 <template>

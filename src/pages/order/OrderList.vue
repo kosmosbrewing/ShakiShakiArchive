@@ -277,6 +277,9 @@ onMounted(() => {
 
                 <p class="text-body text-foreground font-medium">
                   {{ formatPrice(item.productPrice) }}
+                  <span v-if="item.paymentMethod" class="text-muted-foreground font-normal ml-2">
+                    · {{ item.paymentMethod === 'toss' ? '토스페이' : '네이버페이' }}
+                  </span>
                 </p>
               </div>
 
