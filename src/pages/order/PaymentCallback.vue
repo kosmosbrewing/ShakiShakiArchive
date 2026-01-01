@@ -4,19 +4,21 @@
 
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { CheckCircle, XCircle, Package } from "lucide-vue-next";
+import { CheckCircle, XCircle, Package, AlertTriangle } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/formatters";
-import { confirmPayment } from "@/lib/api";
+import { confirmPayment, StockShortageError } from "@/lib/api";
 import { LoadingSpinner } from "@/components/common";
+import type { StockShortageItem } from "@/types/api";
 
 const router = useRouter();
 const route = useRoute();
 
-// 상태
-const status = ref<"loading" | "success" | "error">("loading");
+// 상태: stock_shortage 추가 (재고 부족 에러)
+const status = ref<"loading" | "success" | "error" | "stock_shortage">("loading");
 const errorMessage = ref<string>("");
+const shortageItems = ref<StockShortageItem[]>([]); // 재고 부족 상품 목록
 const orderInfo = ref<{
   orderId?: string; // UUID (주문 상세 이동용)
   externalOrderId?: string; // PG사 주문번호 (화면 표시용)
@@ -59,8 +61,16 @@ onMounted(async () => {
       }
     } catch (err: any) {
       console.error("결제 승인 오류:", err);
-      status.value = "error";
-      errorMessage.value = err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+
+      // 재고 부족 에러 처리 (소프트 락 실패 - PG 자동 환불됨)
+      if (err instanceof StockShortageError) {
+        status.value = "stock_shortage";
+        errorMessage.value = err.message;
+        shortageItems.value = err.shortageItems;
+      } else {
+        status.value = "error";
+        errorMessage.value = err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+      }
     }
   } else if (result === "success") {
     // 네이버페이 등 다른 결제 성공
@@ -205,6 +215,56 @@ const goToCart = () => {
             </Button>
             <Button variant="outline" @click="goToHome" class="w-full">
               홈으로
+            </Button>
+          </div>
+        </div>
+
+        <!-- 재고 부족 상태 (소프트 락 실패 - PG 자동 환불됨) -->
+        <div v-else-if="status === 'stock_shortage'" class="text-center w-full">
+          <div class="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle class="w-12 h-12 text-amber-500" />
+          </div>
+          <h2 class="text-xl font-semibold mb-2">재고 부족으로 결제 취소</h2>
+          <p class="text-muted-foreground mb-4">
+            결제 처리 중 일부 상품의 재고가 부족하여 결제가 자동으로 취소되었습니다.
+          </p>
+          <p class="text-sm text-green-600 dark:text-green-400 mb-6">
+            결제하신 금액은 자동으로 환불됩니다.
+          </p>
+
+          <!-- 재고 부족 상품 목록 -->
+          <div v-if="shortageItems.length > 0" class="bg-muted/50 rounded-lg p-4 mb-6 text-left">
+            <h3 class="text-sm font-medium mb-3">재고 부족 상품</h3>
+            <ul class="space-y-3">
+              <li
+                v-for="(item, index) in shortageItems"
+                :key="index"
+                class="flex justify-between items-start text-sm border-b border-border/50 pb-2 last:border-0 last:pb-0"
+              >
+                <div class="flex-1">
+                  <p class="font-medium">{{ item.productName }}</p>
+                  <p v-if="item.variantInfo" class="text-xs text-muted-foreground">
+                    {{ item.variantInfo }}
+                  </p>
+                </div>
+                <div class="text-right text-xs">
+                  <p class="text-destructive">
+                    요청: {{ item.requestedQuantity }}개
+                  </p>
+                  <p class="text-muted-foreground">
+                    재고: {{ item.availableStock }}개
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="flex flex-col gap-3 w-full">
+            <Button @click="goToCart" class="w-full">
+              장바구니에서 수량 조정하기
+            </Button>
+            <Button variant="outline" @click="goToHome" class="w-full">
+              쇼핑 계속하기
             </Button>
           </div>
         </div>

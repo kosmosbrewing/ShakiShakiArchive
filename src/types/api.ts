@@ -212,6 +212,27 @@ export interface ConfirmPaymentResponse {
   order: Order;
 }
 
+// ------------------------------------------------------------------
+// 재고 소프트 락 관련 타입 (결제 시 재고 부족 에러)
+// ------------------------------------------------------------------
+
+// 재고 부족 상품 정보
+export interface StockShortageItem {
+  productId: string;
+  variantId?: string;
+  productName: string;
+  variantInfo?: string; // "사이즈: L, 색상: Black" 형태
+  requestedQuantity: number;
+  availableStock: number;
+}
+
+// 재고 부족 에러 응답 (결제 승인 실패 시)
+export interface StockLockErrorResponse {
+  message: string;
+  code: "STOCK_SHORTAGE";
+  shortageItems: StockShortageItem[];
+}
+
 // 결제 취소 요청 타입
 export interface CancelPaymentRequest {
   cancelReason: string;
