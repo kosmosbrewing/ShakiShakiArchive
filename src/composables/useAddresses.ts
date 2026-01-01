@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 import type { DeliveryAddress, ShippingFormData, User } from "@/types/api";
+import { useAlert } from "./useAlert";
 
 /**
  * 배송지 CRUD
@@ -72,7 +73,9 @@ export function useAddresses() {
 
   // 배송지 삭제
   const removeAddress = async (id: string | number, confirmMessage = "해당 배송지를 삭제하시겠습니까?") => {
-    if (!confirm(confirmMessage)) return false;
+    const { showDestructiveConfirm, showAlert } = useAlert();
+    const confirmed = await showDestructiveConfirm(confirmMessage);
+    if (!confirmed) return false;
 
     try {
       await deleteDeliveryAddress(id);
@@ -81,7 +84,7 @@ export function useAddresses() {
       return true;
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "삭제 실패";
-      alert("삭제 실패: " + errorMessage);
+      showAlert("삭제 실패: " + errorMessage, { type: "error" });
       return false;
     }
   };

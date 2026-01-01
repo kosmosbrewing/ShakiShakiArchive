@@ -5,6 +5,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import {
   fetchAdminSiteImages,
   createSiteImage,
@@ -34,6 +35,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert, showDestructiveConfirm } = useAlert();
 
 // 상태
 const siteImages = ref<SiteImage[]>([]);
@@ -102,7 +104,7 @@ const loadData = async (showLoading = true) => {
 const openCreateModal = () => {
   if (!canAddMore.value) {
     const max = activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
-    alert(`${activeTab.value === "hero" ? "Hero" : "Marquee"} 이미지는 최대 ${max}개까지 등록 가능합니다.`);
+    showAlert(`${activeTab.value === "hero" ? "Hero" : "Marquee"} 이미지는 최대 ${max}개까지 등록 가능합니다.`, { type: "error" });
     return;
   }
   isEditMode.value = false;
@@ -191,12 +193,12 @@ const handleSave = async () => {
       // 로컬 상태 업데이트
       const idx = siteImages.value.findIndex((img) => img.id === form.value.id);
       if (idx !== -1 && image) siteImages.value[idx] = image;
-      alert("이미지가 수정되었습니다.");
+      showAlert("이미지가 수정되었습니다.");
     } else {
       const { image } = await createSiteImage(payload);
       // 로컬 상태에 추가
       if (image) siteImages.value.push(image);
-      alert("이미지가 추가되었습니다.");
+      showAlert("이미지가 추가되었습니다.");
     }
 
     isModalOpen.value = false;
@@ -209,7 +211,8 @@ const handleSave = async () => {
 
 // 삭제 (낙관적 업데이트)
 const handleDelete = async (id: number) => {
-  if (!confirm("정말 삭제하시겠습니까?")) return;
+  const confirmed = await showDestructiveConfirm("정말 삭제하시겠습니까?");
+  if (!confirmed) return;
 
   // 낙관적 업데이트: UI에서 먼저 제거
   const deletedIndex = siteImages.value.findIndex((img) => img.id === id);
@@ -221,7 +224,7 @@ const handleDelete = async (id: number) => {
   } catch (e: any) {
     // 실패 시 복원
     siteImages.value.splice(deletedIndex, 0, deletedImage);
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 
@@ -239,7 +242,7 @@ const toggleActive = async (image: SiteImage) => {
   } catch (e: any) {
     // 실패 시 롤백
     targetImage.isActive = !newValue;
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 
@@ -262,7 +265,7 @@ const moveUp = async (index: number) => {
     // 실패 시 롤백
     images[index].displayOrder = images[index - 1].displayOrder;
     images[index - 1].displayOrder = prevOrder;
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 
@@ -285,7 +288,7 @@ const moveDown = async (index: number) => {
     // 실패 시 롤백
     images[index + 1].displayOrder = images[index].displayOrder;
     images[index].displayOrder = currentOrder;
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import Navbar from "./components/Navbar.vue";
 import Footer from "./components/Footer.vue";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { Alert } from "@/components/ui/alert";
+import { useAlert } from "@/composables/useAlert";
 
 // 커서 이미지 import
 import cursor01 from "@/assets/cursor/cursor01.png";
@@ -34,6 +36,25 @@ const cursorImages = [
 ];
 
 const authStore = useAuthStore();
+
+// 전역 Alert 시스템
+const { alertState, closeAlert, handleConfirm, handleCancel } = useAlert();
+
+// 환영 메시지 Alert 상태
+const showWelcomeAlert = ref(false);
+const welcomeAlertMessage = ref("");
+
+// 환영 메시지 감지
+watch(
+  () => authStore.welcomeMessage,
+  (message) => {
+    if (message) {
+      welcomeAlertMessage.value = message;
+      showWelcomeAlert.value = true;
+      authStore.clearWelcomeMessage();
+    }
+  }
+);
 
 // 떨어지는 입자 인터페이스
 interface FallingParticle {
@@ -178,6 +199,29 @@ onUnmounted(() => {
   <Navbar />
   <router-view :key="$route.fullPath" />
   <Footer />
+
+  <!-- 전역 환영 메시지 Alert -->
+  <Alert
+    v-if="showWelcomeAlert"
+    type="success"
+    :message="welcomeAlertMessage"
+    @close="showWelcomeAlert = false"
+  />
+
+  <!-- 전역 Alert/Confirm 시스템 -->
+  <Alert
+    v-if="alertState.show"
+    :type="alertState.type"
+    :message="alertState.message"
+    :duration="alertState.duration"
+    :confirm-mode="alertState.confirmMode"
+    :confirm-variant="alertState.confirmVariant"
+    :confirm-text="alertState.confirmText"
+    :cancel-text="alertState.cancelText"
+    @close="closeAlert"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
 
 <style>

@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, type Ref } from "vue";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "@/lib/api";
 import type { WishlistItem } from "@/types/api";
+import { useAlert } from "./useAlert";
 
 /**
  * 위시리스트 CRUD
@@ -47,7 +48,11 @@ export function useWishlist() {
 
   // 위시리스트에서 삭제
   const removeItem = async (productId: string, confirmMessage?: string) => {
-    if (confirmMessage && !confirm(confirmMessage)) return false;
+    if (confirmMessage) {
+      const { showDestructiveConfirm } = useAlert();
+      const confirmed = await showDestructiveConfirm(confirmMessage);
+      if (!confirmed) return false;
+    }
 
     try {
       await removeFromWishlist(productId);

@@ -24,17 +24,17 @@
 
 ## 1. 기술 스택
 
-| 분류 | 기술 |
-|------|------|
-| 프레임워크 | Vue 3 (Composition API, `<script setup>`) |
-| 상태 관리 | Pinia |
-| 라우팅 | Vue Router (인증 가드 포함) |
-| UI 컴포넌트 | Shadcn/Vue (radix-vue 기반) |
-| 스타일링 | Tailwind CSS (CSS 변수 기반 테마) |
-| 빌드 도구 | Vite |
-| 폼 검증 | Zod + vee-validate |
-| HTTP 클라이언트 | Fetch API (credentials: include) |
-| 언어 | TypeScript |
+| 분류            | 기술                                      |
+| --------------- | ----------------------------------------- |
+| 프레임워크      | Vue 3 (Composition API, `<script setup>`) |
+| 상태 관리       | Pinia                                     |
+| 라우팅          | Vue Router (인증 가드 포함)               |
+| UI 컴포넌트     | Shadcn/Vue (radix-vue 기반)               |
+| 스타일링        | Tailwind CSS (CSS 변수 기반 테마)         |
+| 빌드 도구       | Vite                                      |
+| 폼 검증         | Zod + vee-validate                        |
+| HTTP 클라이언트 | Fetch API (credentials: include)          |
+| 언어            | TypeScript                                |
 
 ---
 
@@ -103,21 +103,22 @@ import { useAuthStore } from "@/stores/auth";
 
 Shadcn/Vue 기반의 기본 UI 컴포넌트들입니다.
 
-| 컴포넌트 | 설명 |
-|---------|------|
-| Button | 버튼 (variant: default, destructive, outline, secondary, ghost, link) |
-| Card, CardHeader, CardContent | 카드 컨테이너 |
-| Input, Label, Textarea | 폼 입력 요소 |
-| Select, SelectItem | 드롭다운 선택 |
-| Badge | 배지/태그 |
-| Alert | 경고/알림 |
-| Sheet | 사이드 슬라이드 (모바일 메뉴) |
-| Accordion | 아코디언 |
-| Carousel | 이미지 캐러셀 |
-| NavigationMenu | 네비게이션 메뉴 |
-| Separator | 구분선 |
+| 컴포넌트                      | 설명                                                                  |
+| ----------------------------- | --------------------------------------------------------------------- |
+| Button                        | 버튼 (variant: default, destructive, outline, secondary, ghost, link) |
+| Card, CardHeader, CardContent | 카드 컨테이너                                                         |
+| Input, Label, Textarea        | 폼 입력 요소                                                          |
+| Select, SelectItem            | 드롭다운 선택                                                         |
+| Badge                         | 배지/태그                                                             |
+| Alert                         | 경고/알림                                                             |
+| Sheet                         | 사이드 슬라이드 (모바일 메뉴)                                         |
+| Accordion                     | 아코디언                                                              |
+| Carousel                      | 이미지 캐러셀                                                         |
+| NavigationMenu                | 네비게이션 메뉴                                                       |
+| Separator                     | 구분선                                                                |
 
 **사용 패턴:**
+
 ```typescript
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -127,17 +128,18 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 재사용 가능한 비즈니스 컴포넌트들입니다.
 
-| 컴포넌트 | 용도 | Props |
-|---------|------|-------|
-| LoadingSpinner | 로딩 상태 표시 | - |
-| EmptyState | 빈 상태 화면 | `message`, `buttonText`, `buttonLink` |
-| ProductThumbnail | 상품 썸네일 | `imageUrl`, `productId` |
-| QuantitySelector | 수량 선택 (±버튼) | `modelValue`, `@update:modelValue` |
-| AddressForm | 배송지 입력 폼 | `form`, `showSaveDefault`, `@update:form`, `@searchAddress` |
-| AddressCard | 배송지 카드 | `address` |
-| PhoneInput | 전화번호 입력 (3분할) | `modelValue`, `@update:modelValue` |
+| 컴포넌트         | 용도                  | Props                                                       |
+| ---------------- | --------------------- | ----------------------------------------------------------- |
+| LoadingSpinner   | 로딩 상태 표시        | -                                                           |
+| EmptyState       | 빈 상태 화면          | `message`, `buttonText`, `buttonLink`                       |
+| ProductThumbnail | 상품 썸네일           | `imageUrl`, `productId`                                     |
+| QuantitySelector | 수량 선택 (±버튼)     | `modelValue`, `@update:modelValue`                          |
+| AddressForm      | 배송지 입력 폼        | `form`, `showSaveDefault`, `@update:form`, `@searchAddress` |
+| AddressCard      | 배송지 카드           | `address`                                                   |
+| PhoneInput       | 전화번호 입력 (3분할) | `modelValue`, `@update:modelValue`                          |
 
 **사용 패턴:**
+
 ```typescript
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
 ```
@@ -158,10 +160,11 @@ import { LoadingSpinner, ProductThumbnail } from "@/components/common";
 사용자 인증 상태를 관리합니다.
 
 **상태:**
+
 ```typescript
-const user = ref<User | null>(null);           // 사용자 정보
-const isLoading = ref(false);                  // 로딩 상태
-const error = ref<string | null>(null);        // 에러 메시지
+const user = ref<User | null>(null); // 사용자 정보
+const isLoading = ref(false); // 로딩 상태
+const error = ref<string | null>(null); // 에러 메시지
 
 // 계산된 상태
 const isAuthenticated = computed(() => !!user.value);
@@ -170,15 +173,16 @@ const isAdmin = computed(() => user.value?.isAdmin ?? false);
 
 **주요 메서드:**
 
-| 메서드 | 설명 |
-|--------|------|
-| `loadUser()` | 앱 초기화 시 세션 쿠키로부터 사용자 정보 복원 |
-| `handleLogin(data)` | 로그인 후 비회원 카트 병합 |
-| `handleLogout()` | 로그아웃 및 카트 이벤트 발생 |
-| `register(data)` | 회원가입 |
-| `migrateGuestCart()` | 비회원 카트를 회원 카트로 병합 |
+| 메서드               | 설명                                          |
+| -------------------- | --------------------------------------------- |
+| `loadUser()`         | 앱 초기화 시 세션 쿠키로부터 사용자 정보 복원 |
+| `handleLogin(data)`  | 로그인 후 비회원 카트 병합                    |
+| `handleLogout()`     | 로그아웃 및 카트 이벤트 발생                  |
+| `register(data)`     | 회원가입                                      |
+| `migrateGuestCart()` | 비회원 카트를 회원 카트로 병합                |
 
 **사용 예시:**
+
 ```typescript
 import { useAuthStore } from "@/stores/auth";
 
@@ -205,7 +209,7 @@ await authStore.handleLogout();
 ### 5.1 기본 구조 (`/src/lib/api.ts`)
 
 ```typescript
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 async function apiRequest<T>(
   endpoint: string,
@@ -213,7 +217,7 @@ async function apiRequest<T>(
 ): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    credentials: "include",  // 쿠키 포함 (세션 기반 인증)
+    credentials: "include", // 쿠키 포함 (세션 기반 인증)
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -232,6 +236,7 @@ async function apiRequest<T>(
 ### 5.2 API 도메인별 함수
 
 #### 인증 및 사용자
+
 ```typescript
 login(data: { email, password }) → Promise<User>
 signup(data) → Promise<User>
@@ -243,6 +248,7 @@ withdrawUser() → Promise<void>
 ```
 
 #### 상품 및 카테고리
+
 ```typescript
 fetchProducts(categoryId?, search?) → Promise<Product[]>
 fetchProduct(id) → Promise<Product>
@@ -252,6 +258,7 @@ fetchCategories() → Promise<Category[]>
 ```
 
 #### 장바구니 및 위시리스트
+
 ```typescript
 fetchCart() → Promise<CartItem[]>
 addToCart(data) → Promise<any>
@@ -264,6 +271,7 @@ removeFromWishlist(productId) → Promise<void>
 ```
 
 #### 주문 및 배송지
+
 ```typescript
 createOrder(data) → Promise<CreateOrderResponse>
 fetchOrders() → Promise<Order[]>
@@ -276,6 +284,7 @@ deleteDeliveryAddress(addressId) → Promise<void>
 ```
 
 #### 관리자 전용
+
 ```typescript
 createProduct(data) → Promise<Product>
 updateProduct(id, data) → Promise<Product>
@@ -396,26 +405,26 @@ type OrderStatus =
 
 ### 7.1 라우트 정의 (`/src/router/index.ts`)
 
-| 경로 | 컴포넌트 | 인증 | 관리자 |
-|------|---------|:----:|:------:|
-| `/` | Home | - | - |
-| `/login` | Login | - | - |
-| `/signup` | Signup | - | - |
-| `/account` | Account | ✓ | - |
-| `/modify` | Modify | ✓ | - |
-| `/addresslist` | AddressList | ✓ | - |
-| `/product/:category` | Product | - | - |
-| `/productDetail/:id` | ProductDetail | - | - |
-| `/cart` | Cart | - | - |
-| `/order` | Order | ✓ | - |
-| `/orderlist` | OrderList | ✓ | - |
-| `/orderdetail/:id?` | OrderDetail | ✓ | - |
-| `/checkout` | Checkout | - | - |
-| `/wishlist` | WishList | ✓ | - |
-| `/admin` | Admin | ✓ | ✓ |
-| `/admin/products` | ProductAdmin | ✓ | ✓ |
-| `/admin/categories` | CategoryAdmin | ✓ | ✓ |
-| `/admin/orders` | OrderAdmin | ✓ | ✓ |
+| 경로                 | 컴포넌트      | 인증 | 관리자 |
+| -------------------- | ------------- | :--: | :----: |
+| `/`                  | Home          |  -   |   -    |
+| `/login`             | Login         |  -   |   -    |
+| `/signup`            | Signup        |  -   |   -    |
+| `/account`           | Account       |  ✓   |   -    |
+| `/modify`            | Modify        |  ✓   |   -    |
+| `/addresslist`       | AddressList   |  ✓   |   -    |
+| `/product/:category` | Product       |  -   |   -    |
+| `/productDetail/:id` | ProductDetail |  -   |   -    |
+| `/cart`              | Cart          |  -   |   -    |
+| `/order`             | Order         |  ✓   |   -    |
+| `/orderlist`         | OrderList     |  ✓   |   -    |
+| `/orderdetail/:id?`  | OrderDetail   |  ✓   |   -    |
+| `/checkout`          | Checkout      |  -   |   -    |
+| `/wishlist`          | WishList      |  ✓   |   -    |
+| `/admin`             | Admin         |  ✓   |   ✓    |
+| `/admin/products`    | ProductAdmin  |  ✓   |   ✓    |
+| `/admin/categories`  | CategoryAdmin |  ✓   |   ✓    |
+| `/admin/orders`      | OrderAdmin    |  ✓   |   ✓    |
 
 ### 7.2 네비게이션 가드
 
@@ -473,15 +482,15 @@ import { useCart, useCartWithAutoLoad } from "@/composables";
 const {
   cartItems,
   loading,
-  totalProductPrice,  // 상품 합계
-  shippingFee,        // 배송비 (5만원 이상 무료)
-  totalAmount,        // 총 결제 금액
-  itemCount,          // 상품 개수
-  isEmpty,            // 빈 장바구니 여부
-  loadCart,           // 장바구니 로드
-  addItem,            // 상품 추가
-  updateQuantity,     // 수량 변경
-  removeItem,         // 상품 삭제
+  totalProductPrice, // 상품 합계
+  shippingFee, // 배송비 (5만원 이상 무료)
+  totalAmount, // 총 결제 금액
+  itemCount, // 상품 개수
+  isEmpty, // 빈 장바구니 여부
+  loadCart, // 장바구니 로드
+  addItem, // 상품 추가
+  updateQuantity, // 수량 변경
+  removeItem, // 상품 삭제
 } = useCart();
 
 // 자동 로드 버전 (onMounted에서 자동 로드)
@@ -491,11 +500,16 @@ const cart = useCartWithAutoLoad();
 ### 8.2 useProduct - 상품 상세
 
 ```typescript
-import { useProduct, useVariantSelection, useProductDetail } from "@/composables";
+import {
+  useProduct,
+  useVariantSelection,
+  useProductDetail,
+} from "@/composables";
 
 // 개별 사용
 const { product, variants, loadProduct } = useProduct(productId);
-const { selectedVariantId, quantity, selectedVariant, selectVariant } = useVariantSelection(variants);
+const { selectedVariantId, quantity, selectedVariant, selectVariant } =
+  useVariantSelection(variants);
 
 // 통합 사용
 const {
@@ -513,7 +527,12 @@ const {
 ### 8.3 useOrders - 주문 관리
 
 ```typescript
-import { useOrders, useOrderStats, useCreateOrder, useCancelOrder } from "@/composables";
+import {
+  useOrders,
+  useOrderStats,
+  useCreateOrder,
+  useCancelOrder,
+} from "@/composables";
 
 // 주문 목록
 const { orders, loading, loadOrders } = useOrders();
@@ -604,14 +623,32 @@ module.exports = {
   theme: {
     extend: {
       fontSize: {
-        heading: ["var(--font-size-heading)", { lineHeight: "var(--line-height-heading)" }],
-        body: ["var(--font-size-body)", { lineHeight: "var(--line-height-body)" }],
-        caption: ["var(--font-size-caption)", { lineHeight: "var(--line-height-caption)" }],
+        heading: [
+          "var(--font-size-heading)",
+          { lineHeight: "var(--line-height-heading)" },
+        ],
+        body: [
+          "var(--font-size-body)",
+          { lineHeight: "var(--line-height-body)" },
+        ],
+        caption: [
+          "var(--font-size-caption)",
+          { lineHeight: "var(--line-height-caption)" },
+        ],
       },
       colors: {
-        primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
-        secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
-        destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
         // ... 기타 색상
       },
     },
@@ -625,16 +662,16 @@ module.exports = {
 ```css
 :root {
   /* 타이포그래피 */
-  --font-size-heading: 1.125rem;    /* 18px */
-  --font-size-body: 0.875rem;       /* 14px */
-  --font-size-caption: 0.75rem;     /* 12px */
+  --font-size-heading: 1.125rem; /* 18px */
+  --font-size-body: 0.875rem; /* 14px */
+  --font-size-caption: 0.75rem; /* 12px */
 
   /* 색상 (HSL) */
   --background: 0 0% 100%;
-  --foreground: 31 34% 28%;         /* 갈색 브랜드 컬러 */
-  --primary: 336 60% 68%;           /* #DE7BA3 (핑크) */
+  --foreground: 31 34% 28%; /* 갈색 브랜드 컬러 */
+  --primary: 336 60% 68%; /* #DE7BA3 (핑크) */
   --primary-foreground: 0 0% 100%;
-  --destructive: 0 84.2% 60.2%;     /* 빨강 */
+  --destructive: 0 84.2% 60.2%; /* 빨강 */
 
   /* 컴포넌트 */
   --border: 20 5.9% 90%;
@@ -667,7 +704,8 @@ Pretendard 한글 폰트를 사용합니다.
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 body {
-  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
 }
 ```
 
@@ -724,10 +762,7 @@ const updateValue = (value: string) => {
 </script>
 
 <template>
-  <Input
-    :model-value="modelValue"
-    @update:model-value="updateValue"
-  />
+  <Input :model-value="modelValue" @update:model-value="updateValue" />
 </template>
 ```
 
@@ -813,13 +848,13 @@ router.push(`/orderdetail/${orderId}`);
 
 ### 12.1 파일 명명 규칙
 
-| 분류 | 패턴 | 예시 |
-|------|------|------|
-| 컴포넌트 | PascalCase | `ProductDetail.vue` |
-| Composable | camelCase + use 접두어 | `useCart.ts` |
-| Store | camelCase | `auth.ts` |
-| 타입 파일 | camelCase | `api.ts` |
-| 유틸리티 | camelCase | `formatters.ts` |
+| 분류       | 패턴                   | 예시                |
+| ---------- | ---------------------- | ------------------- |
+| 컴포넌트   | PascalCase             | `ProductDetail.vue` |
+| Composable | camelCase + use 접두어 | `useCart.ts`        |
+| Store      | camelCase              | `auth.ts`           |
+| 타입 파일  | camelCase              | `api.ts`            |
+| 유틸리티   | camelCase              | `formatters.ts`     |
 
 ### 12.2 Composable 작성 패턴
 
@@ -898,17 +933,17 @@ onMounted(() => {
 interface Props {
   modelValue: string;
   disabled?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: 'md',
+  size: "md",
 });
 
 // Emits
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void;
-  (e: 'submit'): void;
+  (e: "update:modelValue", value: string): void;
+  (e: "submit"): void;
 }>();
 ```
 
@@ -918,9 +953,8 @@ const emit = defineEmits<{
 try {
   const result = await apiCall();
 } catch (err: unknown) {
-  const errorMessage = err instanceof Error
-    ? err.message
-    : "알 수 없는 에러 발생";
+  const errorMessage =
+    err instanceof Error ? err.message : "알 수 없는 에러 발생";
   error.value = errorMessage;
   console.error("작업 실패:", err);
 }
@@ -968,6 +1002,7 @@ export async function fetchFeature(id: number): Promise<Feature> {
 ### 13.4 새 UI 컴포넌트 추가
 
 Shadcn/Vue CLI 사용:
+
 ```bash
 npx shadcn-vue@latest add [component-name]
 ```
@@ -988,20 +1023,20 @@ formatOrderStatus(status)  → "배송준비중"
 
 ## 부록: 주요 파일 경로
 
-| 항목 | 경로 |
-|------|------|
-| 메인 진입점 | `/src/main.ts` |
-| 루트 컴포넌트 | `/src/App.vue` |
-| 라우터 설정 | `/src/router/index.ts` |
-| Auth 스토어 | `/src/stores/auth.ts` |
-| API 함수 | `/src/lib/api.ts` |
-| 타입 정의 | `/src/types/api.ts` |
-| Tailwind 설정 | `/tailwind.config.js` |
-| CSS 변수 | `/src/assets/index.css` |
-| 포맷팅 유틸 | `/src/lib/formatters.ts` |
-| Composables | `/src/composables/` |
+| 항목          | 경로                      |
+| ------------- | ------------------------- |
+| 메인 진입점   | `/src/main.ts`            |
+| 루트 컴포넌트 | `/src/App.vue`            |
+| 라우터 설정   | `/src/router/index.ts`    |
+| Auth 스토어   | `/src/stores/auth.ts`     |
+| API 함수      | `/src/lib/api.ts`         |
+| 타입 정의     | `/src/types/api.ts`       |
+| Tailwind 설정 | `/tailwind.config.js`     |
+| CSS 변수      | `/src/assets/index.css`   |
+| 포맷팅 유틸   | `/src/lib/formatters.ts`  |
+| Composables   | `/src/composables/`       |
 | 공용 컴포넌트 | `/src/components/common/` |
-| UI 컴포넌트 | `/src/components/ui/` |
+| UI 컴포넌트   | `/src/components/ui/`     |
 
 ---
 

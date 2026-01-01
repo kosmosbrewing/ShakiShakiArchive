@@ -4,6 +4,7 @@
 import { ref, reactive, onMounted } from "vue";
 import {
   fetchOrders,
+  fetchAllOrders,
   fetchOrder,
   createOrder,
   cancelOrder,
@@ -55,19 +56,32 @@ export function getStatusClass(status: OrderStatus): string {
 }
 
 /**
- * 주문 목록 조회 및 관리
+ * 주문 목록 조회 및 관리 (무한 스크롤 지원 - 상태 기반 잠금)
  */
 export function useOrders() {
   const orders = ref<Order[]>([]);
   const loading = ref(false);
+  const loadingMore = ref(false);
   const error = ref<string | null>(null);
 
-  // 주문 목록 로드 (상세 정보 포함)
+  // 페이지네이션 상태
+  const currentPage = ref(1);
+  const hasMore = ref(true);
+  const totalOrders = ref(0);
+  const pageSize = 10;
+
+  // 주문 목록 초기 로드 (상세 정보 포함)
   const loadOrders = async () => {
     loading.value = true;
     error.value = null;
+    currentPage.value = 1;
+    hasMore.value = true;
+
     try {
-      const simpleOrders = await fetchOrders();
+      const response = await fetchOrders(1, pageSize);
+      const simpleOrders = response.orders;
+      totalOrders.value = response.pagination.total;
+      hasMore.value = response.pagination.hasMore;
 
       // 각 주문의 상세 정보 병렬 로드
       const detailedOrdersPromises = simpleOrders.map(async (order) => {
@@ -85,6 +99,41 @@ export function useOrders() {
       console.error("주문 목록 로드 실패:", e);
     } finally {
       loading.value = false;
+    }
+  };
+
+  // 추가 주문 목록 로드 (무한 스크롤용 - 상태 기반 잠금)
+  const loadMoreOrders = async () => {
+    // 상태 기반 잠금: 이미 로딩 중이거나 더 이상 데이터가 없으면 스킵
+    if (loadingMore.value || loading.value || !hasMore.value) return;
+
+    // 잠금 설정
+    loadingMore.value = true;
+    const nextPage = currentPage.value + 1;
+
+    try {
+      const response = await fetchOrders(nextPage, pageSize);
+      const simpleOrders = response.orders;
+      hasMore.value = response.pagination.hasMore;
+      currentPage.value = nextPage;
+
+      // 각 주문의 상세 정보 병렬 로드
+      const detailedOrdersPromises = simpleOrders.map(async (order) => {
+        try {
+          return await fetchOrder(order.id);
+        } catch (e) {
+          console.error(`Order ${order.id} fetch failed`, e);
+          return order;
+        }
+      });
+
+      const newOrders = await Promise.all(detailedOrdersPromises);
+      orders.value = [...orders.value, ...newOrders];
+    } catch (e) {
+      console.error("추가 주문 로드 실패:", e);
+    } finally {
+      // 잠금 해제
+      loadingMore.value = false;
     }
   };
 
@@ -106,8 +155,12 @@ export function useOrders() {
   return {
     orders,
     loading,
+    loadingMore,
     error,
+    hasMore,
+    totalOrders,
     loadOrders,
+    loadMoreOrders,
     loadOrder,
     getStatusVariant,
     getStatusClass,
@@ -130,7 +183,7 @@ export function useOrderStats() {
   const loadOrderStats = async () => {
     loading.value = true;
     try {
-      const orders = await fetchOrders();
+      const orders = await fetchAllOrders();
 
       // 각 주문의 상세 정보 로드
       const detailsPromises = orders.map((order) => fetchOrder(order.id));

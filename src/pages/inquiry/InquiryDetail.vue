@@ -13,6 +13,7 @@ import {
 import { formatDate } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 
 // 공통 컴포넌트
 import { LoadingSpinner } from "@/components/common";
@@ -35,6 +36,7 @@ import { Alert } from "@/components/ui/alert";
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 
 // 상태
 const inquiry = ref<Inquiry | null>(null);
@@ -92,7 +94,7 @@ const loadInquiry = async () => {
   } catch (error: any) {
     console.error("문의 로드 실패:", error);
     if (error.message?.includes("403") || error.message?.includes("권한")) {
-      alert("접근 권한이 없습니다.");
+      showAlert("접근 권한이 없습니다.", { type: "error" });
       router.push("/inquiry");
     }
   } finally {
@@ -103,7 +105,7 @@ const loadInquiry = async () => {
 // 답변 등록
 const handleReply = async () => {
   if (!replyContent.value.trim()) {
-    alert("답변 내용을 입력해주세요.");
+    showAlert("답변 내용을 입력해주세요.", { type: "error" });
     return;
   }
 
@@ -114,10 +116,10 @@ const handleReply = async () => {
     });
     replyContent.value = "";
     await loadInquiry(); // 새로고침
-    alert("답변이 등록되었습니다.");
+    showAlert("답변이 등록되었습니다.");
   } catch (error: any) {
     console.error("답변 등록 실패:", error);
-    alert(error.message || "답변 등록에 실패했습니다.");
+    showAlert(error.message || "답변 등록에 실패했습니다.", { type: "error" });
   } finally {
     replyLoading.value = false;
   }
@@ -131,7 +133,7 @@ const handleStatusChange = async (newStatus: string) => {
     await loadInquiry();
   } catch (error: any) {
     console.error("상태 변경 실패:", error);
-    alert(error.message || "상태 변경에 실패했습니다.");
+    showAlert(error.message || "상태 변경에 실패했습니다.", { type: "error" });
   } finally {
     statusLoading.value = false;
   }
@@ -148,11 +150,11 @@ const handleDelete = async () => {
   deleteLoading.value = true;
   try {
     await deleteInquiry(inquiryId.value);
-    alert("문의가 삭제되었습니다.");
+    showAlert("문의가 삭제되었습니다.");
     router.push("/inquiry");
   } catch (error: any) {
     console.error("문의 삭제 실패:", error);
-    alert(error.message || "문의 삭제에 실패했습니다.");
+    showAlert(error.message || "문의 삭제에 실패했습니다.", { type: "error" });
   } finally {
     deleteLoading.value = false;
   }

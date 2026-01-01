@@ -5,6 +5,7 @@
 import { ref, onMounted } from "vue";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
+import { useAlert } from "@/composables/useAlert";
 
 // 공통 컴포넌트
 import {
@@ -21,6 +22,8 @@ import type { DeliveryAddress } from "@/types/api";
 
 // 인증 체크
 useAuthGuard();
+
+const { showAlert } = useAlert();
 
 // 배송지 목록 로직
 const { addresses, loading, loadAddresses, editAddress, removeAddress } =
@@ -66,7 +69,7 @@ const handleSaveEdit = async () => {
   if (!editingAddress.value) return;
 
   if (!shippingForm.isValid.value) {
-    alert("필수 항목을 모두 입력해주세요.");
+    showAlert("필수 항목을 모두 입력해주세요.", { type: "error" });
     return;
   }
 
@@ -88,10 +91,10 @@ const handleSaveEdit = async () => {
   isSaving.value = false;
 
   if (success) {
-    alert("배송지가 수정되었습니다.");
+    showAlert("배송지가 수정되었습니다.");
     closeEditModal();
   } else {
-    alert("배송지 수정에 실패했습니다.");
+    showAlert("배송지 수정에 실패했습니다.", { type: "error" });
   }
 };
 

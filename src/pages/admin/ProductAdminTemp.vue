@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import {
   fetchAdminProducts,
   createProduct,
@@ -27,6 +28,7 @@ import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 
 // --- 상태 관리 ---
 const products = ref<any[]>([]);
@@ -193,7 +195,7 @@ const handleSaveProduct = async () => {
 
     isProductModalOpen.value = false;
     await loadData();
-    alert("저장되었습니다.");
+    showAlert("저장되었습니다.");
   } catch (error: any) {
     errorMessage.value = error.message;
   }
@@ -210,7 +212,7 @@ const handleConfirmDelete = async () => {
     await deleteProduct(deleteTargetId.value);
     await loadData();
   } catch (e: any) {
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 

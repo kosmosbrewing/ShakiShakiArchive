@@ -112,28 +112,32 @@ onUnmounted(() => {
       />
     </Transition>
 
-    <!-- 중앙 정렬을 위한 wrapper -->
+    <!-- 반응형 위치 조정 wrapper -->
+    <!-- Confirm 모드 - 데스크탑: Visual Center / 모바일: Thumb Zone -->
+    <!-- 일반 Alert - 항상 상단 -->
     <div
       :class="[
         'fixed z-50 flex justify-center pointer-events-none',
-        confirmMode ? 'inset-0 items-center' : 'top-8 left-0 right-0',
+        confirmMode
+          ? 'inset-0 items-end pb-24 sm:items-center sm:pb-[8vh]'
+          : 'top-8 left-0 right-0',
       ]"
     >
       <Transition
         appear
         :appear-active-class="
           confirmMode
-            ? 'animate-in fade-in-0 zoom-in-95 duration-200'
+            ? 'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200'
             : 'animate-in fade-in-0 slide-in-from-top-5 duration-300'
         "
         :enter-active-class="
           confirmMode
-            ? 'animate-in fade-in-0 zoom-in-95 duration-200'
+            ? 'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200'
             : 'animate-in fade-in-0 slide-in-from-top-5 duration-300'
         "
         :leave-active-class="
           confirmMode
-            ? 'animate-out fade-out-0 zoom-out-95 duration-150'
+            ? 'animate-out fade-out-0 zoom-out-95 slide-out-to-bottom-4 sm:slide-out-to-bottom-0 duration-150'
             : 'animate-out fade-out-0 slide-out-to-top-5 duration-200'
         "
         @after-leave="onAfterLeave"

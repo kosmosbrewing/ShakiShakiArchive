@@ -8,6 +8,7 @@ import {
   addToCart,
 } from "@/lib/api";
 import type { CartItem } from "@/types/api";
+import { useAlert } from "./useAlert";
 
 const LOCAL_CART_KEY = "guest_cart";
 
@@ -66,7 +67,7 @@ export function useCart() {
   // [수정] 장바구니 추가
   const addItem = async (params: {
     productId: string; // UUID
-    variantId?: number;
+    variantId?: string; // UUID
     quantity: number;
     productInfo?: any; // [추가] 비회원용 상품 정보 (이미지, 가격 등)
   }) => {
@@ -146,7 +147,9 @@ export function useCart() {
     itemId: string, // UUID
     confirmMessage = "삭제하시겠습니까?"
   ) => {
-    if (!confirm(confirmMessage)) return false;
+    const { showDestructiveConfirm } = useAlert();
+    const confirmed = await showDestructiveConfirm(confirmMessage);
+    if (!confirmed) return false;
 
     try {
       if (authStore.isAuthenticated) {

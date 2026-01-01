@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
+import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
@@ -30,6 +31,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+const { showAlert } = useAlert();
 
 // useOrders 훅 사용
 const { loadOrder, loading, error } = useOrders();
@@ -89,23 +91,19 @@ const handleConfirmCancel = async (reason: string) => {
 
     // 환불 정보가 있으면 알림
     if (result.refund) {
-      alert(
-        `주문이 취소되었습니다.\n환불 금액: ${formatPrice(
-          result.refund.cancelAmount
-        )}`
-      );
+      showAlert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
     } else {
-      alert("주문이 취소되었습니다.");
+      showAlert("주문이 취소되었습니다.");
     }
   } else {
-    alert("주문 취소에 실패했습니다. 다시 시도해주세요.");
+    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", { type: "error" });
   }
 };
 
 // 배송 조회 핸들러
 const handleTrackShipment = (item: OrderItem) => {
   if (!item.trackingNumber) {
-    alert("아직 운송장 번호가 등록되지 않았습니다.");
+    showAlert("아직 운송장 번호가 등록되지 않았습니다.", { type: "error" });
     return;
   }
   // 스마트택배 등 통합 조회 링크 권장

@@ -7,6 +7,7 @@ import { useRouter } from "vue-router";
 // import { useAuthGuard } from "@/composables/useAuthGuard"; // [삭제] 비회원 접근 허용
 import { useCart } from "@/composables/useCart";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 
 // 공통 컴포넌트
@@ -24,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert, showConfirm } = useAlert();
 
 // [삭제] 인증 체크 로직 제거 (이제 누구나 접근 가능)
 // useAuthGuard();
@@ -40,19 +42,19 @@ const {
 } = useCart();
 
 // 주문 페이지로 이동
-const goToOrder = () => {
+const goToOrder = async () => {
   if (cartItems.value.length === 0) {
-    alert("장바구니가 비어있습니다.");
+    showAlert("장바구니가 비어있습니다.", { type: "error" });
     return;
   }
 
   // 비회원일 경우 로그인 페이지로 유도 (결제는 회원만 가능)
   if (!authStore.isAuthenticated) {
-    if (
-      confirm(
-        "주문을 위해 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?"
-      )
-    ) {
+    const confirmed = await showConfirm(
+      "주문을 위해 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?",
+      { confirmText: "로그인", cancelText: "취소" }
+    );
+    if (confirmed) {
       router.push("/login");
     }
     return;

@@ -30,3 +30,4 @@ dev.sh
 deploy-s3.sh
 .claudeignore
 CLAUDE copy.md
+Portfolio.vue

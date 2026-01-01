@@ -1,6 +1,8 @@
 // src/services/addressSearch.ts
 // 주소 검색 API 서비스 (다음/카카오 주소 API)
 
+import { useAlert } from "@/composables/useAlert";
+
 /**
  * 주소 검색 결과 타입
  */
@@ -43,10 +45,11 @@ export function openAddressSearch(
   const daum = (window as any).daum;
 
   if (!daum?.Postcode) {
+    const { showAlert } = useAlert();
     console.error(
       "다음 우편번호 서비스가 로드되지 않았습니다. index.html에 스크립트를 추가해주세요."
     );
-    alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    showAlert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
     loadDaumPostcodeScript().then(() => {
       openAddressSearch(onComplete, onClose);
     });
