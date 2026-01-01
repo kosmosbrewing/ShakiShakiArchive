@@ -5,6 +5,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
+import { useAlert } from "@/composables/useAlert";
 import { createInquiry, fetchProduct } from "@/lib/api";
 import type { InquiryType, Product } from "@/types/api";
 
@@ -25,6 +26,7 @@ import { ArrowLeft, Loader2, Lock } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
+const { showAlert } = useAlert();
 
 // 인증 체크
 useAuthGuard();
@@ -76,7 +78,7 @@ const isFormValid = computed(() => {
 // 문의 등록
 const handleSubmit = async () => {
   if (!isFormValid.value) {
-    alert("제목과 내용을 입력해주세요.");
+    showAlert("제목과 내용을 입력해주세요.", { type: "error" });
     return;
   }
 
@@ -90,11 +92,11 @@ const handleSubmit = async () => {
       isPrivate: formData.value.isPrivate,
     });
 
-    alert("문의가 등록되었습니다.");
+    showAlert("문의가 등록되었습니다.");
     router.push("/inquiry");
   } catch (error: any) {
     console.error("문의 등록 실패:", error);
-    alert(error.message || "문의 등록에 실패했습니다.");
+    showAlert(error.message || "문의 등록에 실패했습니다.", { type: "error" });
   } finally {
     loading.value = false;
   }

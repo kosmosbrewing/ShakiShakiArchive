@@ -3,6 +3,7 @@
 
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
@@ -191,6 +192,7 @@ const router = createRouter({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.beforeEach(async (to: any, _from: any, next: any) => {
   const authStore = useAuthStore();
+  const { showAlert } = useAlert();
 
   // 로그인이 필요한 페이지인 경우, 먼저 유저 정보 로드
   if (!authStore.user && (to.meta.requiresAuth || to.meta.requiresAdmin)) {
@@ -204,13 +206,13 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
 
   // 1. 로그인 체크 (requiresAuth)
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    alert("로그인이 필요한 서비스입니다.");
+    showAlert("로그인이 필요한 서비스입니다.", { type: "error" });
     return next("/login");
   }
 
   // 2. 관리자 권한 체크 (requiresAdmin)
   if (to.meta.requiresAdmin && !authStore.user?.isAdmin) {
-    alert("접근 권한이 없습니다. (관리자 전용)");
+    showAlert("접근 권한이 없습니다. (관리자 전용)", { type: "error" });
     return next("/");
   }
 

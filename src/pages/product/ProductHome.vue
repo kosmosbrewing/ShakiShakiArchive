@@ -10,6 +10,7 @@ import axios from "axios";
 import { Heart } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
+import { useAlert } from "@/composables/useAlert";
 import { ProductCardSkeleton, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +36,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
+const { showAlert, showConfirm } = useAlert();
 const { card } = useOptimizedImage();
 
 const productList = ref<ProductItem[]>([]);
@@ -87,9 +89,11 @@ const toggleWishlist = async (event: Event, productId: string) => {
   event.stopPropagation();
 
   if (!authStore.isAuthenticated) {
-    if (
-      confirm("로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?")
-    ) {
+    const confirmed = await showConfirm(
+      "로그인이 필요한 서비스입니다.\n로그인 페이지로 이동하시겠습니까?",
+      { confirmText: "로그인", cancelText: "취소" }
+    );
+    if (confirmed) {
       router.push("/login");
     }
     return;
@@ -99,7 +103,7 @@ const toggleWishlist = async (event: Event, productId: string) => {
     await wishlistStore.toggleItem(productId);
   } catch (error) {
     console.error("위시리스트 처리 실패:", error);
-    alert("처리 중 오류가 발생했습니다.");
+    showAlert("처리 중 오류가 발생했습니다.", { type: "error" });
   }
 };
 

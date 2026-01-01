@@ -34,7 +34,7 @@ import type {
   UpdateInquiryStatusRequest,
 } from "@/types/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 // ------------------------------------------------------------------
 // [0] Core: 공통 요청 함수
@@ -103,7 +103,7 @@ export function getNaverLoginUrl(): string {
   // 인증 관련 페이지(/login, /signup 등)에서는 홈으로 이동
   const currentPath = window.location.pathname;
   const authPaths = ["/login", "/signup", "/forgot-password", "/auth"];
-  const isAuthPage = authPaths.some(path => currentPath.startsWith(path));
+  const isAuthPage = authPaths.some((path) => currentPath.startsWith(path));
   const returnUrl = encodeURIComponent(isAuthPage ? "/" : currentPath || "/");
   return `${API_BASE}/api/oauth/naver/login?t=${timestamp}&returnUrl=${returnUrl}`;
 }
@@ -235,13 +235,73 @@ export async function searchKeyword(
 // [2] 상품 및 카테고리 (Public Products & Categories)
 // ------------------------------------------------------------------
 
-// 전체 상품 조회 (관리자용 아님)
+// 상품 목록 페이지네이션 응답 타입
+export interface PaginatedProductsResponse {
+  products: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+// 상품 목록 조회 (페이지네이션 지원)
 export async function fetchProducts(
-  categoryId?: number,
+  options: {
+    category?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<PaginatedProductsResponse> {
+  const { category, search, page = 1, limit = 12 } = options;
+  const params = new URLSearchParams();
+
+  if (category) params.append("category", category);
+  if (search) params.append("search", search);
+  params.append("page", page.toString());
+  params.append("limit", limit.toString());
+
+  try {
+    const response = await apiRequest<PaginatedProductsResponse | any[]>(
+      `/api/products?${params.toString()}`
+    );
+
+    // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
+    if (Array.isArray(response)) {
+      const products = response;
+      const total = products.length;
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedProducts = products.slice(start, end);
+
+      return {
+        products: paginatedProducts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: end < total,
+        },
+      };
+    }
+
+    return response;
+  } catch (e) {
+    throw e;
+  }
+}
+
+// 전체 상품 조회 (기존 호환용)
+export async function fetchAllProducts(
+  category?: string,
   search?: string
 ): Promise<any[]> {
   const params = new URLSearchParams();
-  if (categoryId) params.append("categoryId", categoryId.toString());
+  if (category) params.append("category", category);
   if (search) params.append("search", search);
 
   return apiRequest(`/api/products?${params.toString()}`);
@@ -332,7 +392,62 @@ export async function createOrder(
   });
 }
 
-export async function fetchOrders(): Promise<Order[]> {
+// 주문 목록 페이지네이션 응답 타입
+export interface PaginatedOrdersResponse {
+  orders: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+// 주문 목록 조회 (페이지네이션 지원)
+export async function fetchOrders(
+  page: number = 1,
+  limit: number = 10
+): Promise<PaginatedOrdersResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  // 백엔드가 페이지네이션을 지원하는 경우
+  try {
+    const response = await apiRequest<PaginatedOrdersResponse | Order[]>(
+      `/api/orders?${params.toString()}`
+    );
+
+    // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
+    if (Array.isArray(response)) {
+      const orders = response;
+      const total = orders.length;
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedOrders = orders.slice(start, end);
+
+      return {
+        orders: paginatedOrders,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: end < total,
+        },
+      };
+    }
+
+    return response;
+  } catch (e) {
+    throw e;
+  }
+}
+
+// 전체 주문 목록 조회 (기존 호환용)
+export async function fetchAllOrders(): Promise<Order[]> {
   return apiRequest<Order[]>("/api/orders");
 }
 
@@ -361,7 +476,9 @@ export async function cancelOrder(
 
 // --- 배송지 (Address Book) ---
 export async function fetchDeliveryAddresses(): Promise<any[]> {
-  const response = await apiRequest<{ addresses: any[] } | any[]>("/api/user/addresses");
+  const response = await apiRequest<{ addresses: any[] } | any[]>(
+    "/api/user/addresses"
+  );
   return Array.isArray(response) ? response : response.addresses || [];
 }
 
@@ -399,7 +516,9 @@ export async function updateDeliveryAddress(
   });
 }
 
-export async function deleteDeliveryAddress(addressId: string | number): Promise<void> {
+export async function deleteDeliveryAddress(
+  addressId: string | number
+): Promise<void> {
   return apiRequest(`/api/user/addresses/${addressId}`, {
     method: "DELETE",
   });
@@ -743,19 +862,25 @@ export async function deleteImages(
 
 // 활성화된 전체 사이트 이미지 조회
 export async function fetchSiteImages(): Promise<SiteImage[]> {
-  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images");
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images"
+  );
   return response.images || [];
 }
 
 // Hero 이미지만 조회
 export async function fetchHeroImages(): Promise<SiteImage[]> {
-  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images/hero");
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images/hero"
+  );
   return response.images || [];
 }
 
 // Marquee 이미지만 조회
 export async function fetchMarqueeImages(): Promise<SiteImage[]> {
-  const response = await apiRequest<{ images: SiteImage[] }>("/api/site-images/marquee");
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images/marquee"
+  );
   return response.images || [];
 }
 
@@ -765,7 +890,9 @@ export async function fetchMarqueeImages(): Promise<SiteImage[]> {
 
 // 전체 이미지 목록 조회 (관리자용 - 비활성화 포함)
 export async function fetchAdminSiteImages(): Promise<SiteImage[]> {
-  const response = await apiRequest<{ images: SiteImage[] }>("/api/admin/site-images");
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/admin/site-images"
+  );
   return response.images || [];
 }
 

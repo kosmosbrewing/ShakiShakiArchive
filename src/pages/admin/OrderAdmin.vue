@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 // UI 컴포넌트 및 아이콘
@@ -20,6 +21,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert, showConfirm } = useAlert();
 
 const orders = ref<any[]>([]);
 const loading = ref(false);
@@ -64,13 +66,17 @@ const loadData = async () => {
 };
 
 const handleSaveItem = async (item: any) => {
-  if (!confirm(`'${item.productName}' 상품의 상태를 수정하시겠습니까?`)) return;
+  const confirmed = await showConfirm(`'${item.productName}' 상품의 상태를\n수정하시겠습니까?`, {
+    confirmText: "수정",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
   try {
     await updateAdminOrderItem(item.id, item.status, item.trackingNumber);
-    alert("수정되었습니다.");
+    showAlert("수정되었습니다.");
     await loadData();
   } catch (error: any) {
-    alert("수정 실패: " + error.message);
+    showAlert("수정 실패: " + error.message, { type: "error" });
   }
 };
 

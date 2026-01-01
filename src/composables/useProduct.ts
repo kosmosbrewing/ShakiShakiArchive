@@ -1,10 +1,11 @@
 // src/composables/useProduct.ts
-// 상품 상세 관련 로직
+// 상품 관련 로직 (목록 및 상세)
 
-import { ref, computed, onMounted, type Ref } from "vue";
+import { ref, computed, onMounted, watch, type Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { fetchProduct, fetchProductVariants, fetchSizeMeasurements } from "@/lib/api";
+import { fetchProduct, fetchProducts, fetchProductVariants, fetchSizeMeasurements } from "@/lib/api";
 import type { Product, ProductVariant, SizeMeasurement } from "@/types/api";
+import { useAlert } from "./useAlert";
 
 // 사이즈 측정 키 정의
 export const MEASUREMENT_KEYS = [
@@ -57,9 +58,10 @@ export function useProduct(productId?: string | number) {
       product.value = await fetchProduct(String(pid));
       variants.value = await fetchProductVariants(String(pid));
     } catch (e) {
+      const { showAlert } = useAlert();
       error.value = "상품 정보를 불러올 수 없습니다.";
       console.error("상품 로드 실패:", e);
-      alert("상품 정보를 불러올 수 없습니다.");
+      showAlert("상품 정보를 불러올 수 없습니다.", { type: "error" });
       router.go(-1);
     } finally {
       loading.value = false;
@@ -80,7 +82,7 @@ export function useProduct(productId?: string | number) {
  * 상품 옵션(사이즈) 선택 관리
  */
 export function useVariantSelection(variants: Ref<ProductVariant[]>) {
-  const selectedVariantId = ref<number | string>("");
+  const selectedVariantId = ref<string>("");
   const quantity = ref(1);
 
   // 선택된 variant 객체
@@ -304,5 +306,136 @@ export function useProductDetail() {
 
     // 데이터 로드
     loadAllData,
+  };
+}
+
+// 상품 목록 아이템 인터페이스
+export interface ProductListItem {
+  id: string;
+  imageUrl: string;
+  name: string;
+  price: number;
+}
+
+/**
+ * 상품 목록 조회 및 관리 (무한 스크롤 지원 - 상태 기반 잠금)
+ */
+export function useProductList() {
+  const route = useRoute();
+
+  const products = ref<ProductListItem[]>([]);
+  const loading = ref(false);
+  const loadingMore = ref(false);
+  const error = ref<string | null>(null);
+
+  // 페이지네이션 상태
+  const currentPage = ref(1);
+  const hasMore = ref(true);
+  const totalProducts = ref(0);
+  const pageSize = 12;
+
+  // 필터 상태
+  const currentCategory = ref<string | undefined>(undefined);
+  const currentSearch = ref<string>("");
+
+  // 카테고리 슬러그 추출
+  const getCategorySlug = () => {
+    const categoryParam = Array.isArray(route.params.category)
+      ? route.params.category[0]
+      : route.params.category;
+
+    return !categoryParam || categoryParam === "all"
+      ? undefined
+      : categoryParam.trim().toLowerCase();
+  };
+
+  // 상품 목록 초기 로드
+  const loadProducts = async (search?: string) => {
+    loading.value = true;
+    error.value = null;
+    currentPage.value = 1;
+    hasMore.value = true;
+    currentCategory.value = getCategorySlug();
+    currentSearch.value = search?.trim() || "";
+
+    try {
+      const response = await fetchProducts({
+        category: currentCategory.value,
+        search: currentSearch.value || undefined,
+        page: 1,
+        limit: pageSize,
+      });
+
+      products.value = response.products.map((item) => ({
+        id: item.id,
+        imageUrl: item.imageUrl,
+        name: item.name,
+        price: Number(item.price),
+      }));
+
+      totalProducts.value = response.pagination.total;
+      hasMore.value = response.pagination.hasMore;
+    } catch (e) {
+      error.value = "상품 목록을 불러올 수 없습니다.";
+      console.error("상품 목록 로드 실패:", e);
+      products.value = [];
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 추가 상품 목록 로드 (무한 스크롤용 - 상태 기반 잠금)
+  const loadMoreProducts = async () => {
+    // 상태 기반 잠금: 이미 로딩 중이거나 더 이상 데이터가 없으면 스킵
+    if (loadingMore.value || loading.value || !hasMore.value) return;
+
+    // 잠금 설정
+    loadingMore.value = true;
+    const nextPage = currentPage.value + 1;
+
+    try {
+      const response = await fetchProducts({
+        category: currentCategory.value,
+        search: currentSearch.value || undefined,
+        page: nextPage,
+        limit: pageSize,
+      });
+
+      const newProducts = response.products.map((item) => ({
+        id: item.id,
+        imageUrl: item.imageUrl,
+        name: item.name,
+        price: Number(item.price),
+      }));
+
+      products.value = [...products.value, ...newProducts];
+      hasMore.value = response.pagination.hasMore;
+      currentPage.value = nextPage;
+    } catch (e) {
+      console.error("추가 상품 로드 실패:", e);
+    } finally {
+      // 잠금 해제
+      loadingMore.value = false;
+    }
+  };
+
+  // 카테고리 변경 감지
+  watch(
+    () => route.params.category,
+    () => {
+      loadProducts(currentSearch.value);
+    }
+  );
+
+  return {
+    products,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    totalProducts,
+    currentSearch,
+    loadProducts,
+    loadMoreProducts,
   };
 }

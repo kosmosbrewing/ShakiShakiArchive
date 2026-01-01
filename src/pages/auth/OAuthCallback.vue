@@ -5,15 +5,15 @@
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { Loader2, XCircle } from "lucide-vue-next";
+import { XCircle } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Alert,
   type AlertType,
-  SUCCESS_MESSAGES,
   ERROR_MESSAGES,
 } from "@/components/ui/alert";
+import { LoadingSpinner } from "@/components/common";
 
 const router = useRouter();
 const route = useRoute();
@@ -67,14 +67,10 @@ onMounted(async () => {
         return;
       }
 
-      // 일반 리다이렉트: Alert 표시 후 홈으로 이동
-      alertMessage.value = SUCCESS_MESSAGES.login;
-      alertType.value = "success";
-      showAlert.value = true;
-
-      setTimeout(() => {
-        router.replace(returnUrl);
-      }, 1500);
+      // 일반 리다이렉트: 환영 메시지 설정 후 홈으로 이동
+      const userName = authStore.user?.userName || "회원";
+      authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
+      router.replace(returnUrl);
     } else {
       throw new Error("로그인 처리에 실패했습니다. 다시 시도해주세요.");
     }
@@ -136,18 +132,18 @@ const closePopup = () => {
 </script>
 
 <template>
-  <section class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
-    <!-- 로딩 중일 때만 Card 표시 -->
-    <Card v-if="status === 'loading'" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
-      <CardContent class="flex flex-col items-center justify-center py-12">
-        <Loader2 class="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-        <h2 class="text-lg font-semibold mb-2">로그인 처리 중...</h2>
-        <p class="text-muted-foreground text-sm">잠시만 기다려주세요.</p>
-      </CardContent>
-    </Card>
+  <!-- 로딩/성공 상태: 전체 화면 로딩 -->
+  <LoadingSpinner
+    v-if="status === 'loading' || status === 'success'"
+    fullscreen
+    variant="dots"
+    size="lg"
+    message="로그인 처리 중..."
+  />
 
-    <!-- 에러 시 Card와 버튼 표시 -->
-    <Card v-else-if="status === 'error'" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+  <!-- 에러 상태: 카드로 표시 -->
+  <section v-else class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
+    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
       <CardContent class="flex flex-col items-center justify-center py-12">
         <XCircle class="w-12 h-12 text-destructive mx-auto mb-4" />
         <h2 class="text-lg font-semibold mb-2">로그인 실패</h2>
@@ -163,13 +159,13 @@ const closePopup = () => {
         </div>
       </CardContent>
     </Card>
-
-    <!-- Alert 모달 (성공/오류) -->
-    <Alert
-      v-if="showAlert"
-      :type="alertType"
-      :message="alertMessage"
-      @close="showAlert = false"
-    />
   </section>
+
+  <!-- Alert 모달 (성공/오류) -->
+  <Alert
+    v-if="showAlert"
+    :type="alertType"
+    :message="alertMessage"
+    @close="showAlert = false"
+  />
 </template>

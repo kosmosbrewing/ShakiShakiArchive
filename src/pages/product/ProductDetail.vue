@@ -114,9 +114,8 @@ const handleAddToCart = async () => {
   // 1) 상품 ID (UUID)
   const pid = productData.product.value!.id;
 
-  // 2) 옵션 ID 변환 (serial)
-  const rawVariantId = variantSelection.selectedVariantId.value;
-  const vid = rawVariantId ? Number(rawVariantId) : undefined;
+  // 2) 옵션 ID (UUID)
+  const vid = variantSelection.selectedVariantId.value || undefined;
 
   // 3. 장바구니 로드 후 기존 상품 체크
   await cart.loadCart();
@@ -140,9 +139,8 @@ const proceedAddToCart = async () => {
   // 1) 상품 ID (UUID)
   const pid = productData.product.value!.id;
 
-  // 2) 옵션 ID 변환 (serial)
-  const rawVariantId = variantSelection.selectedVariantId.value;
-  const vid = rawVariantId ? Number(rawVariantId) : undefined;
+  // 2) 옵션 ID (UUID)
+  const vid = variantSelection.selectedVariantId.value || undefined;
 
   // 3) 수량 변환
   const qty = Number(variantSelection.quantity.value);

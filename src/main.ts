@@ -5,7 +5,7 @@ import router from "./router";
 import "./assets/index.css";
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:5000";
+axios.defaults.baseURL = "http://localhost:8080";
 
 const apiClient = axios.create({
   baseURL: axios.defaults.baseURL,

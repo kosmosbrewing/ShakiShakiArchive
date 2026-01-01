@@ -13,11 +13,11 @@ import {
   Alert,
   AlertDescription,
   type AlertType,
-  SUCCESS_MESSAGES,
   ERROR_MESSAGES,
   getErrorMessageByStatus,
 } from "@/components/ui/alert";
 import Separator from "@/components/ui/separator/Separator.vue";
+import { LoadingSpinner } from "@/components/common";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
 interface loginProps {
@@ -37,7 +37,8 @@ const invalidInputForm = ref<boolean>(false);
 const loginError = ref<string | null>(null); // 로그인 에러 메시지
 const isLoading = ref<boolean>(false); // 로딩 상태 관리
 const isAuthenticated = ref<boolean>(false); // 인증 성공 상태
-const isNaverLoading = ref<boolean>(false); // 네이버 로그인 로딩 상태
+const isNaverLoading = ref<boolean>(false); // 네이버 로그인 버튼 로딩 상태
+const isProcessingAuth = ref<boolean>(false); // OAuth 결과 처리 중 (전체 화면 로딩)
 const showAlert = ref<boolean>(false); // Alert 모달 표시 상태
 const alertMessage = ref<string>(""); // Alert 메시지
 const alertType = ref<AlertType>("success"); // Alert 타입 (success/error)
@@ -77,23 +78,20 @@ const handleSubmit = async () => {
 
   try {
     // 4. axios POST 요청 실행
-    const response = await apiClient.post("/api/auth/login", payload);
+    await apiClient.post("/api/auth/login", payload);
 
     // 5. 성공 시 처리
     isLoading.value = false;
     isAuthenticated.value = true;
+    isProcessingAuth.value = true; // 전체 화면 로딩 표시
 
-    // Alert 표시
-    alertMessage.value = SUCCESS_MESSAGES.login;
-    alertType.value = "success";
-    showAlert.value = true;
-
-    console.log("로그인 성공! 사용자 데이터:", response.data);
-
-    // [수정됨] 6. 홈 화면으로 이동
-    // replace를 사용하면 뒤로가기 버튼을 눌렀을 때 로그인 페이지로 돌아오지 않도록 합니다.
-    // 일반적인 이동을 원하시면 router.push('/')를 사용하세요.
+    // 6. 사용자 정보 로드 후 바로 홈으로 이동
     await authStore.loadUser();
+
+    // 환영 메시지 설정
+    const userName = authStore.user?.userName || "회원";
+    authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
+
     router.replace("/");
   } catch (error: any) {
     // 7. 실패(에러) 시 처리
@@ -188,21 +186,24 @@ const handleNaverLogin = () => {
         clearInterval(checkPopup);
         window.removeEventListener("storage", handleStorageChange);
 
+        // 팝업 닫히고 결과 처리 시작 → 전체 화면 로딩 표시
+        isNaverLoading.value = false;
+        isProcessingAuth.value = true;
+
+        // 사용자 정보 로드 후 바로 홈으로 이동
         await authStore.loadUser();
 
-        isNaverLoading.value = false;
-        alertMessage.value = SUCCESS_MESSAGES.login;
-        alertType.value = "success";
-        showAlert.value = true;
+        // 환영 메시지 설정
+        const userName = authStore.user?.userName || "회원";
+        authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
 
-        setTimeout(() => {
-          router.replace("/");
-        }, 1500);
+        router.replace("/");
       } else if (type === "OAUTH_ERROR") {
         clearInterval(checkPopup);
         window.removeEventListener("storage", handleStorageChange);
 
         isNaverLoading.value = false;
+        isProcessingAuth.value = false;
         loginError.value = message || ERROR_MESSAGES.serverError;
         invalidInputForm.value = true;
         alertMessage.value = loginError.value ?? ERROR_MESSAGES.serverError;
@@ -332,6 +333,15 @@ const handleNaverLogin = () => {
       :type="alertType"
       :message="alertMessage"
       @close="showAlert = false"
+    />
+
+    <!-- OAuth 결과 처리 중 전체 화면 로딩 -->
+    <LoadingSpinner
+      v-if="isProcessingAuth"
+      fullscreen
+      variant="dots"
+      size="lg"
+      message="로그인 처리 중..."
     />
   </section>
 </template>

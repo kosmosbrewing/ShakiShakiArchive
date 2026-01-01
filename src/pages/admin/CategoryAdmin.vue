@@ -3,6 +3,7 @@
 import { ref, onMounted, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import {
   fetchCategories,
   createCategory,
@@ -22,6 +23,7 @@ import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 
 const categories = ref<any[]>([]);
 const isLoading = ref(false);
@@ -110,10 +112,10 @@ const handleSave = async () => {
 
     if (isEditMode.value) {
       await updateCategory(formData.id, payload);
-      alert("카테고리가 수정되었습니다.");
+      showAlert("카테고리가 수정되었습니다.");
     } else {
       await createCategory(payload);
-      alert("카테고리가 생성되었습니다.");
+      showAlert("카테고리가 생성되었습니다.");
     }
     isModalOpen.value = false;
     await loadData();
@@ -133,7 +135,7 @@ const handleConfirmDelete = async () => {
     await deleteCategory(deleteTargetId.value);
     await loadData();
   } catch (error: any) {
-    alert("삭제 실패: " + error.message);
+    showAlert("삭제 실패: " + error.message, { type: "error" });
   }
 };
 

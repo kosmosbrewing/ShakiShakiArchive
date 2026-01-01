@@ -49,7 +49,7 @@ export interface Product {
 
 // 상품 옵션(사이즈/색상)
 export interface ProductVariant {
-  id: number; // serial (옵션은 serial 유지)
+  id: string; // UUID
   productId: string; // UUID
   size: string;
   color?: string;
@@ -59,8 +59,8 @@ export interface ProductVariant {
 
 // 사이즈 측정 정보
 export interface SizeMeasurement {
-  id: number;
-  variantId: number;
+  id: string; // UUID
+  variantId: string; // UUID
   variantSize?: string;
   totalLength?: number;
   shoulderWidth?: number;
@@ -76,7 +76,7 @@ export interface CartItem {
   id: string; // UUID
   userId: string; // UUID
   productId: string; // UUID
-  variantId?: number; // serial (옵션은 serial 유지)
+  variantId?: string; // UUID
   quantity: number;
   product: Product;
   variant?: ProductVariant;

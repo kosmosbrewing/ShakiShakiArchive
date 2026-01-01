@@ -4,6 +4,7 @@
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "./useAlert";
 
 interface UseAuthGuardOptions {
   redirectTo?: string;
@@ -27,6 +28,8 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}) {
   const authStore = useAuthStore();
 
   const checkAuth = async () => {
+    const { showAlert } = useAlert();
+
     // 사용자 정보가 없으면 로드 시도
     if (loadUser && !authStore.user) {
       await authStore.loadUser();
@@ -34,7 +37,7 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}) {
 
     // 여전히 인증되지 않았으면 리다이렉트
     if (!authStore.isAuthenticated) {
-      alert(message);
+      showAlert(message, { type: "error" });
       router.replace(redirectTo);
       return false;
     }
@@ -60,9 +63,14 @@ export function useAuthCheck() {
   const router = useRouter();
   const authStore = useAuthStore();
 
-  const requireAuth = (action: () => void, message = "로그인이 필요한 서비스입니다.") => {
+  const requireAuth = async (action: () => void, message = "로그인이 필요한 서비스입니다.") => {
     if (!authStore.isAuthenticated) {
-      if (confirm(`${message} 로그인 하시겠습니까?`)) {
+      const { showConfirm } = useAlert();
+      const confirmed = await showConfirm(`${message}\n로그인 하시겠습니까?`, {
+        confirmText: "로그인",
+        cancelText: "취소",
+      });
+      if (confirmed) {
         router.push("/login");
       }
       return false;

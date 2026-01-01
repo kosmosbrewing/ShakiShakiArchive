@@ -8,6 +8,7 @@ import { fetchInquiries } from "@/lib/api";
 import { formatDate } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState } from "@/components/common";
@@ -33,6 +34,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 
 // FAQ 데이터
 interface FAQItem {
@@ -121,12 +123,12 @@ const goToDetail = (inquiry: Inquiry) => {
   // 비밀글인 경우 본인 또는 관리자만 접근 가능
   if (inquiry.isPrivate) {
     if (!authStore.user) {
-      alert("로그인이 필요합니다.");
+      showAlert("로그인이 필요합니다.", { type: "error" });
       router.push("/login");
       return;
     }
     if (inquiry.userId !== authStore.user.id && !authStore.user.isAdmin) {
-      alert("비밀글은 작성자만 확인할 수 있습니다.");
+      showAlert("비밀글은 작성자만 확인할 수 있습니다.", { type: "error" });
       return;
     }
   }
@@ -136,7 +138,7 @@ const goToDetail = (inquiry: Inquiry) => {
 // 문의 작성 페이지로 이동
 const goToCreate = () => {
   if (!authStore.user) {
-    alert("로그인이 필요합니다.");
+    showAlert("로그인이 필요합니다.", { type: "error" });
     router.push("/login");
     return;
   }

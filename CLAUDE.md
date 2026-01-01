@@ -39,7 +39,7 @@ src/
 
 ### API Layer
 
-모든 백엔드 통신은 `src/lib/api.ts`를 통해 fetch로 처리됩니다. 백엔드 기본 주소는 `http://localhost:5000`이며 `VITE_API_URL` 환경변수로 변경 가능합니다.
+모든 백엔드 통신은 `src/lib/api.ts`를 통해 fetch로 처리됩니다. 백엔드 기본 주소는 `http://localhost:8080`이며 `VITE_API_URL` 환경변수로 변경 가능합니다.
 
 주요 API 도메인:
 

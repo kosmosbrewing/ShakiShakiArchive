@@ -798,7 +798,7 @@ Cloudinary를 사용한 이미지 업로드 시스템입니다. 관리자만 이
 #### 단일 이미지 업로드
 
 ```bash
-curl -X POST http://localhost:5000/api/admin/images/product \
+curl -X POST http://localhost:8080/api/admin/images/product \
   -H "Cookie: connect.sid=..." \
   -F "image=@/path/to/image.jpg"
 ```
@@ -819,7 +819,7 @@ curl -X POST http://localhost:5000/api/admin/images/product \
 #### 여러 이미지 업로드
 
 ```bash
-curl -X POST http://localhost:5000/api/admin/images/products \
+curl -X POST http://localhost:8080/api/admin/images/products \
   -H "Cookie: connect.sid=..." \
   -F "images=@/path/to/image1.jpg" \
   -F "images=@/path/to/image2.jpg"

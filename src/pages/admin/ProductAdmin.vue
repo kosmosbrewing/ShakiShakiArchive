@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import {
   fetchAdminProducts,
   createProduct,
@@ -47,6 +48,7 @@ import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 
 // --- 상태 관리 ---
 const products = ref<any[]>([]);
@@ -236,10 +238,10 @@ const handleSaveProduct = async () => {
 
     if (isEditMode.value) {
       await updateProduct(productForm.id, payload);
-      alert("상품이 수정되었습니다.");
+      showAlert("상품이 수정되었습니다.");
     } else {
       await createProduct(payload);
-      alert("상품이 등록되었습니다.");
+      showAlert("상품이 등록되었습니다.");
     }
     isProductModalOpen.value = false;
     await loadData();
@@ -275,7 +277,7 @@ const handleConfirmDelete = async () => {
       await loadMeasurements(currentVariant.value.id);
     }
   } catch (e: any) {
-    alert(e.message);
+    showAlert(e.message, { type: "error" });
   }
 };
 
@@ -301,7 +303,7 @@ const handleSaveVariant = async () => {
 
   try {
     if (!variantForm.size || !variantForm.sku) {
-      alert("사이즈와 SKU는 필수입니다.");
+      showAlert("사이즈와 SKU는 필수입니다.", { type: "error" });
       return;
     }
 
@@ -331,7 +333,7 @@ const handleSaveVariant = async () => {
     isEditMode.value = false;
   } catch (error: any) {
     console.error(error);
-    alert("저장 실패: " + (error.message || "알 수 없는 오류"));
+    showAlert("저장 실패: " + (error.message || "알 수 없는 오류"), { type: "error" });
   }
 };
 
@@ -401,17 +403,17 @@ const handleSaveMeasurement = async () => {
 
     if (isMeasurementEditMode.value) {
       await updateSizeMeasurement(measurementForm.id, payload);
-      alert("수정되었습니다.");
+      showAlert("수정되었습니다.");
     } else {
       await createSizeMeasurement(currentVariant.value.id, payload);
-      alert("등록되었습니다.");
+      showAlert("등록되었습니다.");
     }
 
     await loadMeasurements(currentVariant.value.id);
     Object.assign(measurementForm, initialMeasurementForm);
     isMeasurementEditMode.value = false;
   } catch (error: any) {
-    alert("저장 실패: " + error.message);
+    showAlert("저장 실패: " + error.message, { type: "error" });
   }
 };
 

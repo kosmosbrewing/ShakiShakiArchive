@@ -4,11 +4,12 @@
 
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { Loader2, CheckCircle, XCircle, Package } from "lucide-vue-next";
+import { CheckCircle, XCircle, Package } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/formatters";
 import { confirmPayment } from "@/lib/api";
+import { LoadingSpinner } from "@/components/common";
 
 const router = useRouter();
 const route = useRoute();
@@ -134,18 +135,21 @@ const goToCart = () => {
 </script>
 
 <template>
-  <section class="max-w-lg mx-auto px-4 py-24 sm:py-16">
+  <!-- 로딩 상태: 전체 화면 로딩 -->
+  <LoadingSpinner
+    v-if="status === 'loading'"
+    fullscreen
+    variant="heart"
+    size="lg"
+    message="결제를 확인하고 있습니다..."
+  />
+
+  <!-- 결과 표시 (성공/에러) -->
+  <section v-else class="max-w-lg mx-auto px-4 py-24 sm:py-16">
     <Card class="bg-muted/5 dark:bg-card">
       <CardContent class="flex flex-col items-center justify-center py-12 px-6">
-        <!-- 로딩 상태 -->
-        <div v-if="status === 'loading'" class="text-center">
-          <Loader2 class="w-16 h-16 animate-spin text-primary mx-auto mb-6" />
-          <h2 class="text-xl font-semibold mb-2">결제 처리 중...</h2>
-          <p class="text-muted-foreground">잠시만 기다려주세요.</p>
-        </div>
-
         <!-- 성공 상태 -->
-        <div v-else-if="status === 'success'" class="text-center w-full">
+        <div v-if="status === 'success'" class="text-center w-full">
           <div class="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
             <CheckCircle class="w-12 h-12 text-green-500" />
           </div>

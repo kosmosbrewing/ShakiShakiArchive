@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCart } from "@/composables/useCart";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
+import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 import {
   createDeliveryAddress,
@@ -37,6 +38,7 @@ import naverLogo from "@/assets/naverSymbol.svg";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert, showConfirm } = useAlert();
 
 // Composables
 const { cartItems, shippingFee, totalAmount, loadCart } = useCart();
@@ -46,6 +48,8 @@ const { submitOrder } = useCreateOrder();
 
 // 상태
 const loading = ref(false);
+const isPaymentProcessing = ref(false); // 주문 생성 중 (전체 화면 로딩)
+const isPaymentPopupOpen = ref(false); // 결제 팝업 열림 상태 (버튼 비활성화용)
 const isAddressModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
@@ -88,7 +92,7 @@ const loadData = async () => {
 
     await loadCart();
     if (cartItems.value.length === 0) {
-      alert("주문할 상품이 없습니다.");
+      showAlert("주문할 상품이 없습니다.", { type: "error" });
       router.replace("/");
       return;
     }
@@ -169,10 +173,15 @@ const handlePayment = async () => {
     return;
   }
 
-  if (!confirm(`${formatPrice(totalAmount.value)}을 결제하시겠습니까?`)) return;
+  const confirmed = await showConfirm(`${formatPrice(totalAmount.value)}을\n결제하시겠습니까?`, {
+    confirmText: "결제하기",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
 
   try {
-    loading.value = true;
+    // 주문 생성 중 전체 화면 로딩
+    isPaymentProcessing.value = true;
 
     const orderData = await submitOrder({
       shippingName: shippingForm.form.recipient,
@@ -181,10 +190,14 @@ const handlePayment = async () => {
       shippingAddress: shippingForm.form.address,
       shippingDetailAddress: shippingForm.form.detailAddress,
       shippingRequestNote: shippingForm.finalRequestNote.value,
-      paymentMethod: paymentProvider.value, // 결제 수단 추가
+      paymentMethod: paymentProvider.value,
     });
 
     if (!orderData) throw new Error("주문 생성 실패");
+
+    // 주문 생성 완료 → 결제 창 열기 전 로딩 해제
+    isPaymentProcessing.value = false;
+    isPaymentPopupOpen.value = true; // 버튼 비활성화 유지
 
     if (paymentProvider.value === "toss") {
       await processTossPayment(orderData);
@@ -192,9 +205,9 @@ const handlePayment = async () => {
       await processNaverPayment(orderData);
     }
   } catch (error: any) {
-    alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
-  } finally {
-    loading.value = false;
+    showAlert(`결제 요청 중 오류가 발생했습니다: ${error.message}`, { type: "error" });
+    isPaymentProcessing.value = false;
+    isPaymentPopupOpen.value = false;
   }
 };
 
@@ -246,9 +259,11 @@ const processTossPayment = async (orderData: any) => {
     });
   } catch (err: any) {
     console.error("토스 결제 오류", err);
+    isPaymentPopupOpen.value = false; // 결제 취소/실패 시 버튼 다시 활성화
+
     // 사용자가 결제 취소한 경우는 별도 처리
     if (err.code === "USER_CANCEL") {
-      alert("결제가 취소되었습니다.");
+      showAlert("결제가 취소되었습니다.");
     } else {
       throw new Error(err.message || "토스 결제 창 호출에 실패했습니다.");
     }
@@ -295,8 +310,22 @@ const processNaverPayment = async (orderData: any) => {
       taxExScopeAmount: "0", // 면세 대상 금액 없음
       returnUrl: `${window.location.origin}/payment/callback?provider=naverpay`,
     });
+
+    // 팝업이 닫히면 버튼 재활성화 (visibilitychange 이벤트 감지)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // 페이지가 다시 보이면 버튼 재활성화 (사용자가 팝업을 닫은 경우)
+        isPaymentPopupOpen.value = false;
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
   } catch (err: any) {
     console.error("네이버페이 결제 오류", err);
+    isPaymentPopupOpen.value = false; // 에러 시 버튼 다시 활성화
     throw new Error(err.message || "네이버페이 결제 호출에 실패했습니다.");
   }
 };
@@ -499,8 +528,18 @@ onMounted(() => {
             </CardContent>
           </Card>
 
-          <Button @click="handlePayment" class="w-full" size="lg">
-            {{ formatPrice(totalAmount) }} 결제하기
+          <Button
+            @click="handlePayment"
+            class="w-full"
+            size="lg"
+            :disabled="isPaymentProcessing || isPaymentPopupOpen"
+          >
+            <template v-if="isPaymentProcessing || isPaymentPopupOpen">
+              결제 진행 중...
+            </template>
+            <template v-else>
+              {{ formatPrice(totalAmount) }} 결제하기
+            </template>
           </Button>
           <p
             class="text-caption text-center text-muted-foreground -translate-y-3"
@@ -559,6 +598,15 @@ onMounted(() => {
       :message="validationMessage"
       :duration="2000"
       @close="showValidationAlert = false"
+    />
+
+    <!-- 주문 생성 중 전체 화면 로딩 -->
+    <LoadingSpinner
+      v-if="isPaymentProcessing"
+      fullscreen
+      variant="dots"
+      size="lg"
+      message="주문을 생성하고 있습니다..."
     />
   </div>
 </template>

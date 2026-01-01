@@ -6,12 +6,16 @@ interface Props {
   size?: "sm" | "md" | "lg";
   center?: boolean;
   variant?: "dots" | "heart" | "hanger";
+  fullscreen?: boolean; // 전체 화면 오버레이 모드
+  message?: string; // 로딩 메시지
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: "md",
   center: true,
   variant: "dots",
+  fullscreen: false,
+  message: "",
 });
 
 // 사이즈별 dot 크기
@@ -37,7 +41,69 @@ const hangerSizes = {
 </script>
 
 <template>
+  <!-- 전체 화면 오버레이 모드 -->
   <div
+    v-if="fullscreen"
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
+  >
+    <!-- Dots 바운스 애니메이션 -->
+    <div v-if="variant === 'dots'" class="flex items-center gap-1.5">
+      <span
+        v-for="i in 3"
+        :key="i"
+        :class="[
+          'rounded-full bg-primary animate-bounce-dot',
+          dotSizes[props.size],
+        ]"
+        :style="{ animationDelay: `${(i - 1) * 0.15}s` }"
+      />
+    </div>
+
+    <!-- 하트 펄스 애니메이션 -->
+    <div v-else-if="variant === 'heart'" class="relative">
+      <svg
+        :class="[heartSizes[props.size], 'animate-heart-beat']"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        class="text-primary drop-shadow-sm"
+      >
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+      </svg>
+      <svg
+        class="absolute -top-1 -right-1 w-3 h-3 text-primary/60 animate-float"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+      </svg>
+    </div>
+
+    <!-- 옷걸이 흔들림 애니메이션 -->
+    <div v-else-if="variant === 'hanger'" class="relative">
+      <svg
+        :class="[hangerSizes[props.size], 'animate-swing origin-top']"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="text-primary"
+      >
+        <circle cx="12" cy="4" r="2" class="fill-primary/30" />
+        <path d="M12 6 L12 8 L4 14 L4 15 L20 15 L20 14 L12 8" class="fill-primary/20" />
+        <path d="M4 15 Q12 18 20 15" class="stroke-primary/50" />
+      </svg>
+      <span class="absolute top-1 right-2 w-1.5 h-1.5 bg-primary/40 rounded-full animate-twinkle" />
+    </div>
+
+    <!-- 로딩 메시지 -->
+    <p v-if="message" class="mt-4 text-sm text-muted-foreground">{{ message }}</p>
+  </div>
+
+  <!-- 일반 모드 (기존 동작) -->
+  <div
+    v-else
     :class="[
       center ? 'flex justify-center items-center py-20' : '',
     ]"

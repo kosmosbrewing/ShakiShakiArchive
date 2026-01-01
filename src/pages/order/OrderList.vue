@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // src/pages/OrderList.vue
-// 주문 내역 페이지 (수정됨: 간소화된 리스트 & 상세 이동 버튼 추가)
+// 주문 내역 페이지 (무한 스크롤 지원)
 
-import { onMounted, ref, computed, watch } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
+import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
@@ -22,16 +23,58 @@ import {
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, X } from "lucide-vue-next";
+import { ChevronRight, X, Loader2 } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
+const { showAlert } = useAlert();
 
 // 인증 체크
 useAuthGuard();
 
-// 주문 목록 로직
-const { orders, loading, loadOrders } = useOrders();
+// 주문 목록 로직 (무한 스크롤 지원)
+const { orders, loading, loadingMore, hasMore, loadOrders, loadMoreOrders } = useOrders();
+
+// 무한 스크롤을 위한 옵저버 타겟 ref
+const loadMoreTrigger = ref<HTMLDivElement | null>(null);
+let observer: IntersectionObserver | null = null;
+
+// Intersection Observer 설정
+const setupIntersectionObserver = () => {
+  observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      // 타겟이 화면에 보이고, 로딩 중이 아니며, 더 불러올 데이터가 있을 때
+      if (entry.isIntersecting && !loadingMore.value && hasMore.value) {
+        loadMoreOrders();
+      }
+    },
+    {
+      rootMargin: "100px", // 100px 전에 미리 로드 시작
+      threshold: 0.1,
+    }
+  );
+
+  if (loadMoreTrigger.value) {
+    observer.observe(loadMoreTrigger.value);
+  }
+};
+
+// 옵저버 정리
+const cleanupObserver = () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+};
+
+// 타겟 요소 변경 감지
+watch(loadMoreTrigger, (newEl) => {
+  cleanupObserver();
+  if (newEl) {
+    setupIntersectionObserver();
+  }
+});
 
 // 주문 취소 훅
 const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
@@ -159,23 +202,19 @@ const handleConfirmCancel = async (reason: string) => {
 
     // 환불 정보가 있으면 알림
     if (result.refund) {
-      alert(
-        `주문이 취소되었습니다.\n환불 금액: ${formatPrice(
-          result.refund.cancelAmount
-        )}`
-      );
+      showAlert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
     } else {
-      alert("주문이 취소되었습니다.");
+      showAlert("주문이 취소되었습니다.");
     }
   } else {
-    alert("주문 취소에 실패했습니다. 다시 시도해주세요.");
+    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", { type: "error" });
   }
 };
 
 // 배송 조회 핸들러
 const handleTrackShipment = (item: OrderItem) => {
   if (!item.trackingNumber) {
-    alert("아직 운송장 번호가 등록되지 않았습니다.");
+    showAlert("아직 운송장 번호가 등록되지 않았습니다.", { type: "error" });
     return;
   }
   window.open(
@@ -186,6 +225,14 @@ const handleTrackShipment = (item: OrderItem) => {
 
 onMounted(() => {
   loadOrders();
+  // DOM이 준비된 후 옵저버 설정
+  if (loadMoreTrigger.value) {
+    setupIntersectionObserver();
+  }
+});
+
+onUnmounted(() => {
+  cleanupObserver();
 });
 </script>
 
@@ -312,6 +359,21 @@ onMounted(() => {
           </div>
         </CardContent>
       </Card>
+
+      <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
+      <div
+        v-if="!currentFilter"
+        ref="loadMoreTrigger"
+        class="py-8 flex justify-center"
+      >
+        <div v-if="loadingMore" class="flex items-center gap-2 text-muted-foreground">
+          <Loader2 class="w-5 h-5 animate-spin" />
+          <span class="text-body">주문 내역을 불러오는 중...</span>
+        </div>
+        <div v-else-if="!hasMore && orders.length > 0" class="text-body text-muted-foreground">
+          모든 주문 내역을 불러왔습니다
+        </div>
+      </div>
     </div>
 
     <!-- 주문 취소 다이얼로그 -->

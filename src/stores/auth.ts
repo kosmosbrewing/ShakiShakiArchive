@@ -8,9 +8,20 @@ export const useAuthStore = defineStore("auth", () => {
   const user = ref<User | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const welcomeMessage = ref<string | null>(null); // 로그인 성공 시 환영 메시지
 
   const isAuthenticated = computed(() => !!user.value);
   const isAdmin = computed(() => user.value?.isAdmin ?? false);
+
+  // 환영 메시지 설정
+  function setWelcomeMessage(message: string) {
+    welcomeMessage.value = message;
+  }
+
+  // 환영 메시지 초기화
+  function clearWelcomeMessage() {
+    welcomeMessage.value = null;
+  }
 
   // [공통] 장바구니 병합 로직 (함수로 분리하여 재사용)
   async function migrateGuestCart() {
@@ -178,9 +189,12 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading,
     isAuthenticated,
     isAdmin,
+    welcomeMessage,
     loadUser,
     handleLogin,
     handleLogout,
     register,
+    setWelcomeMessage,
+    clearWelcomeMessage,
   };
 });

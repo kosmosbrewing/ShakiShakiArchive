@@ -1,6 +1,7 @@
 // src/composables/index.ts
 // 모든 composable을 re-export
 
+export * from "./useAlert";
 export * from "./useAuthGuard";
 export * from "./useCart";
 export * from "./useOrders";

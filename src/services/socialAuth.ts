@@ -1,6 +1,8 @@
 // src/services/socialAuth.ts
 // 소셜 로그인 API 서비스 (카카오, 네이버, 구글)
 
+import { useAlert } from "@/composables/useAlert";
+
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 /**
@@ -90,10 +92,11 @@ export function initKakaoSdk(): boolean {
  */
 export function loginWithKakao(): void {
   const Kakao = (window as any).Kakao;
+  const { showAlert } = useAlert();
 
   if (!Kakao?.isInitialized()) {
     if (!initKakaoSdk()) {
-      alert("카카오 로그인을 사용할 수 없습니다.");
+      showAlert("카카오 로그인을 사용할 수 없습니다.", { type: "error" });
       return;
     }
   }
@@ -128,8 +131,9 @@ export async function handleKakaoCallback(code: string): Promise<SocialAuthRespo
  * @see https://developers.naver.com/docs/login/web/web.md
  */
 export function loginWithNaver(): void {
+  const { showAlert } = useAlert();
   if (!config.naver?.clientId) {
-    alert("네이버 로그인 설정이 필요합니다.");
+    showAlert("네이버 로그인 설정이 필요합니다.", { type: "error" });
     return;
   }
 
@@ -180,8 +184,9 @@ export async function handleNaverCallback(
  * @see https://developers.google.com/identity/protocols/oauth2/web-server
  */
 export function loginWithGoogle(): void {
+  const { showAlert } = useAlert();
   if (!config.google?.clientId) {
-    alert("구글 로그인 설정이 필요합니다.");
+    showAlert("구글 로그인 설정이 필요합니다.", { type: "error" });
     return;
   }
 
