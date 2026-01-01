@@ -30,9 +30,7 @@ jobs:
 
       # 4. 프로덕션 빌드 (환경변수 직접 주입)
       - name: Build for production
-        run: |
-          echo "VITE_API_URL is set: ${{ secrets.VITE_API_URL != '' }}"
-          npm run build
+        run: npm run build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
