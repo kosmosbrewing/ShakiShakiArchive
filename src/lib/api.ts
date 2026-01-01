@@ -32,9 +32,37 @@ import type {
   InquiryListParams,
   CreateReplyRequest,
   UpdateInquiryStatusRequest,
+  StockShortageItem,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+// ------------------------------------------------------------------
+// 커스텀 에러 클래스: 재고 부족 에러
+// ------------------------------------------------------------------
+export class StockShortageError extends Error {
+  code: "STOCK_SHORTAGE" = "STOCK_SHORTAGE";
+  shortageItems: StockShortageItem[];
+
+  constructor(message: string, shortageItems: StockShortageItem[]) {
+    super(message);
+    this.name = "StockShortageError";
+    this.shortageItems = shortageItems;
+  }
+}
+
+// API 에러 (일반)
+export class ApiError extends Error {
+  status: number;
+  data?: any;
+
+  constructor(message: string, status: number, data?: any) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
 
 // ------------------------------------------------------------------
 // [0] Core: 공통 요청 함수
@@ -688,14 +716,40 @@ export async function getPaymentClientKey(): Promise<{ clientKey: string }> {
   return apiRequest<{ clientKey: string }>("/api/payments/client-key");
 }
 
-// 결제 승인 (토스페이먼츠)
+// 결제 승인 (토스페이먼츠) - 재고 소프트 락 에러 처리 포함
 export async function confirmPayment(
   data: ConfirmPaymentRequest
 ): Promise<ConfirmPaymentResponse> {
-  return apiRequest<ConfirmPaymentResponse>("/api/payments/confirm", {
+  const url = `${API_BASE}/api/payments/confirm`;
+
+  const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(data),
   });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    // 재고 부족 에러 처리 (소프트 락 실패)
+    if (result.code === "STOCK_SHORTAGE" && result.shortageItems) {
+      throw new StockShortageError(
+        result.message || "재고가 부족한 상품이 있습니다.",
+        result.shortageItems
+      );
+    }
+    // 일반 에러
+    throw new ApiError(
+      result.message || `HTTP ${response.status}`,
+      response.status,
+      result
+    );
+  }
+
+  return result;
 }
 
 // 결제 취소
