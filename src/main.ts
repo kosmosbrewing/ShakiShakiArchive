@@ -5,10 +5,11 @@ import router from "./router";
 import "./assets/index.css";
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+axios.defaults.baseURL = API_BASE;
 
 const apiClient = axios.create({
-  baseURL: axios.defaults.baseURL,
+  baseURL: API_BASE,
   withCredentials: true, // 🔴 쿠키 포함 필수!
   headers: {
     "Content-Type": "application/json",
