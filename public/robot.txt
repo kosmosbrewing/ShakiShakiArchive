@@ -1,4 +1,4 @@
-// public/robots.txt
+// public/robots.txt 로봇 크롤링
 
 # 모든 검색 로봇(User-agent: *)에게 적용합니다.
 User-agent: *
