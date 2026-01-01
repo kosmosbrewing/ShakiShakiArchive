@@ -1,0 +1,7 @@
+// public/robots.txt
+
+# 모든 검색 로봇(User-agent: *)에게 적용합니다.
+User-agent: *
+
+# 사이트 전체(/)에 대한 크롤링을 금지(Disallow)합니다.
+Disallow: /
