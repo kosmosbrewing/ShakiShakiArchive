@@ -28,14 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4. 환경 변수 파일 생성
-      - name: Create .env file
-        run: |
-          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env.production
-
-      # 5. 프로덕션 빌드
+      # 4. 프로덕션 빌드 (환경변수 직접 주입)
       - name: Build for production
         run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       # 6. AWS 자격 증명 설정
       - name: Configure AWS credentials
