@@ -13,7 +13,7 @@ import { formatPrice } from "@/lib/formatters";
 import {
   createDeliveryAddress,
   getPaymentClientKey,
-  getNaverPayClientInfo,
+  getNaverPaySdkConfig,
 } from "@/lib/api";
 import { initNaverPay } from "@/services/payment";
 
@@ -270,21 +270,25 @@ const processTossPayment = async (orderData: any) => {
   }
 };
 
-// [네이버페이] 결제 로직 (SDK 팝업 방식)
+// [네이버페이] 결제 로직 (SDK 클라이언트 직접 호출 방식)
 const processNaverPayment = async (orderData: any) => {
   try {
-    // 1. 네이버페이 클라이언트 정보 가져오기
-    const { clientId, merchantId, mode } = await getNaverPayClientInfo();
+    // 1. 네이버페이 SDK 설정 가져오기 (신규 엔드포인트)
+    const sdkConfig = await getNaverPaySdkConfig();
 
-    // 2. 네이버페이 SDK 초기화
-    const naverPayMode = mode === "prod" ? "production" : "development";
-    const naverPay = initNaverPay(clientId, merchantId, naverPayMode);
+    // 2. 네이버페이 SDK 초기화 (payType 파라미터 추가)
+    const naverPay = initNaverPay(
+      sdkConfig.clientId,
+      sdkConfig.chainId,
+      sdkConfig.mode,
+      sdkConfig.payType
+    );
 
     if (!naverPay) {
       throw new Error("네이버페이 SDK가 로드되지 않았습니다.");
     }
 
-    // 3. 주문명 생성
+    // 3. 주문명 생성 (128자 이내)
     const firstProductName = cartItems.value[0]?.product?.name || "상품";
     const productName =
       cartItems.value.length > 1
@@ -297,18 +301,34 @@ const processNaverPayment = async (orderData: any) => {
       0
     );
 
-    // 5. 기본 배송지 저장 (결제 전에 저장)
+    // 5. 상품 정보 배열 생성 (필수)
+    const productItems = cartItems.value.map((item) => ({
+      categoryType: "ETC",
+      categoryId: "ETC",
+      uid: item.product?.id || item.productId || String(item.id),
+      name: item.product?.name || "상품",
+      count: item.quantity,
+    }));
+
+    // 6. 사용자 식별키 생성 (암호화 권장)
+    const merchantUserKey = authStore.user?.id
+      ? `user_${authStore.user.id}`
+      : `guest_${orderData.orderId}`;
+
+    // 7. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 6. 네이버페이 결제 팝업 호출
+    // 8. 네이버페이 결제창 호출 (신규 파라미터 적용)
     naverPay.open({
-      merchantPayKey: orderData.externalOrderId, // PG사에서 사용할 주문번호
+      merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
+      merchantUserKey: merchantUserKey, // 사용자 식별키 (신규 필수)
       productName: productName,
-      productCount: String(productCount),
-      totalPayAmount: String(totalAmount.value),
-      taxScopeAmount: String(totalAmount.value), // 전체 금액을 과세 대상으로
-      taxExScopeAmount: "0", // 면세 대상 금액 없음
-      returnUrl: `${window.location.origin}/payment/callback?provider=naverpay`,
+      productCount: productCount, // 숫자 타입으로 변경
+      totalPayAmount: totalAmount.value, // 숫자 타입으로 변경
+      taxScopeAmount: totalAmount.value, // 전체 금액을 과세 대상으로
+      taxExScopeAmount: 0, // 면세 대상 금액 없음
+      returnUrl: `${sdkConfig.returnUrl}?orderId=${orderData.orderId}`, // 백엔드에서 제공하는 returnUrl 사용
+      productItems: productItems, // 상품 정보 배열 (신규 필수)
     });
 
     // 팝업이 닫히면 버튼 재활성화 (visibilitychange 이벤트 감지)

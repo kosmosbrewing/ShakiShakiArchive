@@ -239,6 +239,33 @@ export interface CancelPaymentRequest {
   cancelAmount?: number; // 부분 취소 시
 }
 
+// 네이버페이 결제 취소 요청 타입 (과세/면세 금액 추가)
+export interface NaverPayCancelRequest {
+  cancelReason: string;
+  cancelAmount?: number; // 선택 (미입력 시 전액 취소)
+  taxScopeAmount?: number; // 선택 (과세 금액, 미입력 시 cancelAmount 전액)
+  taxExScopeAmount?: number; // 선택 (면세 금액, 미입력 시 0)
+}
+
+// 네이버페이 결제 취소 상세 응답
+export interface NaverPayCancelDetail {
+  primaryPayCancelAmount: number; // 주 결제 수단 취소 금액
+  npointCancelAmount: number; // N포인트 취소 금액
+  giftCardCancelAmount: number; // 기프트카드 취소 금액
+  discountCancelAmount: number; // 즉시 할인 취소 금액
+}
+
+// 네이버페이 결제 취소 응답
+export interface NaverPayCancelResponse {
+  message: string;
+  refund: {
+    cancelAmount: number; // 총 취소 금액
+    remainAmount: number; // 남은 결제 금액
+    cancelTime: string; // 취소 일시 (YYYYMMDDHHmmss)
+    detail: NaverPayCancelDetail; // 결제 수단별 취소 상세
+  };
+}
+
 // ------------------------------------------------------------------
 // 네이버페이 관련 타입
 // ------------------------------------------------------------------
@@ -262,11 +289,20 @@ export interface NaverPayStatusResponse {
   paymentId?: string;
 }
 
-// 네이버페이 클라이언트 정보 응답
+// 네이버페이 클라이언트 정보 응답 (기존 - 하위 호환용)
 export interface NaverPayClientInfoResponse {
   clientId: string;
   merchantId: string;
   mode: "dev" | "prod";
+}
+
+// 네이버페이 SDK 설정 응답 (신규 - 클라이언트 SDK 직접 호출용)
+export interface NaverPaySdkConfigResponse {
+  clientId: string;
+  chainId: string; // merchantId와 동일, 체인 ID
+  mode: "development" | "production";
+  payType: "normal" | "recurrent";
+  returnUrl: string; // 결제 완료 후 리다이렉트 URL
 }
 
 // 카테고리 타입

@@ -250,20 +250,47 @@ export function getPaymentMethodLabel(method: PaymentMethod): string {
 }
 
 // ------------------------------------------------------------------
-// 네이버페이 SDK (팝업 결제 방식)
+// 네이버페이 SDK (클라이언트 직접 호출 방식)
 // ------------------------------------------------------------------
 
 /**
- * 네이버페이 결제 요청 데이터
+ * 네이버페이 상품 아이템
+ */
+export interface NaverPayProductItem {
+  categoryType: string; // 카테고리 타입 (ETC, PRODUCT 등)
+  categoryId: string; // 카테고리 ID
+  uid: string; // 상품 고유 ID
+  name: string; // 상품명
+  count: number; // 수량
+}
+
+/**
+ * 네이버페이 결제 요청 데이터 (신규 - 클라이언트 SDK 직접 호출용)
  */
 export interface NaverPayOpenRequest {
-  merchantPayKey: string; // 가맹점 주문 ID
-  productName: string; // 상품명
-  productCount: string; // 상품 수량
-  totalPayAmount: string; // 총 결제 금액
-  taxScopeAmount: string; // 과세 대상 금액
-  taxExScopeAmount: string; // 면세 대상 금액
+  merchantPayKey: string; // 가맹점 주문번호
+  merchantUserKey: string; // 사용자 식별키 (암호화 권장)
+  productName: string; // 상품명 (128자 이내)
+  productCount: number; // 총 상품 수량
+  totalPayAmount: number; // 총 결제 금액
+  taxScopeAmount: number; // 과세 금액
+  taxExScopeAmount: number; // 면세 금액
   returnUrl: string; // 결제 완료 후 리다이렉트 URL
+  productItems: NaverPayProductItem[]; // 상품 정보 배열 (필수)
+}
+
+/**
+ * 네이버페이 결제 요청 데이터 (기존 - 하위 호환용)
+ * @deprecated NaverPayOpenRequest를 사용하세요
+ */
+export interface NaverPayOpenRequestLegacy {
+  merchantPayKey: string;
+  productName: string;
+  productCount: string;
+  totalPayAmount: string;
+  taxScopeAmount: string;
+  taxExScopeAmount: string;
+  returnUrl: string;
 }
 
 /**
@@ -271,30 +298,32 @@ export interface NaverPayOpenRequest {
  */
 export interface NaverPayInstance {
   open: (request: NaverPayOpenRequest) => void;
+  close: () => void;
 }
 
 /**
- * 네이버페이 SDK 초기화
+ * 네이버페이 SDK 초기화 (신규 - payType 파라미터 추가)
  * @param clientId - 네이버페이 클라이언트 ID
  * @param chainId - 네이버페이 체인 ID (merchantId)
  * @param mode - 환경 ("development" | "production")
+ * @param payType - 결제 타입 ("normal" | "recurrent")
  */
 export function initNaverPay(
   clientId: string,
   chainId: string,
-  mode: "development" | "production" = "development"
+  mode: "development" | "production" = "development",
+  payType: "normal" | "recurrent" = "normal"
 ): NaverPayInstance | null {
-  const Naver = (window as any).Naver;
-
-  if (!Naver?.Pay?.create) {
+  if (!window.Naver?.Pay?.create) {
     console.error("네이버페이 SDK가 로드되지 않았습니다.");
     return null;
   }
 
-  return Naver.Pay.create({
+  return window.Naver.Pay.create({
     mode,
     clientId,
     chainId,
+    payType,
   });
 }
 
