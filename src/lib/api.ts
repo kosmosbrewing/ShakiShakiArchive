@@ -17,6 +17,9 @@ import type {
   NaverPayReserveResponse,
   NaverPayStatusResponse,
   NaverPayClientInfoResponse,
+  NaverPaySdkConfigResponse,
+  NaverPayCancelRequest,
+  NaverPayCancelResponse,
   ImageUploadResponse,
   ImagesUploadResponse,
   ImageDeleteResponse,
@@ -776,14 +779,23 @@ export async function getPaymentStatus(
 // [6-2] 네이버페이 (NaverPay)
 // ------------------------------------------------------------------
 
-// 네이버페이 클라이언트 정보 조회
+// 네이버페이 클라이언트 정보 조회 (기존 - 하위 호환용)
+/** @deprecated getNaverPaySdkConfig()를 사용하세요 */
 export async function getNaverPayClientInfo(): Promise<NaverPayClientInfoResponse> {
   return apiRequest<NaverPayClientInfoResponse>(
     "/api/payments/naverpay/client-info"
   );
 }
 
-// 네이버페이 결제 예약
+// 네이버페이 SDK 설정 조회 (신규 - 클라이언트 SDK 직접 호출용)
+export async function getNaverPaySdkConfig(): Promise<NaverPaySdkConfigResponse> {
+  return apiRequest<NaverPaySdkConfigResponse>(
+    "/api/payments/naverpay/sdk-config"
+  );
+}
+
+// 네이버페이 결제 예약 (삭제됨 - 클라이언트 SDK 직접 호출 방식으로 변경)
+/** @deprecated 서버 예약 방식에서 클라이언트 SDK 직접 호출 방식으로 변경되었습니다 */
 export async function reserveNaverPayment(
   orderId: string
 ): Promise<NaverPayReserveResponse> {
@@ -802,16 +814,18 @@ export async function getNaverPaymentStatus(
   );
 }
 
-// 네이버페이 결제 취소
+// 네이버페이 결제 취소 (과세/면세 금액 추가)
 export async function cancelNaverPayment(
   orderId: string,
-  cancelReason: string,
-  cancelAmount?: number
-): Promise<Order> {
-  return apiRequest<Order>(`/api/payments/naverpay/${orderId}/cancel`, {
-    method: "POST",
-    body: JSON.stringify({ cancelReason, cancelAmount }),
-  });
+  data: NaverPayCancelRequest
+): Promise<NaverPayCancelResponse> {
+  return apiRequest<NaverPayCancelResponse>(
+    `/api/payments/naverpay/${orderId}/cancel`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
 }
 
 // --- 관리자 결제 관리 ---
