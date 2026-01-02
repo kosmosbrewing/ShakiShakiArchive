@@ -128,7 +128,7 @@ watch(
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-4 sm:gap-6">
+  <div class="w-full grid grid-cols-2 gap-4 sm:gap-6">
     <!-- 로딩 상태: 스켈레톤 카드 표시 -->
     <ProductCardSkeleton v-if="loading" :count="4" />
 

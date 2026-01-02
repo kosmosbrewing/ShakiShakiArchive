@@ -302,7 +302,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 상품 목록 영역 -->
-      <div class="flex items-start justify-center lg:justify-start">
+      <div class="w-full flex items-start justify-center lg:justify-start">
         <ProductHome />
       </div>
     </div>
