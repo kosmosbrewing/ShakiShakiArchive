@@ -27,6 +27,7 @@ import accountIcon from "@/assets/account.png";
 import cartIcon from "@/assets/cart.png";
 import loginIcon from "@/assets/login.png";
 import logoutIcon from "@/assets/logout.png";
+import qaIcon from "@/assets/QA.png";
 
 const mode = useColorMode();
 mode.value = "light";
@@ -98,11 +99,13 @@ const handleCartClick = () => {
   cartSheetOpen.value = true;
 };
 
+const handleQAClick = () => {
+  isOpen.value = false;
+  router.push("/inquiry");
+};
+
 onMounted(async () => {
-  await Promise.all([
-    cartStore.loadCart(),
-    categoryStore.loadCategories(),
-  ]);
+  await Promise.all([cartStore.loadCart(), categoryStore.loadCategories()]);
   window.addEventListener("cart-updated", updateCartCount);
 });
 
@@ -164,6 +167,13 @@ onUnmounted(() => {
                 @click="handleInstagram"
               >
                 INSTAGRAM
+              </Button>
+              <Button
+                variant="ghost"
+                class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
+                @click="handleQAClick"
+              >
+                Q&A
               </Button>
             </div>
             <div class="flex-1"></div>
@@ -315,6 +325,20 @@ onUnmounted(() => {
           <img
             :src="accountIcon"
             alt="Account"
+            class="w-5 h-5 object-contain"
+            draggable="false"
+          />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          class="hover:bg-transparent hover:scale-110 transition-transform"
+          @click="handleQAClick"
+        >
+          <img
+            :src="qaIcon"
+            alt="Q&A"
             class="w-5 h-5 object-contain"
             draggable="false"
           />

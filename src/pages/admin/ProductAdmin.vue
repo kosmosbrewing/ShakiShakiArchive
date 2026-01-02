@@ -229,7 +229,7 @@ const handleSaveProduct = async () => {
         ? String(productForm.originalPrice)
         : null,
       stockQuantity: productForm.stockQuantity,
-      categoryId: productForm.categoryId,
+      categoryId: Number(productForm.categoryId),
       imageUrl: productForm.imageUrl,
       images: productForm.images,
       detailImages: productForm.detailImages,
