@@ -322,17 +322,17 @@ onUnmounted(() => {
       <!-- 실제 콘텐츠: 로딩 완료 후 표시 -->
       <Marquee
         v-else
-        class="gap-[3rem]"
+        class="gap-[2rem]"
         :pauseOnHover="true"
         :fade="true"
-        innerClassName="gap-[3rem]"
+        innerClassName="gap-[2rem]"
       >
         <img
           v-for="(img, index) in repeatedMarqueeImages"
           :key="index"
           :src="optimizeMarquee(img.url)"
           alt="marquee Logo"
-          class="min-w-[60px] object-contain"
+          class="min-w-[80px] object-contain"
           :class="{ 'cursor-pointer': img.linkUrl }"
           loading="lazy"
           decoding="async"
