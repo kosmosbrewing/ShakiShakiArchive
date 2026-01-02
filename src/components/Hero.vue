@@ -129,7 +129,7 @@ const marqueeImageUrls = computed(() => {
 // Marquee 효과를 위해 이미지 3배로 반복
 const repeatedMarqueeImages = computed(() => {
   const images = marqueeImageUrls.value;
-  return [...images, ...images, ...images];
+  return [...images, ...images, ...images, ...images, ...images];
 });
 
 // 이미지 클릭 핸들러
