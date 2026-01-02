@@ -24,7 +24,9 @@ const { count = 4 } = defineProps<Props>();
   >
     <CardHeader class="p-0 gap-0">
       <!-- 이미지 영역 스켈레톤 -->
-      <Skeleton class="w-full aspect-square rounded-none" />
+      <div class="h-full overflow-hidden">
+        <Skeleton class="w-full aspect-square rounded-none" />
+      </div>
 
       <Separator />
 
