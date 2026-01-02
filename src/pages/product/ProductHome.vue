@@ -150,7 +150,7 @@ watch(
     >
       <CardHeader class="p-0 gap-0">
         <div
-          class="h-full overflow-hidden cursor-pointer relative"
+          class="aspect-square overflow-hidden cursor-pointer relative"
           @click="goToDetail(id)"
         >
           <img
