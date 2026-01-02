@@ -259,7 +259,7 @@ onUnmounted(() => {
             />
             <span
               v-if="cartItemCount > 0"
-              class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white"
+              class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white"
             >
               {{ cartItemCount }}
             </span>

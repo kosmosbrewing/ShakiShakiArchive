@@ -2,7 +2,10 @@
 // src/pages/Order.vue
 // 주문/결제 페이지
 
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+
+// Production 환경 체크
+const isProduction = computed(() => import.meta.env.MODE === "production");
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCart } from "@/composables/useCart";
@@ -375,7 +378,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <!-- Production 환경: 준비중 화면 -->
+  <div v-if="isProduction" class="max-w-5xl mx-auto px-4 py-24 sm:py-32 text-center">
+    <h3 class="text-heading text-primary tracking-wider mb-4">ORDER</h3>
+    <p class="text-xl text-muted-foreground">준비중입니다.</p>
+  </div>
+
+  <!-- 개발 환경: 실제 주문 화면 -->
+  <div v-else class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">ORDER</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">결제 내용</p>
