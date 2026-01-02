@@ -7,6 +7,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 @layer base {
@@ -46,12 +47,12 @@ html {
     --radius: 0.5rem;
   }
 
-  /* 기본 폰트 설정 
+  /* 기본 폰트 설정
     - Tailwind Config의 'sans'가 자동으로 적용됩니다.
     - 기본 컬러와 렌더링 최적화만 적용합니다.
   */
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased overflow-x-hidden;
   }
 }
 
