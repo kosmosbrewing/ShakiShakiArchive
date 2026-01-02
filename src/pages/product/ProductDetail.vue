@@ -223,9 +223,9 @@ onMounted(async () => {
       v-if="productData.loading.value || !productData.product.value"
     />
 
-    <div v-else class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- 좌측: 이미지 갤러리 -->
-      <div class="lg:col-span-3 space-y-4">
+      <div class="lg:col-span-1 space-y-4">
         <Card class="overflow-hidden">
           <div class="aspect-[3/4] bg-muted relative">
             <img
@@ -308,7 +308,7 @@ onMounted(async () => {
       </div>
 
       <!-- 우측: 상품 정보 카드 -->
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-1">
         <Card class="sticky top-24">
           <CardContent class="p-6">
             <div class="flex justify-between items-start gap-3 mb-2">

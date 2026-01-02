@@ -354,7 +354,7 @@ onUnmounted(() => {
             <img
               :src="cartIcon"
               alt="Cart"
-              class="w-6 h-6 object-contain"
+              class="w-5 h-5 object-contain"
               draggable="false"
             />
             <span
