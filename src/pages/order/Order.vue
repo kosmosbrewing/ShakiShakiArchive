@@ -2,11 +2,11 @@
 // src/pages/Order.vue
 // 주문/결제 페이지
 
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, onUnmounted } from "vue";
 
 // Production 환경 체크
 const isProduction = computed(() => import.meta.env.MODE === "production");
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCart } from "@/composables/useCart";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
@@ -33,18 +33,63 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Alert } from "@/components/ui/alert";
-import type { DeliveryAddress, User } from "@/types/api";
+import type {
+  DeliveryAddress,
+  User,
+  DirectPurchaseData,
+  CreateOrderRequest,
+  CreateOrderResponse,
+} from "@/types/api";
+import {
+  isValidDirectPurchaseData,
+  isValidPhone,
+  isValidZipCode,
+  isNonEmptyString,
+  isValidPrice,
+  isValidQuantity,
+  validateOrderAmount,
+  calculateShippingFee,
+} from "@/lib/validators";
 
 // [이미지 Import]
 import tossLogo from "@/assets/tossSymbol.png";
 import naverLogo from "@/assets/naverSymbol.svg";
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
 
 // Composables
 const { cartItems, shippingFee, totalAmount, loadCart } = useCart();
+
+// 바로 구매 모드 상태
+const isDirectPurchase = computed(() => route.query.direct === "true");
+const directPurchaseItem = ref<DirectPurchaseData | null>(null);
+
+// 주문 상품 목록 (바로 구매 또는 장바구니)
+const orderItems = computed(() => {
+  if (isDirectPurchase.value && directPurchaseItem.value) {
+    return [directPurchaseItem.value];
+  }
+  return cartItems.value;
+});
+
+// 주문 금액 계산 (바로 구매 모드용)
+const orderSubtotal = computed(() => {
+  if (isDirectPurchase.value && directPurchaseItem.value) {
+    return Number(directPurchaseItem.value.product?.price || 0) * directPurchaseItem.value.quantity;
+  }
+  return totalAmount.value - shippingFee.value;
+});
+
+const orderShippingFee = computed(() => {
+  return calculateShippingFee(orderSubtotal.value);
+});
+
+const orderTotalAmount = computed(() => {
+  return orderSubtotal.value + orderShippingFee.value;
+});
 const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
@@ -53,6 +98,14 @@ const { submitOrder } = useCreateOrder();
 const loading = ref(false);
 const isPaymentProcessing = ref(false); // 주문 생성 중 (전체 화면 로딩)
 const isPaymentPopupOpen = ref(false); // 결제 팝업 열림 상태 (버튼 비활성화용)
+
+// 모바일 환경 감지 (모바일에서는 리다이렉트 방식 사용)
+const isMobile = computed(() => {
+  if (typeof window === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+});
 const isAddressModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
@@ -93,11 +146,36 @@ const loadData = async () => {
       await authStore.loadUser();
     }
 
-    await loadCart();
-    if (cartItems.value.length === 0) {
-      showAlert("주문할 상품이 없습니다.", { type: "error" });
-      router.replace("/");
-      return;
+    // 바로 구매 모드 체크
+    if (isDirectPurchase.value) {
+      const stored = sessionStorage.getItem("directPurchase");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (isValidDirectPurchaseData(parsed)) {
+            directPurchaseItem.value = parsed;
+          } else {
+            throw new Error("Invalid data format");
+          }
+        } catch {
+          sessionStorage.removeItem("directPurchase");
+          showAlert("잘못된 상품 정보입니다.", { type: "error" });
+          router.replace("/");
+          return;
+        }
+      } else {
+        showAlert("주문할 상품 정보가 없습니다.", { type: "error" });
+        router.replace("/");
+        return;
+      }
+    } else {
+      // 장바구니 모드
+      await loadCart();
+      if (cartItems.value.length === 0) {
+        showAlert("주문할 상품이 없습니다.", { type: "error" });
+        router.replace("/");
+        return;
+      }
     }
 
     await loadAddresses();
@@ -155,28 +233,70 @@ const showValidationError = (
 
 // 결제 처리 핸들러
 const handlePayment = async () => {
-  // 필수 항목 개별 유효성 검사
-  if (!shippingForm.form.recipient.trim()) {
+  // 1. 주문 상품 유효성 검사
+  if (orderItems.value.length === 0) {
+    showValidationError("주문할 상품이 없습니다.");
+    return;
+  }
+
+  // 2. 주문 상품 데이터 무결성 검사 (가격, 수량)
+  for (const item of orderItems.value) {
+    const price = Number(item.product?.price);
+    if (!isValidPrice(price)) {
+      showValidationError("상품 가격 정보가 올바르지 않습니다.");
+      console.error("Invalid price:", item.product?.price);
+      return;
+    }
+    if (!isValidQuantity(item.quantity)) {
+      showValidationError("상품 수량이 올바르지 않습니다.");
+      console.error("Invalid quantity:", item.quantity);
+      return;
+    }
+  }
+
+  // 3. 금액 계산 무결성 검사
+  const itemsForValidation = orderItems.value.map((item) => ({
+    price: Number(item.product?.price || 0),
+    quantity: item.quantity,
+  }));
+  if (!validateOrderAmount(itemsForValidation, orderTotalAmount.value, orderShippingFee.value)) {
+    showValidationError("주문 금액 계산에 오류가 있습니다. 새로고침 후 다시 시도해주세요.");
+    console.error("Order amount mismatch");
+    return;
+  }
+
+  // 4. 배송지 필수 항목 유효성 검사
+  if (!isNonEmptyString(shippingForm.form.recipient)) {
     showValidationError("수령인을 입력해주세요.", "recipient");
     return;
   }
 
-  if (!shippingForm.form.phone2 || !shippingForm.form.phone3) {
-    showValidationError("연락처를 입력해주세요.", "phone");
+  // 5. 연락처 유효성 검사
+  const fullPhone = shippingForm.fullPhone.value;
+  if (!isValidPhone(fullPhone)) {
+    showValidationError("올바른 연락처를 입력해주세요.", "phone");
     return;
   }
 
-  if (!shippingForm.form.zipCode || !shippingForm.form.address) {
+  // 6. 우편번호 유효성 검사
+  if (!isValidZipCode(shippingForm.form.zipCode)) {
     showValidationError("주소를 검색해주세요.", "address");
     return;
   }
 
-  if (!shippingForm.form.detailAddress.trim()) {
+  // 7. 주소 유효성 검사
+  if (!isNonEmptyString(shippingForm.form.address)) {
+    showValidationError("주소를 검색해주세요.", "address");
+    return;
+  }
+
+  // 8. 상세 주소 유효성 검사
+  if (!isNonEmptyString(shippingForm.form.detailAddress)) {
     showValidationError("상세 주소를 입력해주세요.", "detailAddress");
     return;
   }
 
-  const confirmed = await showConfirm(`${formatPrice(totalAmount.value)}을\n결제하시겠습니까?`, {
+  const confirmed = await showConfirm(`${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`, {
     confirmText: "결제하기",
     cancelText: "취소",
   });
@@ -186,7 +306,8 @@ const handlePayment = async () => {
     // 주문 생성 중 전체 화면 로딩
     isPaymentProcessing.value = true;
 
-    const orderData = await submitOrder({
+    // 주문 요청 데이터 구성
+    const orderParams: CreateOrderRequest = {
       shippingName: shippingForm.form.recipient,
       shippingPhone: shippingForm.fullPhone.value,
       shippingPostalCode: shippingForm.form.zipCode,
@@ -194,7 +315,18 @@ const handlePayment = async () => {
       shippingDetailAddress: shippingForm.form.detailAddress,
       shippingRequestNote: shippingForm.finalRequestNote.value,
       paymentMethod: paymentProvider.value,
-    });
+    };
+
+    // 바로 구매 모드일 때 상품 정보 추가
+    if (isDirectPurchase.value && directPurchaseItem.value) {
+      orderParams.directPurchaseItem = {
+        productId: directPurchaseItem.value.productId,
+        variantId: directPurchaseItem.value.variantId,
+        quantity: directPurchaseItem.value.quantity,
+      };
+    }
+
+    const orderData = await submitOrder(orderParams);
 
     if (!orderData) throw new Error("주문 생성 실패");
 
@@ -207,21 +339,46 @@ const handlePayment = async () => {
     } else if (paymentProvider.value === "naverpay") {
       await processNaverPayment(orderData);
     }
-  } catch (error: any) {
-    showAlert(`결제 요청 중 오류가 발생했습니다: ${error.message}`, { type: "error" });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, { type: "error" });
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
   }
 };
 
-// [토스페이먼츠] 결제 로직
-const processTossPayment = async (orderData: any) => {
+// 토스페이먼츠 SDK 타입 선언
+interface TossPaymentRequestParams {
+  method: string;
+  amount: { currency: string; value: number };
+  orderId: string;
+  orderName: string;
+  successUrl: string;
+  failUrl: string;
+  customerEmail?: string;
+  customerName?: string;
+  customerMobilePhone?: string;
+  windowTarget?: "iframe" | "self" | "_blank"; // 결제창 표시 방식
+}
+
+interface TossPaymentsInstance {
+  payment: (options: { customerKey: string }) => {
+    requestPayment: (params: TossPaymentRequestParams) => Promise<void>;
+  };
+}
+
+interface TossPaymentsSDK {
+  (clientKey: string): TossPaymentsInstance;
+}
+
+// [토스페이먼츠] 결제 로직 (PC: iframe 모달, 모바일: 리다이렉트)
+const processTossPayment = async (orderData: CreateOrderResponse) => {
   try {
     // 1. 클라이언트 키 가져오기
     const { clientKey } = await getPaymentClientKey();
 
     // 2. 토스페이먼츠 SDK 초기화 (window 객체에서 가져옴)
-    const TossPayments = (window as any).TossPayments;
+    const TossPayments = (window as unknown as { TossPayments?: TossPaymentsSDK }).TossPayments;
     if (!TossPayments) {
       throw new Error("토스페이먼츠 SDK가 로드되지 않았습니다.");
     }
@@ -234,23 +391,23 @@ const processTossPayment = async (orderData: any) => {
       : `guest_${orderData.orderId}`;
 
     // 4. 주문명 생성 (첫 번째 상품명 + 외 n개)
-    const firstProductName = cartItems.value[0]?.product?.name || "상품";
+    const firstProductName = orderItems.value[0]?.product?.name || "상품";
     const orderName =
-      cartItems.value.length > 1
-        ? `${firstProductName} 외 ${cartItems.value.length - 1}건`
+      orderItems.value.length > 1
+        ? `${firstProductName} 외 ${orderItems.value.length - 1}건`
         : firstProductName;
 
     // 5. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 6. 결제 요청
+    // 6. 결제 요청 (모바일: 리다이렉트, PC: iframe 모달)
     const payment = tossPayments.payment({ customerKey });
 
     await payment.requestPayment({
       method: "CARD", // 카드 결제 (토스페이 선택 시 다양한 결제수단 제공)
       amount: {
         currency: "KRW",
-        value: totalAmount.value,
+        value: orderTotalAmount.value,
       },
       orderId: orderData.externalOrderId, // PG사에서 사용할 주문번호 (SHAKI_... 형식)
       orderName: orderName,
@@ -259,53 +416,61 @@ const processTossPayment = async (orderData: any) => {
       customerEmail: authStore.user?.email || undefined,
       customerName: shippingForm.form.recipient,
       customerMobilePhone: shippingForm.fullPhone.value.replace(/-/g, ""),
+      // 모바일: 현재 창에서 리다이렉트, PC: iframe 모달
+      windowTarget: isMobile.value ? "self" : "iframe",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("토스 결제 오류", err);
     isPaymentPopupOpen.value = false; // 결제 취소/실패 시 버튼 다시 활성화
 
     // 사용자가 결제 취소한 경우는 별도 처리
-    if (err.code === "USER_CANCEL") {
+    const errorWithCode = err as { code?: string; message?: string };
+    if (errorWithCode.code === "USER_CANCEL") {
       showAlert("결제가 취소되었습니다.");
     } else {
-      throw new Error(err.message || "토스 결제 창 호출에 실패했습니다.");
+      const errorMessage = errorWithCode.message || "토스 결제 창 호출에 실패했습니다.";
+      throw new Error(errorMessage);
     }
   }
 };
 
-// [네이버페이] 결제 로직 (SDK 클라이언트 직접 호출 방식)
-const processNaverPayment = async (orderData: any) => {
+// [네이버페이] 결제 로직 (PC: 팝업 방식, 모바일: 리다이렉트 방식)
+const processNaverPayment = async (orderData: CreateOrderResponse) => {
   try {
-    // 1. 네이버페이 SDK 설정 가져오기 (신규 엔드포인트)
+    // 1. 네이버페이 SDK 설정 가져오기
     const sdkConfig = await getNaverPaySdkConfig();
 
-    // 2. 네이버페이 SDK 초기화 (payType 파라미터 추가)
+    // 2. 모바일 환경에서는 리다이렉트(page), PC에서는 팝업(popup) 방식
+    const openType = isMobile.value ? "page" : "popup";
+
+    // 3. 네이버페이 SDK 초기화
     const naverPay = initNaverPay(
       sdkConfig.clientId,
       sdkConfig.chainId,
       sdkConfig.mode,
-      sdkConfig.payType
+      sdkConfig.payType,
+      openType
     );
 
     if (!naverPay) {
       throw new Error("네이버페이 SDK가 로드되지 않았습니다.");
     }
 
-    // 3. 주문명 생성 (128자 이내)
-    const firstProductName = cartItems.value[0]?.product?.name || "상품";
+    // 4. 주문명 생성 (128자 이내)
+    const firstProductName = orderItems.value[0]?.product?.name || "상품";
     const productName =
-      cartItems.value.length > 1
-        ? `${firstProductName} 외 ${cartItems.value.length - 1}건`
+      orderItems.value.length > 1
+        ? `${firstProductName} 외 ${orderItems.value.length - 1}건`
         : firstProductName;
 
-    // 4. 상품 수량 계산
-    const productCount = cartItems.value.reduce(
+    // 5. 상품 수량 계산
+    const productCount = orderItems.value.reduce(
       (sum, item) => sum + item.quantity,
       0
     );
 
-    // 5. 상품 정보 배열 생성 (필수)
-    const productItems = cartItems.value.map((item) => ({
+    // 6. 상품 정보 배열 생성 (필수)
+    const productItems = orderItems.value.map((item) => ({
       categoryType: "ETC",
       categoryId: "ETC",
       uid: item.product?.id || item.productId || String(item.id),
@@ -313,43 +478,43 @@ const processNaverPayment = async (orderData: any) => {
       count: item.quantity,
     }));
 
-    // 6. 사용자 식별키 생성 (암호화 권장)
+    // 7. 사용자 식별키 생성 (암호화 권장)
     const merchantUserKey = authStore.user?.id
       ? `user_${authStore.user.id}`
       : `guest_${orderData.orderId}`;
 
-    // 7. 기본 배송지 저장 (결제 전에 저장)
+    // 8. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 8. 네이버페이 결제창 호출 (신규 파라미터 적용)
+    // 9. 네이버페이 결제창 호출
     naverPay.open({
       merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
-      merchantUserKey: merchantUserKey, // 사용자 식별키 (신규 필수)
+      merchantUserKey: merchantUserKey, // 사용자 식별키
       productName: productName,
-      productCount: productCount, // 숫자 타입으로 변경
-      totalPayAmount: totalAmount.value, // 숫자 타입으로 변경
-      taxScopeAmount: totalAmount.value, // 전체 금액을 과세 대상으로
+      productCount: productCount,
+      totalPayAmount: orderTotalAmount.value,
+      taxScopeAmount: orderTotalAmount.value, // 전체 금액을 과세 대상으로
       taxExScopeAmount: 0, // 면세 대상 금액 없음
-      returnUrl: `${sdkConfig.returnUrl}?orderId=${orderData.orderId}`, // 백엔드에서 제공하는 returnUrl 사용
-      productItems: productItems, // 상품 정보 배열 (신규 필수)
+      returnUrl: `${sdkConfig.returnUrl}?orderId=${orderData.orderId}`,
+      productItems: productItems,
     });
 
-    // 팝업이 닫히면 버튼 재활성화 (visibilitychange 이벤트 감지)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // 페이지가 다시 보이면 버튼 재활성화 (사용자가 팝업을 닫은 경우)
-        isPaymentPopupOpen.value = false;
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange
-        );
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-  } catch (err: any) {
+    // PC 팝업 방식일 때만 focus 이벤트로 버튼 재활성화
+    if (!isMobile.value) {
+      const handleWindowFocus = () => {
+        setTimeout(() => {
+          isPaymentPopupOpen.value = false;
+        }, 500);
+        window.removeEventListener("focus", handleWindowFocus);
+      };
+      window.addEventListener("focus", handleWindowFocus);
+    }
+    // 모바일은 리다이렉트되므로 별도 처리 불필요
+  } catch (err: unknown) {
     console.error("네이버페이 결제 오류", err);
     isPaymentPopupOpen.value = false; // 에러 시 버튼 다시 활성화
-    throw new Error(err.message || "네이버페이 결제 호출에 실패했습니다.");
+    const errorMessage = err instanceof Error ? err.message : "네이버페이 결제 호출에 실패했습니다.";
+    throw new Error(errorMessage);
   }
 };
 
@@ -374,6 +539,14 @@ const saveDefaultAddressIfNeeded = async () => {
 
 onMounted(() => {
   loadData();
+});
+
+// 페이지 이탈 시 바로 구매 세션 정리
+onUnmounted(() => {
+  // 결제 완료 콜백으로 이동하는 경우는 정리하지 않음
+  if (!window.location.pathname.includes("/payment/callback")) {
+    sessionStorage.removeItem("directPurchase");
+  }
 });
 </script>
 
@@ -451,13 +624,13 @@ onMounted(() => {
         <Card>
           <CardHeader>
             <CardTitle class="text-heading"
-              >주문 상품 ({{ cartItems.length }}개)</CardTitle
+              >주문 상품 ({{ orderItems.length }}개)</CardTitle
             >
           </CardHeader>
           <CardContent class="p-0">
             <div class="divide-y divide-border">
               <div
-                v-for="item in cartItems"
+                v-for="item in orderItems"
                 :key="item.id"
                 class="flex gap-4 pl-4 pr-7 pb-4 items-start"
               >
@@ -505,16 +678,16 @@ onMounted(() => {
             <CardContent class="space-y-3">
               <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">총 상품 금액</span>
-                <span>{{ formatPrice(totalAmount - shippingFee) }}</span>
+                <span>{{ formatPrice(orderSubtotal) }}</span>
               </div>
               <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">배송비</span>
-                <span>{{ formatPrice(shippingFee) }}</span>
+                <span>{{ formatPrice(orderShippingFee) }}</span>
               </div>
               <div class="border-t pt-3 flex justify-between items-center">
                 <span class="font-bold text-heading">합계</span>
                 <span class="font-bold text-heading text-primary">{{
-                  formatPrice(totalAmount)
+                  formatPrice(orderTotalAmount)
                 }}</span>
               </div>
             </CardContent>
@@ -568,7 +741,7 @@ onMounted(() => {
               결제 진행 중...
             </template>
             <template v-else>
-              {{ formatPrice(totalAmount) }} 결제하기
+              {{ formatPrice(orderTotalAmount) }} 결제하기
             </template>
           </Button>
           <p

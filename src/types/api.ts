@@ -180,6 +180,51 @@ export interface OrderStatusCounts {
   delivered: number;
 }
 
+// 바로 구매용 상품 정보 (백엔드 요청용)
+export interface DirectPurchaseItem {
+  productId: string;
+  variantId?: string;
+  quantity: number;
+}
+
+// 바로 구매 상품의 표시용 정보
+export interface DirectPurchaseProductInfo {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+}
+
+// 바로 구매 상품의 옵션 정보
+export interface DirectPurchaseVariantInfo {
+  id: string;
+  size: string;
+  color?: string;
+}
+
+// 세션 스토리지에 저장되는 바로 구매 전체 데이터
+export interface DirectPurchaseData {
+  id: string;
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  product: DirectPurchaseProductInfo;
+  variant: DirectPurchaseVariantInfo | null;
+}
+
+// 장바구니 추가 시 상품 정보 (비회원용 캐싱)
+export interface CartProductInfo {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  variant?: {
+    id: string;
+    size: string;
+    color?: string;
+  } | null;
+}
+
 // 주문 생성 요청 타입
 export interface CreateOrderRequest {
   shippingName: string;
@@ -189,6 +234,7 @@ export interface CreateOrderRequest {
   shippingDetailAddress?: string; // 상세 주소 (NEW)
   shippingRequestNote?: string; // 배송 요청사항 (NEW)
   paymentMethod?: "toss" | "naverpay"; // 결제 수단
+  directPurchaseItem?: DirectPurchaseItem; // 바로 구매 시 상품 정보
 }
 
 // 주문 생성 응답 타입
@@ -302,6 +348,7 @@ export interface NaverPaySdkConfigResponse {
   chainId: string; // merchantId와 동일, 체인 ID
   mode: "development" | "production";
   payType: "normal" | "recurrent";
+  openType: "popup" | "page"; // 결제창 오픈 방식 (popup: 모달, page: 리다이렉트)
   returnUrl: string; // 결제 완료 후 리다이렉트 URL
 }
 

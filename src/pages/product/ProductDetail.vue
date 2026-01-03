@@ -37,6 +37,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, type AlertType, ERROR_MESSAGES } from "@/components/ui/alert";
+import type { DirectPurchaseData, CartProductInfo } from "@/types/api";
+import {
+  isValidQuantity,
+  isValidPrice,
+  isValidUUID,
+  QUANTITY_LIMITS,
+} from "@/lib/validators";
 
 const route = useRoute();
 const router = useRouter();
@@ -71,6 +78,13 @@ const showAlert = ref(false);
 const alertMessage = ref("");
 const alertType = ref<AlertType>("success");
 
+// Alert 표시 헬퍼 함수
+const displayAlert = (message: string, type: AlertType = "error") => {
+  alertMessage.value = message;
+  alertType.value = type;
+  showAlert.value = true;
+};
+
 // 장바구니 이동 확인 다이얼로그 상태
 const showCartConfirm = ref(false);
 
@@ -86,9 +100,7 @@ const handleToggleWishlist = () => {
   requireAuth(async () => {
     const success = await wishlistToggle.toggle();
     if (!success) {
-      alertMessage.value = ERROR_MESSAGES.serverError;
-      alertType.value = "error";
-      showAlert.value = true;
+      displayAlert(ERROR_MESSAGES.serverError);
     }
   });
 };
@@ -97,30 +109,29 @@ const handleToggleWishlist = () => {
 const handleAddToCart = async () => {
   // 1. 옵션 선택 필수 체크
   if (variantSelection.needsVariantSelection.value) {
-    alertMessage.value = "옵션을 선택해주세요.";
-    alertType.value = "error";
-    showAlert.value = true;
+    displayAlert("옵션을 선택해주세요.");
     return;
   }
 
   // 2. 재고 확인
   if (!variantSelection.isStockAvailable.value) {
-    alertMessage.value = "재고가 부족합니다.";
-    alertType.value = "error";
-    showAlert.value = true;
+    displayAlert("재고가 부족합니다.");
     return;
   }
 
-  // 1) 상품 ID (UUID)
-  const pid = productData.product.value!.id;
+  // 3. 상품 데이터 존재 확인
+  const product = productData.product.value;
+  if (!product) {
+    displayAlert("상품 정보를 불러올 수 없습니다.");
+    return;
+  }
 
-  // 2) 옵션 ID (UUID)
   const vid = variantSelection.selectedVariantId.value || undefined;
 
-  // 3. 장바구니 로드 후 기존 상품 체크
+  // 4. 장바구니 로드 후 기존 상품 체크
   await cart.loadCart();
   const existing = cart.cartItems.value.find(
-    (item) => item.productId === pid && item.variantId === vid
+    (item) => item.productId === product.id && item.variantId === vid
   );
 
   if (existing) {
@@ -136,40 +147,69 @@ const handleAddToCart = async () => {
 
 // 실제 장바구니 추가 처리
 const proceedAddToCart = async () => {
-  // 1) 상품 ID (UUID)
-  const pid = productData.product.value!.id;
+  // 상품 데이터 존재 확인
+  const product = productData.product.value;
+  if (!product) {
+    displayAlert("상품 정보를 불러올 수 없습니다.");
+    return;
+  }
 
-  // 2) 옵션 ID (UUID)
   const vid = variantSelection.selectedVariantId.value || undefined;
-
-  // 3) 수량 변환
   const qty = Number(variantSelection.quantity.value);
 
-  // [중요] 비회원 장바구니를 위한 상품 정보 구성
-  // useCart.ts의 addItem에서 로컬 저장 시 이 정보를 사용함
-  const productInfo = {
-    id: pid,
-    name: productData.product.value!.name,
-    price: productData.product.value!.price,
-    imageUrl: productData.product.value!.imageUrl,
-    variant: vid ? productData.variants.value.find((v) => v.id === vid) : null,
+  // 수량 검증
+  if (!isValidQuantity(qty)) {
+    displayAlert(
+      `수량은 ${QUANTITY_LIMITS.MIN}~${QUANTITY_LIMITS.MAX}개 사이로 입력해주세요.`
+    );
+    return;
+  }
+
+  // 가격 검증
+  const price = Number(product.price);
+  if (!isValidPrice(price)) {
+    displayAlert("상품 가격 정보가 올바르지 않습니다.");
+    return;
+  }
+
+  // 상품 ID 검증
+  if (!isValidUUID(product.id)) {
+    displayAlert("상품 정보가 올바르지 않습니다.");
+    return;
+  }
+
+  const selectedVariant = vid
+    ? productData.variants.value.find((v) => v.id === vid)
+    : null;
+
+  // 비회원 장바구니를 위한 상품 정보 구성 (타입 명시)
+  const productInfo: CartProductInfo = {
+    id: product.id,
+    name: product.name,
+    price: price,
+    imageUrl: product.imageUrl,
+    variant: selectedVariant
+      ? {
+          id: selectedVariant.id,
+          size: selectedVariant.size,
+          color: selectedVariant.color,
+        }
+      : null,
   };
 
   // API 호출 (비회원은 내부적으로 localStorage 사용)
   const success = await addItem({
-    productId: pid, // UUID
+    productId: product.id,
     variantId: vid,
     quantity: qty,
-    productInfo: productInfo, // [추가] 상품 상세 정보 전달
+    productInfo: productInfo,
   });
 
   if (success) {
     // 장바구니 이동 확인 다이얼로그 표시
     showCartConfirm.value = true;
   } else {
-    alertMessage.value = "장바구니 담기에 실패했습니다.";
-    alertType.value = "error";
-    showAlert.value = true;
+    displayAlert("장바구니 담기에 실패했습니다.");
   }
 };
 
@@ -190,6 +230,80 @@ const handleCancelDuplicate = () => {
 const handleGoToCart = () => {
   showCartConfirm.value = false;
   router.push("/cart");
+};
+
+// 바로 구매 (해당 상품만 주문 페이지로 이동)
+const handleBuyNow = async () => {
+  // 1. 옵션 선택 필수 체크
+  if (variantSelection.needsVariantSelection.value) {
+    displayAlert("옵션을 선택해주세요.");
+    return;
+  }
+
+  // 2. 재고 확인
+  if (!variantSelection.isStockAvailable.value) {
+    displayAlert("재고가 부족합니다.");
+    return;
+  }
+
+  // 3. 상품 데이터 존재 확인
+  const product = productData.product.value;
+  if (!product) {
+    displayAlert("상품 정보를 불러올 수 없습니다.");
+    return;
+  }
+
+  // 4. 수량 검증
+  const qty = Number(variantSelection.quantity.value);
+  if (!isValidQuantity(qty)) {
+    displayAlert(
+      `수량은 ${QUANTITY_LIMITS.MIN}~${QUANTITY_LIMITS.MAX}개 사이로 입력해주세요.`
+    );
+    return;
+  }
+
+  // 5. 가격 및 상품 ID 검증
+  const price = Number(product.price);
+  if (!isValidPrice(price) || !isValidUUID(product.id)) {
+    displayAlert("상품 정보가 올바르지 않습니다.");
+    return;
+  }
+
+  // 6. 로그인 체크 (주문 페이지는 로그인 필수)
+  requireAuth(() => {
+    const vid = variantSelection.selectedVariantId.value || undefined;
+    const selectedVariant = vid
+      ? productData.variants.value.find((v) => v.id === vid)
+      : null;
+
+    // 바로 구매 상품 정보를 세션 스토리지에 저장 (타입 명시)
+    const directPurchaseItem: DirectPurchaseData = {
+      id: `direct_${Date.now()}`,
+      productId: product.id,
+      variantId: vid,
+      quantity: qty,
+      product: {
+        id: product.id,
+        name: product.name,
+        price: price, // 이미 검증된 가격 사용
+        imageUrl: product.imageUrl,
+      },
+      variant: selectedVariant
+        ? {
+            id: selectedVariant.id,
+            size: selectedVariant.size,
+            color: selectedVariant.color,
+          }
+        : null,
+    };
+
+    sessionStorage.setItem(
+      "directPurchase",
+      JSON.stringify(directPurchaseItem)
+    );
+
+    router.push("/order?direct=true");
+  });
 };
 
 // 계속 쇼핑하기
@@ -312,9 +426,9 @@ onMounted(async () => {
         <Card class="sticky top-24">
           <CardContent class="p-6">
             <div class="flex justify-between items-start gap-3 mb-2">
-              <h1 class="text-heading text-foreground font-bold">
+              <h3 class="text-body font-medium">
                 {{ productData.product.value.name }}
-              </h1>
+              </h3>
 
               <!-- 데스크톱 위시리스트 버튼 -->
               <button
@@ -334,7 +448,7 @@ onMounted(async () => {
             </div>
 
             <div class="flex items-baseline gap-2 mb-4 -translate-y-4">
-              <span class="text-body text-foreground">
+              <span class="text-body text-muted-foreground">
                 {{ formatPrice(productData.product.value.price) }}
               </span>
               <span
@@ -385,18 +499,27 @@ onMounted(async () => {
               <QuantitySelector v-model="variantSelection.quantity.value" />
             </div>
 
-            <div class="mb-6">
+            <div class="mb-6 flex flex-col gap-3">
               <Button
                 @click="handleAddToCart"
                 :disabled="variantSelection.needsVariantSelection.value"
-                class="w-full"
+                class="w-full text-primary"
                 size="lg"
+                variant="outline"
               >
                 {{
                   variantSelection.needsVariantSelection.value
                     ? "옵션을 선택해주세요"
                     : "장바구니 담기"
                 }}
+              </Button>
+              <Button
+                @click="handleBuyNow"
+                :disabled="variantSelection.needsVariantSelection.value"
+                class="w-full"
+                size="lg"
+              >
+                바로 구매
               </Button>
             </div>
 

@@ -67,6 +67,8 @@ interface NaverPayCreateOptions {
   chainId: string;
   /** 결제 타입 */
   payType: "normal" | "recurrent";
+  /** 결제창 오픈 방식 (popup: 모달/팝업, page: 리다이렉트) */
+  openType?: "popup" | "page";
 }
 
 /** 전역 Window 확장 */

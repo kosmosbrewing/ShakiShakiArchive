@@ -143,7 +143,7 @@ watch(
     <!-- 상품 카드 목록 -->
     <Card
       v-else
-      v-for="({ id, imageUrl, name, price }, idx) in productList"
+      v-for="({ id, imageUrl, name, price }, idx) in productList.slice(0, 4)"
       :key="id"
       class="product-card bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
       :style="{ animationDelay: `${idx * 0.05}s` }"
