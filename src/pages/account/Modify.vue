@@ -2,7 +2,7 @@
 // src/pages/Modify.vue
 // 회원정보 수정 페이지
 
-import { ref, reactive, onMounted, nextTick } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
@@ -99,13 +99,14 @@ const showValidationError = (message: string, focusRef?: any) => {
   showAlert.value = true;
 
   if (focusRef) {
-    nextTick(() => {
+    // Alert가 표시된 후 해당 필드에 focus
+    setTimeout(() => {
       if (focusRef.value?.$el) {
         focusRef.value.$el.focus();
       } else if (focusRef.value?.focus) {
         focusRef.value.focus();
       }
-    });
+    }, 100);
   }
 };
 
@@ -147,8 +148,10 @@ const handleUpdateProfile = async () => {
     alertType.value = "success";
     showAlert.value = true;
 
-    // 비밀번호 필드 초기화
-    form.currentPassword = "";
+    // 잠시 후 Account 페이지로 이동
+    setTimeout(() => {
+      router.push("/account");
+    }, 1500);
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : "정보 수정 실패";
     if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
@@ -203,10 +206,10 @@ const handleChangePassword = async () => {
     alertType.value = "success";
     showAlert.value = true;
 
-    // 폼 초기화
-    passwordForm.currentPassword = "";
-    passwordForm.newPassword = "";
-    passwordForm.confirmNewPassword = "";
+    // 잠시 후 Account 페이지로 이동
+    setTimeout(() => {
+      router.push("/account");
+    }, 1500);
   } catch (error: unknown) {
     const errMsg =
       error instanceof Error ? error.message : "비밀번호 변경 실패";
