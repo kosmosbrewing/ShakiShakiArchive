@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive, nextTick } from "vue";
+import { ref, computed, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { sendVerification, verifyEmail } from "@/lib/api";
@@ -10,7 +10,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Search,
   Mail,
   KeyRound,
 } from "lucide-vue-next";
@@ -151,7 +150,8 @@ const showValidationError = (
   showAlert.value = true;
 
   if (focusRef) {
-    nextTick(() => {
+    // Alert가 표시된 후 해당 필드에 focus
+    setTimeout(() => {
       if (isPhoneInput) {
         focusRef.value?.focusFirst?.();
       } else if (focusRef.value?.$el) {
@@ -159,7 +159,7 @@ const showValidationError = (
       } else if (focusRef.value?.focus) {
         focusRef.value.focus();
       }
-    });
+    }, 100);
   }
 };
 
@@ -423,42 +423,38 @@ const handleSignup = async () => {
               v-model:phone3="formData.phone3"
             />
           </div>
-          <div class="flex flex-col gap-2">
+          <div class="space-y-2">
             <Label>주소</Label>
-            <div class="flex gap-2">
+            <div class="space-y-2">
+              <div class="flex gap-2">
+                <Input
+                  v-model="formData.zipCode"
+                  type="text"
+                  readonly
+                  placeholder="우편번호"
+                  class="w-32 bg-muted"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  @click="openAddressSearch"
+                >
+                  주소검색
+                </Button>
+              </div>
               <Input
-                v-model="formData.zipCode"
-                placeholder="우편번호"
+                v-model="formData.address"
+                type="text"
                 readonly
-                class="bg-gray/50"
+                placeholder="기본 주소"
+                class="bg-muted"
               />
-              <Button
-                type="button"
-                variant="outline"
-                class="w-28 shrink-0"
-                @click="openAddressSearch"
-              >
-                <Search class="w-4 h-4 mr-2" /> 주소검색
-              </Button>
+              <Input
+                v-model="formData.detailAddress"
+                type="text"
+                placeholder="상세 주소 입력"
+              />
             </div>
-
-            <Input
-              v-model="formData.address"
-              placeholder="기본 주소"
-              readonly
-              class="bg-gray/50"
-            />
-
-            <Input
-              v-model="formData.detailAddress"
-              :disabled="!formData.address"
-              :placeholder="
-                formData.address
-                  ? '상세 주소를 입력해주세요'
-                  : '주소 검색 후 입력 가능합니다'
-              "
-              class="disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
           </div>
 
           <div class="flex items-center space-x-2 mt-2">
