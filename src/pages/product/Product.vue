@@ -3,9 +3,9 @@
 // 상품 목록 페이지 컴포넌트 (무한 스크롤 지원)
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { Heart, Search, X, Loader2 } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
@@ -18,11 +18,24 @@ import { useOptimizedImage } from "@/composables";
 import { Input } from "@/components/ui/input";
 import { useDebounceFn } from "@vueuse/core";
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
 const { showAlert, showConfirm } = useAlert();
 const { card } = useOptimizedImage();
+
+// 카테고리 파라미터가 있는지 확인 (라우트에서 사용될 때)
+const hasCategory = computed(() => !!route.params.category);
+
+// 화면에 표시할 상품 목록 (Home에서는 5번째부터, 라우트에서는 전체)
+const displayProducts = computed(() => {
+  if (hasCategory.value) {
+    return productList.value;
+  }
+  // Home에서 사용될 때: ProductHome이 0~3을 보여주므로 4번 인덱스부터 출력
+  return productList.value.slice(4);
+});
 
 // 상품 목록 composable (무한 스크롤 지원)
 const {
@@ -50,7 +63,12 @@ const setupIntersectionObserver = () => {
     (entries) => {
       const entry = entries[0];
       // 타겟이 화면에 보이고, 로딩 중이 아니며, 더 불러올 데이터가 있을 때
-      if (entry.isIntersecting && !loadingMore.value && hasMore.value && !loading.value) {
+      if (
+        entry.isIntersecting &&
+        !loadingMore.value &&
+        hasMore.value &&
+        !loading.value
+      ) {
         loadMoreProducts();
       }
     },
@@ -142,8 +160,8 @@ onUnmounted(() => {
 
 <template>
   <section class="w-11/12 max-w-screen-2xl mx-auto py-4 sm:py-8">
-    <!-- 검색 입력 영역 -->
-    <div class="mb-6">
+    <!-- 검색 입력 영역 (카테고리 라우트에서만 활성화) -->
+    <div v-if="hasCategory" class="mb-6 pt-8">
       <div class="relative max-w-md">
         <Search
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
@@ -164,7 +182,10 @@ onUnmounted(() => {
           <X class="w-4 h-4" />
         </button>
       </div>
-      <p v-if="searchQuery && !loading" class="mt-2 text-sm text-muted-foreground">
+      <p
+        v-if="searchQuery && !loading"
+        class="mt-2 text-sm text-muted-foreground"
+      >
         "{{ searchQuery }}" 검색 결과: {{ totalProducts }}개
       </p>
     </div>
@@ -177,9 +198,13 @@ onUnmounted(() => {
 
       <!-- 빈 상태 (검색 결과 없음 또는 상품 없음) -->
       <EmptyState
-        v-else-if="productList.length === 0"
+        v-else-if="displayProducts.length === 0"
         :header="searchQuery ? '검색 결과 없음' : '상품 없음'"
-        :message="searchQuery ? `'${searchQuery}'에 대한 검색 결과가 없습니다.` : '등록된 상품이 없습니다.'"
+        :message="
+          searchQuery
+            ? `'${searchQuery}'에 대한 검색 결과가 없습니다.`
+            : '등록된 상품이 없습니다.'
+        "
         :button-text="searchQuery ? '검색어 초기화' : '홈으로 이동'"
         :button-link="searchQuery ? '' : '/'"
         @action="clearSearch"
@@ -189,7 +214,7 @@ onUnmounted(() => {
       <!-- 상품 카드 목록 -->
       <Card
         v-else
-        v-for="({ id, imageUrl, name, price }, idx) in productList"
+        v-for="({ id, imageUrl, name, price }, idx) in displayProducts"
         :key="id"
         class="product-card bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
         :style="{ animationDelay: `${idx * 0.05}s` }"
@@ -242,17 +267,23 @@ onUnmounted(() => {
       </Card>
     </div>
 
-    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
+    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 (카테고리 라우트에서만 표시) -->
     <div
-      v-if="productList.length > 0"
+      v-if="hasCategory && displayProducts.length > 0"
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >
-      <div v-if="loadingMore" class="flex items-center gap-2 text-muted-foreground">
+      <div
+        v-if="loadingMore"
+        class="flex items-center gap-2 text-muted-foreground"
+      >
         <Loader2 class="w-5 h-5 animate-spin" />
         <span class="text-body">상품을 불러오는 중...</span>
       </div>
-      <div v-else-if="!hasMore && productList.length > 0" class="text-body text-muted-foreground">
+      <div
+        v-else-if="!hasMore && displayProducts.length > 0"
+        class="text-body text-muted-foreground"
+      >
         모든 상품을 불러왔습니다
       </div>
     </div>
