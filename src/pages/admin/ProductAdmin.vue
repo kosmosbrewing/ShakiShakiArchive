@@ -41,9 +41,6 @@ import {
   X,
   Check,
   PlusCircle,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
@@ -386,7 +383,9 @@ const handleSaveVariant = async () => {
     isEditMode.value = false;
   } catch (error: any) {
     console.error(error);
-    showAlert("저장 실패: " + (error.message || "알 수 없는 오류"), { type: "error" });
+    showAlert("저장 실패: " + (error.message || "알 수 없는 오류"), {
+      type: "error",
+    });
   }
 };
 
@@ -574,8 +573,6 @@ onMounted(async () => {
                     class="inline-flex items-center gap-1 hover:text-primary transition-colors"
                   >
                     수정일
-                    <ArrowDown v-if="sortOrder === 'desc'" class="w-3.5 h-3.5" />
-                    <ArrowUp v-else class="w-3.5 h-3.5" />
                   </button>
                 </th>
               </tr>
@@ -798,10 +795,7 @@ onMounted(async () => {
             <!-- 수정일 설정 (수정 모드에서만 표시) -->
             <div v-if="isEditMode" class="space-y-2">
               <Label class="text-admin">수정일 (updatedAt)</Label>
-              <Input
-                v-model="productForm.updatedAt"
-                type="datetime-local"
-              />
+              <Input v-model="productForm.updatedAt" type="datetime-local" />
               <p class="text-caption text-muted-foreground">
                 비워두면 현재 시간으로 자동 설정됩니다.
               </p>
@@ -918,7 +912,9 @@ onMounted(async () => {
 
               <form @submit.prevent="handleSaveVariant" class="space-y-5">
                 <div class="space-y-2">
-                  <Label class="text-muted-foreground">재고관리코드 (SKU)</Label>
+                  <Label class="text-muted-foreground"
+                    >재고관리코드 (SKU)</Label
+                  >
                   <Input
                     v-model="variantForm.sku"
                     type="text"
