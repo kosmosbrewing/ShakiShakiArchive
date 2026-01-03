@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive, nextTick } from "vue";
+import { ref, computed, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { sendVerification, verifyEmail } from "@/lib/api";
+
+// 환경 체크: Production 환경에서는 준비중 표시
+const isProduction = computed(() => import.meta.env.MODE === "production");
 import {
   Loader2,
   CheckCircle2,
@@ -128,14 +131,21 @@ const openAddressSearch = () => {
 };
 
 // 주소 선택 핸들러
-const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+const handleAddressSelect = (address: {
+  zonecode: string;
+  address: string;
+}) => {
   formData.zipCode = address.zonecode;
   formData.address = address.address;
   formData.detailAddress = ""; // 상세 주소 초기화
 };
 
 // 유효성 검사 및 Alert 표시 헬퍼
-const showValidationError = (message: string, focusRef?: any, isPhoneInput = false) => {
+const showValidationError = (
+  message: string,
+  focusRef?: any,
+  isPhoneInput = false
+) => {
   alertMessage.value = message;
   alertType.value = "error";
   showAlert.value = true;
@@ -168,15 +178,24 @@ const handleSignup = async () => {
     return;
   }
   if (formData.password.length < 8) {
-    showValidationError("비밀번호는 최소 8자 이상이어야 합니다.", passwordInputRef);
+    showValidationError(
+      "비밀번호는 최소 8자 이상이어야 합니다.",
+      passwordInputRef
+    );
     return;
   }
   if (!formData.confirmPassword) {
-    showValidationError("비밀번호 확인을 입력해주세요.", confirmPasswordInputRef);
+    showValidationError(
+      "비밀번호 확인을 입력해주세요.",
+      confirmPasswordInputRef
+    );
     return;
   }
   if (formData.password !== formData.confirmPassword) {
-    showValidationError("비밀번호가 일치하지 않습니다.", confirmPasswordInputRef);
+    showValidationError(
+      "비밀번호가 일치하지 않습니다.",
+      confirmPasswordInputRef
+    );
     return;
   }
 
@@ -235,7 +254,25 @@ const handleSignup = async () => {
       <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
     </div>
 
-    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+    <!-- Production 환경: 준비중 안내 -->
+    <Card v-if="isProduction" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+      <CardContent class="py-16 text-center">
+        <div class="flex flex-col items-center gap-4">
+          <AlertCircle class="w-16 h-16 text-muted-foreground" />
+          <h3 class="text-xl font-semibold text-foreground">준비중입니다</h3>
+          <p class="text-muted-foreground">
+            회원가입 기능은 현재 준비중입니다.<br />
+            빠른 시일 내에 서비스를 오픈할 예정입니다.
+          </p>
+          <router-link to="/">
+            <Button variant="outline" class="mt-4">홈으로 돌아가기</Button>
+          </router-link>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- 개발 환경: 기존 회원가입 폼 -->
+    <Card v-else class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
       <CardContent>
         <form @submit.prevent="handleSignup" class="grid gap-6">
           <div class="flex flex-col gap-1.5 mt-6">
@@ -278,9 +315,7 @@ const handleSignup = async () => {
               </Button>
             </div>
             <p
-              v-if="
-                verificationState.errorMessage && !verificationState.isSent
-              "
+              v-if="verificationState.errorMessage && !verificationState.isSent"
               class="text-caption text-red-500"
             >
               {{ verificationState.errorMessage }}
@@ -459,7 +494,7 @@ const handleSignup = async () => {
       </CardContent>
     </Card>
 
-    <p class="text-center text-muted-foreground mt-4">
+    <p v-if="!isProduction" class="text-center text-muted-foreground mt-4">
       이미 계정이 있으신가요?
       <router-link to="/login" class="text-primary hover:underline font-medium"
         >로그인하기</router-link
