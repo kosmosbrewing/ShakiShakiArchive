@@ -8,9 +8,9 @@ import { Separator } from "@/components/ui/separator";
 </script>
 
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-fade-in">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
     <!-- 좌측: 이미지 갤러리 스켈레톤 -->
-    <div class="lg:col-span-3 space-y-4">
+    <div class="lg:col-span-1 space-y-4">
       <!-- 메인 이미지 -->
       <Card class="overflow-hidden">
         <Skeleton class="aspect-[3/4] w-full rounded-none" />
@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
     </div>
 
     <!-- 우측: 상품 정보 스켈레톤 -->
-    <div class="lg:col-span-2">
+    <div class="lg:col-span-1">
       <Card class="sticky top-24">
         <CardContent class="p-6 space-y-6">
           <!-- 상품명 -->

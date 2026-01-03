@@ -41,6 +41,9 @@ import {
   X,
   Check,
   PlusCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
@@ -91,6 +94,7 @@ const initialProductForm = {
   images: [] as string[], // 상품 이미지 배열
   detailImages: [] as string[], // 상세 이미지 배열
   isAvailable: true,
+  updatedAt: "", // 수정일 직접 설정용
 };
 const productForm = reactive({ ...initialProductForm });
 
@@ -142,13 +146,29 @@ const measurementFields: { id: keyof MeasurementForm; label: string }[] = [
   { id: "displayOrder", label: "출력순서" },
 ];
 
+// --- 정렬 상태 ---
+const sortOrder = ref<"asc" | "desc">("desc"); // 기본: 최신순
+
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === "desc" ? "asc" : "desc";
+  currentPage.value = 1; // 정렬 변경 시 첫 페이지로 이동
+};
+
 // --- Computed ---
+const sortedProducts = computed(() => {
+  return [...products.value].sort((a, b) => {
+    const dateA = new Date(a.updatedAt || 0).getTime();
+    const dateB = new Date(b.updatedAt || 0).getTime();
+    return sortOrder.value === "desc" ? dateB - dateA : dateA - dateB;
+  });
+});
+
 const totalPages = computed(() =>
-  Math.ceil(products.value.length / itemsPerPage)
+  Math.ceil(sortedProducts.value.length / itemsPerPage)
 );
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return products.value.slice(start, start + itemsPerPage);
+  return sortedProducts.value.slice(start, start + itemsPerPage);
 });
 const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) currentPage.value = page;
@@ -195,14 +215,39 @@ const openCreateProductModal = () => {
   isProductModalOpen.value = true;
 };
 
+// 수정일 표시용 포맷 (KST 기준, YYYY.MM.DD)
+const formatDisplayDate = (isoString: string) => {
+  if (!isoString) return "-";
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
+};
+
+// ISO 문자열을 datetime-local input 형식으로 변환 (KST 기준)
+const formatDateTimeLocal = (isoString: string) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  // 로컬 시간(KST) 기준으로 "YYYY-MM-DDTHH:mm" 형식 생성
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const openEditProductModal = (product: any) => {
   isEditMode.value = true;
   Object.assign(productForm, {
     ...product,
     price: Number(product.price),
     originalPrice: Number(product.originalPrice || 0),
+    categoryId: String(product.categoryId), // Select 컴포넌트 value와 타입 일치 필요
     images: product.images || [],
     detailImages: product.detailImages || [],
+    updatedAt: formatDateTimeLocal(product.updatedAt),
   });
   errorMessage.value = "";
   isProductModalOpen.value = true;
@@ -220,7 +265,7 @@ const handleSaveProduct = async () => {
       errorMessage.value = "필수 항목(*)을 모두 입력해주세요.";
       return;
     }
-    const payload = {
+    const payload: Record<string, any> = {
       name: productForm.name,
       slug: productForm.slug,
       description: productForm.description,
@@ -237,6 +282,14 @@ const handleSaveProduct = async () => {
     };
 
     if (isEditMode.value) {
+      // 수정 모드에서 updatedAt이 설정된 경우 ISO 형식으로 변환하여 전송
+      if (productForm.updatedAt) {
+        const date = new Date(productForm.updatedAt);
+        // 유효한 날짜인지 확인
+        if (!isNaN(date.getTime())) {
+          payload.updatedAt = date.toISOString();
+        }
+      }
       await updateProduct(productForm.id, payload);
       showAlert("상품이 수정되었습니다.");
     } else {
@@ -421,6 +474,22 @@ const handleDeleteMeasurement = (id: string) => {
   openDeleteConfirm("measurement", id, "삭제하시겠습니까?");
 };
 
+// 상품명 변경 시 Slug 자동 생성
+watch(
+  () => productForm.name,
+  (newName) => {
+    if (newName) {
+      // 공백을 '-'로 치환, 연속 하이픈 제거, 앞뒤 하이픈 제거, 소문자 변환
+      productForm.slug = newName
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+  }
+);
+
 watch(
   // 감시 대상: 사이즈와 색상 입력값
   [() => variantForm.size, () => variantForm.color],
@@ -498,7 +567,17 @@ onMounted(async () => {
                 <th class="px-6 py-5 text-center">판매가</th>
                 <th class="px-6 py-5 text-center">상태</th>
                 <th class="px-6 py-5 text-center">관리 도구</th>
-                <th class="px-6 py-5 text-right pr-10">작업</th>
+                <th class="px-6 py-5 text-center">작업</th>
+                <th class="px-6 py-5 text-right pr-10">
+                  <button
+                    @click="toggleSortOrder"
+                    class="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    수정일
+                    <ArrowDown v-if="sortOrder === 'desc'" class="w-3.5 h-3.5" />
+                    <ArrowUp v-else class="w-3.5 h-3.5" />
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -577,8 +656,8 @@ onMounted(async () => {
                     </Button>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex justify-end gap-1">
+                <td class="px-6 py-4 text-center">
+                  <div class="flex justify-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -596,6 +675,11 @@ onMounted(async () => {
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
+                </td>
+                <td class="px-6 py-4 text-right pr-10">
+                  <span class="text-caption text-admin-muted">
+                    {{ formatDisplayDate(product.updatedAt) }}
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -709,6 +793,18 @@ onMounted(async () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <!-- 수정일 설정 (수정 모드에서만 표시) -->
+            <div v-if="isEditMode" class="space-y-2">
+              <Label class="text-admin">수정일 (updatedAt)</Label>
+              <Input
+                v-model="productForm.updatedAt"
+                type="datetime-local"
+              />
+              <p class="text-caption text-muted-foreground">
+                비워두면 현재 시간으로 자동 설정됩니다.
+              </p>
             </div>
 
             <div class="space-y-6">

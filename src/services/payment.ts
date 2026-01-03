@@ -302,17 +302,19 @@ export interface NaverPayInstance {
 }
 
 /**
- * 네이버페이 SDK 초기화 (신규 - payType 파라미터 추가)
+ * 네이버페이 SDK 초기화 (openType 파라미터 추가로 팝업 방식 지원)
  * @param clientId - 네이버페이 클라이언트 ID
  * @param chainId - 네이버페이 체인 ID (merchantId)
  * @param mode - 환경 ("development" | "production")
  * @param payType - 결제 타입 ("normal" | "recurrent")
+ * @param openType - 결제창 오픈 방식 ("popup" | "page"), 기본값 "popup" (모달 방식)
  */
 export function initNaverPay(
   clientId: string,
   chainId: string,
   mode: "development" | "production" = "development",
-  payType: "normal" | "recurrent" = "normal"
+  payType: "normal" | "recurrent" = "normal",
+  openType: "popup" | "page" = "popup"
 ): NaverPayInstance | null {
   if (!window.Naver?.Pay?.create) {
     console.error("네이버페이 SDK가 로드되지 않았습니다.");
@@ -324,6 +326,7 @@ export function initNaverPay(
     clientId,
     chainId,
     payType,
+    openType,
   });
 }
 
