@@ -86,14 +86,14 @@ const sendVerificationCode = async () => {
 
   try {
     await sendVerification(formData.email, "password_reset");
-    verificationState.isSent = true;
-    verificationState.errorMessage = "";
-    currentStep.value = 2;
-  } catch (error: any) {
-    verificationState.errorMessage =
-      error.message || "인증코드 발송에 실패했습니다.";
+  } catch (error: unknown) {
+    // 보안을 위해 이메일 존재 여부와 관계없이 동일하게 처리
+    console.log("Password reset request processed");
   } finally {
+    // 성공/실패와 관계없이 동일하게 다음 단계로 이동
+    verificationState.isSent = true;
     verificationState.isLoading = false;
+    currentStep.value = 2;
   }
 };
 
@@ -273,7 +273,7 @@ const goToLogin = () => {
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">
-              이메일로 발송된 6자리 인증번호를 입력해주세요.
+              입력하신 이메일이 등록되어 있다면, 인증번호가 발송되었습니다.
             </p>
             <p
               v-if="verificationState.errorMessage"
