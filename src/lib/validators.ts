@@ -1,35 +1,66 @@
 // src/lib/validators.ts
 // 공통 데이터 검증 유틸리티
+// 상수 값은 useConstantsStore에서 관리됩니다.
 
 import type {
   DirectPurchaseData,
   CartProductInfo,
   DirectPurchaseItem,
 } from "@/types/api";
+import { getActivePinia } from "pinia";
+import { useConstantsStore } from "@/stores/constants";
 
-// 수량 검증 상수
-export const QUANTITY_LIMITS = {
-  MIN: 1,
-  MAX: 99,
-} as const;
-
-// 가격 검증 상수
-export const PRICE_LIMITS = {
-  MIN: 0,
-  MAX: 100_000_000, // 1억원
-} as const;
-
-// 배송비 관련 상수
-export const SHIPPING_CONFIG = {
-  FREE_THRESHOLD: 50000, // 무료 배송 기준 금액
-  FEE: 3000, // 기본 배송비
-} as const;
+// 폴백 값 (Pinia 미초기화 시 사용)
+const FALLBACK_QUANTITY = { MIN: 1, MAX: 99 };
+const FALLBACK_PRICE = { MIN: 0, MAX: 100000000 };
+const FALLBACK_SHIPPING = { FREE_THRESHOLD: 50000, FEE: 3000 };
 
 /**
- * 배송비 계산
+ * 상수 스토어에서 현재 값을 가져오는 헬퍼
+ * Pinia 미초기화 시 null 반환
+ */
+const getConstantsSafe = () => {
+  try {
+    // Pinia가 초기화되었는지 확인
+    if (!getActivePinia()) {
+      return null;
+    }
+    return useConstantsStore();
+  } catch {
+    return null;
+  }
+};
+
+// 수량 검증 상수 (스토어에서 가져옴, 폴백 포함)
+export const getQuantityLimits = () => {
+  const store = getConstantsSafe();
+  return store?.quantityLimits ?? FALLBACK_QUANTITY;
+};
+
+// 가격 검증 상수 (스토어에서 가져옴, 폴백 포함)
+export const getPriceLimits = () => {
+  const store = getConstantsSafe();
+  return store?.priceLimits ?? FALLBACK_PRICE;
+};
+
+// 배송비 관련 상수 (스토어에서 가져옴, 폴백 포함)
+export const getShippingConfig = () => {
+  const store = getConstantsSafe();
+  return store?.shipping ?? FALLBACK_SHIPPING;
+};
+
+/**
+ * 배송비 계산 (스토어 헬퍼 사용, 폴백 포함)
  */
 export const calculateShippingFee = (subtotal: number): number => {
-  return subtotal >= SHIPPING_CONFIG.FREE_THRESHOLD ? 0 : SHIPPING_CONFIG.FEE;
+  const store = getConstantsSafe();
+  if (store) {
+    return store.calculateShippingFee(subtotal);
+  }
+  // 폴백 계산
+  return subtotal >= FALLBACK_SHIPPING.FREE_THRESHOLD
+    ? 0
+    : FALLBACK_SHIPPING.FEE;
 };
 
 // UUID 형식 검증 (v4)
@@ -44,26 +75,28 @@ export const isValidUUID = (value: unknown): value is string => {
 };
 
 /**
- * 수량 검증
+ * 수량 검증 (스토어의 validation.quantity 사용)
  */
 export const isValidQuantity = (value: unknown): value is number => {
+  const limits = getQuantityLimits();
   return (
     typeof value === "number" &&
     Number.isInteger(value) &&
-    value >= QUANTITY_LIMITS.MIN &&
-    value <= QUANTITY_LIMITS.MAX
+    value >= limits.MIN &&
+    value <= limits.MAX
   );
 };
 
 /**
- * 가격 검증
+ * 가격 검증 (스토어의 validation.price 사용)
  */
 export const isValidPrice = (value: unknown): value is number => {
+  const limits = getPriceLimits();
   return (
     typeof value === "number" &&
     Number.isFinite(value) &&
-    value >= PRICE_LIMITS.MIN &&
-    value <= PRICE_LIMITS.MAX
+    value >= limits.MIN &&
+    value <= limits.MAX
   );
 };
 

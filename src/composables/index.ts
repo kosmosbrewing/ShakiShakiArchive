@@ -9,3 +9,4 @@ export * from "./useWishlist";
 export * from "./useAddresses";
 export * from "./useProduct";
 export * from "./useOptimizedImage";
+export * from "./useOrderItems";

@@ -86,7 +86,10 @@ const openAddressSearch = () => {
 };
 
 // 주소 선택 핸들러
-const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+const handleAddressSelect = (address: {
+  zonecode: string;
+  address: string;
+}) => {
   form.zipCode = address.zonecode;
   form.address = address.address;
   form.detailAddress = ""; // 상세 주소 초기화
@@ -117,7 +120,10 @@ const handleUpdateProfile = async () => {
     return;
   }
   if (!form.currentPassword) {
-    showValidationError("정보를 수정하려면 현재 비밀번호를 입력해주세요.", currentPasswordInputRef);
+    showValidationError(
+      "정보를 수정하려면 현재 비밀번호를 입력해주세요.",
+      currentPasswordInputRef
+    );
     return;
   }
 
@@ -169,7 +175,10 @@ const handleUpdateProfile = async () => {
 // 비밀번호 변경
 const handleChangePassword = async () => {
   if (!passwordForm.currentPassword) {
-    showValidationError("현재 비밀번호를 입력해주세요.", pwCurrentPasswordInputRef);
+    showValidationError(
+      "현재 비밀번호를 입력해주세요.",
+      pwCurrentPasswordInputRef
+    );
     return;
   }
   if (!passwordForm.newPassword) {
@@ -177,19 +186,31 @@ const handleChangePassword = async () => {
     return;
   }
   if (passwordForm.newPassword.length < 8) {
-    showValidationError("새 비밀번호는 8자 이상이어야 합니다.", newPasswordInputRef);
+    showValidationError(
+      "새 비밀번호는 8자 이상이어야 합니다.",
+      newPasswordInputRef
+    );
     return;
   }
   if (!passwordForm.confirmNewPassword) {
-    showValidationError("새 비밀번호 확인을 입력해주세요.", confirmNewPasswordInputRef);
+    showValidationError(
+      "새 비밀번호 확인을 입력해주세요.",
+      confirmNewPasswordInputRef
+    );
     return;
   }
   if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
-    showValidationError("새 비밀번호가 일치하지 않습니다.", confirmNewPasswordInputRef);
+    showValidationError(
+      "새 비밀번호가 일치하지 않습니다.",
+      confirmNewPasswordInputRef
+    );
     return;
   }
   if (passwordForm.currentPassword === passwordForm.newPassword) {
-    showValidationError("현재 비밀번호와 다른 비밀번호를 입력해주세요.", newPasswordInputRef);
+    showValidationError(
+      "현재 비밀번호와 다른 비밀번호를 입력해주세요.",
+      newPasswordInputRef
+    );
     return;
   }
 
@@ -290,7 +311,12 @@ onMounted(async () => {
 
           <div class="space-y-2">
             <Label for="userName">이름</Label>
-            <Input ref="userNameInputRef" id="userName" v-model="form.userName" type="text" />
+            <Input
+              ref="userNameInputRef"
+              id="userName"
+              v-model="form.userName"
+              type="text"
+            />
           </div>
 
           <div class="space-y-2">
@@ -336,6 +362,22 @@ onMounted(async () => {
             />
           </div>
 
+          <div class="space-y-2">
+            <Label for="currentPassword"
+              >현재 비밀번호
+              <span class="text-primary text-body font-normal ml-2">
+                * 정보 수정을 위해 필수입니다.
+              </span>
+            </Label>
+            <Input
+              ref="currentPasswordInputRef"
+              id="currentPassword"
+              v-model="form.currentPassword"
+              type="password"
+              placeholder="현재 비밀번호 입력"
+            />
+          </div>
+
           <div class="flex items-center space-x-2">
             <input
               id="opt-in"
@@ -346,32 +388,6 @@ onMounted(async () => {
             <Label for="opt-in" class="text-body font-normal cursor-pointer">
               이메일 수신 동의
             </Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <!-- 현재 비밀번호 확인 섹션 (정보 수정용) -->
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-heading">
-            현재 비밀번호 확인
-            <span class="text-destructive text-body font-normal ml-2">
-              * 정보 수정을 위해 필수입니다.
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-5">
-          <div class="space-y-2">
-            <Label for="currentPassword">현재 비밀번호</Label>
-            <Input
-              ref="currentPasswordInputRef"
-              id="currentPassword"
-              v-model="form.currentPassword"
-              type="password"
-              placeholder="현재 비밀번호 입력"
-            />
           </div>
         </CardContent>
       </Card>

@@ -87,7 +87,7 @@ watch(
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 제목 -->
     <div class="mb-6">
-      <h3 class="text-heading text-primary tracking-wider">CART</h3>
+      <h3 class="text-heading text-primary tracking-wider">장바구니</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">
         관심 있는 상품을 모아두었습니다.
       </p>
@@ -162,7 +162,7 @@ watch(
       <div class="lg:col-span-1">
         <Card class="sticky top-24">
           <CardHeader>
-            <CardTitle class="text-heading">Order Summary</CardTitle>
+            <CardTitle class="text-heading">주문 요약</CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
             <div class="flex justify-between text-body">

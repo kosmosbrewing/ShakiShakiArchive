@@ -596,3 +596,47 @@ export interface CreateReplyRequest {
 export interface UpdateInquiryStatusRequest {
   status: InquiryStatus;
 }
+
+// ------------------------------------------------------------------
+// 공통 상수 관련 타입 (Constants)
+// ------------------------------------------------------------------
+
+// 배송비 설정
+export interface ShippingConstants {
+  FREE_THRESHOLD: number; // 무료배송 기준 금액
+  FEE: number; // 기본 배송비
+}
+
+// 주문 상태 설정
+export interface OrderConstants {
+  status: Record<string, string>; // 상태 코드 매핑
+  statusEnum: string[]; // 상태 목록
+  nonCancelableStatuses: string[]; // 취소 불가 상태 목록
+}
+
+// 결제 수단 설정
+export interface PaymentConstants {
+  provider: Record<string, string>; // PG사 코드 매핑
+}
+
+// 폼 검증 규칙
+export interface ValidationConstants {
+  quantity: { MIN: number; MAX: number };
+  price: { MIN: number; MAX: number };
+  password: { minLength: number };
+  inquiry: { TITLE_MAX_LENGTH: number };
+}
+
+// 검증 에러 메시지
+export interface MessagesConstants {
+  validation: Record<string, string>;
+}
+
+// 전체 상수 응답
+export interface AppConstants {
+  shipping: ShippingConstants;
+  order: OrderConstants;
+  payment: PaymentConstants;
+  validation: ValidationConstants;
+  messages: MessagesConstants;
+}

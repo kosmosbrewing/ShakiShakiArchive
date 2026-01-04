@@ -36,6 +36,9 @@ import type {
   CreateReplyRequest,
   UpdateInquiryStatusRequest,
   StockShortageItem,
+  AppConstants,
+  ShippingConstants,
+  ValidationConstants,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -1094,4 +1097,23 @@ export async function updateInquiryStatus(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+// ------------------------------------------------------------------
+// [10] 공통 상수 (Constants)
+// ------------------------------------------------------------------
+
+// 전체 상수 조회
+export async function fetchConstants(): Promise<AppConstants> {
+  return apiRequest<AppConstants>("/api/constants");
+}
+
+// 배송비 설정만 조회
+export async function fetchShippingConstants(): Promise<ShippingConstants> {
+  return apiRequest<ShippingConstants>("/api/constants/shipping");
+}
+
+// 폼 검증 규칙만 조회
+export async function fetchValidationConstants(): Promise<ValidationConstants> {
+  return apiRequest<ValidationConstants>("/api/constants/validation");
 }

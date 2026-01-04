@@ -6,9 +6,8 @@ import { ref, computed, onMounted, watch, onUnmounted } from "vue";
 
 // Production 환경 체크
 const isProduction = computed(() => import.meta.env.MODE === "production");
-import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { useCart } from "@/composables/useCart";
+import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
@@ -36,60 +35,36 @@ import { Alert } from "@/components/ui/alert";
 import type {
   DeliveryAddress,
   User,
-  DirectPurchaseData,
   CreateOrderRequest,
   CreateOrderResponse,
 } from "@/types/api";
 import {
-  isValidDirectPurchaseData,
   isValidPhone,
   isValidZipCode,
   isNonEmptyString,
   isValidPrice,
   isValidQuantity,
   validateOrderAmount,
-  calculateShippingFee,
 } from "@/lib/validators";
 
 // [이미지 Import]
 import tossLogo from "@/assets/tossSymbol.png";
 import naverLogo from "@/assets/naverSymbol.svg";
 
-const router = useRouter();
-const route = useRoute();
 const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
 
-// Composables
-const { cartItems, shippingFee, totalAmount, loadCart } = useCart();
-
-// 바로 구매 모드 상태
-const isDirectPurchase = computed(() => route.query.direct === "true");
-const directPurchaseItem = ref<DirectPurchaseData | null>(null);
-
-// 주문 상품 목록 (바로 구매 또는 장바구니)
-const orderItems = computed(() => {
-  if (isDirectPurchase.value && directPurchaseItem.value) {
-    return [directPurchaseItem.value];
-  }
-  return cartItems.value;
-});
-
-// 주문 금액 계산 (바로 구매 모드용)
-const orderSubtotal = computed(() => {
-  if (isDirectPurchase.value && directPurchaseItem.value) {
-    return Number(directPurchaseItem.value.product?.price || 0) * directPurchaseItem.value.quantity;
-  }
-  return totalAmount.value - shippingFee.value;
-});
-
-const orderShippingFee = computed(() => {
-  return calculateShippingFee(orderSubtotal.value);
-});
-
-const orderTotalAmount = computed(() => {
-  return orderSubtotal.value + orderShippingFee.value;
-});
+// Composables - 주문 상품 관리
+const {
+  items: orderItems,
+  subtotal: orderSubtotal,
+  shippingFee: orderShippingFee,
+  totalAmount: orderTotalAmount,
+  orderName,
+  loadOrderItems,
+  clearDirectPurchase,
+  getDirectPurchasePayload,
+} = useOrderItems();
 const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
@@ -142,44 +117,19 @@ watch(deliveryMode, (newMode) => {
 const loadData = async () => {
   loading.value = true;
   try {
+    // 사용자 정보 로드
     if (authStore.isAuthenticated && !authStore.user) {
       await authStore.loadUser();
     }
 
-    // 바로 구매 모드 체크
-    if (isDirectPurchase.value) {
-      const stored = sessionStorage.getItem("directPurchase");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (isValidDirectPurchaseData(parsed)) {
-            directPurchaseItem.value = parsed;
-          } else {
-            throw new Error("Invalid data format");
-          }
-        } catch {
-          sessionStorage.removeItem("directPurchase");
-          showAlert("잘못된 상품 정보입니다.", { type: "error" });
-          router.replace("/");
-          return;
-        }
-      } else {
-        showAlert("주문할 상품 정보가 없습니다.", { type: "error" });
-        router.replace("/");
-        return;
-      }
-    } else {
-      // 장바구니 모드
-      await loadCart();
-      if (cartItems.value.length === 0) {
-        showAlert("주문할 상품이 없습니다.", { type: "error" });
-        router.replace("/");
-        return;
-      }
-    }
+    // 주문 상품 로드 (바로 구매 / 장바구니 자동 분기)
+    const success = await loadOrderItems();
+    if (!success) return;
 
+    // 배송지 로드
     await loadAddresses();
 
+    // 기본 배송지 설정
     const defaultAddr = addresses.value.find((a) => a.isDefault);
     if (defaultAddr) {
       deliveryMode.value = "saved";
@@ -241,10 +191,9 @@ const handlePayment = async () => {
 
   // 2. 주문 상품 데이터 무결성 검사 (가격, 수량)
   for (const item of orderItems.value) {
-    const price = Number(item.product?.price);
-    if (!isValidPrice(price)) {
+    if (!isValidPrice(item.product.price)) {
       showValidationError("상품 가격 정보가 올바르지 않습니다.");
-      console.error("Invalid price:", item.product?.price);
+      console.error("Invalid price:", item.product.price);
       return;
     }
     if (!isValidQuantity(item.quantity)) {
@@ -256,11 +205,19 @@ const handlePayment = async () => {
 
   // 3. 금액 계산 무결성 검사
   const itemsForValidation = orderItems.value.map((item) => ({
-    price: Number(item.product?.price || 0),
+    price: item.product.price,
     quantity: item.quantity,
   }));
-  if (!validateOrderAmount(itemsForValidation, orderTotalAmount.value, orderShippingFee.value)) {
-    showValidationError("주문 금액 계산에 오류가 있습니다. 새로고침 후 다시 시도해주세요.");
+  if (
+    !validateOrderAmount(
+      itemsForValidation,
+      orderTotalAmount.value,
+      orderShippingFee.value
+    )
+  ) {
+    showValidationError(
+      "주문 금액 계산에 오류가 있습니다. 새로고침 후 다시 시도해주세요."
+    );
     console.error("Order amount mismatch");
     return;
   }
@@ -296,10 +253,13 @@ const handlePayment = async () => {
     return;
   }
 
-  const confirmed = await showConfirm(`${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`, {
-    confirmText: "결제하기",
-    cancelText: "취소",
-  });
+  const confirmed = await showConfirm(
+    `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`,
+    {
+      confirmText: "결제하기",
+      cancelText: "취소",
+    }
+  );
   if (!confirmed) return;
 
   try {
@@ -315,16 +275,8 @@ const handlePayment = async () => {
       shippingDetailAddress: shippingForm.form.detailAddress,
       shippingRequestNote: shippingForm.finalRequestNote.value,
       paymentMethod: paymentProvider.value,
+      directPurchaseItem: getDirectPurchasePayload(),
     };
-
-    // 바로 구매 모드일 때 상품 정보 추가
-    if (isDirectPurchase.value && directPurchaseItem.value) {
-      orderParams.directPurchaseItem = {
-        productId: directPurchaseItem.value.productId,
-        variantId: directPurchaseItem.value.variantId,
-        quantity: directPurchaseItem.value.quantity,
-      };
-    }
 
     const orderData = await submitOrder(orderParams);
 
@@ -340,8 +292,13 @@ const handlePayment = async () => {
       await processNaverPayment(orderData);
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
-    showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, { type: "error" });
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "알 수 없는 오류가 발생했습니다.";
+    showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, {
+      type: "error",
+    });
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
   }
@@ -378,7 +335,9 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     const { clientKey } = await getPaymentClientKey();
 
     // 2. 토스페이먼츠 SDK 초기화 (window 객체에서 가져옴)
-    const TossPayments = (window as unknown as { TossPayments?: TossPaymentsSDK }).TossPayments;
+    const TossPayments = (
+      window as unknown as { TossPayments?: TossPaymentsSDK }
+    ).TossPayments;
     if (!TossPayments) {
       throw new Error("토스페이먼츠 SDK가 로드되지 않았습니다.");
     }
@@ -390,12 +349,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       ? `user_${authStore.user.id}`
       : `guest_${orderData.orderId}`;
 
-    // 4. 주문명 생성 (첫 번째 상품명 + 외 n개)
-    const firstProductName = orderItems.value[0]?.product?.name || "상품";
-    const orderName =
-      orderItems.value.length > 1
-        ? `${firstProductName} 외 ${orderItems.value.length - 1}건`
-        : firstProductName;
+    // 4. 주문명 (useOrderItems에서 제공)
 
     // 5. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
@@ -410,7 +364,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
         value: orderTotalAmount.value,
       },
       orderId: orderData.externalOrderId, // PG사에서 사용할 주문번호 (SHAKI_... 형식)
-      orderName: orderName,
+      orderName: orderName.value,
       successUrl: `${window.location.origin}/payment/callback?result=success`,
       failUrl: `${window.location.origin}/payment/callback?result=fail`,
       customerEmail: authStore.user?.email || undefined,
@@ -428,7 +382,8 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     if (errorWithCode.code === "USER_CANCEL") {
       showAlert("결제가 취소되었습니다.");
     } else {
-      const errorMessage = errorWithCode.message || "토스 결제 창 호출에 실패했습니다.";
+      const errorMessage =
+        errorWithCode.message || "토스 결제 창 호출에 실패했습니다.";
       throw new Error(errorMessage);
     }
   }
@@ -456,12 +411,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       throw new Error("네이버페이 SDK가 로드되지 않았습니다.");
     }
 
-    // 4. 주문명 생성 (128자 이내)
-    const firstProductName = orderItems.value[0]?.product?.name || "상품";
-    const productName =
-      orderItems.value.length > 1
-        ? `${firstProductName} 외 ${orderItems.value.length - 1}건`
-        : firstProductName;
+    // 4. 주문명 (useOrderItems에서 제공, 128자 이내)
 
     // 5. 상품 수량 계산
     const productCount = orderItems.value.reduce(
@@ -473,8 +423,8 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     const productItems = orderItems.value.map((item) => ({
       categoryType: "ETC",
       categoryId: "ETC",
-      uid: item.product?.id || item.productId || String(item.id),
-      name: item.product?.name || "상품",
+      uid: item.product.id,
+      name: item.product.name,
       count: item.quantity,
     }));
 
@@ -490,7 +440,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     naverPay.open({
       merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
       merchantUserKey: merchantUserKey, // 사용자 식별키
-      productName: productName,
+      productName: orderName.value,
       productCount: productCount,
       totalPayAmount: orderTotalAmount.value,
       taxScopeAmount: orderTotalAmount.value, // 전체 금액을 과세 대상으로
@@ -513,7 +463,10 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
   } catch (err: unknown) {
     console.error("네이버페이 결제 오류", err);
     isPaymentPopupOpen.value = false; // 에러 시 버튼 다시 활성화
-    const errorMessage = err instanceof Error ? err.message : "네이버페이 결제 호출에 실패했습니다.";
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "네이버페이 결제 호출에 실패했습니다.";
     throw new Error(errorMessage);
   }
 };
@@ -545,23 +498,28 @@ onMounted(() => {
 onUnmounted(() => {
   // 결제 완료 콜백으로 이동하는 경우는 정리하지 않음
   if (!window.location.pathname.includes("/payment/callback")) {
-    sessionStorage.removeItem("directPurchase");
+    clearDirectPurchase();
   }
 });
 </script>
 
 <template>
   <!-- Production 환경: 준비중 화면 -->
-  <div v-if="isProduction" class="max-w-5xl mx-auto px-4 py-24 sm:py-32 text-center">
-    <h3 class="text-heading text-primary tracking-wider mb-4">ORDER</h3>
+  <div
+    v-if="isProduction"
+    class="max-w-5xl mx-auto px-4 py-24 sm:py-32 text-center"
+  >
+    <h3 class="text-heading text-primary tracking-wider mb-4">주문 하기</h3>
     <p class="text-xl text-muted-foreground">준비중입니다.</p>
   </div>
 
   <!-- 개발 환경: 실제 주문 화면 -->
   <div v-else class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6">
-      <h3 class="text-heading text-primary tracking-wider">ORDER</h3>
-      <p class="text-body text-muted-foreground pt-1 mb-3">결제 내용</p>
+      <h3 class="text-heading text-primary tracking-wider">주문 하기</h3>
+      <p class="text-body text-muted-foreground pt-1 mb-3">
+        결제 정보를 입력해주세요.
+      </p>
       <Separator></Separator>
     </div>
 
@@ -638,7 +596,7 @@ onUnmounted(() => {
                   class="w-20 h-24 bg-muted rounded overflow-hidden shrink-0 border border-border"
                 >
                   <img
-                    :src="item.product?.imageUrl"
+                    :src="item.product.imageUrl"
                     class="w-full h-full object-cover"
                     draggable="false"
                   />
@@ -646,20 +604,18 @@ onUnmounted(() => {
 
                 <div class="flex-1 min-w-0">
                   <h3 class="text-body font-bold truncate">
-                    {{ item.product?.name }}
+                    {{ item.product.name }}
                   </h3>
                   <p class="text-caption text-muted-foreground mt-1">
                     옵션: {{ item.variant?.size || "-" }}
                     <span v-if="item.variant?.color"
-                      >/ {{ item.variant?.color }}</span
+                      >/ {{ item.variant.color }}</span
                     >
                   </p>
                   <div class="flex justify-between items-end mt-2">
                     <span class="text-body">수량 {{ item.quantity }}개</span>
                     <span class="font-bold">
-                      {{
-                        formatPrice(Number(item.product?.price) * item.quantity)
-                      }}
+                      {{ formatPrice(item.product.price * item.quantity) }}
                     </span>
                   </div>
                 </div>
