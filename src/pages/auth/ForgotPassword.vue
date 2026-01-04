@@ -193,7 +193,9 @@ const goToLogin = () => {
         <!-- Step 1 & 2: 이메일 인증 -->
         <form
           v-if="currentStep <= 2"
-          @submit.prevent="currentStep === 1 ? sendVerificationCode() : verifyCode()"
+          @submit.prevent="
+            currentStep === 1 ? sendVerificationCode() : verifyCode()
+          "
           class="grid gap-6"
         >
           <!-- 이메일 입력 -->
@@ -213,9 +215,7 @@ const goToLogin = () => {
                 type="button"
                 variant="outline"
                 @click="sendVerificationCode"
-                :disabled="
-                  verificationState.isLoading || !formData.email
-                "
+                :disabled="verificationState.isLoading || !formData.email"
                 class="w-28 shrink-0"
               >
                 <Loader2
@@ -229,7 +229,7 @@ const goToLogin = () => {
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">
-              가입 시 사용한 이메일 주소를 입력해주세요.
+              가입한 이메일 주소를 입력해주세요.
             </p>
             <p
               v-if="verificationState.errorMessage && !verificationState.isSent"
@@ -273,7 +273,8 @@ const goToLogin = () => {
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">
-              입력하신 이메일이 등록되어 있다면, 인증번호가 발송되었습니다.
+              인증번호를 발송했습니다. 메일함을 확인해 주세요. (가입된 계정인
+              경우)
             </p>
             <p
               v-if="verificationState.errorMessage"
@@ -328,11 +329,7 @@ const goToLogin = () => {
             <AlertDescription>{{ errorMessage }}</AlertDescription>
           </Alert>
 
-          <Button
-            type="submit"
-            class="w-full mt-2"
-            :disabled="isSubmitting"
-          >
+          <Button type="submit" class="w-full mt-2" :disabled="isSubmitting">
             <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
             <Lock v-else class="mr-2 h-4 w-4" />
             {{ isSubmitting ? "처리 중..." : "비밀번호 재설정" }}

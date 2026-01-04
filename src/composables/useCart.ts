@@ -13,7 +13,7 @@ import {
   isValidQuantity,
   isValidUUID,
   isValidCartProductInfo,
-  QUANTITY_LIMITS,
+  getQuantityLimits,
   calculateShippingFee,
 } from "@/lib/validators";
 
@@ -117,8 +117,9 @@ export function useCart() {
     }
 
     if (!isValidQuantity(params.quantity)) {
+      const limits = getQuantityLimits();
       console.error(
-        `장바구니 추가 실패: 수량은 ${QUANTITY_LIMITS.MIN}~${QUANTITY_LIMITS.MAX} 사이여야 합니다`
+        `장바구니 추가 실패: 수량은 ${limits.MIN}~${limits.MAX} 사이여야 합니다`
       );
       return false;
     }
@@ -146,11 +147,12 @@ export function useCart() {
 
         if (existingIndex > -1) {
           // 최대 수량 초과 체크
+          const limits = getQuantityLimits();
           const newQuantity =
             localCart[existingIndex].quantity + params.quantity;
-          if (newQuantity > QUANTITY_LIMITS.MAX) {
+          if (newQuantity > limits.MAX) {
             console.error(
-              `장바구니 추가 실패: 최대 수량(${QUANTITY_LIMITS.MAX}개)을 초과할 수 없습니다`
+              `장바구니 추가 실패: 최대 수량(${limits.MAX}개)을 초과할 수 없습니다`
             );
             return false;
           }
@@ -182,12 +184,13 @@ export function useCart() {
   // [수정] 수량 변경
   const updateQuantity = async (item: CartItem, change: number) => {
     const newQuantity = item.quantity + change;
+    const limits = getQuantityLimits();
 
     // 수량 범위 검증
-    if (newQuantity < QUANTITY_LIMITS.MIN) return;
-    if (newQuantity > QUANTITY_LIMITS.MAX) {
+    if (newQuantity < limits.MIN) return;
+    if (newQuantity > limits.MAX) {
       console.error(
-        `수량 변경 실패: 최대 수량(${QUANTITY_LIMITS.MAX}개)을 초과할 수 없습니다`
+        `수량 변경 실패: 최대 수량(${limits.MAX}개)을 초과할 수 없습니다`
       );
       return;
     }

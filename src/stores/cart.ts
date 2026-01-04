@@ -4,6 +4,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useAuthStore } from "./auth";
+import { useConstantsStore } from "./constants";
 import {
   fetchCart,
   addToCart,
@@ -16,6 +17,7 @@ const LOCAL_CART_KEY = "guest_cart";
 
 export const useCartStore = defineStore("cart", () => {
   const authStore = useAuthStore();
+  const constantsStore = useConstantsStore();
 
   // 상태
   const items = ref<CartItem[]>([]);
@@ -38,7 +40,7 @@ export const useCartStore = defineStore("cart", () => {
   });
 
   const shippingFee = computed(() =>
-    totalProductPrice.value >= 50000 ? 0 : 3000
+    constantsStore.calculateShippingFee(totalProductPrice.value)
   );
 
   const totalAmount = computed(

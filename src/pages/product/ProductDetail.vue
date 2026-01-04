@@ -42,7 +42,7 @@ import {
   isValidQuantity,
   isValidPrice,
   isValidUUID,
-  QUANTITY_LIMITS,
+  getQuantityLimits,
 } from "@/lib/validators";
 
 const route = useRoute();
@@ -159,8 +159,9 @@ const proceedAddToCart = async () => {
 
   // 수량 검증
   if (!isValidQuantity(qty)) {
+    const limits = getQuantityLimits();
     displayAlert(
-      `수량은 ${QUANTITY_LIMITS.MIN}~${QUANTITY_LIMITS.MAX}개 사이로 입력해주세요.`
+      `수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`
     );
     return;
   }
@@ -256,8 +257,9 @@ const handleBuyNow = async () => {
   // 4. 수량 검증
   const qty = Number(variantSelection.quantity.value);
   if (!isValidQuantity(qty)) {
+    const limits = getQuantityLimits();
     displayAlert(
-      `수량은 ${QUANTITY_LIMITS.MIN}~${QUANTITY_LIMITS.MAX}개 사이로 입력해주세요.`
+      `수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`
     );
     return;
   }

@@ -94,7 +94,7 @@ const continueShopping = () => {
       <SheetHeader class="px-6 py-4 pt-10">
         <div class="flex items-center justify-between">
           <SheetTitle class="text-heading text-primary tracking-wider">
-            CART
+            장바구니
           </SheetTitle>
         </div>
         <p class="text-caption text-muted-foreground mb-3">
@@ -219,9 +219,7 @@ const continueShopping = () => {
               formatPrice(totalProductPrice)
             }}</span>
           </div>
-          <Button @click="goToCart" class="w-full" size="lg">
-            주문하기
-          </Button>
+          <Button @click="goToCart" class="w-full" size="lg"> 주문하기 </Button>
           <div class="pt-1"></div>
         </div>
       </SheetFooter>
