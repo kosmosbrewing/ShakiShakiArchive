@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Mail,
   KeyRound,
-  Lock,
 } from "lucide-vue-next";
 
 // UI Components

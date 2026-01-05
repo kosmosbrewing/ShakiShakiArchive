@@ -221,7 +221,7 @@ onUnmounted(() => {
   <section class="w-11/12 max-w-screen-2xl mx-auto pt-8 sm:pt-16">
     <div class="grid grid-cols-1 lg:grid-cols-2 mx-auto">
       <!-- Hero 이미지 슬라이더 영역 -->
-      <div class="flex flex-col justify-center lg:justify-start lg:pr-8">
+      <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
           <Skeleton class="w-full aspect-square rounded-2xl" />
@@ -309,7 +309,7 @@ onUnmounted(() => {
   </section>
 
   <section id="marquee" class="max-w-[75%] mx-auto">
-    <div class="mx-auto mt-6 lg:mt-10">
+    <div class="mx-auto mt-10 lg:mt-5">
       <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
       <div v-if="isLoading" class="flex items-center justify-center gap-12">
         <Skeleton
