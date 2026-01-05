@@ -29,16 +29,17 @@ import { Card, CardContent } from "@/components/ui/card";
                 샤키샤키 아카이브(ShakiShaki Archive) | CEO : 손유진
               </p>
               <p class="text-caption text-muted-foreground">
-                Business License : 680-79-00404 | Mail order license: 신고중
+                Business License : 157-68-02463 | Mail order license: No.
+                2025-경남밀양-210호
               </p>
             </div>
 
             <div class="space-y-1">
               <p class="text-caption text-muted-foreground">
-                부산광역시 부산진구 전포대로 84-1 104동 201호
+                부산광역시 부산진구 전포대로 84-1
               </p>
               <p class="text-caption text-muted-foreground">
-                Tel: 010-2357-3345
+                Tel: 010-7347-4088
               </p>
             </div>
 

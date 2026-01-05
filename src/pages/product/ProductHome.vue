@@ -22,6 +22,7 @@ interface ProductItem {
   imageUrl: string;
   name: string;
   price: number;
+  totalStock?: number; // 총 재고 수량 (품절 정렬용)
 }
 
 interface ProductApiResponse {
@@ -30,6 +31,9 @@ interface ProductApiResponse {
   categoryId: number; // 카테고리는 serial
   name: string;
   price: number;
+  totalStock?: number; // 총 재고 수량
+  stockQuantity?: number; // 대체 필드
+  isAvailable?: boolean; // 판매 가능 여부
 }
 
 const route = useRoute();
@@ -44,6 +48,19 @@ const loading = ref(false);
 
 // 위시리스트 Set (스토어에서 반응성 유지)
 const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
+
+// 상품 정렬 (품절 상품 맨 뒤로)
+const sortByStock = (items: ProductItem[]): ProductItem[] => {
+  return [...items].sort((a, b) => {
+    const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
+    const bStock = b.totalStock ?? 1;
+
+    // 품절(재고 0) 상품을 뒤로 정렬
+    if (aStock === 0 && bStock > 0) return 1;
+    if (aStock > 0 && bStock === 0) return -1;
+    return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
+  });
+};
 
 // [핵심] 상품 데이터 불러오기 (백엔드 필터링 적용)
 const fetchProductData = async () => {
@@ -69,13 +86,18 @@ const fetchProductData = async () => {
       },
     });
 
-    // 3. 받아온 데이터를 그대로 화면용으로 변환
-    productList.value = response.data.map((item) => ({
-      id: item.id,
-      imageUrl: item.imageUrl,
-      name: item.name,
-      price: Number(item.price),
-    }));
+    // 3. 받아온 데이터를 화면용으로 변환 후 isAvailable이 false인 상품 제외, 품절 상품을 맨 뒤로 정렬
+    const mappedProducts = response.data
+      .filter((item) => item.isAvailable !== false)
+      .map((item) => ({
+        id: item.id,
+        imageUrl: item.imageUrl,
+        name: item.name,
+        price: Number(item.price),
+        totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
+      }));
+
+    productList.value = sortByStock(mappedProducts);
   } catch (error) {
     console.error("API Error:", error);
     productList.value = []; // 에러 시 빈 목록
