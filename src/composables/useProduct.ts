@@ -79,11 +79,50 @@ export function useProduct(productId?: string | number) {
 }
 
 /**
- * 상품 옵션(사이즈) 선택 관리
+ * 상품 옵션(사이즈/색상) 순차 선택 관리
  */
 export function useVariantSelection(variants: Ref<ProductVariant[]>) {
+  const selectedSize = ref<string>("");
+  const selectedColor = ref<string>("");
   const selectedVariantId = ref<string>("");
   const quantity = ref(1);
+
+  // 고유한 사이즈 목록 (재고/판매 가능 여부 포함)
+  const uniqueSizes = computed(() => {
+    const sizeMap = new Map<string, { size: string; hasStock: boolean }>();
+
+    variants.value.forEach((v: ProductVariant) => {
+      const existing = sizeMap.get(v.size);
+      const hasStock = v.stockQuantity > 0 && v.isAvailable;
+
+      if (!existing) {
+        sizeMap.set(v.size, { size: v.size, hasStock });
+      } else if (hasStock && !existing.hasStock) {
+        // 재고 있는 variant가 하나라도 있으면 활성화
+        sizeMap.set(v.size, { size: v.size, hasStock: true });
+      }
+    });
+
+    return Array.from(sizeMap.values());
+  });
+
+  // 색상이 있는지 여부 확인
+  const hasColors = computed(() => {
+    return variants.value.some((v: ProductVariant) => v.color && v.color.trim() !== "");
+  });
+
+  // 선택된 사이즈에 대한 색상 목록
+  const availableColors = computed(() => {
+    if (!selectedSize.value) return [];
+
+    return variants.value
+      .filter((v: ProductVariant) => v.size === selectedSize.value && v.color)
+      .map((v: ProductVariant) => ({
+        color: v.color!,
+        hasStock: v.stockQuantity > 0 && v.isAvailable,
+        variantId: v.id,
+      }));
+  });
 
   // 선택된 variant 객체
   const selectedVariant = computed(() => {
@@ -94,9 +133,12 @@ export function useVariantSelection(variants: Ref<ProductVariant[]>) {
   // 옵션 선택 가능 여부
   const hasVariants = computed(() => variants.value.length > 0);
 
-  // 옵션 선택 필요 여부
+  // 옵션 선택 필요 여부 (사이즈/색상 모두 선택해야 완료)
   const needsVariantSelection = computed(() => {
-    return hasVariants.value && !selectedVariantId.value;
+    if (!hasVariants.value) return false;
+    if (!selectedSize.value) return true;
+    if (hasColors.value && !selectedColor.value) return true;
+    return !selectedVariantId.value;
   });
 
   // 선택된 옵션의 재고 확인
@@ -105,9 +147,43 @@ export function useVariantSelection(variants: Ref<ProductVariant[]>) {
     return selectedVariant.value.stockQuantity >= quantity.value;
   });
 
-  // variant 선택
+  // 사이즈 선택
+  const selectSize = (size: string) => {
+    // 해당 사이즈에 재고 있는 variant가 있는지 확인
+    const sizeInfo = uniqueSizes.value.find((s) => s.size === size);
+    if (!sizeInfo?.hasStock) return;
+
+    selectedSize.value = size;
+    selectedColor.value = "";
+    selectedVariantId.value = "";
+    quantity.value = 1;
+
+    // 색상이 없는 경우 바로 variant 선택
+    if (!hasColors.value) {
+      const variant = variants.value.find(
+        (v: ProductVariant) => v.size === size && v.stockQuantity > 0 && v.isAvailable
+      );
+      if (variant) {
+        selectedVariantId.value = variant.id;
+      }
+    }
+  };
+
+  // 색상 선택
+  const selectColor = (color: string) => {
+    const colorInfo = availableColors.value.find((c) => c.color === color);
+    if (!colorInfo?.hasStock) return;
+
+    selectedColor.value = color;
+    selectedVariantId.value = colorInfo.variantId;
+    quantity.value = 1;
+  };
+
+  // variant 직접 선택 (기존 호환성 유지)
   const selectVariant = (variant: ProductVariant) => {
     if (variant.stockQuantity <= 0 || !variant.isAvailable) return;
+    selectedSize.value = variant.size;
+    selectedColor.value = variant.color || "";
     selectedVariantId.value = variant.id;
     quantity.value = 1;
   };
@@ -126,17 +202,26 @@ export function useVariantSelection(variants: Ref<ProductVariant[]>) {
 
   // 선택 초기화
   const resetSelection = () => {
+    selectedSize.value = "";
+    selectedColor.value = "";
     selectedVariantId.value = "";
     quantity.value = 1;
   };
 
   return {
+    selectedSize,
+    selectedColor,
     selectedVariantId,
     quantity,
     selectedVariant,
     hasVariants,
+    hasColors,
+    uniqueSizes,
+    availableColors,
     needsVariantSelection,
     isStockAvailable,
+    selectSize,
+    selectColor,
     selectVariant,
     increaseQuantity,
     decreaseQuantity,
