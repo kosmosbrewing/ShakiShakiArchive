@@ -140,7 +140,7 @@ const measurementFields: { id: keyof MeasurementForm; label: string }[] = [
   { id: "waistSection", label: "허리단면" },
   { id: "hipSection", label: "엉덩이단면" },
   { id: "thighSection", label: "허벅지단면" },
-  { id: "displayOrder", label: "출력순서" },
+  //{ id: "displayOrder", label: "출력순서" },
 ];
 
 // --- 정렬 상태 ---
@@ -792,6 +792,29 @@ onMounted(async () => {
               </div>
             </div>
 
+            <!-- 판매 상태 토글 -->
+            <div class="flex items-center gap-3 py-2">
+              <input
+                v-model="productForm.isAvailable"
+                type="checkbox"
+                id="productIsAvailable"
+                class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+              />
+              <Label for="productIsAvailable" class="cursor-pointer">
+                판매 가능 상태
+              </Label>
+              <span
+                :class="
+                  productForm.isAvailable
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                "
+                class="px-2 py-0.5 rounded-full text-caption font-bold ml-2"
+              >
+                {{ productForm.isAvailable ? "판매중" : "판매중단" }}
+              </span>
+            </div>
+
             <!-- 수정일 설정 (수정 모드에서만 표시) -->
             <div v-if="isEditMode" class="space-y-2">
               <Label class="text-admin">수정일 (updatedAt)</Label>
@@ -950,18 +973,6 @@ onMounted(async () => {
                     type="number"
                     placeholder="0"
                   />
-                </div>
-
-                <div class="flex items-center gap-3 py-1">
-                  <input
-                    v-model="variantForm.isAvailable"
-                    type="checkbox"
-                    id="isAvailable"
-                    class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
-                  />
-                  <Label for="isAvailable" class="cursor-pointer">
-                    즉시 판매 가능함
-                  </Label>
                 </div>
 
                 <div class="pt-2 space-y-2">

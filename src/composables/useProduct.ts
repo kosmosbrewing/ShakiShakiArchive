@@ -400,6 +400,8 @@ export interface ProductListItem {
   imageUrl: string;
   name: string;
   price: number;
+  totalStock?: number; // 총 재고 수량 (품절 정렬용)
+  isAvailable?: boolean; // 판매 가능 여부
 }
 
 /**
@@ -434,6 +436,29 @@ export function useProductList() {
       : categoryParam.trim().toLowerCase();
   };
 
+  // 상품 정렬 (품절 상품 맨 뒤로)
+  const sortByStock = (items: ProductListItem[]): ProductListItem[] => {
+    return [...items].sort((a, b) => {
+      const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
+      const bStock = b.totalStock ?? 1;
+
+      // 품절(재고 0) 상품을 뒤로 정렬
+      if (aStock === 0 && bStock > 0) return 1;
+      if (aStock > 0 && bStock === 0) return -1;
+      return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
+    });
+  };
+
+  // API 응답을 ProductListItem으로 변환
+  const mapProduct = (item: any): ProductListItem => ({
+    id: item.id,
+    imageUrl: item.imageUrl,
+    name: item.name,
+    price: Number(item.price),
+    totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
+    isAvailable: item.isAvailable,
+  });
+
   // 상품 목록 초기 로드
   const loadProducts = async (search?: string) => {
     loading.value = true;
@@ -451,12 +476,11 @@ export function useProductList() {
         limit: pageSize,
       });
 
-      products.value = response.products.map((item) => ({
-        id: item.id,
-        imageUrl: item.imageUrl,
-        name: item.name,
-        price: Number(item.price),
-      }));
+      // 상품 매핑 후 isAvailable이 false인 상품 제외, 품절 상품을 맨 뒤로 정렬
+      const mappedProducts = response.products
+        .map(mapProduct)
+        .filter((p) => p.isAvailable !== false);
+      products.value = sortByStock(mappedProducts);
 
       totalProducts.value = response.pagination.total;
       hasMore.value = response.pagination.hasMore;
@@ -486,14 +510,13 @@ export function useProductList() {
         limit: pageSize,
       });
 
-      const newProducts = response.products.map((item) => ({
-        id: item.id,
-        imageUrl: item.imageUrl,
-        name: item.name,
-        price: Number(item.price),
-      }));
+      // isAvailable이 false인 상품 제외
+      const newProducts = response.products
+        .map(mapProduct)
+        .filter((p) => p.isAvailable !== false);
 
-      products.value = [...products.value, ...newProducts];
+      // 기존 상품과 새 상품을 합친 후 품절 상품을 맨 뒤로 정렬
+      products.value = sortByStock([...products.value, ...newProducts]);
       hasMore.value = response.pagination.hasMore;
       currentPage.value = nextPage;
     } catch (e) {

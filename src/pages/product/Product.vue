@@ -285,7 +285,7 @@ onUnmounted(() => {
 
     <!-- 무한 스크롤 트리거 및 로딩 인디케이터 (카테고리 라우트에서만 표시) -->
     <div
-      v-if="hasCategory && displayProducts.length > 0"
+      v-if="hasCategory && (displayProducts.length > 0 || hasMore)"
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >
