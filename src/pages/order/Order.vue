@@ -3,6 +3,7 @@
 // 주문/결제 페이지
 
 import { ref, computed, onMounted, watch, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 
 // Production 환경 체크
 const isProduction = computed(() => import.meta.env.MODE === "production");
@@ -51,6 +52,7 @@ import {
 import tossLogo from "@/assets/tossSymbol.png";
 import naverLogo from "@/assets/naverSymbol.svg";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
 
@@ -436,7 +438,12 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 8. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 9. 네이버페이 결제창 호출
+    // 9. PC 팝업 방식: localStorage로 팝업 여부 표시 (PaymentCallback에서 확인)
+    if (!isMobile.value) {
+      localStorage.setItem("naverpay_popup", "true");
+    }
+
+    // 10. 네이버페이 결제창 호출
     naverPay.open({
       merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
       merchantUserKey: merchantUserKey, // 사용자 식별키
@@ -449,15 +456,40 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       productItems: productItems,
     });
 
-    // PC 팝업 방식일 때만 focus 이벤트로 버튼 재활성화
+    // PC 팝업 방식: localStorage storage 이벤트로 결제 결과 수신
     if (!isMobile.value) {
-      const handleWindowFocus = () => {
-        setTimeout(() => {
+      const handleStorageChange = async (event: StorageEvent) => {
+        if (event.key !== "naverpay_result" || !event.newValue) return;
+
+        try {
+          const result = JSON.parse(event.newValue);
+          const { type, orderId, message } = result;
+
+          // 결과 처리 후 localStorage 정리
+          localStorage.removeItem("naverpay_result");
+          window.removeEventListener("storage", handleStorageChange);
           isPaymentPopupOpen.value = false;
-        }, 500);
-        window.removeEventListener("focus", handleWindowFocus);
+
+          if (type === "PAYMENT_SUCCESS") {
+            // 결제 성공: 주문 상세 페이지로 이동
+            clearDirectPurchase();
+            router.push(`/orderdetail/${orderId}`);
+          } else if (type === "PAYMENT_ERROR") {
+            // 결제 실패
+            showAlert(message || "결제 처리 중 오류가 발생했습니다.", {
+              type: "error",
+            });
+          } else if (type === "PAYMENT_CANCEL") {
+            // 결제 취소
+            showAlert("결제가 취소되었습니다.");
+          }
+        } catch (e) {
+          console.error("네이버페이 결과 파싱 오류:", e);
+          isPaymentPopupOpen.value = false;
+        }
       };
-      window.addEventListener("focus", handleWindowFocus);
+
+      window.addEventListener("storage", handleStorageChange);
     }
     // 모바일은 리다이렉트되므로 별도 처리 불필요
   } catch (err: unknown) {

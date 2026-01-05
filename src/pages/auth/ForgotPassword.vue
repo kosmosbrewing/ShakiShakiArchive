@@ -292,14 +292,14 @@ const goToLogin = () => {
           class="grid gap-6"
         >
           <!-- 이메일 인증 완료 알림 -->
-          <Alert class="bg-green-50 text-green-700 border-green-200 py-2 mt-6">
+          <Alert class="bg-green-50 text-green-700 border-green-200 py-2 mt-8">
             <CheckCircle2 class="h-4 w-4" />
             <AlertTitle class="ml-2 text-body font-medium">
               이메일 인증 완료
             </AlertTitle>
           </Alert>
 
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5 pt-6">
             <Label for="newPassword">
               새 비밀번호 <span class="text-red-500">*</span>
             </Label>
@@ -331,7 +331,6 @@ const goToLogin = () => {
 
           <Button type="submit" class="w-full mt-2" :disabled="isSubmitting">
             <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
-            <Lock v-else class="mr-2 h-4 w-4" />
             {{ isSubmitting ? "처리 중..." : "비밀번호 재설정" }}
           </Button>
         </form>

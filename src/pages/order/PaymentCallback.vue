@@ -27,7 +27,14 @@ const orderInfo = ref<{
   paymentMethod?: string;
 }>({});
 
+// 팝업 창인지 확인 (네이버페이 PC 결제용)
+const isPopup = ref<boolean>(false);
+
 onMounted(async () => {
+  // 팝업 창 여부 확인 (네이버페이 PC 결제)
+  isPopup.value = localStorage.getItem("naverpay_popup") === "true";
+  localStorage.removeItem("naverpay_popup");
+
   // URL 쿼리 파라미터 확인
   const result = route.query.result as string;
   const paymentKey = route.query.paymentKey as string;
@@ -77,15 +84,67 @@ onMounted(async () => {
     const provider = route.query.provider as string;
     status.value = "success";
     orderInfo.value = {
-      externalOrderId: orderId, // URL의 orderId는 이미 externalOrderId
+      orderId: orderId, // 네이버페이는 orderId가 UUID
+      externalOrderId: route.query.externalOrderId as string,
       orderName: route.query.orderName as string,
       amount: amount ? Number(amount) : undefined,
-      paymentMethod: provider || (route.query.paymentMethod as string), // paymentProvider 그대로 사용
+      paymentMethod: provider || (route.query.paymentMethod as string),
     };
+
+    // 팝업 창인 경우: localStorage로 부모 창에 결과 전달 후 닫기
+    if (isPopup.value) {
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_SUCCESS",
+          orderId: orderId,
+          timestamp: Date.now(),
+        })
+      );
+      setTimeout(() => {
+        window.close();
+      }, 100);
+      return;
+    }
   } else if (result === "fail" || error) {
     // 결제 실패
     status.value = "error";
     errorMessage.value = message || getErrorMessage(error);
+
+    // 팝업 창인 경우: localStorage로 부모 창에 에러 전달 후 닫기
+    if (isPopup.value) {
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_ERROR",
+          message: errorMessage.value,
+          timestamp: Date.now(),
+        })
+      );
+      setTimeout(() => {
+        window.close();
+      }, 100);
+      return;
+    }
+  } else if (error === "user_cancel" || result === "cancel") {
+    // 결제 취소
+    status.value = "error";
+    errorMessage.value = "결제가 취소되었습니다.";
+
+    // 팝업 창인 경우: localStorage로 부모 창에 취소 전달 후 닫기
+    if (isPopup.value) {
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_CANCEL",
+          timestamp: Date.now(),
+        })
+      );
+      setTimeout(() => {
+        window.close();
+      }, 100);
+      return;
+    }
   } else {
     // 잘못된 접근
     status.value = "error";
