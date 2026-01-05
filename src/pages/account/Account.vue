@@ -57,7 +57,7 @@ const goToMyInquiries = () => router.push("/my-inquiries");
 
 // 관리자용 페이지 이동
 const goToCategoryAdmin = () => router.push("/admin/categories");
-const goToInquiryAdmin = () => router.push("/inquiry"); // 관리자는 전체 문의 목록으로
+const goToInquiryAdmin = () => router.push("/admin/inquiries"); // 관리자는 전체 문의 목록으로
 const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
 const goToSiteImageAdmin = () => router.push("/admin/site-images");

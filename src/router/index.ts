@@ -44,6 +44,7 @@ import {
 import {
   ProductAdmin,
   CategoryAdmin,
+  InquiryAdmin,
   OrderAdmin,
   SiteImageAdmin,
 } from "@/pages/admin";
@@ -157,6 +158,12 @@ const routes = [
     path: "/admin/categories",
     name: "CategoryAdmin",
     component: CategoryAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: "/admin/inquiries",
+    name: "InquiryAdmin",
+    component: InquiryAdmin,
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {

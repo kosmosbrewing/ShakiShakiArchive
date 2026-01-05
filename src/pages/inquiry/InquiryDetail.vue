@@ -22,6 +22,7 @@ import { LoadingSpinner } from "@/components/common";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -63,7 +64,10 @@ const statusLabels: Record<InquiryStatus, string> = {
 };
 
 // 문의 상태별 배지 색상
-const statusVariants: Record<InquiryStatus, "default" | "secondary" | "outline"> = {
+const statusVariants: Record<
+  InquiryStatus,
+  "default" | "secondary" | "outline"
+> = {
   pending: "outline",
   answered: "default",
   closed: "secondary",
@@ -84,7 +88,9 @@ const isAdmin = computed(() => authStore.user?.isAdmin);
 const canDelete = computed(() => isMyInquiry.value || isAdmin.value);
 
 // 답변 작성 가능 여부 (관리자만)
-const canReply = computed(() => isAdmin.value && inquiry.value?.status !== "closed");
+const canReply = computed(
+  () => isAdmin.value && inquiry.value?.status !== "closed"
+);
 
 // 문의 로드
 const loadInquiry = async () => {
@@ -129,7 +135,9 @@ const handleReply = async () => {
 const handleStatusChange = async (newStatus: string) => {
   statusLoading.value = true;
   try {
-    await updateInquiryStatus(inquiryId.value, { status: newStatus as InquiryStatus });
+    await updateInquiryStatus(inquiryId.value, {
+      status: newStatus as InquiryStatus,
+    });
     await loadInquiry();
   } catch (error: any) {
     console.error("상태 변경 실패:", error);
@@ -176,9 +184,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div class="mb-6 border-b pb-3 flex items-center justify-between">
+    <div class="pb-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <Button variant="ghost" size="icon" @click="goBack" class="shrink-0">
           <ArrowLeft class="w-5 h-5" />
@@ -200,7 +208,7 @@ onMounted(() => {
         삭제
       </Button>
     </div>
-
+    <Separator class="mb-6"></Separator>
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="inquiry">
@@ -214,10 +222,16 @@ onMounted(() => {
                 <Badge variant="outline" class="text-xs">
                   {{ typeLabels[inquiry.type] }}
                 </Badge>
-                <Badge :variant="statusVariants[inquiry.status]" class="text-xs">
+                <Badge
+                  :variant="statusVariants[inquiry.status]"
+                  class="text-xs"
+                >
                   {{ statusLabels[inquiry.status] }}
                 </Badge>
-                <Lock v-if="inquiry.isPrivate" class="w-3.5 h-3.5 text-muted-foreground" />
+                <Lock
+                  v-if="inquiry.isPrivate"
+                  class="w-3.5 h-3.5 text-muted-foreground"
+                />
               </div>
 
               <!-- 제목 -->
@@ -245,11 +259,14 @@ onMounted(() => {
           </div>
 
           <!-- 작성자 & 날짜 -->
-          <div class="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+          <div
+            class="flex items-center gap-2 text-sm text-muted-foreground mt-1"
+          >
             <span>{{ inquiry.user?.userName || "익명" }}</span>
             <span>·</span>
             <span>{{ formatDate(inquiry.createdAt) }}</span>
           </div>
+          <Separator class="mt-2"></Separator>
         </CardHeader>
 
         <CardContent>
@@ -279,7 +296,10 @@ onMounted(() => {
       </Card>
 
       <!-- 답변 목록 -->
-      <div v-if="inquiry.replies && inquiry.replies.length > 0" class="space-y-4 mb-6">
+      <div
+        v-if="inquiry.replies && inquiry.replies.length > 0"
+        class="space-y-4 mb-6"
+      >
         <h4 class="font-medium text-foreground">
           답변 ({{ inquiry.replies.length }})
         </h4>
@@ -292,7 +312,9 @@ onMounted(() => {
           <CardContent class="p-4">
             <!-- 답변자 정보 -->
             <div class="flex items-center gap-2 mb-3">
-              <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <div
+                class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"
+              >
                 <User class="w-4 h-4 text-primary" />
               </div>
               <div>

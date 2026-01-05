@@ -308,7 +308,7 @@ onUnmounted(() => {
     </div>
   </section>
 
-  <section id="marquee" class="max-w-[75%] mx-auto pb-8 pt-8">
+  <section id="marquee" class="max-w-[75%] mx-auto">
     <div class="mx-auto mt-6 lg:mt-10">
       <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
       <div v-if="isLoading" class="flex items-center justify-center gap-12">
@@ -332,7 +332,7 @@ onUnmounted(() => {
           :key="index"
           :src="optimizeMarquee(img.url)"
           alt="marquee Logo"
-          class="min-w-[80px] object-contain"
+          class="min-w-[50px] lg:min-w-[80px] object-contain"
           :class="{ 'cursor-pointer': img.linkUrl }"
           loading="lazy"
           decoding="async"
