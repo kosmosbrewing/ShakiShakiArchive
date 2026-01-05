@@ -160,9 +160,7 @@ const proceedAddToCart = async () => {
   // 수량 검증
   if (!isValidQuantity(qty)) {
     const limits = getQuantityLimits();
-    displayAlert(
-      `수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`
-    );
+    displayAlert(`수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`);
     return;
   }
 
@@ -258,9 +256,7 @@ const handleBuyNow = async () => {
   const qty = Number(variantSelection.quantity.value);
   if (!isValidQuantity(qty)) {
     const limits = getQuantityLimits();
-    displayAlert(
-      `수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`
-    );
+    displayAlert(`수량은 ${limits.MIN}~${limits.MAX}개 사이로 입력해주세요.`);
     return;
   }
 
@@ -427,15 +423,28 @@ onMounted(async () => {
       <div class="lg:col-span-1">
         <Card class="sticky top-24">
           <CardContent class="p-6">
-            <div class="flex justify-between items-start gap-3 mb-2">
-              <h3 class="text-body font-medium">
-                {{ productData.product.value.name }}
-              </h3>
+            <div class="flex justify-between items-end gap-3 mb-3">
+              <div>
+                <h3 class="text-body font-medium">
+                  {{ productData.product.value.name }}
+                </h3>
+                <div class="flex items-baseline gap-2 pt-1.5">
+                  <span class="text-body text-muted-foreground">
+                    {{ formatPrice(productData.product.value.price) }}
+                  </span>
+                  <span
+                    v-if="productData.product.value.originalPrice"
+                    class="text-caption text-muted-foreground/70 line-through -translate-y-1"
+                  >
+                    {{ formatPrice(productData.product.value.originalPrice) }}
+                  </span>
+                </div>
+              </div>
 
               <!-- 데스크톱 위시리스트 버튼 -->
               <button
                 @click="handleToggleWishlist"
-                class="hidden lg:flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all shrink-0"
+                class="hidden lg:flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all shrink-0 lg:-translate-y-3"
                 title="위시리스트 담기"
               >
                 <Heart
@@ -449,19 +458,7 @@ onMounted(async () => {
               </button>
             </div>
 
-            <div class="flex items-baseline gap-2 mb-4 -translate-y-4">
-              <span class="text-body text-muted-foreground">
-                {{ formatPrice(productData.product.value.price) }}
-              </span>
-              <span
-                v-if="productData.product.value.originalPrice"
-                class="text-caption text-muted-foreground/70 line-through -translate-y-1"
-              >
-                {{ formatPrice(productData.product.value.originalPrice) }}
-              </span>
-            </div>
-
-            <Separator class="mb-2 -translate-y-4" />
+            <Separator class="mb-4" />
 
             <div v-if="productData.variants.value.length > 0" class="mb-6">
               <label class="block text-body font-semibold text-foreground mb-2"
@@ -503,17 +500,13 @@ onMounted(async () => {
 
             <div class="mb-6 flex flex-col gap-3">
               <Button
+                v-if="!variantSelection.needsVariantSelection.value"
                 @click="handleAddToCart"
-                :disabled="variantSelection.needsVariantSelection.value"
                 class="w-full text-primary"
                 size="lg"
                 variant="outline"
               >
-                {{
-                  variantSelection.needsVariantSelection.value
-                    ? "옵션을 선택해주세요"
-                    : "장바구니 담기"
-                }}
+                장바구니 담기
               </Button>
               <Button
                 @click="handleBuyNow"
@@ -521,7 +514,11 @@ onMounted(async () => {
                 class="w-full"
                 size="lg"
               >
-                바로 구매
+                {{
+                  variantSelection.needsVariantSelection.value
+                    ? "옵션을 선택해주세요"
+                    : "바로 구매"
+                }}
               </Button>
             </div>
 
@@ -564,10 +561,10 @@ onMounted(async () => {
               <div class="py-6 min-h-[180px]">
                 <div
                   v-show="activeTab === 'description'"
-                  class="animate-fade-in"
+                  class="animate-fade-in max-h-[175px] overflow-y-auto pr-2 scrollbar-thin"
                 >
                   <p
-                    class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption"
+                    class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption tracking-wide"
                   >
                     {{ productData.product.value.description }}
                   </p>
@@ -576,17 +573,19 @@ onMounted(async () => {
                 <div v-show="activeTab === 'size'" class="animate-fade-in">
                   <div v-if="sizeMeasurements.hasSizeData.value">
                     <div class="overflow-x-auto">
-                      <Table>
+                      <Table class="table-fixed">
                         <TableHeader>
                           <TableRow>
-                            <TableHead class="w-20 text-center">
+                            <TableHead
+                              class="font-medium text-caption text-center"
+                            >
                               Size
                             </TableHead>
                             <TableHead
                               v-for="col in sizeMeasurements.activeColumns
                                 .value"
                               :key="col.key"
-                              class="text-center"
+                              class="text-caption text-center"
                             >
                               {{ col.label }}
                             </TableHead>
@@ -598,14 +597,16 @@ onMounted(async () => {
                               .value"
                             :key="idx"
                           >
-                            <TableCell class="font-medium text-center">
+                            <TableCell
+                              class="font-medium text-caption text-center"
+                            >
                               {{ data.variantSize }}
                             </TableCell>
                             <TableCell
                               v-for="col in sizeMeasurements.activeColumns
                                 .value"
                               :key="col.key"
-                              class="text-center text-muted-foreground"
+                              class="text-center text-caption text-muted-foreground"
                             >
                               {{
                                 formatSizeValue(
@@ -623,13 +624,12 @@ onMounted(async () => {
                       * 단위: cm / 측정 방법에 따라 오차가 있을 수 있습니다.
                     </p>
                   </div>
-                  <Card v-else class="py-10 text-center">
-                    <CardContent>
-                      <p class="text-muted-foreground text-body">
-                        등록된 상세 사이즈 정보가 없습니다.
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <p
+                    v-else
+                    class="py-10 text-center text-muted-foreground text-body"
+                  >
+                    등록된 상세 사이즈 정보가 없습니다.
+                  </p>
                 </div>
               </div>
             </div>
@@ -701,5 +701,28 @@ onMounted(async () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Description 스크롤바 스타일 */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
 }
 </style>

@@ -145,12 +145,24 @@ watch(
       v-else
       v-for="({ id, imageUrl, name, price }, idx) in productList.slice(0, 4)"
       :key="id"
-      class="product-card bg-muted/5 flex flex-col h-full overflow-hidden group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow"
+      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative mt-3"
       :style="{ animationDelay: `${idx * 0.05}s` }"
     >
-      <CardHeader class="p-0 gap-0">
+      <!-- 스티커 장식 -->
+      <div
+        class="sticker-dot absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full shadow-md z-10"
+        :class="[
+          [
+            'bg-[#7DD3C0]',
+            'bg-[#F472B6]',
+            'bg-[#F9A8D4]',
+            'bg-[#FCD34D]',
+          ][idx % 4],
+        ]"
+      />
+      <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
         <div
-          class="aspect-square overflow-hidden cursor-pointer relative"
+          class="aspect-square cursor-pointer relative"
           @click="goToDetail(id)"
         >
           <img
@@ -181,10 +193,12 @@ watch(
         <Separator></Separator>
         <!-- 상품명 -->
         <CardContent
-          class="py-3 px-4 cursor-pointer hover:underline line-clamp-2"
+          class="py-3 px-4 cursor-pointer hover:underline"
           @click="goToDetail(id)"
         >
-          <span class="text-caption text-foreground"> {{ name }}</span>
+          <span class="text-caption text-foreground leading-snug line-clamp-2">
+            {{ name }}
+          </span>
         </CardContent>
         <!-- 가격 -->
         <CardContent class="pb-2 px-4 -translate-y-3">
