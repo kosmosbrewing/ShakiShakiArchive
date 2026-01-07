@@ -11,6 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
+import { useStockReservation } from "@/composables/useStockReservation";
 import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 import {
@@ -70,6 +71,15 @@ const {
 const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
+const {
+  reservationId,
+  isReserved,
+  isLoading: isReserving,
+  remainingTimeFormatted,
+  reserve: reserveStock,
+  release: releaseStock,
+  reset: resetReservation,
+} = useStockReservation();
 
 // 상태
 const loading = ref(false);
@@ -265,10 +275,19 @@ const handlePayment = async () => {
   if (!confirmed) return;
 
   try {
-    // 주문 생성 중 전체 화면 로딩
+    // 1단계: 재고 선점 (임시 점유)
     isPaymentProcessing.value = true;
 
-    // 주문 요청 데이터 구성
+    const reservationResult = await reserveStock(
+      orderItems.value,
+      getDirectPurchasePayload()
+    );
+
+    if (!reservationResult) {
+      throw new Error("재고 선점에 실패했습니다. 재고를 확인해주세요.");
+    }
+
+    // 2단계: 주문 생성 (reservationId 포함)
     const orderParams: CreateOrderRequest = {
       shippingName: shippingForm.form.recipient,
       shippingPhone: shippingForm.fullPhone.value,
@@ -278,15 +297,20 @@ const handlePayment = async () => {
       shippingRequestNote: shippingForm.finalRequestNote.value,
       paymentMethod: paymentProvider.value,
       directPurchaseItem: getDirectPurchasePayload(),
+      reservationId: reservationResult.reservationId,
     };
 
     const orderData = await submitOrder(orderParams);
 
-    if (!orderData) throw new Error("주문 생성 실패");
+    if (!orderData) {
+      // 주문 생성 실패 시 재고 선점 해제
+      await releaseStock();
+      throw new Error("주문 생성 실패");
+    }
 
-    // 주문 생성 완료 → 결제 창 열기 전 로딩 해제
+    // 3단계: 결제 진행
     isPaymentProcessing.value = false;
-    isPaymentPopupOpen.value = true; // 버튼 비활성화 유지
+    isPaymentPopupOpen.value = true;
 
     if (paymentProvider.value === "toss") {
       await processTossPayment(orderData);
@@ -301,6 +325,12 @@ const handlePayment = async () => {
     showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, {
       type: "error",
     });
+
+    // 에러 발생 시 재고 선점 해제
+    if (reservationId.value) {
+      await releaseStock();
+    }
+
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
   }
@@ -377,7 +407,12 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     });
   } catch (err: unknown) {
     console.error("토스 결제 오류", err);
-    isPaymentPopupOpen.value = false; // 결제 취소/실패 시 버튼 다시 활성화
+    isPaymentPopupOpen.value = false;
+
+    // 결제 취소/실패 시 재고 선점 해제
+    if (reservationId.value) {
+      await releaseStock();
+    }
 
     // 사용자가 결제 취소한 경우는 별도 처리
     const errorWithCode = err as { code?: string; message?: string };
@@ -471,16 +506,23 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
           isPaymentPopupOpen.value = false;
 
           if (type === "PAYMENT_SUCCESS") {
-            // 결제 성공: 주문 상세 페이지로 이동
+            // 결제 성공: 재고 선점 상태 정리 후 주문 상세 페이지로 이동
+            resetReservation();
             clearDirectPurchase();
             router.push(`/orderdetail/${orderId}`);
           } else if (type === "PAYMENT_ERROR") {
-            // 결제 실패
+            // 결제 실패: 재고 선점 해제
+            if (reservationId.value) {
+              await releaseStock();
+            }
             showAlert(message || "결제 처리 중 오류가 발생했습니다.", {
               type: "error",
             });
           } else if (type === "PAYMENT_CANCEL") {
-            // 결제 취소
+            // 결제 취소: 재고 선점 해제
+            if (reservationId.value) {
+              await releaseStock();
+            }
             showAlert("결제가 취소되었습니다.");
           }
         } catch (e) {
@@ -494,7 +536,13 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 모바일은 리다이렉트되므로 별도 처리 불필요
   } catch (err: unknown) {
     console.error("네이버페이 결제 오류", err);
-    isPaymentPopupOpen.value = false; // 에러 시 버튼 다시 활성화
+    isPaymentPopupOpen.value = false;
+
+    // 에러 발생 시 재고 선점 해제
+    if (reservationId.value) {
+      await releaseStock();
+    }
+
     const errorMessage =
       err instanceof Error
         ? err.message
@@ -719,13 +767,27 @@ onUnmounted(() => {
             </CardContent>
           </Card>
 
+          <!-- 재고 선점 상태 표시 -->
+          <div
+            v-if="isReserved"
+            class="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10 rounded-lg text-sm"
+          >
+            <span class="text-primary font-medium">재고 확보됨</span>
+            <span class="text-muted-foreground">
+              ({{ remainingTimeFormatted }} 남음)
+            </span>
+          </div>
+
           <Button
             @click="handlePayment"
             class="w-full"
             size="lg"
-            :disabled="isPaymentProcessing || isPaymentPopupOpen"
+            :disabled="isPaymentProcessing || isPaymentPopupOpen || isReserving"
           >
-            <template v-if="isPaymentProcessing || isPaymentPopupOpen">
+            <template v-if="isReserving">
+              재고 확인 중...
+            </template>
+            <template v-else-if="isPaymentProcessing || isPaymentPopupOpen">
               결제 진행 중...
             </template>
             <template v-else>
