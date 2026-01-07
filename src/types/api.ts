@@ -235,6 +235,7 @@ export interface CreateOrderRequest {
   shippingRequestNote?: string; // 배송 요청사항 (NEW)
   paymentMethod?: "toss" | "naverpay"; // 결제 수단
   directPurchaseItem?: DirectPurchaseItem; // 바로 구매 시 상품 정보
+  reservationId?: string; // 재고 선점 ID (선점 패턴 사용 시)
 }
 
 // 주문 생성 응답 타입
@@ -256,6 +257,42 @@ export interface ConfirmPaymentRequest {
 export interface ConfirmPaymentResponse {
   success: boolean;
   order: Order;
+}
+
+// ------------------------------------------------------------------
+// 재고 선점(Reservation) 관련 타입
+// ------------------------------------------------------------------
+
+// 재고 선점 요청 아이템
+export interface ReserveStockItem {
+  productId: string;
+  variantId?: string;
+  quantity: number;
+}
+
+// 재고 선점 요청
+export interface ReserveStockRequest {
+  items: ReserveStockItem[];
+  directPurchaseItem?: DirectPurchaseItem; // 바로 구매 시
+}
+
+// 재고 선점 응답
+export interface ReserveStockResponse {
+  reservationId: string; // 선점 ID (UUID)
+  expiresAt: string; // 만료 시간 (ISO 8601)
+  ttlSeconds: number; // 남은 시간 (초)
+  reservedItems: {
+    productId: string;
+    variantId?: string;
+    quantity: number;
+    productName: string;
+  }[];
+}
+
+// 재고 선점 해제 응답
+export interface ReleaseStockResponse {
+  message: string;
+  released: boolean;
 }
 
 // ------------------------------------------------------------------

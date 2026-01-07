@@ -234,10 +234,7 @@ onUnmounted(() => {
           ]"
         />
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
-          <div
-            class="h-full cursor-pointer relative"
-            @click="goToDetail(id)"
-          >
+          <div class="h-full cursor-pointer relative" @click="goToDetail(id)">
             <img
               :src="card(imageUrl)"
               :alt="name"
@@ -266,15 +263,17 @@ onUnmounted(() => {
           <Separator></Separator>
           <!-- 상품명 -->
           <CardContent
-            class="py-3 px-4 cursor-pointer hover:underline"
+            class="pb-0 px-4 mt-3 cursor-pointer hover:underline"
             @click="goToDetail(id)"
           >
-            <span class="text-caption text-foreground leading-snug line-clamp-2">
+            <span
+              class="text-caption text-foreground leading-snug line-clamp-2"
+            >
               {{ name }}
             </span>
           </CardContent>
           <!-- 가격 -->
-          <CardContent class="pb-2 px-4 -translate-y-3">
+          <CardContent class="pb-0 px-4">
             <span class="text-caption text-muted-foreground/80">
               {{ formatPrice(price) }}</span
             >

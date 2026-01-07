@@ -39,6 +39,9 @@ import type {
   AppConstants,
   ShippingConstants,
   ValidationConstants,
+  ReserveStockRequest,
+  ReserveStockResponse,
+  ReleaseStockResponse,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -415,6 +418,30 @@ export async function removeFromWishlist(productId: string): Promise<void> {
 // ------------------------------------------------------------------
 // [4] 주문 및 배송지 (Orders & Addresses)
 // ------------------------------------------------------------------
+
+// --- 재고 선점 (Stock Reservation) ---
+
+// 재고 선점 요청 (결제 전 임시 점유)
+export async function reserveStock(
+  data: ReserveStockRequest
+): Promise<ReserveStockResponse> {
+  return apiRequest<ReserveStockResponse>("/api/stock/reserve", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 재고 선점 해제 (결제 취소/실패/이탈 시)
+export async function releaseStockReservation(
+  reservationId: string
+): Promise<ReleaseStockResponse> {
+  return apiRequest<ReleaseStockResponse>(
+    `/api/stock/reserve/${reservationId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
 
 // --- 주문 (Orders) ---
 export async function createOrder(
