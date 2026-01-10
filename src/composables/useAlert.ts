@@ -89,7 +89,10 @@ export function useAlert() {
    * @param options Confirm 옵션
    * @returns 확인: true, 취소: false
    */
-  const showConfirm = (message: string, options?: ConfirmOptions): Promise<boolean> => {
+  const showConfirm = (
+    message: string,
+    options?: ConfirmOptions
+  ): Promise<boolean> => {
     return new Promise((resolve) => {
       alertState.value = {
         ...defaultState,
@@ -109,7 +112,10 @@ export function useAlert() {
    * @param message 확인 메시지
    * @param options Confirm 옵션
    */
-  const showDestructiveConfirm = (message: string, options?: Omit<ConfirmOptions, "variant">) => {
+  const showDestructiveConfirm = (
+    message: string,
+    options?: Omit<ConfirmOptions, "variant">
+  ) => {
     return showConfirm(message, { ...options, variant: "destructive" });
   };
 

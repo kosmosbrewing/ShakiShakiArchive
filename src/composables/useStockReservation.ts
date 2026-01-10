@@ -85,10 +85,14 @@ export function useStockReservation() {
     directPurchaseItem?: DirectPurchaseItem
   ): Promise<ReserveStockResponse | null> => {
     // 이미 선점 중이면 스킵
-    if (status.value === "reserving") return null;
+    if (status.value === "reserving") {
+      console.log("[재고 선점] 이미 선점 요청 중입니다.");
+      return null;
+    }
 
     // 이전 선점이 있으면 먼저 해제
     if (reservationId.value) {
+      console.log("[재고 선점] 이전 선점 해제:", reservationId.value);
       await release();
     }
 
@@ -105,7 +109,9 @@ export function useStockReservation() {
         directPurchaseItem,
       };
 
+      console.log("[재고 선점] 요청:", request);
       const response = await reserveStock(request);
+      console.log("[재고 선점] 성공:", response);
 
       reservationId.value = response.reservationId;
       expiresAt.value = new Date(response.expiresAt);
@@ -118,20 +124,29 @@ export function useStockReservation() {
     } catch (e) {
       status.value = "failed";
       error.value = e instanceof Error ? e.message : "재고 선점 실패";
-      console.error("재고 선점 실패:", e);
+      console.error("[재고 선점] 실패:", e);
       return null;
     }
   };
 
-  // 재고 선점 해제
-  const release = async (): Promise<boolean> => {
-    if (!reservationId.value) return true;
+  // 재고 선점 해제 (재시도 로직 포함)
+  const release = async (
+    retryCount = 0,
+    options?: { keepalive?: boolean }
+  ): Promise<boolean> => {
+    if (!reservationId.value) {
+      console.log("[재고 해제] reservationId 없음 (이미 해제됨)");
+      return true;
+    }
 
     status.value = "releasing";
     const currentReservationId = reservationId.value;
+    const maxRetries = 3; // 최대 재시도 횟수
 
     try {
-      await releaseStockReservation(currentReservationId);
+      console.log(`[재고 해제] 요청:`, currentReservationId);
+      await releaseStockReservation(currentReservationId, options);
+      console.log("[재고 해제] 성공:", currentReservationId);
       clearTimers();
       reservationId.value = null;
       expiresAt.value = null;
@@ -139,8 +154,45 @@ export function useStockReservation() {
       status.value = "idle";
       return true;
     } catch (e) {
-      // 해제 실패해도 로컬 상태는 정리 (서버에서 TTL로 자동 해제됨)
-      console.error("재고 선점 해제 실패:", e);
+      const error = e as any;
+
+      // 404 에러는 "이미 해제됨"으로 간주하고 정상 처리
+      // (주문 삭제 시 백엔드에서 재고 선점도 자동 해제함)
+      if (
+        error.message?.includes("찾을 수 없습니다") ||
+        error.message?.includes("not found") ||
+        error.status === 404
+      ) {
+        console.log(
+          `[재고 해제] 이미 해제됨 (주문 삭제 시 자동 해제됨):`,
+          currentReservationId
+        );
+        clearTimers();
+        reservationId.value = null;
+        expiresAt.value = null;
+        ttlSeconds.value = 0;
+        status.value = "idle";
+        return true; // 성공으로 처리
+      }
+
+      // 다른 에러만 재시도
+      console.error(
+        `[재고 해제] 실패 (시도 ${retryCount + 1}/${maxRetries}):`,
+        currentReservationId,
+        error
+      );
+
+      // 재시도 (최대 3회)
+      if (retryCount < maxRetries - 1) {
+        console.log(`[재고 해제] ${retryCount + 2}번째 시도 중...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
+        return release(retryCount + 1, options);
+      }
+
+      // 최대 재시도 초과 시 로컬 상태 정리
+      console.error(
+        "[재고 해제] 최대 재시도 초과. 서버에서 TTL로 자동 해제됩니다."
+      );
       clearTimers();
       reservationId.value = null;
       status.value = "idle";
@@ -161,8 +213,10 @@ export function useStockReservation() {
   // 컴포넌트 언마운트 시 자동 해제
   onUnmounted(() => {
     if (reservationId.value) {
-      // 비동기 해제 요청 (결과 무시)
-      releaseStockReservation(reservationId.value).catch(() => {});
+      // 비동기 해제 요청 (결과 무시, keepalive로 보장)
+      releaseStockReservation(reservationId.value, { keepalive: true }).catch(
+        () => {}
+      );
     }
     clearTimers();
   });

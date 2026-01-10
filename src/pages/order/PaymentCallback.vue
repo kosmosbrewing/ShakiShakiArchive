@@ -33,15 +33,133 @@ const isPopup = ref<boolean>(false);
 onMounted(async () => {
   // 팝업 창 여부 확인 (네이버페이 PC 결제)
   isPopup.value = localStorage.getItem("naverpay_popup") === "true";
-  localStorage.removeItem("naverpay_popup");
+  // 주의: naverpay_popup 플래그는 여기서 제거하지 않음!
+  // window.close() 직전이나 beforeunload에서만 제거해야 함
+
+  // 팝업 강제 종료 감지 (X 버튼 클릭 등)
+  if (isPopup.value) {
+    const handlePopupClose = () => {
+      const orderId = localStorage.getItem("naverpay_current_order");
+      console.log("[팝업 강제 종료] 감지, orderId:", orderId);
+
+      // 팝업 플래그 먼저 제거 (Order.vue의 폴링이 감지)
+      localStorage.removeItem("naverpay_popup");
+
+      if (orderId) {
+        console.log("[팝업 강제 종료] 부모 창에 취소 알림");
+        localStorage.setItem(
+          "naverpay_result",
+          JSON.stringify({
+            type: "PAYMENT_CANCEL",
+            orderId: orderId,
+            timestamp: Date.now(),
+          })
+        );
+      }
+    };
+
+    window.addEventListener("beforeunload", handlePopupClose);
+    window.addEventListener("pagehide", handlePopupClose);
+  }
 
   // URL 쿼리 파라미터 확인
   const result = route.query.result as string;
   const paymentKey = route.query.paymentKey as string;
-  const orderId = route.query.orderId as string;
+  let orderId = route.query.orderId as string;
   const amount = route.query.amount as string;
   const error = route.query.error as string;
   const message = route.query.message as string;
+
+  // orderId가 URL에 없으면 localStorage에서 가져오기 (네이버페이 취소 시 백업)
+  if (!orderId && isPopup.value) {
+    const savedOrderId = localStorage.getItem("naverpay_current_order");
+    if (savedOrderId) {
+      orderId = savedOrderId;
+      console.log("[PaymentCallback] URL에 orderId 없음, localStorage에서 복원:", orderId);
+    }
+  }
+  // localStorage 정리
+  localStorage.removeItem("naverpay_current_order");
+
+  // 디버깅: 팝업 및 쿼리 파라미터 로그
+  console.log("[PaymentCallback] isPopup:", isPopup.value);
+  console.log("[PaymentCallback] Current Path:", route.path);
+  console.log("[PaymentCallback] Query Params:", {
+    result,
+    paymentKey,
+    orderId,
+    amount,
+    error,
+    message,
+  });
+
+  // 네이버페이 실패/취소 경로 (/checkout/fail)
+  if (route.path === "/checkout/fail") {
+    console.log("[PaymentCallback] 네이버페이 결제 실패/취소");
+    console.log("[PaymentCallback] orderId:", orderId); // orderId 확인
+    console.log("[PaymentCallback] message:", message); // 원본 메시지 확인
+
+    status.value = "error";
+
+    // 에러 메시지 정제 (네이버페이의 긴 메시지를 간결하게)
+    let cleanMessage = message || "결제가 취소되었습니다.";
+
+    // 특정 패턴 감지 및 메시지 정제 (네이버페이 공식 에러 코드 패턴)
+    if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
+      cleanMessage = "계좌 잔액이 부족합니다. 잔액을 확인해주세요.";
+    } else if (cleanMessage.includes("한도")) {
+      cleanMessage = "카드 한도가 부족합니다. 다른 결제 수단을 이용해주세요.";
+    } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
+      cleanMessage = "본인 인증에 실패했습니다. 카드 정보를 확인해주세요.";
+    } else if (cleanMessage.includes("비밀번호") || cleanMessage.includes("인증")) {
+      cleanMessage = "인증에 실패했습니다. 다시 시도해주세요.";
+    } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
+      cleanMessage = "결제 시간이 만료되었습니다. 다시 시도해주세요.";
+    } else if (cleanMessage.includes("점검")) {
+      if (cleanMessage.includes("은행")) {
+        cleanMessage = "은행 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.";
+      } else if (cleanMessage.includes("원천사") || cleanMessage.includes("시스템")) {
+        cleanMessage = "결제 시스템 점검 중입니다. 다른 결제 수단을 이용해주세요.";
+      } else {
+        cleanMessage = "서비스 점검 중입니다. 잠시 후 다시 시도해주세요.";
+      }
+    } else if (cleanMessage.includes("이미") && (cleanMessage.includes("진행") || cleanMessage.includes("완료"))) {
+      cleanMessage = "이미 처리된 결제입니다.";
+    } else if (cleanMessage.length > 50) {
+      // 50자 이상의 긴 메시지는 간단하게 정리
+      cleanMessage = "결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+    }
+
+    errorMessage.value = cleanMessage;
+
+    // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
+    if (isPopup.value) {
+      console.log("[PaymentCallback] /checkout/fail - 팝업 닫기, orderId:", orderId);
+      console.log("[PaymentCallback] 에러 메시지:", cleanMessage);
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_ERROR", // 실제 에러이므로 ERROR 타입 사용
+          orderId: orderId, // orderId 전달 (주문 삭제용)
+          message: cleanMessage, // 에러 메시지 전달
+          timestamp: Date.now(),
+        })
+      );
+      localStorage.removeItem("naverpay_popup");
+      // 즉시 팝업 닫기
+      window.close();
+      return;
+    }
+    // 팝업이 아닌 경우 에러 화면 표시
+    return;
+  }
+
+  // 네이버페이 성공 경로 (/checkout/success)
+  if (route.path === "/checkout/success") {
+    console.log("[PaymentCallback] 네이버페이 결제 성공");
+    // result=success 로직으로 이동
+    // 아래에서 처리됨
+  }
 
   // 토스페이먼츠 결제 성공 시 (paymentKey가 있으면 결제 승인 필요)
   if (paymentKey && orderId && amount) {
@@ -63,20 +181,35 @@ onMounted(async () => {
           amount: Number(amount),
           paymentMethod: confirmResult.order?.paymentProvider || "toss", // 백엔드에서 받은 paymentProvider 사용
         };
+
+        // 로딩 상태 유지하며 자동으로 주문 상세로 이동 (Login.vue 패턴)
+        setTimeout(() => {
+          if (confirmResult.order?.id) {
+            router.replace(`/orderdetail/${confirmResult.order.id}`);
+          } else {
+            router.replace("/orderlist");
+          }
+        }, 500); // 0.5초 대기
+        return;
       } else {
         throw new Error("결제 승인에 실패했습니다.");
       }
     } catch (err: any) {
-      console.error("결제 승인 오류:", err);
+      console.error("[PaymentCallback] 토스 결제 승인 오류:", err);
+      console.error("[PaymentCallback] 에러 타입:", err?.constructor?.name);
+      console.error("[PaymentCallback] 에러 메시지:", err?.message);
 
       // 재고 부족 에러 처리 (소프트 락 실패 - PG 자동 환불됨)
       if (err instanceof StockShortageError) {
         status.value = "stock_shortage";
         errorMessage.value = err.message;
         shortageItems.value = err.shortageItems;
+        console.log("[PaymentCallback] 재고 부족 에러 처리 완료");
       } else {
         status.value = "error";
+        // 백엔드에서 정제된 메시지 사용 (ApiError.message)
         errorMessage.value = err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+        console.log("[PaymentCallback] 에러 메시지 설정:", errorMessage.value);
       }
     }
   } else if (result === "success") {
@@ -93,6 +226,7 @@ onMounted(async () => {
 
     // 팝업 창인 경우: localStorage로 부모 창에 결과 전달 후 닫기
     if (isPopup.value) {
+      console.log("[PaymentCallback] 결제 성공 - 팝업 닫기");
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
@@ -101,54 +235,91 @@ onMounted(async () => {
           timestamp: Date.now(),
         })
       );
-      setTimeout(() => {
-        window.close();
-      }, 100);
+      localStorage.removeItem("naverpay_popup");
+      // 즉시 팝업 닫기
+      window.close();
       return;
     }
+
+    // 팝업이 아닌 경우 (모바일 리다이렉트): 로딩 상태 유지하며 자동으로 주문 상세로 이동
+    // Login.vue의 OAuth 처리와 동일한 패턴
+    setTimeout(() => {
+      if (orderId) {
+        router.replace(`/orderdetail/${orderId}`);
+      } else {
+        router.replace("/orderlist");
+      }
+    }, 500); // 0.5초 대기 (사용자가 "결제 확인 중..." 메시지를 볼 수 있게)
+    return;
   } else if (result === "fail" || error) {
     // 결제 실패
+    console.log("[PaymentCallback] 결제 실패, orderId:", orderId);
     status.value = "error";
     errorMessage.value = message || getErrorMessage(error);
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 전달 후 닫기
     if (isPopup.value) {
+      console.log("[PaymentCallback] 결제 실패 - 팝업 닫기, orderId:", orderId);
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_ERROR",
+          orderId: orderId, // orderId 전달 (주문 삭제용)
           message: errorMessage.value,
           timestamp: Date.now(),
         })
       );
-      setTimeout(() => {
-        window.close();
-      }, 100);
+      localStorage.removeItem("naverpay_popup");
+      // 즉시 팝업 닫기
+      window.close();
       return;
     }
   } else if (error === "user_cancel" || result === "cancel") {
     // 결제 취소
+    console.log("[PaymentCallback] 결제 취소, orderId:", orderId);
     status.value = "error";
     errorMessage.value = "결제가 취소되었습니다.";
 
     // 팝업 창인 경우: localStorage로 부모 창에 취소 전달 후 닫기
     if (isPopup.value) {
+      console.log("[PaymentCallback] 결제 취소 - 팝업 닫기, orderId:", orderId);
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_CANCEL",
+          orderId: orderId, // orderId 전달 (주문 삭제용)
           timestamp: Date.now(),
         })
       );
-      setTimeout(() => {
-        window.close();
-      }, 100);
+      localStorage.removeItem("naverpay_popup");
+      // 즉시 팝업 닫기
+      window.close();
       return;
     }
   } else {
-    // 잘못된 접근
+    // 잘못된 접근 또는 예상하지 못한 파라미터
+    console.warn("[PaymentCallback] 예상하지 못한 접근:", route.query);
+    console.log("[PaymentCallback] orderId:", orderId);
     status.value = "error";
     errorMessage.value = "잘못된 접근입니다.";
+
+    // 팝업 창인 경우: 에러 전달 후 닫기
+    if (isPopup.value) {
+      console.log("[PaymentCallback] 잘못된 접근 - 팝업 닫기, orderId:", orderId);
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_ERROR",
+          orderId: orderId, // orderId 전달 (주문 삭제용)
+          message: errorMessage.value,
+          timestamp: Date.now(),
+        })
+      );
+      localStorage.removeItem("naverpay_popup");
+      // 즉시 팝업 닫기
+      window.close();
+      return;
+    }
   }
 });
 
@@ -267,7 +438,14 @@ const goToCart = () => {
             <XCircle class="w-12 h-12 text-destructive" />
           </div>
           <h2 class="text-xl font-semibold mb-2">결제 실패</h2>
-          <p class="text-muted-foreground mb-6">{{ errorMessage }}</p>
+          <p class="text-muted-foreground mb-2 whitespace-pre-line">{{ errorMessage }}</p>
+
+          <!-- 계좌 잔액 부족 에러 시 추가 안내 -->
+          <p v-if="errorMessage.includes('잔액')" class="text-sm text-amber-600 dark:text-amber-400 mb-6">
+            💡 다른 결제 수단을 이용하시거나 잔액 충전 후 다시 시도해주세요.
+          </p>
+          <div v-else class="mb-6"></div>
+
           <div class="flex flex-col gap-3 w-full">
             <Button @click="goToCart" class="w-full">
               장바구니로 돌아가기

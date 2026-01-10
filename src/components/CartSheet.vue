@@ -2,10 +2,13 @@
 // src/components/CartSheet.vue
 // 오른쪽 슬라이드 장바구니 Sheet
 
-import { watch } from "vue";
+import { computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
 import { formatPrice } from "@/lib/formatters";
+
+// 아이콘
+import { AlertCircle, X } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import {
@@ -19,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +30,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { X } from "lucide-vue-next";
 
 // Props & Emits
 const props = defineProps<{
@@ -49,6 +52,22 @@ const {
   //updateQuantity,
   removeItem,
 } = useCart();
+
+// 재고 없는 상품 확인
+const hasOutOfStockItems = computed(() => {
+  return cartItems.value.some((item) => {
+    if (!item.variant) return false;
+    const availableStock = item.variant.stockQuantity;
+    return availableStock === 0 || item.quantity > availableStock;
+  });
+});
+
+// 특정 아이템이 재고 부족인지 확인
+const isOutOfStock = (item: any) => {
+  if (!item.variant) return false;
+  const availableStock = item.variant.stockQuantity;
+  return availableStock === 0 || item.quantity > availableStock;
+};
 
 // Sheet가 열릴 때 장바구니 로드
 watch(
@@ -130,18 +149,50 @@ const continueShopping = () => {
         <!-- 장바구니 아이템 목록 -->
         <ScrollArea v-else class="h-full">
           <div class="px-4 space-y-3">
+            <!-- 재고 부족 경고 -->
+            <Card
+              v-if="hasOutOfStockItems"
+              class="border-primary/50 bg-primary/5 rounded-2xl"
+            >
+              <CardContent class="flex items-center gap-2 p-3">
+                <AlertCircle class="w-4 h-4 text-primary flex-shrink-0" />
+                <div class="flex-1">
+                  <p class="text-caption font-semibold text-primary">
+                    재고 부족 상품이 있습니다
+                  </p>
+                  <p class="text-caption text-muted-foreground">
+                    재고 부족 상품을 삭제해주세요.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card
               v-for="item in cartItems"
               :key="item.id"
-              class="rounded-2xl overflow-hidden"
+              :class="[
+                'rounded-2xl overflow-hidden',
+                isOutOfStock(item)
+                  ? 'border-primary/30 bg-muted/30'
+                  : '',
+              ]"
             >
-              <CardContent class="flex gap-4 p-3">
+              <CardContent class="flex gap-4 p-3 relative">
+                <!-- SOLD OUT 배지 -->
+                <Badge
+                  v-if="isOutOfStock(item)"
+                  class="absolute top-2 left-2 z-10 text-xs bg-primary text-primary-foreground"
+                >
+                  SOLD OUT
+                </Badge>
+
                 <!-- 상품 이미지 -->
                 <div class="flex-shrink-0">
                   <ProductThumbnail
                     :image-url="item.product?.imageUrl"
                     :product-id="item.productId"
                     size="sm"
+                    :class="[isOutOfStock(item) ? 'opacity-50' : '']"
                     @click="goToProductDetail(item.productId)"
                   />
                 </div>
@@ -151,7 +202,12 @@ const continueShopping = () => {
                   <div>
                     <div class="flex justify-between items-start gap-2">
                       <h4
-                        class="text-body font-medium text-foreground truncate cursor-pointer hover:underline"
+                        :class="[
+                          'text-body font-medium truncate cursor-pointer hover:underline',
+                          isOutOfStock(item)
+                            ? 'text-muted-foreground opacity-60'
+                            : 'text-foreground',
+                        ]"
                         @click="goToProductDetail(item.productId)"
                       >
                         {{ item.product?.name }}
@@ -160,7 +216,7 @@ const continueShopping = () => {
                         variant="ghost"
                         size="sm"
                         @click="removeItem(item.id)"
-                        class="text-muted-foreground hover:text-destructive h-auto p-0.5 flex-shrink-0"
+                        class="text-muted-foreground hover:text-primary h-auto p-0.5 flex-shrink-0"
                       >
                         <X class="h-3.5 w-3.5" />
                       </Button>
@@ -168,11 +224,25 @@ const continueShopping = () => {
 
                     <p
                       v-if="item.variant"
-                      class="text-caption text-muted-foreground mt-0.5"
+                      :class="[
+                        'text-caption text-muted-foreground mt-0.5',
+                        isOutOfStock(item) ? 'opacity-60' : '',
+                      ]"
                     >
-                      {{ item.variant.size }}
+                      Size : {{ item.variant.size }}
                       <span v-if="item.variant.color"
                         >/ {{ item.variant.color }}</span
+                      >
+                    </p>
+
+                    <!-- 재고 부족 메시지 -->
+                    <p
+                      v-if="isOutOfStock(item)"
+                      class="text-caption text-primary mt-1 font-medium"
+                    >
+                      재고 부족
+                      <span v-if="item.variant"
+                        >(남은 재고: {{ item.variant.stockQuantity }}개)</span
                       >
                     </p>
                   </div>
@@ -185,7 +255,14 @@ const continueShopping = () => {
                       @change="(change) => updateQuantity(item, change)"
                     />
                     -->
-                    <span class="text-body font-medium text-foreground">
+                    <span
+                      :class="[
+                        'text-body font-medium',
+                        isOutOfStock(item)
+                          ? 'text-muted-foreground opacity-60'
+                          : 'text-foreground',
+                      ]"
+                    >
                       {{
                         formatPrice(Number(item.product?.price) * item.quantity)
                       }}
@@ -221,7 +298,14 @@ const continueShopping = () => {
               formatPrice(totalProductPrice)
             }}</span>
           </div>
-          <Button @click="goToCart" class="w-full" size="lg"> 주문하기 </Button>
+          <Button
+            @click="goToCart"
+            :disabled="hasOutOfStockItems"
+            class="w-full"
+            size="lg"
+          >
+            {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}
+          </Button>
           <div class="pt-1"></div>
         </div>
       </SheetFooter>

@@ -42,6 +42,10 @@ import type {
   ReserveStockRequest,
   ReserveStockResponse,
   ReleaseStockResponse,
+  AdminUserListParams,
+  AdminUsersResponse,
+  AdminUserDetailResponse,
+  UpdateUserRequest,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -443,12 +447,14 @@ export async function reserveStock(
 
 // 재고 선점 해제 (결제 취소/실패/이탈 시)
 export async function releaseStockReservation(
-  reservationId: string
+  reservationId: string,
+  options?: { keepalive?: boolean }
 ): Promise<ReleaseStockResponse> {
   return apiRequest<ReleaseStockResponse>(
     `/api/stock/reserve/${reservationId}`,
     {
       method: "DELETE",
+      keepalive: options?.keepalive || false, // 페이지 종료 시에도 요청 보장
     }
   );
 }
@@ -542,6 +548,17 @@ export async function cancelOrder(
   return apiRequest(`/api/orders/${orderId}/cancel`, {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// 주문 삭제 (결제 전 주문만 삭제 가능 - 입금 대기 상태)
+export async function deleteOrder(
+  orderId: number | string,
+  options?: { keepalive?: boolean }
+): Promise<{ message: string }> {
+  return apiRequest(`/api/orders/${orderId}`, {
+    method: "DELETE",
+    keepalive: options?.keepalive || false, // 페이지 종료 시에도 요청 보장
   });
 }
 
@@ -1137,7 +1154,56 @@ export async function updateInquiryStatus(
 }
 
 // ------------------------------------------------------------------
-// [10] 공통 상수 (Constants)
+// [10] 회원 관리 (Admin Only)
+// ------------------------------------------------------------------
+
+// 전체 회원 목록 조회 (관리자 전용)
+export async function fetchAdminUsers(
+  params?: AdminUserListParams
+): Promise<AdminUsersResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const queryString = queryParams.toString();
+  const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ""}`;
+
+  return apiRequest<AdminUsersResponse>(endpoint);
+}
+
+// 회원 상세 조회 (관리자 전용)
+export async function fetchAdminUserDetail(
+  userId: string
+): Promise<AdminUserDetailResponse> {
+  return apiRequest<AdminUserDetailResponse>(`/api/admin/users/${userId}`);
+}
+
+// 회원 정보 수정 (관리자 전용)
+export async function updateAdminUser(
+  userId: string,
+  data: UpdateUserRequest
+): Promise<User> {
+  return apiRequest<User>(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// 회원 강제 탈퇴 (관리자 전용)
+export async function deleteAdminUser(
+  userId: string
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/api/admin/users/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+// ------------------------------------------------------------------
+// [11] 공통 상수 (Constants)
 // ------------------------------------------------------------------
 
 // 전체 상수 조회
