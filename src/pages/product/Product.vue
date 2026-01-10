@@ -57,6 +57,9 @@ const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
+// 호버 상태 관리 (이미지 전환용)
+const hoveredProductId = ref<string | null>(null);
+
 // Intersection Observer 설정
 const setupIntersectionObserver = () => {
   observer = new IntersectionObserver(
@@ -214,21 +217,53 @@ onUnmounted(() => {
       <!-- 상품 카드 목록 -->
       <Card
         v-else
-        v-for="({ id, imageUrl, name, price }, idx) in displayProducts"
+        v-for="(
+          { id, imageUrl, images, name, price, isAvailable }, idx
+        ) in displayProducts"
         :key="id"
-        class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative mt-3"
+        class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative mt-3"
         :style="{ animationDelay: `${idx * 0.05}s` }"
       >
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
-          <div class="h-full cursor-pointer relative" @click="goToDetail(id)">
+          <div
+            class="h-full cursor-pointer relative"
+            @click="goToDetail(id)"
+            @mouseenter="hoveredProductId = id"
+            @mouseleave="hoveredProductId = null"
+          >
+            <!-- 기본 이미지 -->
             <img
               :src="card(imageUrl)"
               :alt="name"
-              class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+              class="w-full aspect-square object-cover size-full absolute inset-0 transition-opacity duration-300"
+              :class="
+                hoveredProductId === id && images && images.length > 0
+                  ? 'opacity-0'
+                  : 'opacity-100'
+              "
               loading="lazy"
               decoding="async"
               draggable="false"
             />
+            <!-- 호버 이미지 -->
+            <img
+              v-if="images && images.length > 0"
+              :src="card(images[0])"
+              :alt="`${name} - 호버`"
+              class="w-full aspect-square object-cover size-full transition-opacity duration-300"
+              :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+            />
+
+            <!-- SOLD OUT 배지 -->
+            <div
+              v-if="isAvailable === false"
+              class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
+            >
+              SOLD OUT
+            </div>
 
             <!-- 위시리스트 버튼 -->
             <button

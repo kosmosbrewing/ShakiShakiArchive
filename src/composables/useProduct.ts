@@ -398,6 +398,7 @@ export function useProductDetail() {
 export interface ProductListItem {
   id: string;
   imageUrl: string;
+  images?: string[]; // 추가 이미지 목록 (호버용)
   name: string;
   price: number;
   totalStock?: number; // 총 재고 수량 (품절 정렬용)
@@ -439,12 +440,13 @@ export function useProductList() {
   // 상품 정렬 (품절 상품 맨 뒤로)
   const sortByStock = (items: ProductListItem[]): ProductListItem[] => {
     return [...items].sort((a, b) => {
-      const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
-      const bStock = b.totalStock ?? 1;
+      // isAvailable === false면 품절로 간주
+      const aOutOfStock = a.isAvailable === false;
+      const bOutOfStock = b.isAvailable === false;
 
-      // 품절(재고 0) 상품을 뒤로 정렬
-      if (aStock === 0 && bStock > 0) return 1;
-      if (aStock > 0 && bStock === 0) return -1;
+      // 품절 상품을 뒤로 정렬
+      if (aOutOfStock && !bOutOfStock) return 1;
+      if (!aOutOfStock && bOutOfStock) return -1;
       return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
     });
   };
@@ -453,6 +455,7 @@ export function useProductList() {
   const mapProduct = (item: any): ProductListItem => ({
     id: item.id,
     imageUrl: item.imageUrl,
+    images: item.images ?? [],
     name: item.name,
     price: Number(item.price),
     totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
@@ -476,10 +479,8 @@ export function useProductList() {
         limit: pageSize,
       });
 
-      // 상품 매핑 후 isAvailable이 false인 상품 제외, 품절 상품을 맨 뒤로 정렬
-      const mappedProducts = response.products
-        .map(mapProduct)
-        .filter((p) => p.isAvailable !== false);
+      // 상품 매핑 후 품절 상품(isAvailable === false)을 맨 뒤로 정렬
+      const mappedProducts = response.products.map(mapProduct);
       products.value = sortByStock(mappedProducts);
 
       totalProducts.value = response.pagination.total;
@@ -510,12 +511,10 @@ export function useProductList() {
         limit: pageSize,
       });
 
-      // isAvailable이 false인 상품 제외
-      const newProducts = response.products
-        .map(mapProduct)
-        .filter((p) => p.isAvailable !== false);
+      // 새 상품 매핑
+      const newProducts = response.products.map(mapProduct);
 
-      // 기존 상품과 새 상품을 합친 후 품절 상품을 맨 뒤로 정렬
+      // 기존 상품과 새 상품을 합친 후 품절 상품(isAvailable === false)을 맨 뒤로 정렬
       products.value = sortByStock([...products.value, ...newProducts]);
       hasMore.value = response.pagination.hasMore;
       currentPage.value = nextPage;

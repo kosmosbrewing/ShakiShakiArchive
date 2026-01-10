@@ -20,14 +20,17 @@ import { useOptimizedImage } from "@/composables";
 interface ProductItem {
   id: string; // UUID
   imageUrl: string;
+  images?: string[]; // 추가 이미지 목록 (호버용)
   name: string;
   price: number;
   totalStock?: number; // 총 재고 수량 (품절 정렬용)
+  isAvailable?: boolean; // 판매 가능 여부
 }
 
 interface ProductApiResponse {
   id: string; // UUID
   imageUrl: string;
+  images?: string[]; // 추가 이미지 목록
   categoryId: number; // 카테고리는 serial
   name: string;
   price: number;
@@ -46,18 +49,22 @@ const { card } = useOptimizedImage();
 const productList = ref<ProductItem[]>([]);
 const loading = ref(false);
 
+// 호버 상태 관리 (이미지 전환용)
+const hoveredProductId = ref<string | null>(null);
+
 // 위시리스트 Set (스토어에서 반응성 유지)
 const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 
 // 상품 정렬 (품절 상품 맨 뒤로)
 const sortByStock = (items: ProductItem[]): ProductItem[] => {
   return [...items].sort((a, b) => {
-    const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
-    const bStock = b.totalStock ?? 1;
+    // isAvailable === false면 품절로 간주
+    const aOutOfStock = a.isAvailable === false;
+    const bOutOfStock = b.isAvailable === false;
 
-    // 품절(재고 0) 상품을 뒤로 정렬
-    if (aStock === 0 && bStock > 0) return 1;
-    if (aStock > 0 && bStock === 0) return -1;
+    // 품절 상품을 뒤로 정렬
+    if (aOutOfStock && !bOutOfStock) return 1;
+    if (!aOutOfStock && bOutOfStock) return -1;
     return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
   });
 };
@@ -86,17 +93,22 @@ const fetchProductData = async () => {
       },
     });
 
-    // 3. 받아온 데이터를 화면용으로 변환 후 isAvailable이 false인 상품 제외, 품절 상품을 맨 뒤로 정렬
+    // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
+    // [디버그] 실제 API 응답 확인
+    console.log("[ProductHome] API 응답 샘플:", response.data[0]);
+
     const mappedProducts = response.data
-      .filter((item) => item.isAvailable !== false)
       .map((item) => ({
         id: item.id,
         imageUrl: item.imageUrl,
+        images: item.images ?? [],
         name: item.name,
         price: Number(item.price),
         totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
+        isAvailable: item.isAvailable,
       }));
 
+    console.log("[ProductHome] 매핑된 상품 샘플:", mappedProducts[0]);
     productList.value = sortByStock(mappedProducts);
   } catch (error) {
     console.error("API Error:", error);
@@ -165,24 +177,53 @@ watch(
     <!-- 상품 카드 목록 -->
     <Card
       v-else
-      v-for="({ id, imageUrl, name, price }, idx) in productList.slice(0, 4)"
+      v-for="(
+        { id, imageUrl, images, name, price, isAvailable }, idx
+      ) in productList.slice(0, 4)"
       :key="id"
-      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative"
+      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
       :style="{ animationDelay: `${idx * 0.05}s` }"
     >
       <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
         <div
           class="aspect-square cursor-pointer relative"
           @click="goToDetail(id)"
+          @mouseenter="hoveredProductId = id"
+          @mouseleave="hoveredProductId = null"
         >
+          <!-- 기본 이미지 -->
           <img
             :src="card(imageUrl)"
             :alt="name"
-            class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:scale-[1.02]"
+            class="w-full aspect-square object-cover size-full absolute inset-0 transition-opacity duration-300"
+            :class="
+              hoveredProductId === id && images && images.length > 0
+                ? 'opacity-0'
+                : 'opacity-100'
+            "
             loading="lazy"
             decoding="async"
             draggable="false"
           />
+          <!-- 호버 이미지 -->
+          <img
+            v-if="images && images.length > 0"
+            :src="card(images[0])"
+            :alt="`${name} - 호버`"
+            class="w-full aspect-square object-cover size-full transition-opacity duration-300"
+            :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
+            loading="lazy"
+            decoding="async"
+            draggable="false"
+          />
+
+          <!-- SOLD OUT 배지 -->
+          <div
+            v-if="isAvailable === false"
+            class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
+          >
+            SOLD OUT
+          </div>
 
           <!-- 위시리스트 버튼 -->
           <button

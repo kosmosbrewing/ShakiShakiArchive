@@ -144,11 +144,13 @@ watch(
               </div>
 
               <div class="flex justify-between items-end mt-4">
+                <!-- 수량 비활성화
                 <QuantitySelector
                   :model-value="item.quantity"
                   size="sm"
                   @change="(change) => updateQuantity(item, change)"
                 />
+                -->
 
                 <div class="font-bold text-foreground">
                   {{ formatPrice(Number(item.product?.price) * item.quantity) }}
