@@ -14,7 +14,7 @@ import { formatPrice } from "@/lib/formatters";
 import {
   LoadingSpinner,
   EmptyState,
-  QuantitySelector,
+  //QuantitySelector,
   ProductThumbnail,
 } from "@/components/common";
 
@@ -37,7 +37,7 @@ const {
   totalProductPrice,
   isEmpty,
   loadCart,
-  updateQuantity,
+  //updateQuantity,
   removeItem,
 } = useCart();
 

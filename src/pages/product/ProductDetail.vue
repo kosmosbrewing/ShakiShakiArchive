@@ -22,7 +22,10 @@ import { formatPrice, formatSizeValue } from "@/lib/formatters";
 import { Heart } from "lucide-vue-next";
 
 // 공통 컴포넌트
-import { ProductDetailSkeleton, QuantitySelector } from "@/components/common";
+import {
+  ProductDetailSkeleton,
+  //QuantitySelector
+} from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent } from "@/components/ui/card";

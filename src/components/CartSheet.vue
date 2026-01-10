@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/formatters";
 // 공통 컴포넌트
 import {
   LoadingSpinner,
-  QuantitySelector,
+  //QuantitySelector,
   ProductThumbnail,
 } from "@/components/common";
 
@@ -46,7 +46,7 @@ const {
   totalProductPrice,
   isEmpty,
   loadCart,
-  updateQuantity,
+  //updateQuantity,
   removeItem,
 } = useCart();
 
