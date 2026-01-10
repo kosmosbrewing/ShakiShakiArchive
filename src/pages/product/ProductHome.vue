@@ -167,18 +167,9 @@ watch(
       v-else
       v-for="({ id, imageUrl, name, price }, idx) in productList.slice(0, 4)"
       :key="id"
-      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative mt-3"
+      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative"
       :style="{ animationDelay: `${idx * 0.05}s` }"
     >
-      <!-- 스티커 장식 -->
-      <div
-        class="sticker-dot absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full shadow-md z-10"
-        :class="[
-          ['bg-[#7DD3C0]', 'bg-[#F472B6]', 'bg-[#F9A8D4]', 'bg-[#FCD34D]'][
-            idx % 4
-          ],
-        ]"
-      />
       <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
         <div
           class="aspect-square cursor-pointer relative"
@@ -212,7 +203,7 @@ watch(
         <Separator></Separator>
         <!-- 상품명 -->
         <CardContent
-          class="pb-0 px-4 mt-3 cursor-pointer hover:underline"
+          class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
           @click="goToDetail(id)"
         >
           <span class="text-caption text-foreground leading-snug line-clamp-2">
@@ -220,7 +211,7 @@ watch(
           </span>
         </CardContent>
         <!-- 가격 -->
-        <CardContent class="pb-0 px-4">
+        <CardContent class="pb-2 px-4 text-center">
           <span class="text-caption text-muted-foreground/80">
             {{ formatPrice(price) }}</span
           >
