@@ -226,7 +226,7 @@ onUnmounted(() => {
       >
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
           <div
-            class="h-full cursor-pointer relative"
+            class="aspect-square cursor-pointer relative"
             @click="goToDetail(id)"
             @mouseenter="hoveredProductId = id"
             @mouseleave="hoveredProductId = null"
