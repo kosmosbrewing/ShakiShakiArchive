@@ -58,13 +58,12 @@ const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 // 상품 정렬 (품절 상품 맨 뒤로)
 const sortByStock = (items: ProductItem[]): ProductItem[] => {
   return [...items].sort((a, b) => {
-    // isAvailable === false면 품절로 간주
-    const aOutOfStock = a.isAvailable === false;
-    const bOutOfStock = b.isAvailable === false;
+    const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
+    const bStock = b.totalStock ?? 1;
 
-    // 품절 상품을 뒤로 정렬
-    if (aOutOfStock && !bOutOfStock) return 1;
-    if (!aOutOfStock && bOutOfStock) return -1;
+    // 품절(재고 0) 상품을 뒤로 정렬
+    if (aStock === 0 && bStock > 0) return 1;
+    if (aStock > 0 && bStock === 0) return -1;
     return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
   });
 };
@@ -94,9 +93,6 @@ const fetchProductData = async () => {
     });
 
     // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
-    // [디버그] 실제 API 응답 확인
-    console.log("[ProductHome] API 응답 샘플:", response.data[0]);
-
     const mappedProducts = response.data
       .map((item) => ({
         id: item.id,
@@ -108,7 +104,6 @@ const fetchProductData = async () => {
         isAvailable: item.isAvailable,
       }));
 
-    console.log("[ProductHome] 매핑된 상품 샘플:", mappedProducts[0]);
     productList.value = sortByStock(mappedProducts);
   } catch (error) {
     console.error("API Error:", error);
@@ -178,7 +173,7 @@ watch(
     <Card
       v-else
       v-for="(
-        { id, imageUrl, images, name, price, isAvailable }, idx
+        { id, imageUrl, images, name, price, totalStock }, idx
       ) in productList.slice(0, 4)"
       :key="id"
       class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
@@ -219,7 +214,7 @@ watch(
 
           <!-- SOLD OUT 배지 -->
           <div
-            v-if="isAvailable === false"
+            v-if="totalStock !== undefined && totalStock === 0"
             class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
           >
             SOLD OUT

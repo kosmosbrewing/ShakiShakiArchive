@@ -440,13 +440,12 @@ export function useProductList() {
   // 상품 정렬 (품절 상품 맨 뒤로)
   const sortByStock = (items: ProductListItem[]): ProductListItem[] => {
     return [...items].sort((a, b) => {
-      // isAvailable === false면 품절로 간주
-      const aOutOfStock = a.isAvailable === false;
-      const bOutOfStock = b.isAvailable === false;
+      const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
+      const bStock = b.totalStock ?? 1;
 
-      // 품절 상품을 뒤로 정렬
-      if (aOutOfStock && !bOutOfStock) return 1;
-      if (!aOutOfStock && bOutOfStock) return -1;
+      // 품절(재고 0) 상품을 뒤로 정렬
+      if (aStock === 0 && bStock > 0) return 1;
+      if (aStock > 0 && bStock === 0) return -1;
       return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
     });
   };
