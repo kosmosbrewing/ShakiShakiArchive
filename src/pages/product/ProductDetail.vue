@@ -61,6 +61,13 @@ const productId = computed(() => String(route.params.id));
 // variant 선택
 const variantSelection = useVariantSelection(productData.variants);
 
+// 전체 품절 여부 확인
+const isOutOfStock = computed(() => {
+  const variants = productData.variants.value;
+  if (variants.length === 0) return false;
+  return variants.every((v) => v.stockQuantity <= 0 || !v.isAvailable);
+});
+
 // 사이즈 정보
 const sizeMeasurements = useSizeMeasurements(productData.variants);
 
@@ -436,7 +443,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- 사이즈 선택 후에만 수량 선택기 표시 -->
+            <!-- 사이즈 선택 후에만 수량 선택기 표시
             <div
               v-if="!variantSelection.needsVariantSelection.value"
               class="mb-6 animate-fade-in"
@@ -446,7 +453,7 @@ onMounted(async () => {
               >
               <QuantitySelector v-model="variantSelection.quantity.value" />
             </div>
-
+             -->
             <div class="mb-6 flex flex-col gap-3">
               <Button
                 v-if="!variantSelection.needsVariantSelection.value"
@@ -459,12 +466,16 @@ onMounted(async () => {
               </Button>
               <Button
                 @click="handleBuyNow"
-                :disabled="variantSelection.needsVariantSelection.value"
+                :disabled="
+                  isOutOfStock || variantSelection.needsVariantSelection.value
+                "
                 class="w-full"
                 size="lg"
               >
                 {{
-                  variantSelection.needsVariantSelection.value
+                  isOutOfStock
+                    ? "SOLD OUT"
+                    : variantSelection.needsVariantSelection.value
                     ? "옵션을 선택해주세요"
                     : "바로 구매"
                 }}

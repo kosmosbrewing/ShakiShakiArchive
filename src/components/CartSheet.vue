@@ -178,11 +178,13 @@ const continueShopping = () => {
                   </div>
 
                   <div class="flex justify-between items-center mt-2">
+                    <!-- 수량 비활성화
                     <QuantitySelector
                       :model-value="item.quantity"
                       size="sm"
                       @change="(change) => updateQuantity(item, change)"
                     />
+                    -->
                     <span class="text-body font-medium text-foreground">
                       {{
                         formatPrice(Number(item.product?.price) * item.quantity)
