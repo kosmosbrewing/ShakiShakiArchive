@@ -219,20 +219,6 @@ onUnmounted(() => {
         class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-0 shadow-sm hover:shadow-md transition-shadow relative mt-3"
         :style="{ animationDelay: `${idx * 0.05}s` }"
       >
-        <!-- 스티커 장식 -->
-        <div
-          class="sticker-dot absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full shadow-md z-10"
-          :class="[
-            [
-              'bg-[#7DD3C0]',
-              'bg-[#F472B6]',
-              'bg-[#F9A8D4]',
-              'bg-[#FCD34D]',
-              'bg-[#A5B4FC]',
-              'bg-[#86EFAC]',
-            ][idx % 6],
-          ]"
-        />
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
           <div class="h-full cursor-pointer relative" @click="goToDetail(id)">
             <img
@@ -263,7 +249,7 @@ onUnmounted(() => {
           <Separator></Separator>
           <!-- 상품명 -->
           <CardContent
-            class="pb-0 px-4 mt-3 cursor-pointer hover:underline"
+            class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
             @click="goToDetail(id)"
           >
             <span
@@ -273,7 +259,7 @@ onUnmounted(() => {
             </span>
           </CardContent>
           <!-- 가격 -->
-          <CardContent class="pb-0 px-4">
+          <CardContent class="pb-0 px-4 text-center">
             <span class="text-caption text-muted-foreground/80">
               {{ formatPrice(price) }}</span
             >
@@ -282,9 +268,9 @@ onUnmounted(() => {
       </Card>
     </div>
 
-    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 (카테고리 라우트에서만 표시) -->
+    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
     <div
-      v-if="hasCategory && (displayProducts.length > 0 || hasMore)"
+      v-if="displayProducts.length > 0 || hasMore"
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >

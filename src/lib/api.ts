@@ -145,6 +145,16 @@ export function getNaverLoginUrl(): string {
   return `${API_BASE}/api/oauth/naver/login?t=${timestamp}&returnUrl=${returnUrl}`;
 }
 
+// 카카오 소셜 로그인 URL 반환
+export function getKakaoLoginUrl(): string {
+  const timestamp = Date.now();
+  const currentPath = window.location.pathname;
+  const authPaths = ["/login", "/signup", "/forgot-password", "/auth"];
+  const isAuthPage = authPaths.some((path) => currentPath.startsWith(path));
+  const returnUrl = encodeURIComponent(isAuthPage ? "/" : currentPath || "/");
+  return `${API_BASE}/api/oauth/kakao?t=${timestamp}&returnUrl=${returnUrl}`;
+}
+
 // 현재 사용자 정보 가져오기
 export async function fetchCurrentUser(): Promise<User> {
   return apiRequest<User>("/api/auth/user");

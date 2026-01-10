@@ -53,7 +53,7 @@ const authStore = useAuthStore();
 const productData = useProduct();
 const { requireAuth } = useAuthCheck();
 const { addItem } = useCart();
-const { detail, thumbnail } = useOptimizedImage();
+const { detail } = useOptimizedImage();
 
 // 상품 ID (UUID)
 const productId = computed(() => String(route.params.id));
@@ -335,9 +335,9 @@ onMounted(async () => {
       v-if="productData.loading.value || !productData.product.value"
     />
 
-    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <!-- 좌측: 이미지 갤러리 -->
-      <div class="lg:col-span-1 space-y-4">
+    <div v-else class="flex flex-col lg:grid lg:grid-cols-2 gap-8">
+      <!-- 메인 이미지: 모바일에서만 표시 -->
+      <div class="order-1 lg:hidden">
         <Card class="overflow-hidden">
           <div class="aspect-[3/4] bg-muted relative">
             <img
@@ -366,61 +366,10 @@ onMounted(async () => {
             </button>
           </div>
         </Card>
-
-        <!-- 썸네일 갤러리 -->
-        <div
-          v-if="productData.galleryImages.value.length > 1"
-          class="flex gap-2 overflow-x-auto pb-2"
-        >
-          <button
-            v-for="(img, idx) in productData.galleryImages.value"
-            :key="`thumb-${idx}`"
-            @click="gallery.setCurrentImage(img)"
-            :class="[
-              'w-20 h-20 flex-shrink-0 rounded border border-border overflow-hidden transition',
-              gallery.currentImage.value === img
-                ? 'ring-2 ring-primary'
-                : 'opacity-70 hover:opacity-100',
-            ]"
-          >
-            <img
-              :src="thumbnail(img)"
-              class="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-              draggable="false"
-            />
-          </button>
-        </div>
-
-        <!-- 상세 이미지 -->
-        <div
-          v-if="
-            productData.product.value.detailImages &&
-            productData.product.value.detailImages.length > 0
-          "
-          class="space-y-6 mt-6"
-        >
-          <div
-            v-for="(detailImg, idx) in productData.product.value.detailImages"
-            :key="`detail-${idx}`"
-            class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
-            :style="{ animationDelay: `${idx * 0.1}s` }"
-          >
-            <img
-              :src="detail(detailImg)"
-              class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
-              loading="lazy"
-              decoding="async"
-              draggable="false"
-              :alt="`상품 상세 이미지 ${idx + 1}`"
-            />
-          </div>
-        </div>
       </div>
 
-      <!-- 우측: 상품 정보 카드 -->
-      <div class="lg:col-span-1">
+      <!-- 상품 정보 카드: 모바일 2번, 데스크탑 우측 -->
+      <div class="order-2 lg:order-2">
         <Card class="sticky top-24">
           <CardContent class="p-6">
             <div class="flex justify-between items-end gap-3 mb-3">
@@ -635,6 +584,31 @@ onMounted(async () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <!-- 상세 이미지: 모바일 3번, 데스크탑 좌측 -->
+      <div
+        v-if="
+          productData.product.value.detailImages &&
+          productData.product.value.detailImages.length > 0
+        "
+        class="order-3 lg:order-1 space-y-6"
+      >
+        <div
+          v-for="(detailImg, idx) in productData.product.value.detailImages"
+          :key="`detail-${idx}`"
+          class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
+          :style="{ animationDelay: `${idx * 0.1}s` }"
+        >
+          <img
+            :src="detail(detailImg)"
+            class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+            loading="lazy"
+            decoding="async"
+            draggable="false"
+            :alt="`상품 상세 이미지 ${idx + 1}`"
+          />
+        </div>
       </div>
     </div>
 
