@@ -2,13 +2,16 @@
 // src/pages/Cart.vue
 // 장바구니 페이지
 
-import { onMounted, watch } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 // import { useAuthGuard } from "@/composables/useAuthGuard"; // [삭제] 비회원 접근 허용
 import { useCart } from "@/composables/useCart";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
+
+// 아이콘
+import { AlertCircle } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import {
@@ -22,6 +25,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -41,10 +45,35 @@ const {
   removeItem,
 } = useCart();
 
+// 재고 없는 상품 확인
+const hasOutOfStockItems = computed(() => {
+  return cartItems.value.some((item) => {
+    if (!item.variant) return false;
+    const availableStock = item.variant.stockQuantity;
+    return availableStock === 0 || item.quantity > availableStock;
+  });
+});
+
+// 특정 아이템이 재고 부족인지 확인
+const isOutOfStock = (item: any) => {
+  if (!item.variant) return false;
+  const availableStock = item.variant.stockQuantity;
+  return availableStock === 0 || item.quantity > availableStock;
+};
+
 // 주문 페이지로 이동
 const goToOrder = async () => {
   if (cartItems.value.length === 0) {
     showAlert("장바구니가 비어있습니다.", { type: "error" });
+    return;
+  }
+
+  // 재고 부족 상품 확인
+  if (hasOutOfStockItems.value) {
+    showAlert(
+      "재고가 부족한 상품이 있습니다.\n해당 상품을 삭제해주세요.",
+      { type: "error" }
+    );
     return;
   }
 
@@ -106,18 +135,58 @@ watch(
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-4">
-        <Card v-for="item in cartItems" :key="item.id">
-          <CardContent class="flex gap-6 p-4">
+        <!-- 재고 부족 경고 -->
+        <Card
+          v-if="hasOutOfStockItems"
+          class="border-primary/50 bg-primary/5"
+        >
+          <CardContent class="flex items-center gap-3 p-4">
+            <AlertCircle class="w-5 h-5 text-primary flex-shrink-0" />
+            <div class="flex-1">
+              <p class="text-body font-semibold text-primary">
+                재고 부족 상품이 있습니다
+              </p>
+              <p class="text-caption text-muted-foreground mt-0.5">
+                재고가 부족한 상품을 삭제한 후 주문해주세요.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          v-for="item in cartItems"
+          :key="item.id"
+          :class="[
+            isOutOfStock(item)
+              ? 'border-primary/30 bg-muted/30'
+              : '',
+          ]"
+        >
+          <CardContent class="flex gap-6 p-4 relative">
+            <!-- SOLD OUT 배지 -->
+            <Badge
+              v-if="isOutOfStock(item)"
+              class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
+            >
+              SOLD OUT
+            </Badge>
+
             <ProductThumbnail
               :image-url="item.product?.imageUrl"
               :product-id="item.productId"
+              :class="[isOutOfStock(item) ? 'opacity-50' : '']"
             />
 
             <div class="flex-1 flex flex-col justify-between">
               <div>
                 <div class="flex justify-between items-start">
                   <h3
-                    class="font-bold text-foreground cursor-pointer hover:underline"
+                    :class="[
+                      'font-bold cursor-pointer hover:underline',
+                      isOutOfStock(item)
+                        ? 'text-muted-foreground opacity-60'
+                        : 'text-foreground',
+                    ]"
                     @click="router.push(`/productDetail/${item.productId}`)"
                   >
                     {{ item.product?.name }}
@@ -126,7 +195,7 @@ watch(
                     variant="ghost"
                     size="sm"
                     @click="removeItem(item.id)"
-                    class="text-muted-foreground hover:text-destructive h-auto p-1"
+                    class="text-muted-foreground hover:text-primary h-auto p-1"
                   >
                     삭제
                   </Button>
@@ -134,11 +203,25 @@ watch(
 
                 <p
                   v-if="item.variant"
-                  class="text-body text-muted-foreground mt-1"
+                  :class="[
+                    'text-body text-muted-foreground mt-1',
+                    isOutOfStock(item) ? 'opacity-60' : '',
+                  ]"
                 >
-                  옵션: {{ item.variant.size }}
+                  Size : {{ item.variant.size }}
                   <span v-if="item.variant.color"
                     >/ {{ item.variant.color }}</span
+                  >
+                </p>
+
+                <!-- 재고 부족 메시지 -->
+                <p
+                  v-if="isOutOfStock(item)"
+                  class="text-caption text-primary mt-2 font-medium"
+                >
+                  재고가 부족합니다
+                  <span v-if="item.variant"
+                    >(남은 재고: {{ item.variant.stockQuantity }}개)</span
                   >
                 </p>
               </div>
@@ -152,7 +235,14 @@ watch(
                 />
                 -->
 
-                <div class="font-bold text-foreground">
+                <div
+                  :class="[
+                    'font-bold',
+                    isOutOfStock(item)
+                      ? 'text-muted-foreground opacity-60'
+                      : 'text-foreground',
+                  ]"
+                >
                   {{ formatPrice(Number(item.product?.price) * item.quantity) }}
                 </div>
               </div>
@@ -187,8 +277,13 @@ watch(
               }}</span>
             </div>
 
-            <Button @click="goToOrder" class="w-full" size="lg">
-              주문하기
+            <Button
+              @click="goToOrder"
+              :disabled="hasOutOfStockItems"
+              class="w-full"
+              size="lg"
+            >
+              {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}
             </Button>
           </CardContent>
         </Card>

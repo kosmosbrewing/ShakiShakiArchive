@@ -47,6 +47,7 @@ import {
   InquiryAdmin,
   OrderAdmin,
   SiteImageAdmin,
+  UserAdmin,
 } from "@/pages/admin";
 
 // 404 페이지
@@ -122,6 +123,16 @@ const routes = [
     name: "PaymentCallback",
     component: PaymentCallback,
   },
+  {
+    path: "/checkout/fail",
+    name: "CheckoutFail",
+    component: PaymentCallback,
+  },
+  {
+    path: "/checkout/success",
+    name: "CheckoutSuccess",
+    component: PaymentCallback,
+  },
 
   // 위시리스트
   {
@@ -176,6 +187,12 @@ const routes = [
     path: "/admin/site-images",
     name: "SiteImageAdmin",
     component: SiteImageAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: "/admin/users",
+    name: "UserAdmin",
+    component: UserAdmin,
     meta: { requiresAuth: true, requiresAdmin: true },
   },
 

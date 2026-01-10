@@ -161,9 +161,9 @@ onUnmounted(() => {
               <!-- 삭제/경고 아이콘 -->
               <div
                 v-else
-                class="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center"
+                class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
               >
-                <AlertTriangle class="w-8 h-8 text-destructive" />
+                <AlertTriangle class="w-8 h-8 text-primary" />
               </div>
               <p class="text-body font-semibold text-foreground text-center whitespace-pre-line">
                 {{ message }}
@@ -180,12 +180,7 @@ onUnmounted(() => {
               </button>
               <button
                 @click="handleConfirm"
-                :class="[
-                  'flex-1 py-3.5 text-caption font-semibold transition-colors',
-                  isDestructive
-                    ? 'text-destructive hover:bg-destructive/5'
-                    : 'text-primary hover:bg-primary/5',
-                ]"
+                class="flex-1 py-3.5 text-caption font-semibold transition-colors text-primary hover:bg-primary/5"
               >
                 {{ confirmText }}
               </button>

@@ -5,6 +5,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Alert, type AlertType } from "@/components/ui/alert";
 
 // Input refs - 기본 정보
 const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
@@ -30,13 +30,9 @@ const confirmNewPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { showAlert } = useAlert();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
-
-// Alert 상태
-const showAlert = ref(false);
-const alertMessage = ref("");
-const alertType = ref<AlertType>("success");
 
 // 폼 데이터
 const form = reactive({
@@ -97,9 +93,7 @@ const handleAddressSelect = (address: {
 
 // 유효성 검사 및 Alert 표시 헬퍼
 const showValidationError = (message: string, focusRef?: any) => {
-  alertMessage.value = message;
-  alertType.value = "error";
-  showAlert.value = true;
+  showAlert(message, { type: "error" });
 
   if (focusRef) {
     // Alert가 표시된 후 해당 필드에 focus
@@ -149,24 +143,16 @@ const handleUpdateProfile = async () => {
 
     await authStore.loadUser();
 
-    // 성공 Alert 표시
-    alertMessage.value = "회원 정보가 수정되었습니다.";
-    alertType.value = "success";
-    showAlert.value = true;
-
-    // 잠시 후 Account 페이지로 이동
-    setTimeout(() => {
-      router.push("/account");
-    }, 1500);
+    // Account 페이지로 이동 후 성공 Alert 표시
+    await router.push("/account");
+    showAlert("회원 정보가 수정되었습니다.", { type: "success" });
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : "정보 수정 실패";
     if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
-      alertMessage.value = "비밀번호가 올바르지 않습니다.";
+      showAlert("비밀번호가 올바르지 않습니다.", { type: "error" });
     } else {
-      alertMessage.value = "오류 발생: " + errMsg;
+      showAlert("오류 발생: " + errMsg, { type: "error" });
     }
-    alertType.value = "error";
-    showAlert.value = true;
   } finally {
     isLoading.value = false;
   }
@@ -222,25 +208,17 @@ const handleChangePassword = async () => {
       newPassword: passwordForm.newPassword,
     });
 
-    // 성공 Alert 표시
-    alertMessage.value = "비밀번호가 변경되었습니다.";
-    alertType.value = "success";
-    showAlert.value = true;
-
-    // 잠시 후 Account 페이지로 이동
-    setTimeout(() => {
-      router.push("/account");
-    }, 1500);
+    // Account 페이지로 이동 후 성공 Alert 표시
+    await router.push("/account");
+    showAlert("비밀번호가 변경되었습니다.", { type: "success" });
   } catch (error: unknown) {
     const errMsg =
       error instanceof Error ? error.message : "비밀번호 변경 실패";
     if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
-      alertMessage.value = "현재 비밀번호가 올바르지 않습니다.";
+      showAlert("현재 비밀번호가 올바르지 않습니다.", { type: "error" });
     } else {
-      alertMessage.value = "오류 발생: " + errMsg;
+      showAlert("오류 발생: " + errMsg, { type: "error" });
     }
-    alertType.value = "error";
-    showAlert.value = true;
   } finally {
     isPasswordLoading.value = false;
   }
@@ -252,20 +230,12 @@ const handleWithdraw = async () => {
     try {
       await withdrawUser();
 
-      // 성공 Alert 표시
-      alertMessage.value = "탈퇴되었습니다.";
-      alertType.value = "success";
-      showAlert.value = true;
-
-      // 잠시 후 로그아웃 처리
-      setTimeout(async () => {
-        await authStore.handleLogout();
-      }, 1500);
+      // 로그아웃 처리 후 성공 Alert 표시
+      await authStore.handleLogout();
+      showAlert("탈퇴되었습니다.", { type: "success" });
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : "탈퇴 실패";
-      alertMessage.value = errMsg;
-      alertType.value = "error";
-      showAlert.value = true;
+      showAlert(errMsg, { type: "error" });
     }
   }
 };
@@ -470,12 +440,5 @@ onMounted(async () => {
       @select="handleAddressSelect"
     />
 
-    <!-- Alert 모달 (성공/오류) -->
-    <Alert
-      v-if="showAlert"
-      :type="alertType"
-      :message="alertMessage"
-      @close="showAlert = false"
-    />
   </div>
 </template>

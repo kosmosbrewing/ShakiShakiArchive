@@ -123,13 +123,7 @@ const handleAddToCart = async () => {
     return;
   }
 
-  // 2. 재고 확인
-  if (!variantSelection.isStockAvailable.value) {
-    displayAlert("재고가 부족합니다.");
-    return;
-  }
-
-  // 3. 상품 데이터 존재 확인
+  // 2. 상품 데이터 존재 확인
   const product = productData.product.value;
   if (!product) {
     displayAlert("상품 정보를 불러올 수 없습니다.");
@@ -137,12 +131,37 @@ const handleAddToCart = async () => {
   }
 
   const vid = variantSelection.selectedVariantId.value || undefined;
+  const qty = Number(variantSelection.quantity.value);
 
-  // 4. 장바구니 로드 후 기존 상품 체크
+  // 3. 선택된 variant의 재고 확인
+  const selectedVariant = vid
+    ? productData.variants.value.find((v) => v.id === vid)
+    : null;
+
+  const availableStock = selectedVariant ? selectedVariant.stockQuantity : 0;
+
+  // 재고가 0이면 담을 수 없음
+  if (availableStock === 0) {
+    displayAlert("재고가 없어 장바구니에 담을 수 없습니다.");
+    return;
+  }
+
+  // 4. 장바구니 로드 후 기존 상품 체크 및 총 수량 확인
   await cart.loadCart();
   const existing = cart.cartItems.value.find(
     (item) => item.productId === product.id && item.variantId === vid
   );
+
+  // 기존 장바구니 수량 + 새로 담으려는 수량이 재고를 초과하는지 확인
+  const existingQty = existing ? existing.quantity : 0;
+  const totalQty = existingQty + qty;
+
+  if (totalQty > availableStock) {
+    displayAlert(
+      `아쉽게도 남은 재고가 부족하여 더 이상 담을 수 없어요. (재고: ${availableStock}개)`
+    );
+    return;
+  }
 
   if (existing) {
     // 기존 상품이 있으면 확인 다이얼로그 표시
@@ -190,6 +209,29 @@ const proceedAddToCart = async () => {
   const selectedVariant = vid
     ? productData.variants.value.find((v) => v.id === vid)
     : null;
+
+  // 재고 확인 (중복 추가 확인 후에도 한 번 더 체크)
+  const availableStock = selectedVariant ? selectedVariant.stockQuantity : 0;
+
+  if (availableStock === 0) {
+    displayAlert("재고가 없어 장바구니에 담을 수 없습니다.");
+    return;
+  }
+
+  // 장바구니에 이미 있는 수량 확인
+  await cart.loadCart();
+  const existing = cart.cartItems.value.find(
+    (item) => item.productId === product.id && item.variantId === vid
+  );
+  const existingQty = existing ? existing.quantity : 0;
+  const totalQty = existingQty + qty;
+
+  if (totalQty > availableStock) {
+    displayAlert(
+      `재고가 부족합니다. (재고: ${availableStock}개, 장바구니: ${existingQty}개)`
+    );
+    return;
+  }
 
   // 비회원 장바구니를 위한 상품 정보 구성 (타입 명시)
   const productInfo: CartProductInfo = {
@@ -461,7 +503,7 @@ onMounted(async () => {
               <Button
                 v-if="!variantSelection.needsVariantSelection.value"
                 @click="handleAddToCart"
-                class="w-full text-primary"
+                class="w-full text-primary hover:text-primary"
                 size="lg"
                 variant="outline"
               >

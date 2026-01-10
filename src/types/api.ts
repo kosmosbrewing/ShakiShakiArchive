@@ -678,3 +678,55 @@ export interface AppConstants {
   validation: ValidationConstants;
   messages: MessagesConstants;
 }
+
+// ------------------------------------------------------------------
+// 회원 관리 (Admin)
+// ------------------------------------------------------------------
+
+// 페이지네이션 정보
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+// 회원 목록 조회 파라미터
+export interface AdminUserListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+// 회원 목록 응답
+export interface AdminUsersResponse {
+  users: User[];
+  pagination: Pagination;
+}
+
+// 회원 상세 통계
+export interface UserStats {
+  totalOrders: number;
+  totalSpent: number;
+  lastOrderDate: string | null;
+  totalInquiries: number;
+}
+
+// 회원 상세 조회 응답
+export interface AdminUserDetailResponse {
+  user: User;
+  stats: UserStats;
+}
+
+// 회원 정보 수정 요청
+export interface UpdateUserRequest {
+  userName?: string;
+  phone?: string;
+  zipCode?: string;
+  address?: string;
+  detailAddress?: string;
+  emailOptIn?: boolean;
+}

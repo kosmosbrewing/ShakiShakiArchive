@@ -61,6 +61,7 @@ const goToInquiryAdmin = () => router.push("/admin/inquiries"); // 관리자는 
 const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
 const goToSiteImageAdmin = () => router.push("/admin/site-images");
+const goToUserAdmin = () => router.push("/admin/users");
 
 // 메뉴 아이템 정의
 const menuItems = [
@@ -210,6 +211,19 @@ onMounted(async () => {
               <MessageCircle class="w-4 h-4 text-white" />
             </div>
             문의 관리
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToUserAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-orange-600 flex items-center justify-center"
+            >
+              <User class="w-4 h-4 text-white" />
+            </div>
+            회원 관리
           </Button>
         </div>
       </CardContent>
