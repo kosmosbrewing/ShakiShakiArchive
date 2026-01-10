@@ -43,6 +43,7 @@ export interface Product {
   detailImages?: string[];
   isAvailable: boolean;
   categoryId?: number;
+  totalStock?: number; // 모든 variants의 재고 합계
   createdAt: string;
   updatedAt: string;
 }

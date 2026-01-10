@@ -218,7 +218,7 @@ onUnmounted(() => {
       <Card
         v-else
         v-for="(
-          { id, imageUrl, images, name, price, isAvailable }, idx
+          { id, imageUrl, images, name, price, totalStock }, idx
         ) in displayProducts"
         :key="id"
         class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative mt-3"
@@ -259,7 +259,7 @@ onUnmounted(() => {
 
             <!-- SOLD OUT 배지 -->
             <div
-              v-if="isAvailable === false"
+              v-if="totalStock !== undefined && totalStock === 0"
               class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
             >
               SOLD OUT
