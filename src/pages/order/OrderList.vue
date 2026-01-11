@@ -92,7 +92,7 @@ const statusLabels: Record<string, string> = {
 
 // 상태별 실제 status 값 매핑
 const statusMapping: Record<string, string[]> = {
-  pending: ["pending_payment"],
+  pending: ["pending_payment", "paying"],
   preparing: ["payment_confirmed", "preparing"],
   shipped: ["shipped"],
   delivered: ["delivered"],
@@ -169,7 +169,7 @@ const goToOrderDetail = (orderId: string | number) => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["pending_payment", "payment_confirmed", "preparing"].includes(status);
+  return ["pending_payment", "paying", "payment_confirmed", "preparing"].includes(status);
 };
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
