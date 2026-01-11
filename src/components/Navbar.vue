@@ -104,11 +104,6 @@ const handleFAQClick = () => {
   router.push("/faq");
 };
 
-const handleQAClick = () => {
-  isOpen.value = false;
-  router.push("/inquiry");
-};
-
 onMounted(async () => {
   await Promise.all([cartStore.loadCart(), categoryStore.loadCategories()]);
   window.addEventListener("cart-updated", updateCartCount);

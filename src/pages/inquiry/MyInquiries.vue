@@ -9,13 +9,11 @@ import { fetchMyInquiries } from "@/lib/api";
 import { formatDate, maskUserName } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
-import { useAlert } from "@/composables/useAlert";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState } from "@/components/common";
 
 // Shadcn UI 컴포넌트
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,14 +34,12 @@ import {
 import {
   Lock,
   MessageCircle,
-  ChevronRight,
   PenLine,
   ArrowLeft,
 } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { showAlert } = useAlert();
 
 // 인증 체크
 useAuthGuard();

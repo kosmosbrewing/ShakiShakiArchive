@@ -384,7 +384,7 @@ onMounted(() => {
                   variant="ghost"
                   size="sm"
                   class="text-primary hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
-                  @click="confirmReplyDelete(reply.id)"
+                  @click="confirmReplyDelete(String(reply.id))"
                 >
                   <Trash2 class="w-4 h-4" />
                 </Button>

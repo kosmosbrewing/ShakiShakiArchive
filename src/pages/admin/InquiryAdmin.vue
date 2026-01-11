@@ -8,7 +8,6 @@ import { fetchInquiries } from "@/lib/api";
 import { formatDate } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
-import { useAlert } from "@/composables/useAlert";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState } from "@/components/common";
@@ -35,7 +34,6 @@ import { Lock, MessageCircle } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { showAlert } = useAlert();
 
 // 상태
 const inquiries = ref<Inquiry[]>([]);

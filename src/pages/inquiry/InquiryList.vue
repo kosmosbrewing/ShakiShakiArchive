@@ -14,7 +14,6 @@ import { useAlert } from "@/composables/useAlert";
 import { LoadingSpinner, EmptyState } from "@/components/common";
 
 // Shadcn UI 컴포넌트
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,7 +34,6 @@ import {
 import {
   Lock,
   MessageCircle,
-  ChevronRight,
   PenLine,
   ArrowLeft,
 } from "lucide-vue-next";
@@ -61,7 +59,6 @@ const typeLabels: Record<InquiryType, string> = {
 const statusLabels: Record<InquiryStatus, string> = {
   pending: "답변 대기",
   answered: "답변 완료",
-  closed: "종료",
 };
 
 // 문의 상태별 배지 색상
@@ -71,7 +68,6 @@ const statusVariants: Record<
 > = {
   pending: "outline",
   answered: "default",
-  closed: "secondary",
 };
 
 // 필터링된 문의 목록
