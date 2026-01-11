@@ -60,7 +60,7 @@ const goBack = () => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["pending_payment", "paying", "payment_confirmed", "preparing"].includes(status);
+  return ["payment_confirmed", "preparing"].includes(status);
 };
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
@@ -177,10 +177,17 @@ const getPaymentProviderLabel = (provider: string): string => {
               :key="item.id"
               class="p-6 flex flex-col sm:flex-row gap-6"
             >
-              <ProductThumbnail
-                :image-url="item.product?.imageUrl"
-                :product-id="item.productId"
-              />
+              <div class="relative">
+                <ProductThumbnail
+                  :image-url="item.product?.imageUrl"
+                  :product-id="item.productId"
+                />
+                <!-- 모바일: 이미지 우측 상단에 뱃지 -->
+                <OrderStatusBadge
+                  :status="item.status"
+                  class="absolute top-2 right-2 sm:hidden shadow-sm"
+                />
+              </div>
 
               <div class="flex-1 flex flex-col justify-between min-h-[100px]">
                 <div>
@@ -191,7 +198,8 @@ const getPaymentProviderLabel = (provider: string): string => {
                     >
                       {{ item.productName }}
                     </h3>
-                    <OrderStatusBadge :status="item.status" class="shrink-0" />
+                    <!-- 데스크톱: 제목 우측에 뱃지 -->
+                    <OrderStatusBadge :status="item.status" class="shrink-0 hidden sm:inline-flex" />
                   </div>
 
                   <p class="text-body text-muted-foreground mb-1">
@@ -219,7 +227,7 @@ const getPaymentProviderLabel = (provider: string): string => {
 
                     <Button
                       v-if="canTrack(item.status)"
-                      variant="secondary"
+                      variant="outline"
                       size="sm"
                       class="text-caption h-8"
                       @click="handleTrackShipment(item)"

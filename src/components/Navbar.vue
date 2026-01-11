@@ -99,6 +99,11 @@ const handleCartClick = () => {
   cartSheetOpen.value = true;
 };
 
+const handleFAQClick = () => {
+  isOpen.value = false;
+  router.push("/faq");
+};
+
 const handleQAClick = () => {
   isOpen.value = false;
   router.push("/inquiry");
@@ -168,10 +173,11 @@ onUnmounted(() => {
               >
                 INSTAGRAM
               </Button>
+
               <Button
                 variant="ghost"
                 class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
-                @click="handleQAClick"
+                @click="handleFAQClick"
               >
                 Q&A
               </Button>
@@ -334,7 +340,7 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="hover:bg-transparent hover:scale-110 transition-transform"
-          @click="handleQAClick"
+          @click="handleFAQClick"
         >
           <img
             :src="qaIcon"

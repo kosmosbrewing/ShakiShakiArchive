@@ -101,7 +101,7 @@ export function formatOrderStatus(status: OrderStatus): string {
     preparing: "배송준비중",
     shipped: "배송중",
     delivered: "배송완료",
-    cancelled: "주문취소",
+    cancelled: "주문중단",
     refunded: "주문취소",
   };
   return statusMap[status] || status;
@@ -115,4 +115,31 @@ export function formatSizeValue(value: number | undefined | null): string | numb
     return "-";
   }
   return Number(value);
+}
+
+/**
+ * 사용자 이름 마스킹 처리
+ * 예: "홍길동" → "홍*동", "김철수" → "김*수", "이영" → "이*"
+ */
+export function maskUserName(name: string | undefined | null): string {
+  if (!name || name.length === 0) {
+    return "익명";
+  }
+
+  // 1글자인 경우
+  if (name.length === 1) {
+    return name;
+  }
+
+  // 2글자인 경우: 첫 글자만 보여주고 나머지 마스킹
+  if (name.length === 2) {
+    return name[0] + "*";
+  }
+
+  // 3글자 이상인 경우: 첫 글자와 마지막 글자 보여주고 중간 마스킹
+  const firstChar = name[0];
+  const lastChar = name[name.length - 1];
+  const middleMask = "*".repeat(name.length - 2);
+
+  return firstChar + middleMask + lastChar;
 }

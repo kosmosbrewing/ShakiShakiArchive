@@ -109,7 +109,7 @@ const continueShopping = () => {
   <Sheet :open="open" @update:open="emit('update:open', $event)">
     <SheetContent
       side="right"
-      class="w-full sm:max-w-sm flex flex-col p-0 bg-card rounded-2xl"
+      class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-2xl"
     >
       <!-- 헤더 -->
       <SheetHeader class="px-6 py-4 pt-10">

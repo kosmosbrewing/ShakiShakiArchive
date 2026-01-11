@@ -171,6 +171,7 @@ onMounted(() => {
             v-model="formData.title"
             placeholder="문의 제목을 입력해주세요"
             :disabled="loading"
+            class="placeholder:text-muted-foreground/50"
           />
         </div>
 
@@ -183,6 +184,7 @@ onMounted(() => {
             placeholder="문의 내용을 상세히 입력해주세요"
             :rows="8"
             :disabled="loading"
+            class="placeholder:text-muted-foreground/50"
           />
         </div>
 

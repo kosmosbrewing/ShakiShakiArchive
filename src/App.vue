@@ -38,7 +38,8 @@ const cursorImages = [
 const authStore = useAuthStore();
 
 // 전역 Alert 시스템
-const { alertState, closeAlert, handleConfirm, handleCancel } = useAlert();
+const { alertState, closeAlert, handleConfirm, handleCancel, updatePromptValue } =
+  useAlert();
 
 // 환영 메시지 Alert 상태
 const showWelcomeAlert = ref(false);
@@ -218,9 +219,14 @@ onUnmounted(() => {
     :confirm-variant="alertState.confirmVariant"
     :confirm-text="alertState.confirmText"
     :cancel-text="alertState.cancelText"
+    :prompt-mode="alertState.promptMode"
+    :prompt-value="alertState.promptValue"
+    :prompt-placeholder="alertState.promptPlaceholder"
+    :prompt-required="alertState.promptRequired"
     @close="closeAlert"
     @confirm="handleConfirm"
     @cancel="handleCancel"
+    @update:prompt-value="updatePromptValue"
   />
 </template>
 

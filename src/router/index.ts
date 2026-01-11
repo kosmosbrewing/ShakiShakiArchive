@@ -38,6 +38,7 @@ import {
   InquiryCreate,
   InquiryDetail,
   MyInquiries,
+  FAQ,
 } from "@/pages/inquiry";
 
 // Admin (관리자)
@@ -142,7 +143,8 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // 문의하기 (Q&A)
+  // FAQ 및 문의하기 (Q&A)
+  { path: "/faq", name: "FAQ", component: FAQ },
   { path: "/inquiry", name: "InquiryList", component: InquiryList },
   {
     path: "/inquiry/create",

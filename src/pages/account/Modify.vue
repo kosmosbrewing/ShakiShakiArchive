@@ -30,7 +30,7 @@ const confirmNewPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { showAlert } = useAlert();
+const { showAlert, showDestructiveConfirm, showPromptConfirm } = useAlert();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
 
@@ -226,17 +226,49 @@ const handleChangePassword = async () => {
 
 // 회원 탈퇴
 const handleWithdraw = async () => {
-  if (prompt("탈퇴하려면 '탈퇴'를 입력하세요.") === "탈퇴") {
-    try {
-      await withdrawUser();
-
-      // 로그아웃 처리 후 성공 Alert 표시
-      await authStore.handleLogout();
-      showAlert("탈퇴되었습니다.", { type: "success" });
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : "탈퇴 실패";
-      showAlert(errMsg, { type: "error" });
+  // 1단계: Confirm으로 탈퇴 의사 확인
+  const confirmed = await showDestructiveConfirm(
+    "샤키샤키 아카이브를 떠나시겠습니까?\n떠나시면 모든 정보가 즉시 파기되며,\n다시는 복구할 수 없습니다.",
+    {
+      confirmText: "다음",
+      cancelText: "취소",
     }
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  // Alert transition이 완료될 시간을 줌 (150ms transition + 여유 50ms)
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // 2단계: '탈퇴' 직접 입력 확인 (PromptConfirm 사용)
+  const input = await showPromptConfirm(
+    "샤키샤키 아카이브를 떠나시려면 \n 아래에 '탈퇴'를 입력해주세요.",
+    {
+      variant: "destructive",
+      confirmText: "확인",
+      cancelText: "취소",
+      placeholder: "탈퇴",
+      //required: "탈퇴",
+    }
+  );
+
+  // null이면 취소하거나 입력이 일치하지 않은 경우
+  if (input === null) {
+    return;
+  }
+
+  // 탈퇴 실행
+  try {
+    await withdrawUser();
+
+    // 로그아웃 처리 후 성공 Alert 표시
+    await authStore.handleLogout();
+    showAlert("탈퇴되었습니다.", { type: "success" });
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : "탈퇴 실패";
+    showAlert(errMsg, { type: "error" });
   }
 };
 
@@ -367,7 +399,12 @@ onMounted(async () => {
 
       <!-- 제출 버튼 -->
       <div class="text-right">
-        <Button type="submit" :disabled="isLoading" size="lg" class="w-full sm:w-auto">
+        <Button
+          type="submit"
+          :disabled="isLoading"
+          size="lg"
+          class="w-full sm:w-auto"
+        >
           {{ isLoading ? "처리중..." : "정보 수정 완료" }}
         </Button>
       </div>
@@ -418,7 +455,12 @@ onMounted(async () => {
       </Card>
 
       <div class="text-right">
-        <Button type="submit" :disabled="isPasswordLoading" size="lg" class="w-full sm:w-auto">
+        <Button
+          type="submit"
+          :disabled="isPasswordLoading"
+          size="lg"
+          class="w-full sm:w-auto"
+        >
           {{ isPasswordLoading ? "처리중..." : "비밀번호 변경" }}
         </Button>
       </div>
@@ -430,7 +472,7 @@ onMounted(async () => {
         variant="ghost"
         size="sm"
         @click="handleWithdraw"
-        class="text-caption sm:text-body text-muted-foreground hover:text-destructive"
+        class="text-caption sm:text-body text-destructive hover:text-destructive hover:bg-destructive/10"
       >
         회원 탈퇴하기
       </Button>

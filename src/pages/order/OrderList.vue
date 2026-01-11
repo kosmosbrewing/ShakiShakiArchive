@@ -11,6 +11,7 @@ import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
 import { fetchAllOrders, fetchOrder } from "@/lib/api";
+import { useDebounceFn } from "@vueuse/core";
 
 // 공통 컴포넌트
 import {
@@ -24,7 +25,8 @@ import {
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, X, Loader2 } from "lucide-vue-next";
+import { Input } from "@/components/ui/input";
+import { ChevronRight, X, Loader2, Search } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -88,9 +90,12 @@ const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
 // 현재 필터 상태
 const currentFilter = ref<string | null>(null);
 
+// 검색어 상태
+const searchQuery = ref<string>("");
+
 // 상태 필터 레이블 매핑
 const statusLabels: Record<string, string> = {
-  pending: "입금전",
+  pending: "입금대기",
   payment_confirmed: "결제완료",
   preparing: "배송준비중",
   shipped: "배송중",
@@ -119,10 +124,10 @@ const filteredOrders = computed((): Order[] => {
   const result: Order[] = [];
 
   // 사용자에게 숨길 상태
-  const hiddenStatuses = ["cancelled", "paying"];
+  const hiddenStatuses = ["cancelled", "paying", "pending_payment"];
 
-  // 필터가 있으면 전체 주문 데이터, 없으면 페이지네이션된 데이터 사용
-  const sourceOrders = currentFilter.value ? allOrders.value : orders.value;
+  // 검색어나 필터가 있으면 전체 주문 데이터, 없으면 페이지네이션된 데이터 사용
+  const sourceOrders = currentFilter.value || searchQuery.value ? allOrders.value : orders.value;
 
   for (const order of sourceOrders) {
     if (!order.orderItems) continue;
@@ -134,7 +139,16 @@ const filteredOrders = computed((): Order[] => {
         return false;
       }
 
-      // 필터가 있는 경우
+      // 상품명 검색 필터
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        const productName = item.productName?.toLowerCase() || "";
+        if (!productName.includes(query)) {
+          return false;
+        }
+      }
+
+      // 상태 필터가 있는 경우
       if (currentFilter.value) {
         const allowedStatuses = statusMapping[currentFilter.value] || [];
         // 상태 필터
@@ -167,6 +181,36 @@ const clearFilter = () => {
   currentFilter.value = null;
   router.replace({ path: "/orderlist" });
 };
+
+// 검색어 초기화
+const clearSearch = () => {
+  searchQuery.value = "";
+};
+
+// 모든 필터 해제
+const clearAllFilters = () => {
+  clearFilter();
+  clearSearch();
+};
+
+// 디바운스된 검색 함수 (300ms 후 전체 주문 로드)
+const debouncedSearch = useDebounceFn(async () => {
+  if (searchQuery.value) {
+    loadingAllOrders.value = true;
+    try {
+      const allOrdersData = await fetchAllOrders();
+      const detailsPromises = allOrdersData.map((order) =>
+        fetchOrder(order.id)
+      );
+      allOrders.value = await Promise.all(detailsPromises);
+    } catch (e) {
+      console.error("전체 주문 로드 실패:", e);
+      allOrders.value = [];
+    } finally {
+      loadingAllOrders.value = false;
+    }
+  }
+}, 300);
 
 // 쿼리 파라미터 감시
 watch(
@@ -202,6 +246,11 @@ watch(
   { immediate: true }
 );
 
+// 검색어 변경 감지
+watch(searchQuery, () => {
+  debouncedSearch();
+});
+
 // 취소 다이얼로그 상태
 const cancelDialogOpen = ref(false);
 const cancelTargetOrder = ref<Order | null>(null);
@@ -214,7 +263,7 @@ const goToOrderDetail = (orderId: string | number) => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["pending_payment", "payment_confirmed", "preparing"].includes(status);
+  return ["payment_confirmed", "preparing"].includes(status);
 };
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
@@ -244,8 +293,8 @@ const handleConfirmCancel = async (reason: string) => {
     // 취소 성공 시 주문 목록 갱신
     await loadOrders();
 
-    // 필터가 적용된 경우 전체 주문도 갱신
-    if (currentFilter.value) {
+    // 필터나 검색어가 적용된 경우 전체 주문도 갱신
+    if (currentFilter.value || searchQuery.value) {
       loadingAllOrders.value = true;
       try {
         const allOrdersData = await fetchAllOrders();
@@ -312,32 +361,74 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 필터 표시 -->
-    <div v-if="currentFilter" class="mb-4 flex items-center gap-2">
-      <span class="text-body text-muted-foreground">필터:</span>
-      <Button
-        variant="secondary"
-        size="sm"
-        class="h-8 gap-1 pr-2"
-        @click="clearFilter"
-      >
-        {{ statusLabels[currentFilter] }}
-        <X class="w-4 h-4" />
-      </Button>
+    <!-- 검색 및 필터 -->
+    <div class="mb-6 space-y-4">
+      <!-- 검색 입력 -->
+      <div class="relative">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          type="text"
+          placeholder="상품명으로 검색..."
+          class="pl-9 pr-9"
+        />
+        <Button
+          v-if="searchQuery"
+          variant="ghost"
+          size="sm"
+          class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+          @click="clearSearch"
+        >
+          <X class="w-4 h-4" />
+        </Button>
+      </div>
+
+      <!-- 적용된 필터 표시 -->
+      <div v-if="currentFilter || searchQuery" class="flex items-center gap-2 flex-wrap">
+        <span class="text-caption text-muted-foreground">적용된 필터:</span>
+        <Button
+          v-if="currentFilter"
+          variant="secondary"
+          size="sm"
+          class="h-7 gap-1 pr-2 text-xs"
+          @click="clearFilter"
+        >
+          {{ statusLabels[currentFilter] }}
+          <X class="w-3 h-3" />
+        </Button>
+        <Button
+          v-if="searchQuery"
+          variant="secondary"
+          size="sm"
+          class="h-7 gap-1 pr-2 text-xs"
+          @click="clearSearch"
+        >
+          검색: {{ searchQuery }}
+          <X class="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          class="h-7 text-xs text-muted-foreground hover:text-foreground"
+          @click="clearAllFilters"
+        >
+          전체 초기화
+        </Button>
+      </div>
     </div>
 
-    <LoadingSpinner v-if="currentFilter ? loadingAllOrders : loading" />
+    <LoadingSpinner v-if="(currentFilter || searchQuery) ? loadingAllOrders : loading" />
 
     <EmptyState
       v-else-if="filteredOrders.length === 0"
       header="주문내역"
       :message="
-        currentFilter
-          ? `${statusLabels[currentFilter]} 상태의 주문이 없습니다.`
+        currentFilter || searchQuery
+          ? '조건에 맞는 주문이 없습니다.'
           : '주문 내역이 없습니다.'
       "
-      :button-text="currentFilter ? '전체 주문 보기' : '쇼핑하러 가기'"
-      :button-link="currentFilter ? '/orderlist' : '/product/all'"
+      :button-text="currentFilter || searchQuery ? '전체 주문 보기' : '쇼핑하러 가기'"
+      :button-link="currentFilter || searchQuery ? '/orderlist' : '/product/all'"
     />
 
     <div v-else class="space-y-6">
@@ -373,10 +464,17 @@ onUnmounted(() => {
             :key="item.id"
             class="p-6 flex flex-col sm:flex-row gap-6"
           >
-            <ProductThumbnail
-              :image-url="item.product?.imageUrl"
-              :product-id="item.productId"
-            />
+            <div class="relative">
+              <ProductThumbnail
+                :image-url="item.product?.imageUrl"
+                :product-id="item.productId"
+              />
+              <!-- 모바일: 이미지 우측 상단에 뱃지 -->
+              <OrderStatusBadge
+                :status="item.status"
+                class="absolute top-2 right-2 sm:hidden shadow-sm"
+              />
+            </div>
 
             <div class="flex-1 flex flex-col justify-between min-h-[100px]">
               <div>
@@ -387,7 +485,8 @@ onUnmounted(() => {
                   >
                     {{ item.productName }}
                   </h3>
-                  <OrderStatusBadge :status="item.status" class="shrink-0" />
+                  <!-- 데스크톱: 제목 우측에 뱃지 -->
+                  <OrderStatusBadge :status="item.status" class="shrink-0 hidden sm:inline-flex" />
                 </div>
 
                 <p class="text-body text-muted-foreground mb-1">
@@ -424,7 +523,7 @@ onUnmounted(() => {
 
                   <Button
                     v-if="canTrack(item.status)"
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     class="text-caption h-8"
                     @click="handleTrackShipment(item)"
@@ -440,7 +539,7 @@ onUnmounted(() => {
 
       <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
       <div
-        v-if="!currentFilter"
+        v-if="!currentFilter && !searchQuery"
         ref="loadMoreTrigger"
         class="py-8 flex justify-center"
       >

@@ -565,7 +565,7 @@ export interface ReorderSiteImagesRequest {
 export type InquiryType = "product" | "shipping" | "exchange" | "other";
 
 // 문의 상태
-export type InquiryStatus = "pending" | "answered" | "closed";
+export type InquiryStatus = "pending" | "answered";
 
 // 문의 작성자 정보 (마스킹 처리됨)
 export interface InquiryUser {
@@ -609,7 +609,8 @@ export interface Inquiry {
   updatedAt: string;
   user?: InquiryUser;
   product?: InquiryProduct;
-  replies?: InquiryReply[];
+  replies?: InquiryReply[]; // 문의 상세에서만 사용
+  replyCount?: number; // 문의 목록에서 사용
 }
 
 // 문의 생성 요청

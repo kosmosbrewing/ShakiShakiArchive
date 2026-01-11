@@ -2,11 +2,12 @@
 // src/pages/Account.vue
 // 마이페이지
 
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useOrderStats } from "@/composables/useOrders";
 import { useWishlistCount } from "@/composables/useWishlist";
+import { fetchInquiries, fetchAdminUsers } from "@/lib/api";
 import { Separator } from "@/components/ui/separator";
 // 아이콘
 import {
@@ -26,6 +27,7 @@ import {
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -37,10 +39,40 @@ const { orderCounts, loadOrderStats } = useOrderStats();
 const { count: wishlistCount, loadCount: loadWishlistCount } =
   useWishlistCount();
 
+// 관리자 통계
+const pendingInquiriesCount = ref(0);
+const todayNewUsersCount = ref(0);
+
 // 유저 이름 표시
 const userName = computed(() => {
   return authStore.user?.userName || "고객";
 });
+
+// 관리자 통계 로드
+const loadAdminStats = async () => {
+  if (!authStore.user?.isAdmin) return;
+
+  try {
+    // 답변 대기 중인 문의 건수
+    const inquiries = await fetchInquiries();
+    pendingInquiriesCount.value = inquiries.filter(
+      (inquiry) => inquiry.status === "pending"
+    ).length;
+
+    // 오늘 가입한 신규 고객 건수
+    const usersResponse = await fetchAdminUsers();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    todayNewUsersCount.value = usersResponse.users.filter((user) => {
+      const createdAt = new Date(user.createdAt);
+      createdAt.setHours(0, 0, 0, 0);
+      return createdAt.getTime() === today.getTime();
+    }).length;
+  } catch (error) {
+    console.error("관리자 통계 로드 실패:", error);
+  }
+};
 
 // 페이지 이동 함수들
 const goToModify = () => router.push("/modify");
@@ -108,6 +140,11 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     loadOrderStats();
     loadWishlistCount();
+
+    // 관리자인 경우 관리자 통계 로드
+    if (authStore.user?.isAdmin) {
+      loadAdminStats();
+    }
   }
 });
 </script>
@@ -177,14 +214,19 @@ onMounted(async () => {
           <Button
             variant="outline"
             @click="goToOrderAdmin"
-            class="h-12 justify-start gap-3"
+            class="h-12 justify-between gap-3"
           >
-            <div
-              class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center"
-            >
-              <ShoppingBag class="w-4 h-4 text-white" />
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center"
+              >
+                <ShoppingBag class="w-4 h-4 text-white" />
+              </div>
+              주문/배송 관리
             </div>
-            주문/배송 관리
+            <Badge v-if="orderCounts.payment_confirmed > 0" variant="default" class="ml-auto">
+              {{ orderCounts.payment_confirmed }}
+            </Badge>
           </Button>
 
           <Button
@@ -203,27 +245,37 @@ onMounted(async () => {
           <Button
             variant="outline"
             @click="goToInquiryAdmin"
-            class="h-12 justify-start gap-3"
+            class="h-12 justify-between gap-3"
           >
-            <div
-              class="w-8 h-8 rounded bg-teal-600 flex items-center justify-center"
-            >
-              <MessageCircle class="w-4 h-4 text-white" />
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 rounded bg-teal-600 flex items-center justify-center"
+              >
+                <MessageCircle class="w-4 h-4 text-white" />
+              </div>
+              문의 관리
             </div>
-            문의 관리
+            <Badge v-if="pendingInquiriesCount > 0" variant="default" class="ml-auto">
+              {{ pendingInquiriesCount }}
+            </Badge>
           </Button>
 
           <Button
             variant="outline"
             @click="goToUserAdmin"
-            class="h-12 justify-start gap-3"
+            class="h-12 justify-between gap-3"
           >
-            <div
-              class="w-8 h-8 rounded bg-orange-600 flex items-center justify-center"
-            >
-              <User class="w-4 h-4 text-white" />
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 rounded bg-orange-600 flex items-center justify-center"
+              >
+                <User class="w-4 h-4 text-white" />
+              </div>
+              회원 관리
             </div>
-            회원 관리
+            <Badge v-if="todayNewUsersCount > 0" variant="default" class="ml-auto">
+              {{ todayNewUsersCount }}
+            </Badge>
           </Button>
         </div>
       </CardContent>

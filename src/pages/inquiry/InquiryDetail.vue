@@ -8,9 +8,10 @@ import {
   fetchInquiry,
   deleteInquiry,
   createInquiryReply,
+  deleteInquiryReply,
   updateInquiryStatus,
 } from "@/lib/api";
-import { formatDate } from "@/lib/formatters";
+import { formatDate, maskUserName } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -47,6 +48,8 @@ const deleteLoading = ref(false);
 const statusLoading = ref(false);
 const replyContent = ref("");
 const showDeleteConfirm = ref(false);
+const deletingReplyId = ref<string | null>(null);
+const showReplyDeleteConfirm = ref(false);
 
 // 문의 유형 레이블
 const typeLabels: Record<InquiryType, string> = {
@@ -60,7 +63,6 @@ const typeLabels: Record<InquiryType, string> = {
 const statusLabels: Record<InquiryStatus, string> = {
   pending: "답변 대기",
   answered: "답변 완료",
-  closed: "종료",
 };
 
 // 문의 상태별 배지 색상
@@ -70,7 +72,6 @@ const statusVariants: Record<
 > = {
   pending: "outline",
   answered: "default",
-  closed: "secondary",
 };
 
 // 문의 ID
@@ -88,9 +89,7 @@ const isAdmin = computed(() => authStore.user?.isAdmin);
 const canDelete = computed(() => isMyInquiry.value || isAdmin.value);
 
 // 답변 작성 가능 여부 (관리자만)
-const canReply = computed(
-  () => isAdmin.value && inquiry.value?.status !== "closed"
-);
+const canReply = computed(() => isAdmin.value);
 
 // 문의 로드
 const loadInquiry = async () => {
@@ -120,6 +119,14 @@ const handleReply = async () => {
     await createInquiryReply(inquiryId.value, {
       content: replyContent.value.trim(),
     });
+
+    // 답변 등록 후 상태가 pending인 경우 자동으로 answered로 변경
+    if (inquiry.value?.status === "pending") {
+      await updateInquiryStatus(inquiryId.value, {
+        status: "answered",
+      });
+    }
+
     replyContent.value = "";
     await loadInquiry(); // 새로고침
     showAlert("답변이 등록되었습니다.");
@@ -168,6 +175,38 @@ const handleDelete = async () => {
   }
 };
 
+// 답변 삭제 확인
+const confirmReplyDelete = (replyId: string) => {
+  deletingReplyId.value = replyId;
+  showReplyDeleteConfirm.value = true;
+};
+
+// 답변 삭제
+const handleReplyDelete = async () => {
+  if (!deletingReplyId.value) return;
+
+  showReplyDeleteConfirm.value = false;
+  try {
+    await deleteInquiryReply(inquiryId.value, deletingReplyId.value);
+    await loadInquiry(); // 새로고침
+
+    // 답변이 모두 삭제된 경우 자동으로 상태를 pending으로 변경
+    if (inquiry.value?.replies && inquiry.value.replies.length === 0 && inquiry.value.status === "answered") {
+      await updateInquiryStatus(inquiryId.value, {
+        status: "pending",
+      });
+      await loadInquiry(); // 상태 변경 후 다시 새로고침
+    }
+
+    showAlert("답변이 삭제되었습니다.");
+  } catch (error: any) {
+    console.error("답변 삭제 실패:", error);
+    showAlert(error.message || "답변 삭제에 실패했습니다.", { type: "error" });
+  } finally {
+    deletingReplyId.value = null;
+  }
+};
+
 // 뒤로 가기
 const goBack = () => {
   router.back();
@@ -184,14 +223,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div class="pb-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <Button variant="ghost" size="icon" @click="goBack" class="shrink-0">
+    <div class="mb-8 pb-4 border-b border-border flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          @click="goBack"
+          class="shrink-0 -ml-2 hover:bg-muted/80"
+        >
           <ArrowLeft class="w-5 h-5" />
         </Button>
-        <h3 class="text-heading text-primary tracking-wider">문의 상세</h3>
+        <h3 class="text-heading text-primary tracking-wider font-semibold">
+          문의 상세
+        </h3>
       </div>
 
       <!-- 삭제 버튼 -->
@@ -199,32 +245,31 @@ onMounted(() => {
         v-if="canDelete && inquiry"
         variant="ghost"
         size="sm"
-        class="text-destructive hover:text-destructive"
+        class="text-primary hover:text-primary hover:bg-primary/10 transition-colors"
         :disabled="deleteLoading"
         @click="confirmDelete"
       >
         <Loader2 v-if="deleteLoading" class="w-4 h-4 mr-1 animate-spin" />
         <Trash2 v-else class="w-4 h-4 mr-1" />
-        삭제
+        <span class="hidden sm:inline">삭제</span>
       </Button>
     </div>
-    <Separator class="mb-6"></Separator>
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="inquiry">
       <!-- 문의 내용 -->
-      <Card class="mb-6">
-        <CardHeader class="pb-4">
+      <Card class="mb-6 shadow-sm border-border rounded-xl">
+        <CardHeader class="pb-4 px-5 sm:px-6">
           <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <!-- 배지 -->
-              <div class="flex items-center gap-2 mb-3">
+              <div class="flex items-center gap-2 mb-3 flex-wrap">
                 <Badge variant="outline" class="text-xs">
                   {{ typeLabels[inquiry.type] }}
                 </Badge>
                 <Badge
                   :variant="statusVariants[inquiry.status]"
-                  class="text-xs"
+                  class="text-xs font-medium"
                 >
                   {{ statusLabels[inquiry.status] }}
                 </Badge>
@@ -235,7 +280,7 @@ onMounted(() => {
               </div>
 
               <!-- 제목 -->
-              <CardTitle class="text-lg leading-snug">
+              <CardTitle class="text-lg sm:text-xl leading-snug font-semibold">
                 {{ inquiry.title }}
               </CardTitle>
             </div>
@@ -247,49 +292,52 @@ onMounted(() => {
               :disabled="statusLoading"
               @update:model-value="handleStatusChange"
             >
-              <SelectTrigger class="w-[130px]">
+              <SelectTrigger class="w-[130px] border-border/60">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pending">답변 대기</SelectItem>
                 <SelectItem value="answered">답변 완료</SelectItem>
-                <SelectItem value="closed">종료</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <!-- 작성자 & 날짜 -->
           <div
-            class="flex items-center gap-2 text-sm text-muted-foreground mt-1"
+            class="flex items-center gap-2 text-caption sm:text-sm text-muted-foreground mt-2"
           >
-            <span>{{ inquiry.user?.userName || "익명" }}</span>
+            <span class="font-medium">{{ maskUserName(inquiry.user?.userName) }}</span>
             <span>·</span>
             <span>{{ formatDate(inquiry.createdAt) }}</span>
           </div>
-          <Separator class="mt-2"></Separator>
+          <Separator class="mt-4"></Separator>
         </CardHeader>
 
-        <CardContent>
+        <CardContent class="px-5 sm:px-6 pb-5 sm:pb-6">
           <!-- 상품 정보 -->
           <div
             v-if="inquiry.product"
-            class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 cursor-pointer hover:bg-muted transition-colors"
+            class="flex items-center gap-3 p-3 sm:p-4 bg-muted/30 border border-border/50 rounded-lg mb-5 cursor-pointer hover:bg-muted/50 hover:border-primary/20 transition-all duration-200"
             @click="goToProduct(inquiry.product.id)"
           >
             <img
               v-if="inquiry.product.imageUrl"
               :src="inquiry.product.imageUrl"
               :alt="inquiry.product.name"
-              class="w-12 h-12 object-cover rounded"
+              class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-md border border-border/30"
             />
-            <div>
-              <p class="text-xs text-muted-foreground">문의 상품</p>
-              <p class="text-sm font-medium">{{ inquiry.product.name }}</p>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-muted-foreground mb-0.5">문의 상품</p>
+              <p class="text-sm sm:text-base font-semibold truncate">
+                {{ inquiry.product.name }}
+              </p>
             </div>
           </div>
 
           <!-- 문의 내용 -->
-          <div class="whitespace-pre-wrap text-foreground">
+          <div
+            class="whitespace-pre-wrap text-foreground text-body leading-relaxed"
+          >
             {{ inquiry.content }}
           </div>
         </CardContent>
@@ -300,55 +348,79 @@ onMounted(() => {
         v-if="inquiry.replies && inquiry.replies.length > 0"
         class="space-y-4 mb-6"
       >
-        <h4 class="font-medium text-foreground">
-          답변 ({{ inquiry.replies.length }})
-        </h4>
+        <div class="flex items-center gap-2 px-1">
+          <h4 class="font-semibold text-foreground text-body">답변</h4>
+          <span class="text-caption text-primary font-medium">
+            {{ inquiry.replies.length }}
+          </span>
+        </div>
 
-        <Card
-          v-for="reply in inquiry.replies"
-          :key="reply.id"
-          class="bg-primary/5 border-primary/20"
-        >
-          <CardContent class="p-4">
-            <!-- 답변자 정보 -->
-            <div class="flex items-center gap-2 mb-3">
+        <!-- 답변 위계 표시를 위한 왼쪽 여백 및 시각적 구분 -->
+        <div class="ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-4 border-primary/30 space-y-4">
+          <Card
+            v-for="reply in inquiry.replies"
+            :key="reply.id"
+            class="bg-primary/5 border-primary/20 shadow-sm rounded-xl"
+          >
+            <CardContent class="p-4 sm:p-5">
+              <!-- 답변자 정보 -->
+              <div class="flex items-center gap-2.5 mb-4">
+                <div
+                  class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0"
+                >
+                  <User class="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm sm:text-base font-semibold text-foreground">
+                    {{ maskUserName(reply.user.userName) }}
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ formatDate(reply.createdAt) }}
+                  </p>
+                </div>
+                <!-- 답변 삭제 버튼 (관리자만) -->
+                <Button
+                  v-if="isAdmin"
+                  variant="ghost"
+                  size="sm"
+                  class="text-primary hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                  @click="confirmReplyDelete(reply.id)"
+                >
+                  <Trash2 class="w-4 h-4" />
+                </Button>
+              </div>
+
+              <!-- 답변 내용 -->
               <div
-                class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"
+                class="whitespace-pre-wrap text-foreground text-body leading-relaxed"
               >
-                <User class="w-4 h-4 text-primary" />
+                {{ reply.content }}
               </div>
-              <div>
-                <p class="text-sm font-medium">{{ reply.user.userName }}</p>
-                <p class="text-xs text-muted-foreground">
-                  {{ formatDate(reply.createdAt) }}
-                </p>
-              </div>
-            </div>
-
-            <!-- 답변 내용 -->
-            <div class="whitespace-pre-wrap text-foreground pl-10">
-              {{ reply.content }}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <!-- 관리자 답변 작성 -->
-      <Card v-if="canReply">
-        <CardHeader class="pb-3">
-          <CardTitle class="text-base">답변 작성</CardTitle>
+      <Card v-if="canReply" class="shadow-sm border-border rounded-xl">
+        <CardHeader class="pb-3 px-5 sm:px-6">
+          <CardTitle class="text-base sm:text-lg font-semibold">
+            답변 작성
+          </CardTitle>
         </CardHeader>
-        <CardContent class="space-y-4">
+        <CardContent class="space-y-4 px-5 sm:px-6 pb-5 sm:pb-6">
           <Textarea
             v-model="replyContent"
             placeholder="답변 내용을 입력해주세요"
-            :rows="4"
+            :rows="5"
             :disabled="replyLoading"
+            class="text-body leading-relaxed resize-none border-border/60 focus:border-primary/50 placeholder:text-muted-foreground/50"
           />
           <div class="flex justify-end">
             <Button
               :disabled="replyLoading || !replyContent.trim()"
               @click="handleReply"
+              class="shadow-sm hover:shadow"
             >
               <Loader2 v-if="replyLoading" class="w-4 h-4 mr-2 animate-spin" />
               {{ replyLoading ? "등록 중..." : "답변 등록" }}
@@ -359,12 +431,20 @@ onMounted(() => {
     </template>
 
     <!-- 문의를 찾을 수 없는 경우 -->
-    <div v-else class="text-center py-12">
-      <p class="text-muted-foreground">문의를 찾을 수 없습니다.</p>
-      <Button variant="outline" class="mt-4" @click="router.push('/inquiry')">
-        목록으로 돌아가기
-      </Button>
-    </div>
+    <Card v-else class="shadow-sm border-border rounded-xl">
+      <CardContent class="text-center py-16">
+        <p class="text-muted-foreground text-body mb-6">
+          문의를 찾을 수 없습니다.
+        </p>
+        <Button
+          variant="outline"
+          class="shadow-sm hover:shadow border-border/60"
+          @click="router.push('/inquiry')"
+        >
+          목록으로 돌아가기
+        </Button>
+      </CardContent>
+    </Card>
 
     <!-- 삭제 확인 다이얼로그 -->
     <Alert
@@ -378,6 +458,20 @@ onMounted(() => {
       @confirm="handleDelete"
       @cancel="showDeleteConfirm = false"
       @close="showDeleteConfirm = false"
+    />
+
+    <!-- 답변 삭제 확인 다이얼로그 -->
+    <Alert
+      v-if="showReplyDeleteConfirm"
+      :confirm-mode="true"
+      confirm-variant="destructive"
+      message="정말로 이 답변을 삭제하시겠습니까?
+삭제된 답변은 복구할 수 없습니다."
+      confirm-text="삭제"
+      cancel-text="취소"
+      @confirm="handleReplyDelete"
+      @cancel="showReplyDeleteConfirm = false"
+      @close="showReplyDeleteConfirm = false"
     />
   </div>
 </template>

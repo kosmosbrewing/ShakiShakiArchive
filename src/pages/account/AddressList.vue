@@ -58,7 +58,10 @@ const openAddressSearch = () => {
 };
 
 // 주소 선택 핸들러
-const handleAddressSelect = (address: { zonecode: string; address: string }) => {
+const handleAddressSelect = (address: {
+  zonecode: string;
+  address: string;
+}) => {
   shippingForm.form.zipCode = address.zonecode;
   shippingForm.form.address = address.address;
   shippingForm.form.detailAddress = ""; // 상세 주소 초기화
@@ -109,7 +112,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">배송지 관리</h3>

@@ -1186,6 +1186,19 @@ export async function createInquiryReply(
   });
 }
 
+// 답변 삭제 (관리자)
+export async function deleteInquiryReply(
+  inquiryId: string,
+  replyId: string
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/api/inquiries/${inquiryId}/replies/${replyId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
 // 문의 상태 변경 (관리자)
 export async function updateInquiryStatus(
   id: string,

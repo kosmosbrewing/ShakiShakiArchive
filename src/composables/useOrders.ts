@@ -26,17 +26,21 @@ export type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
  */
 export function getStatusVariant(status: OrderStatus): BadgeVariant {
   switch (status) {
-    case "pending_payment":
-      return "outline";
+    // 진행 중 상태 - primary 색상 (파란색)
     case "payment_confirmed":
     case "preparing":
-      return "secondary";
     case "shipped":
-    case "delivered":
       return "default";
+    // 완료 상태 - 파스텔 녹색 (CSS 오버라이드)
+    case "delivered":
+      return "outline";
+    // 취소/환불 상태 - 파스텔 빨간색 (CSS 오버라이드)
     case "cancelled":
     case "refunded":
-      return "destructive";
+      return "outline";
+    // 기타 (거의 표시 안됨)
+    case "pending_payment":
+    case "paying":
     default:
       return "outline";
   }
@@ -44,13 +48,17 @@ export function getStatusVariant(status: OrderStatus): BadgeVariant {
 
 /**
  * 주문 상태별 추가 CSS 클래스
+ * 파스텔 톤 색상으로 부드러운 디자인 적용 (border 완전 제거)
  */
 export function getStatusClass(status: OrderStatus): string {
   switch (status) {
-    case "shipped":
-      return "bg-orange-500 hover:bg-orange-600";
     case "delivered":
-      return "bg-green-600 hover:bg-green-700";
+      // 파스텔 녹색 - 완료 상태
+      return "bg-green-50 hover:bg-green-100 text-green-700 border-0";
+    case "cancelled":
+    case "refunded":
+      // 파스텔 빨간색 - 취소/환불 상태
+      return "bg-red-50 hover:bg-red-100 text-red-700 border-0";
     default:
       return "";
   }

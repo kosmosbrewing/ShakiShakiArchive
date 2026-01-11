@@ -19,6 +19,11 @@ const props = withDefaults(
     confirmVariant?: ConfirmVariant;
     confirmText?: string;
     cancelText?: string;
+    // prompt 모드 관련 props
+    promptMode?: boolean;
+    promptValue?: string;
+    promptPlaceholder?: string;
+    promptRequired?: string;
   }>(),
   {
     message: "잠시만 기다려주세요",
@@ -28,6 +33,10 @@ const props = withDefaults(
     confirmVariant: "success",
     confirmText: "확인",
     cancelText: "취소",
+    promptMode: false,
+    promptValue: "",
+    promptPlaceholder: "",
+    promptRequired: "",
   }
 );
 
@@ -38,6 +47,7 @@ const emit = defineEmits<{
   close: [];
   confirm: [];
   cancel: [];
+  "update:promptValue": [value: string];
 }>();
 
 const isVisible = ref(true);
@@ -167,6 +177,22 @@ onUnmounted(() => {
               </div>
               <p class="text-body font-semibold text-foreground text-center whitespace-pre-line">
                 {{ message }}
+              </p>
+
+              <!-- Prompt 입력 필드 -->
+              <input
+                v-if="promptMode"
+                :value="promptValue"
+                @input="emit('update:promptValue', ($event.target as HTMLInputElement).value)"
+                :placeholder="promptPlaceholder"
+                class="w-full px-3 py-2 mt-2 border border-border rounded-md text-caption sm:text-body focus:outline-none focus:ring-2 focus:ring-primary"
+                autocomplete="off"
+              />
+              <p
+                v-if="promptMode && promptRequired"
+                class="text-caption text-muted-foreground text-center"
+              >
+                {{ promptPlaceholder || `'${promptRequired}'를 입력하세요` }}
               </p>
             </div>
 
