@@ -248,14 +248,14 @@ const handleSignup = async () => {
 <template>
   <section
     id="signup"
-    class="max-w-md mx-auto items-center justify-center py-24 sm:py-16"
+    class="max-w-md mx-auto items-center justify-center py-12 sm:py-16 px-3 sm:px-4"
   >
-    <div class="mb-6 text-center">
+    <div class="mb-4 sm:mb-6 text-center">
       <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
     </div>
 
     <!-- Production 환경: 준비중 안내 -->
-    <Card v-if="isProduction" class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+    <Card v-if="isProduction" class="w-full bg-muted/5 dark:bg-card mx-auto">
       <CardContent class="py-16 text-center">
         <div class="flex flex-col items-center gap-4">
           <AlertCircle class="w-16 h-16 text-muted-foreground" />
@@ -272,14 +272,14 @@ const handleSignup = async () => {
     </Card>
 
     <!-- 개발 환경: 기존 회원가입 폼 -->
-    <Card v-else class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
-      <CardContent>
-        <form @submit.prevent="handleSignup" class="grid gap-6">
-          <div class="flex flex-col gap-1.5 mt-6">
-            <Label for="email"
+    <Card v-else class="w-full bg-muted/5 dark:bg-card mx-auto">
+      <CardContent class="px-4 sm:px-6 py-5 sm:py-6">
+        <form @submit.prevent="handleSignup" class="grid gap-4 sm:gap-5">
+          <div class="flex flex-col gap-1.5 mt-2">
+            <Label for="email" class="text-body"
               >이메일 <span class="text-red-500">*</span></Label
             >
-            <div class="flex gap-2">
+            <div class="flex gap-1.5 sm:gap-2">
               <Input
                 ref="emailInputRef"
                 id="email"
@@ -287,17 +287,19 @@ const handleSignup = async () => {
                 placeholder="example@email.com"
                 v-model="formData.email"
                 :disabled="verificationState.isVerified"
+                class="text-caption sm:text-body"
               />
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 @click="sendVerificationCode"
                 :disabled="
                   verificationState.isVerified ||
                   verificationState.isLoading ||
                   !formData.email
                 "
-                class="w-28 shrink-0"
+                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem]"
               >
                 <Loader2
                   v-if="verificationState.isLoading"
@@ -326,8 +328,8 @@ const handleSignup = async () => {
             v-if="verificationState.isSent && !verificationState.isVerified"
             class="flex flex-col gap-1.5 animate-in slide-in-from-top-2"
           >
-            <Label for="code">인증번호</Label>
-            <div class="flex gap-2">
+            <Label for="code" class="text-body">인증번호</Label>
+            <div class="flex gap-1.5 sm:gap-2">
               <Input
                 id="code"
                 type="text"
@@ -335,11 +337,13 @@ const handleSignup = async () => {
                 maxlength="6"
                 v-model="verificationState.code"
                 :disabled="verificationState.isVerifying"
+                class="text-caption sm:text-body"
               />
               <Button
                 type="button"
                 variant="outline"
-                class="w-28 shrink-0"
+                size="sm"
+                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem]"
                 @click="verifyCode"
                 :disabled="
                   verificationState.isVerifying ||
@@ -376,7 +380,7 @@ const handleSignup = async () => {
           </Alert>
 
           <div class="flex flex-col gap-1.5">
-            <Label for="password"
+            <Label for="password" class="text-body"
               >비밀번호 <span class="text-red-500">*</span></Label
             >
             <Input
@@ -385,10 +389,11 @@ const handleSignup = async () => {
               type="password"
               placeholder="8자 이상"
               v-model="formData.password"
+              class="text-caption sm:text-body"
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="confirmPassword"
+            <Label for="confirmPassword" class="text-body"
               >비밀번호 확인 <span class="text-red-500">*</span></Label
             >
             <Input
@@ -397,11 +402,12 @@ const handleSignup = async () => {
               type="password"
               placeholder="비밀번호 재입력"
               v-model="formData.confirmPassword"
+              class="text-caption sm:text-body"
             />
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <Label for="userName"
+            <Label for="userName" class="text-body"
               >이름 <span class="text-red-500">*</span></Label
             >
             <Input
@@ -410,10 +416,11 @@ const handleSignup = async () => {
               type="text"
               placeholder="실명 입력"
               v-model="formData.userName"
+              class="text-caption sm:text-body"
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="phone"
+            <Label for="phone" class="text-body"
               >휴대전화 <span class="text-red-500">*</span></Label
             >
             <PhoneInput
@@ -424,7 +431,7 @@ const handleSignup = async () => {
             />
           </div>
           <div class="space-y-2">
-            <Label>주소</Label>
+            <Label class="text-body">주소</Label>
             <div class="space-y-2">
               <div class="flex gap-2">
                 <Input
@@ -432,11 +439,13 @@ const handleSignup = async () => {
                   type="text"
                   readonly
                   placeholder="우편번호"
-                  class="w-32 bg-muted"
+                  class="w-20 sm:w-28 bg-muted text-caption sm:text-body"
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
+                  class="h-10 px-3 sm:px-4 text-caption sm:text-body shrink-0"
                   @click="openAddressSearch"
                 >
                   주소검색
@@ -447,12 +456,13 @@ const handleSignup = async () => {
                 type="text"
                 readonly
                 placeholder="기본 주소"
-                class="bg-muted"
+                class="bg-muted text-caption sm:text-body"
               />
               <Input
                 v-model="formData.detailAddress"
                 type="text"
                 placeholder="상세 주소 입력"
+                class="text-caption sm:text-body"
               />
             </div>
           </div>
@@ -481,6 +491,7 @@ const handleSignup = async () => {
           <Button
             type="submit"
             class="w-full mt-2"
+            size="lg"
             :disabled="isSubmitting || !verificationState.isVerified"
           >
             <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
@@ -490,7 +501,7 @@ const handleSignup = async () => {
       </CardContent>
     </Card>
 
-    <p v-if="!isProduction" class="text-center text-muted-foreground mt-4">
+    <p v-if="!isProduction" class="text-center text-muted-foreground mt-4 text-caption sm:text-body px-2">
       이미 계정이 있으신가요?
       <router-link to="/login" class="text-primary hover:underline font-medium"
         >로그인하기</router-link

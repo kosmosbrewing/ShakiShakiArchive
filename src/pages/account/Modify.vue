@@ -251,23 +251,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-md mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6">
+    <div class="mb-4 sm:mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">
         회원정보 수정
       </h3>
       <Separator></Separator>
     </div>
 
-    <form @submit.prevent="handleUpdateProfile" class="space-y-8">
+    <form @submit.prevent="handleUpdateProfile" class="space-y-6 sm:space-y-8">
       <!-- 기본 정보 섹션 -->
       <Card>
-        <CardHeader>
+        <CardHeader class="px-4 sm:px-6 py-4 sm:py-5">
           <CardTitle class="text-heading">기본 정보</CardTitle>
         </CardHeader>
 
-        <CardContent class="space-y-5">
+        <CardContent class="space-y-4 sm:space-y-5 px-4 sm:px-6 pb-5 sm:pb-6">
           <div class="space-y-2">
             <Label for="email">이메일</Label>
             <Input
@@ -290,7 +290,7 @@ onMounted(async () => {
           </div>
 
           <div class="space-y-2">
-            <Label>주소</Label>
+            <Label class="text-body">주소</Label>
             <div class="space-y-2">
               <div class="flex gap-2">
                 <Input
@@ -298,11 +298,13 @@ onMounted(async () => {
                   type="text"
                   readonly
                   placeholder="우편번호"
-                  class="w-32 bg-muted"
+                  class="w-20 sm:w-28 bg-muted text-caption sm:text-body"
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
+                  class="h-10 px-3 sm:px-4 text-caption sm:text-body shrink-0"
                   @click="openAddressSearch"
                 >
                   주소검색
@@ -313,12 +315,13 @@ onMounted(async () => {
                 type="text"
                 readonly
                 placeholder="기본 주소"
-                class="bg-muted"
+                class="bg-muted text-caption sm:text-body"
               />
               <Input
                 v-model="form.detailAddress"
                 type="text"
                 placeholder="상세 주소 입력"
+                class="text-caption sm:text-body"
               />
             </div>
           </div>
@@ -364,21 +367,21 @@ onMounted(async () => {
 
       <!-- 제출 버튼 -->
       <div class="text-right">
-        <Button type="submit" :disabled="isLoading" size="lg">
+        <Button type="submit" :disabled="isLoading" size="lg" class="w-full sm:w-auto">
           {{ isLoading ? "처리중..." : "정보 수정 완료" }}
         </Button>
       </div>
     </form>
 
-    <Separator class="my-8" />
+    <Separator class="my-6 sm:my-8" />
 
     <!-- 비밀번호 변경 섹션 (별도 폼) -->
-    <form @submit.prevent="handleChangePassword" class="space-y-8">
+    <form @submit.prevent="handleChangePassword" class="space-y-6 sm:space-y-8">
       <Card>
-        <CardHeader>
+        <CardHeader class="px-4 sm:px-6 py-4 sm:py-5">
           <CardTitle class="text-heading">비밀번호 변경</CardTitle>
         </CardHeader>
-        <CardContent class="space-y-5">
+        <CardContent class="space-y-4 sm:space-y-5 px-4 sm:px-6 pb-5 sm:pb-6">
           <div class="space-y-2">
             <Label for="pwCurrentPassword">현재 비밀번호</Label>
             <Input
@@ -415,19 +418,19 @@ onMounted(async () => {
       </Card>
 
       <div class="text-right">
-        <Button type="submit" :disabled="isPasswordLoading" size="lg">
+        <Button type="submit" :disabled="isPasswordLoading" size="lg" class="w-full sm:w-auto">
           {{ isPasswordLoading ? "처리중..." : "비밀번호 변경" }}
         </Button>
       </div>
     </form>
 
     <!-- 회원 탈퇴 -->
-    <div class="mt-16 pt-3 border-t border-border flex justify-end">
+    <div class="mt-12 sm:mt-16 pt-3 border-t border-border flex justify-end">
       <Button
         variant="ghost"
         size="sm"
         @click="handleWithdraw"
-        class="text-muted-foreground hover:text-destructive"
+        class="text-caption sm:text-body text-muted-foreground hover:text-destructive"
       >
         회원 탈퇴하기
       </Button>
