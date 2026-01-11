@@ -60,7 +60,7 @@ const goBack = () => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["pending_payment", "payment_confirmed", "preparing"].includes(status);
+  return ["pending_payment", "paying", "payment_confirmed", "preparing"].includes(status);
 };
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);

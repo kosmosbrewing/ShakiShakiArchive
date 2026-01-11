@@ -12,6 +12,10 @@ const statusConfig = computed(() => {
       label: '결제 대기',
       class: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     },
+    paying: {
+      label: '결제 진행 중',
+      class: 'bg-orange-100 text-orange-800 border-orange-300',
+    },
     payment_confirmed: {
       label: '결제 완료',
       class: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -32,8 +36,12 @@ const statusConfig = computed(() => {
       label: '취소됨',
       class: 'bg-red-100 text-red-800 border-red-300',
     },
+    refunded: {
+      label: '환불 완료',
+      class: 'bg-pink-100 text-pink-800 border-pink-300',
+    },
   };
-  
+
   return configs[props.status] || configs.pending_payment;
 });
 </script>

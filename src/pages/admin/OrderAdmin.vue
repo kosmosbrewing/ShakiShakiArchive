@@ -28,27 +28,33 @@ const loading = ref(false);
 
 const statusOptions = [
   { value: "pending_payment", label: "입금대기" },
+  { value: "paying", label: "결제진행중" },
   { value: "payment_confirmed", label: "결제완료" },
   { value: "preparing", label: "배송준비중" },
   { value: "shipped", label: "배송중" },
   { value: "delivered", label: "배송완료" },
   { value: "cancelled", label: "주문취소" },
+  { value: "refunded", label: "환불완료" },
 ];
 
 const getStatusClass = (status: string) => {
   switch (status) {
     case "pending_payment":
       return "bg-muted text-admin-muted border-border";
+    case "paying":
+      return "bg-orange-50 text-orange-700 border-orange-100";
     case "payment_confirmed":
       return "bg-blue-50 text-blue-700 border-blue-100";
     case "preparing":
       return "bg-indigo-50 text-indigo-700 border-indigo-100";
     case "shipped":
-      return "bg-orange-50 text-orange-700 border-orange-100";
+      return "bg-amber-50 text-amber-700 border-amber-100";
     case "delivered":
       return "bg-green-50 text-green-700 border-green-100";
     case "cancelled":
       return "bg-red-50 text-red-700 border-red-100";
+    case "refunded":
+      return "bg-pink-50 text-pink-700 border-pink-100";
     default:
       return "bg-muted";
   }

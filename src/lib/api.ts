@@ -533,6 +533,21 @@ export async function fetchOrder(orderId: number | string): Promise<Order> {
 }
 
 // 주문 취소 (결제 대기/결제 완료/상품 준비 중 상태에서만 가능)
+/**
+ * 주문 상태를 paying으로 변경
+ * 토스페이먼츠 결제창 오픈 직전 호출
+ */
+export async function updateOrderStatusToPaying(
+  orderId: number | string
+): Promise<{
+  message: string;
+  order: Order;
+}> {
+  return apiRequest(`/api/orders/${orderId}/status/paying`, {
+    method: "PUT",
+  });
+}
+
 export async function cancelOrder(
   orderId: number | string,
   data: CancelPaymentRequest
@@ -560,6 +575,24 @@ export async function deleteOrder(
     method: "DELETE",
     keepalive: options?.keepalive || false, // 페이지 종료 시에도 요청 보장
   });
+}
+
+/**
+ * 🔒 브라우저 강제 종료 시 주문 정리 (Best Effort)
+ * sendBeacon을 사용하여 페이지 종료 시에도 요청 전송 보장
+ * paying 상태 주문의 재고를 즉시 복구합니다.
+ */
+export function cleanupOrder(orderId: number | string): boolean {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const url = `${API_BASE_URL}/api/orders/${orderId}/cleanup`;
+
+  // sendBeacon은 POST만 지원하므로 JSON Blob 사용
+  const blob = new Blob([JSON.stringify({ reason: "browser_close" })], {
+    type: "application/json",
+  });
+
+  // sendBeacon 성공 여부 반환 (true: 큐에 성공적으로 추가됨)
+  return navigator.sendBeacon(url, blob);
 }
 
 // --- 배송지 (Address Book) ---
@@ -795,10 +828,21 @@ export async function confirmPayment(
 
   if (!response.ok) {
     // 재고 부족 에러 처리 (소프트 락 실패)
-    if (result.code === "STOCK_SHORTAGE" && result.shortageItems) {
+    // 백엔드가 STOCK_SHORTAGE 또는 INSUFFICIENT_STOCK 둘 다 사용할 수 있음
+    if (
+      (result.code === "STOCK_SHORTAGE" || result.code === "INSUFFICIENT_STOCK") &&
+      result.shortageItems
+    ) {
       throw new StockShortageError(
         result.message || "재고가 부족한 상품이 있습니다.",
         result.shortageItems
+      );
+    }
+    // 재고 부족인데 shortageItems가 없는 경우 (백엔드 응답 형식 차이)
+    if (result.code === "STOCK_SHORTAGE" || result.code === "INSUFFICIENT_STOCK") {
+      throw new StockShortageError(
+        result.message || "재고가 부족한 상품이 있습니다.",
+        [] // 빈 배열로 처리
       );
     }
     // 일반 에러

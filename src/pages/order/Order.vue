@@ -11,14 +11,18 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
-import { useStockReservation } from "@/composables/useStockReservation";
+// 🔒 Option A: useStockReservation 제거 (재고 선점 사용 안함)
+// import { useStockReservation } from "@/composables/useStockReservation";
 import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 import {
   createDeliveryAddress,
   getPaymentClientKey,
   getNaverPaySdkConfig,
+  updateOrderStatusToPaying,
+  cancelOrder,
   deleteOrder,
+  cleanupOrder,
 } from "@/lib/api";
 import { initNaverPay } from "@/services/payment";
 
@@ -72,15 +76,26 @@ const {
 const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
-const {
-  reservationId,
-  isReserved,
-  isLoading: isReserving,
-  remainingTimeFormatted,
-  reserve: reserveStock,
-  release: releaseStock,
-  reset: resetReservation,
-} = useStockReservation();
+// 🔒 Option A: useStockReservation 제거 (재고 선점 사용 안함)
+// const {
+//   reservationId,
+//   isReserved,
+//   isLoading: isReserving,
+//   remainingTimeFormatted,
+//   reserve: reserveStock,
+//   release: releaseStock,
+//   reset: resetReservation,
+// } = useStockReservation();
+
+// 🔒 재고 선점 제거: 빈 함수로 정의 (하위 호환성 유지)
+const reservationId = ref<string | null>(null);
+const isReserved = ref(false);
+const isReserving = ref(false);
+const remainingTimeFormatted = ref("");
+const resetReservation = () => {
+  // 재고 선점 로직 제거됨 - 아무것도 하지 않음
+  console.log("[재고 선점] 제거됨 - resetReservation 호출 무시");
+};
 
 // 상태
 const loading = ref(false);
@@ -286,23 +301,8 @@ const handlePayment = async () => {
     // 1단계: 재고 선점 (임시 점유)
     isPaymentProcessing.value = true;
 
-    console.log("[결제 프로세스] 1단계: 재고 선점 시작");
-    const reservationResult = await reserveStock(
-      orderItems.value,
-      getDirectPurchasePayload()
-    );
-
-    if (!reservationResult) {
-      console.error("[결제 프로세스] 재고 선점 실패");
-      throw new Error(
-        "방금 다른 고객님이 먼저 결제를 시작하셨어요. 잠시 후 다시 확인해 주세요!"
-      );
-    }
-
-    console.log("[결제 프로세스] 재고 선점 성공:", reservationResult.reservationId);
-
-    // 2단계: 주문 생성 (reservationId 포함)
-    console.log("[결제 프로세스] 2단계: 주문 생성 시작");
+    // 🔒 Option A: 재고 선점 제거 - 주문 생성 시 재고 확인 및 차감
+    console.log("[결제 프로세스] 주문 생성 시작 (재고 확인 + 차감 포함)");
     const orderParams: CreateOrderRequest = {
       shippingName: shippingForm.form.recipient,
       shippingPhone: shippingForm.fullPhone.value,
@@ -312,19 +312,17 @@ const handlePayment = async () => {
       shippingRequestNote: shippingForm.finalRequestNote.value,
       paymentMethod: paymentProvider.value,
       directPurchaseItem: getDirectPurchasePayload(),
-      reservationId: reservationResult.reservationId,
+      // reservationId 제거됨 (재고 선점 사용 안함)
     };
 
     orderData = await submitOrder(orderParams);
 
     if (!orderData) {
-      // 주문 생성 실패 시 재고 선점 해제
-      console.error("[결제 프로세스] 주문 생성 실패, 재고 해제");
-      await releaseStock();
-      throw new Error("주문 생성 실패");
+      console.error("[결제 프로세스] 주문 생성 실패");
+      throw new Error("주문 생성에 실패했습니다. 재고 부족일 수 있습니다.");
     }
 
-    console.log("[결제 프로세스] 주문 생성 성공:", orderData.orderId);
+    console.log("[결제 프로세스] 주문 생성 성공 (재고 차감 완료):", orderData.orderId);
 
     // 현재 주문 ID 저장 (결제 취소 시 주문 취소용)
     currentOrderId.value = orderData.orderId;
@@ -359,21 +357,11 @@ const handlePayment = async () => {
       }
       currentOrderId.value = null;
 
-      // 재고 선점 상태만 정리
+      // 🔒 Option A: 재고 선점 제거 - 프론트엔드 상태만 정리
       resetReservation();
-      console.log("[결제 프로세스] 재고 선점 상태 정리 완료");
-    } else if (reservationId.value) {
-      // 주문 생성 전 에러: 재고 선점만 해제 (API 호출 필요)
-      try {
-        console.log("[결제 프로세스] 주문 생성 전 에러, 재고 선점 해제");
-        await releaseStock();
-        console.log("[결제 프로세스] 재고 선점 해제 완료");
-      } catch (releaseError) {
-        console.error("재고 해제 실패:", releaseError);
-        // API 실패해도 클라이언트 상태는 정리
-        resetReservation();
-      }
+      console.log("[결제 프로세스] 프론트엔드 상태 정리 완료");
     }
+    // 🔒 Option A: 재고 선점 제거 - 주문 생성 전 에러는 정리할 것이 없음
 
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
@@ -430,7 +418,16 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     // 5. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 6. 결제 요청 (모바일: 리다이렉트, PC: iframe 모달)
+    // 6. 🔒 주문 상태를 paying으로 변경 (결제창 오픈 직전)
+    try {
+      await updateOrderStatusToPaying(orderData.orderId);
+      console.log("[토스페이] 주문 상태 변경: paying");
+    } catch (statusErr) {
+      console.error("[토스페이] 상태 업데이트 실패:", statusErr);
+      throw new Error("결제 준비 중 오류가 발생했습니다.");
+    }
+
+    // 7. 결제 요청 (모바일: 리다이렉트, PC: iframe 모달)
     const payment = tossPayments.payment({ customerKey });
 
     await payment.requestPayment({
@@ -463,17 +460,33 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
 
     const errorWithCode = err as { code?: string; message?: string };
 
-    // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
-    resetReservation();
-    console.log("[토스페이] 재고 선점 상태 정리 완료");
+    // 🔒 Security First: 재고 해제는 백엔드만 처리
+    // resetReservation() 제거 - 백엔드 /cancel API 또는 Cron이 재고 복구 처리
 
-    // 사용자가 결제 취소한 경우는 별도 처리
+    // 사용자가 명시적으로 결제 취소한 경우: 백엔드 취소 API 호출
     if (errorWithCode.code === "USER_CANCEL") {
-      console.log("[토스페이] 사용자 취소로 처리");
+      console.log("[토스페이] 사용자 취소 - 주문 취소 API 호출");
+
+      if (currentOrderId.value) {
+        try {
+          await cancelOrder(currentOrderId.value, {
+            cancelReason: "사용자가 결제를 취소했습니다.",
+          });
+          console.log("[토스페이] 주문 취소 완료");
+
+          // 프론트엔드 상태 정리
+          currentOrderId.value = null;
+          resetReservation();
+        } catch (cancelErr) {
+          console.error("[토스페이] 주문 취소 실패:", cancelErr);
+          // 취소 실패해도 Cron이 30분 후 자동 정리
+        }
+      }
+
       showAlert("결제가 취소되었습니다.");
     } else {
       // iframe이 닫힌 경우는 정상 결제 진행일 수 있으므로 에러 메시지 표시하지 않음
-      console.log("[토스페이] 결제창이 닫혔습니다 - watcher에서 처리 예정");
+      console.log("[토스페이] 결제창이 닫혔습니다 - PaymentCallback에서 처리 예정");
     }
 
     // 상태 복구
@@ -529,7 +542,16 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 8. 기본 배송지 저장 (결제 전에 저장)
     await saveDefaultAddressIfNeeded();
 
-    // 9. PC 팝업 방식: localStorage로 팝업 여부 표시 (PaymentCallback에서 확인)
+    // 9. 🔒 주문 상태를 paying으로 변경 (결제창 오픈 직전)
+    try {
+      await updateOrderStatusToPaying(orderData.orderId);
+      console.log("[네이버페이] 주문 상태 변경: paying");
+    } catch (statusErr) {
+      console.error("[네이버페이] 상태 업데이트 실패:", statusErr);
+      throw new Error("결제 준비 중 오류가 발생했습니다.");
+    }
+
+    // 10. PC 팝업 방식: localStorage로 팝업 여부 표시 (PaymentCallback에서 확인)
     if (!isMobile.value) {
       localStorage.setItem("naverpay_popup", "true");
       // 현재 주문 ID를 localStorage에 저장 (취소 시 백업용)
@@ -570,16 +592,20 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       const handlePopupForceClosed = async () => {
         console.log("[네이버페이] 팝업 강제 종료 처리 시작");
 
-        // 주문 삭제 및 정리
+        // 주문 취소 및 정리
         if (currentOrderId.value) {
           try {
-            console.log("[팝업 강제 종료] 주문 삭제:", currentOrderId.value);
-            await deleteOrder(currentOrderId.value);
-            console.log("[팝업 강제 종료] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-          } catch (deleteError) {
-            console.error("[팝업 강제 종료] 주문 삭제 실패:", deleteError);
+            console.log("[팝업 강제 종료] 주문 취소:", currentOrderId.value);
+            await cancelOrder(currentOrderId.value, {
+              cancelReason: "네이버페이 팝업 강제 종료",
+            });
+            console.log("[팝업 강제 종료] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+            currentOrderId.value = null;
+            resetReservation();
+          } catch (cancelError) {
+            console.error("[팝업 강제 종료] 주문 취소 실패:", cancelError);
+            currentOrderId.value = null;
           }
-          currentOrderId.value = null;
         }
 
         // 재고 선점 상태 정리
@@ -598,7 +624,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
 
       // localStorage 주기적 체크 (storage/focus 이벤트 보완)
       let pollCount = 0;
-      const maxPolls = 1200; // 10분 (500ms * 1200)
+      const maxPolls = 360; // 3분 (500ms * 360) - 재고 선점 TTL과 동일
       let popupClosedDetected = false;
 
       popupCheckInterval = setInterval(async () => {
@@ -623,7 +649,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             await handlePopupForceClosed();
           }
         } else if (pollCount >= maxPolls) {
-          // 타임아웃 (10분)
+          // 타임아웃 (3분)
           clearInterval(popupCheckInterval!);
           popupCheckInterval = null;
           if (isPaymentPopupOpen.value) {
@@ -661,7 +687,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
           localStorage.removeItem("naverpay_current_order");
 
           if (type === "PAYMENT_SUCCESS") {
-            // 결제 성공: 팝업 닫히고 전체 화면 로딩 표시
+            // 결제 성공: 팝업 닫히고 결제 확인 화면으로 리다이렉트
             isPaymentPopupOpen.value = false;
             isPaymentProcessing.value = true;
 
@@ -670,51 +696,53 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             clearDirectPurchase();
             currentOrderId.value = null; // 주문 ID 초기화
 
-            // 주문 상세 페이지로 이동 (replace로 히스토리 쌓이지 않게)
-            router.replace(`/orderdetail/${orderId}`);
+            // ✅ 결제 확인 화면으로 이동 (PaymentCallback.vue에서 Alert 표시)
+            router.replace(`/checkout/success?result=success&orderId=${orderId}&provider=naverpay`)
           } else if (type === "PAYMENT_ERROR") {
-            // 결제 실패: 주문 삭제
+            // 결제 실패: 주문 취소
             isPaymentPopupOpen.value = false;
 
             if (orderId) {
               try {
-                console.log("[네이버페이] 주문 삭제 (실패):", orderId);
-                await deleteOrder(orderId);
-                console.log("[네이버페이] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-              } catch (deleteError) {
-                console.error("[네이버페이] 주문 삭제 실패:", deleteError);
+                console.log("[네이버페이] 주문 취소 (실패):", orderId);
+                await cancelOrder(orderId, {
+                  cancelReason: "네이버페이 결제 실패",
+                });
+                console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+                currentOrderId.value = null;
+                resetReservation();
+              } catch (cancelError) {
+                console.error("[네이버페이] 주문 취소 실패:", cancelError);
+                currentOrderId.value = null;
               }
             } else {
-              console.warn("[네이버페이] orderId가 없어서 주문을 삭제할 수 없습니다.");
+              console.warn("[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.");
             }
-            currentOrderId.value = null; // 주문 ID 초기화
-
-            // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
-            resetReservation();
-            console.log("[네이버페이] 재고 선점 상태 정리 완료");
 
             showAlert(message || "결제 처리 중 오류가 발생했습니다.", {
               type: "error",
             });
           } else if (type === "PAYMENT_CANCEL") {
-            // 결제 취소: 주문 삭제
+            // 결제 취소: 주문 취소
             isPaymentPopupOpen.value = false;
 
             if (orderId) {
               try {
-                console.log("[네이버페이] 주문 삭제 (취소):", orderId);
-                await deleteOrder(orderId);
-                console.log("[네이버페이] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-              } catch (deleteError) {
-                console.error("[네이버페이] 주문 삭제 실패:", deleteError);
+                console.log("[네이버페이] 주문 취소 (사용자 취소):", orderId);
+                await cancelOrder(orderId, {
+                  cancelReason: "사용자가 결제를 취소했습니다.",
+                });
+                console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+                currentOrderId.value = null;
+                resetReservation();
+              } catch (cancelError) {
+                console.error("[네이버페이] 주문 취소 실패:", cancelError);
+                currentOrderId.value = null;
               }
             } else {
-              console.warn("[네이버페이] orderId가 없어서 주문을 삭제할 수 없습니다.");
+              console.warn("[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.");
             }
-            currentOrderId.value = null; // 주문 ID 초기화
 
-            // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
-            resetReservation();
             showAlert("결제가 취소되었습니다.");
           }
 
@@ -814,21 +842,27 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // localStorage 정리
     localStorage.removeItem("naverpay_current_order");
 
-    // 에러 발생 시 주문 삭제
+    // 🔒 Security First: 에러 발생 시 주문 취소 API 호출 (재고는 백엔드가 복구)
     if (orderData.orderId) {
       try {
-        console.log("[네이버페이] 주문 삭제 (오류):", orderData.orderId);
-        await deleteOrder(orderData.orderId);
-        console.log("[네이버페이] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-      } catch (deleteError) {
-        console.error("[네이버페이] 주문 삭제 실패:", deleteError);
+        console.log("[네이버페이] 주문 취소 API 호출 (오류):", orderData.orderId);
+        await cancelOrder(orderData.orderId, {
+          cancelReason: "네이버페이 결제 호출 오류",
+        });
+        console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+
+        // 프론트엔드 상태 정리
+        currentOrderId.value = null;
+        resetReservation();
+      } catch (cancelError) {
+        console.error("[네이버페이] 주문 취소 실패:", cancelError);
+        // 취소 실패해도 Cron이 30분 후 자동 정리
+        currentOrderId.value = null;
       }
     }
-    currentOrderId.value = null; // 주문 ID 초기화
 
-    // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
-    resetReservation();
-    console.log("[네이버페이] 재고 선점 상태 정리 완료");
+    // resetReservation()은 취소 성공 시에만 호출 (위에서 처리)
+    // 백엔드 /cancel API 또는 Cron이 재고 복구 처리
 
     const errorMessage =
       err instanceof Error
@@ -866,30 +900,37 @@ const saveDefaultAddressIfNeeded = async () => {
 
 // 페이지 이탈 시 정리 (브라우저 종료, 탭 닫기 등)
 const handleBeforeUnload = () => {
-  // 주문이 생성되었으면 삭제 (keepalive로 보장)
+  // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
+  if (localStorage.getItem("payment_confirming") === "true") {
+    console.log("[페이지 이탈] 결제 승인 진행 중 - cleanup 취소");
+    return;
+  }
+
+  // 주문이 생성되었으면 cleanup API 호출 (sendBeacon으로 보장)
   if (currentOrderId.value) {
-    console.log("[페이지 이탈] 주문 삭제 (비정상 종료):", currentOrderId.value);
-    deleteOrder(currentOrderId.value, { keepalive: true }).catch(() => {});
+    console.log("[페이지 이탈] 주문 정리 (브라우저 강제 종료 대응):", currentOrderId.value);
+    // sendBeacon으로 paying 상태 주문의 재고 즉시 복구
+    const sent = cleanupOrder(currentOrderId.value);
+    console.log("[페이지 이탈] cleanup 요청 전송:", sent ? "성공" : "실패 (Cron이 처리)");
   }
-  // 재고 선점만 있으면 해제 (주문 생성 전)
-  else if (reservationId.value && !isPaymentProcessing.value) {
-    console.log("[페이지 이탈] 재고 선점 해제:", reservationId.value);
-    releaseStock(0, { keepalive: true }).catch(() => {});
-  }
+  // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
+  // 주문 생성 전에는 재고가 차감되지 않으므로 정리할 필요 없음
 };
 
 // 뒤로가기/앞으로가기 감지
 const handlePopState = () => {
-  // 주문이 생성되었으면 삭제
+  // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
+  if (localStorage.getItem("payment_confirming") === "true") {
+    console.log("[뒤로가기] 결제 승인 진행 중 - cleanup 취소");
+    return;
+  }
+
+  // 주문이 생성되었으면 cleanup API 호출
   if (currentOrderId.value) {
-    console.log("[뒤로가기] 주문 삭제:", currentOrderId.value);
-    deleteOrder(currentOrderId.value, { keepalive: true }).catch(() => {});
+    console.log("[뒤로가기] 주문 정리:", currentOrderId.value);
+    cleanupOrder(currentOrderId.value);
   }
-  // 재고 선점만 있으면 해제
-  else if (reservationId.value) {
-    console.log("[뒤로가기] 재고 선점 해제:", reservationId.value);
-    releaseStock(0, { keepalive: true }).catch(() => {});
-  }
+  // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
 };
 
 // 결제 팝업 상태 감시 (팝업이 닫혔을 때 처리)
@@ -915,26 +956,28 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
       if (reservationId.value || currentOrderId.value) {
         // 결제 성공하지 않았는데 팝업이 닫힌 경우
 
-        // 주문 삭제
+        // 🔒 Security First: 주문 삭제/취소하지 않음
+        // paying 상태의 주문은 백엔드 Cron이 30분 후 자동 정리
+        // 프론트엔드는 재고에 관여하지 않음
+        console.log(
+          "[팝업 종료] 주문 자동 정리는 백엔드 Cron이 처리합니다 (30분 후)"
+        );
+
+        // 프론트엔드 상태만 정리
         if (currentOrderId.value) {
-          try {
-            console.log("[팝업 종료] 주문 삭제:", currentOrderId.value);
-            await deleteOrder(currentOrderId.value);
-            console.log("[팝업 종료] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-          } catch (deleteError) {
-            console.error("[팝업 종료] 주문 삭제 실패:", deleteError);
-          }
+          console.log("[팝업 종료] 프론트엔드 상태 정리:", currentOrderId.value);
           currentOrderId.value = null;
         }
 
-        // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
-        resetReservation();
+        resetReservation(); // 프론트엔드 재고 선점 상태만 정리
 
         // 상태 초기화 (버튼 재활성화)
         isPaymentProcessing.value = false;
-        showAlert("결제가 취소되었습니다.");
+        showAlert(
+          "결제창이 닫혔습니다. 결제가 완료되지 않은 경우 주문이 자동으로 취소됩니다."
+        );
       }
-    }, 10000); // 10초 대기 (결제 승인 완료 대기)
+    }, 20000); // 20초 대기 (결제 승인 완료 대기 - 토스페이먼츠 충돌 방지)
   }
 
   // 팝업이 열릴 때 타이머 정리
@@ -973,11 +1016,19 @@ onUnmounted(() => {
 
   // 비정상 종료 시 정리
   if (currentOrderId.value) {
-    console.log("[언마운트] 주문 삭제:", currentOrderId.value);
-    deleteOrder(currentOrderId.value, { keepalive: true }).catch(() => {});
+    // 🔒 Security First: 주문 삭제하지 않음
+    // Cron이 30분 후 자동 정리 (유령 주문 방지)
+    console.log(
+      "[언마운트] 주문 자동 정리는 백엔드 Cron이 처리합니다:",
+      currentOrderId.value
+    );
   } else if (reservationId.value) {
-    console.log("[언마운트] 재고 선점 해제:", reservationId.value);
-    releaseStock(0, { keepalive: true }).catch(() => {});
+    // 🔒 Security First: 재고 해제도 백엔드가 처리
+    // 재고 선점 TTL 만료 또는 Cron이 자동 해제
+    console.log(
+      "[언마운트] 재고 선점 자동 해제는 백엔드가 처리합니다:",
+      reservationId.value
+    );
   }
 
   // 결제 완료 콜백으로 이동하는 경우는 정리하지 않음
@@ -1171,25 +1222,15 @@ onUnmounted(() => {
             </CardContent>
           </Card>
 
-          <!-- 재고 선점 상태 표시 -->
-          <div
-            v-if="isReserved"
-            class="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10 rounded-lg text-sm"
-          >
-            <span class="text-primary font-medium">재고 확보됨</span>
-            <span class="text-muted-foreground">
-              ({{ remainingTimeFormatted }} 남음)
-            </span>
-          </div>
+          <!-- 🔒 재고 선점 UI 제거: 주문 생성 시 즉시 재고 차감 -->
 
           <Button
             @click="handlePayment"
             class="w-full"
             size="lg"
-            :disabled="isPaymentProcessing || isPaymentPopupOpen || isReserving"
+            :disabled="isPaymentProcessing || isPaymentPopupOpen"
           >
-            <template v-if="isReserving"> 재고 확인 중... </template>
-            <template v-else-if="isPaymentProcessing || isPaymentPopupOpen">
+            <template v-if="isPaymentProcessing || isPaymentPopupOpen">
               결제 진행 중...
             </template>
             <template v-else>

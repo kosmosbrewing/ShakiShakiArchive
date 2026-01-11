@@ -3,11 +3,13 @@
 // 주문 상태 타입
 export type OrderStatus =
   | "pending_payment"
+  | "paying"              // 결제 진행 중 (결제창 오픈 ~ 결제 완료 전)
   | "payment_confirmed"
   | "preparing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"           // 결제 전 취소 (환불 없음)
+  | "refunded";           // 결제 후 환불 (실제 환불 발생)
 
 // 결제 제공자 타입 (PG사 통합)
 export type PaymentProvider = "toss" | "naverpay" | "kakaopay" | string;
