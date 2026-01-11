@@ -31,6 +31,10 @@ const orderInfo = ref<{
 const isPopup = ref<boolean>(false);
 
 onMounted(async () => {
+  // 🔒 결제 승인 페이지에 진입했으므로 주문 삭제 방지 플래그 설정
+  localStorage.setItem("payment_confirming", "true");
+  console.log("[PaymentCallback] 결제 승인 페이지 진입 - 주문 삭제 방지 플래그 설정");
+
   // 팝업 창 여부 확인 (네이버페이 PC 결제)
   isPopup.value = localStorage.getItem("naverpay_popup") === "true";
   // 주의: naverpay_popup 플래그는 여기서 제거하지 않음!
@@ -164,12 +168,21 @@ onMounted(async () => {
   // 토스페이먼츠 결제 성공 시 (paymentKey가 있으면 결제 승인 필요)
   if (paymentKey && orderId && amount) {
     try {
+      console.log("[PaymentCallback] 토스페이먼츠 결제 승인 시작");
+      console.log("[PaymentCallback] paymentKey:", paymentKey);
+      console.log("[PaymentCallback] orderId (externalOrderId):", orderId);
+      console.log("[PaymentCallback] amount:", amount);
+
       // 백엔드에 결제 승인 요청
       const confirmResult = await confirmPayment({
         paymentKey,
         orderId,
         amount: Number(amount),
       });
+
+      // 결제 승인 완료 - 플래그 제거
+      localStorage.removeItem("payment_confirming");
+      console.log("[PaymentCallback] 결제 승인 성공:", confirmResult);
 
       // success 필드 또는 order가 있으면 성공으로 처리
       if (confirmResult.success || confirmResult.order) {
@@ -195,6 +208,9 @@ onMounted(async () => {
         throw new Error("결제 승인에 실패했습니다.");
       }
     } catch (err: any) {
+      // 결제 승인 실패 시 플래그 제거
+      localStorage.removeItem("payment_confirming");
+
       console.error("[PaymentCallback] 토스 결제 승인 오류:", err);
       console.error("[PaymentCallback] 에러 타입:", err?.constructor?.name);
       console.error("[PaymentCallback] 에러 메시지:", err?.message);
