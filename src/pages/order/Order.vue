@@ -456,30 +456,12 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     console.error("[토스페이] 에러 메시지:", (err as any)?.message);
     isPaymentPopupOpen.value = false;
 
-    // 결제 취소/실패 시 주문 삭제 처리
-    // 중요: 3초 딜레이 추가 (결제 승인 콜백이 먼저 처리되도록)
-    const errorWithCode = err as { code?: string; message?: string };
-    if (orderData.orderId) {
-      console.log("[토스페이] 주문 삭제 예약 (3초 후):", orderData.orderId);
+    // 중요: 토스페이먼츠 iframe 결제창에서 결제 완료 시 콜백 URL로 리다이렉트되면서
+    // iframe이 닫히는데, 이것이 에러로 감지됩니다.
+    // 따라서 여기서 주문을 삭제하면 안 됩니다!
+    // 대신 watcher에서 일정 시간 후 처리합니다.
 
-      setTimeout(async () => {
-        try {
-          console.log("[토스페이] 주문 삭제 실행:", orderData.orderId);
-          await deleteOrder(orderData.orderId);
-          console.log("[토스페이] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
-        } catch (deleteError: any) {
-          // 404 에러는 무시 (이미 결제 승인되어 삭제 불가능한 경우)
-          if (deleteError?.status === 404 || deleteError?.response?.status === 404) {
-            console.log("[토스페이] 주문이 이미 없음 (결제 승인되었을 수 있음)");
-          } else if (deleteError?.response?.data?.code === "CANNOT_DELETE_PAID_ORDER") {
-            console.log("[토스페이] 주문이 이미 결제됨 - 삭제 불필요");
-          } else {
-            console.error("[토스페이] 주문 삭제 실패:", deleteError);
-          }
-        }
-      }, 3000); // 3초 대기
-    }
-    currentOrderId.value = null; // 주문 ID 초기화
+    const errorWithCode = err as { code?: string; message?: string };
 
     // 재고 선점 상태만 정리 (백엔드에서 이미 복구했으므로 API 호출 불필요)
     resetReservation();
@@ -490,15 +472,10 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       console.log("[토스페이] 사용자 취소로 처리");
       showAlert("결제가 취소되었습니다.");
     } else {
-      const errorMessage =
-        errorWithCode.message || "토스 결제 창 호출에 실패했습니다.";
-      console.log("[토스페이] 에러 Alert 표시:", errorMessage);
-      showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, {
-        type: "error",
-      });
+      // iframe이 닫힌 경우는 정상 결제 진행일 수 있으므로 에러 메시지 표시하지 않음
+      console.log("[토스페이] 결제창이 닫혔습니다 - watcher에서 처리 예정");
     }
 
-    // 이미 처리했으므로 외부 catch로 throw하지 않음
     // 상태 복구
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
@@ -929,6 +906,12 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
         return;
       }
 
+      // 결제 승인이 진행 중이면 주문 삭제하지 않음 (localStorage 확인)
+      if (localStorage.getItem("payment_confirming") === "true") {
+        console.log("[팝업 종료] 결제 승인 진행 중 - 주문 삭제 취소");
+        return;
+      }
+
       if (reservationId.value || currentOrderId.value) {
         // 결제 성공하지 않았는데 팝업이 닫힌 경우
 
@@ -951,7 +934,7 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
         isPaymentProcessing.value = false;
         showAlert("결제가 취소되었습니다.");
       }
-    }, 500); // 500ms 대기 (storage 이벤트 처리 시간 확보)
+    }, 10000); // 10초 대기 (결제 승인 완료 대기)
   }
 
   // 팝업이 열릴 때 타이머 정리
