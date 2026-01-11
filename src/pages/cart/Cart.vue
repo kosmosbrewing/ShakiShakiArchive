@@ -39,6 +39,8 @@ const {
   cartItems,
   loading,
   totalProductPrice,
+  shippingFee,
+  totalAmount,
   isEmpty,
   loadCart,
   //updateQuantity,
@@ -265,7 +267,9 @@ watch(
             </div>
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
-              <span class="text-foreground">0원 (무료배송)</span>
+              <span class="text-foreground">
+                {{ shippingFee === 0 ? '무료배송' : formatPrice(shippingFee) }}
+              </span>
             </div>
 
             <Separator />
@@ -273,7 +277,7 @@ watch(
             <div class="flex justify-between text-heading">
               <span class="text-foreground">총 결제 금액</span>
               <span class="text-primary">{{
-                formatPrice(totalProductPrice)
+                formatPrice(totalAmount)
               }}</span>
             </div>
 

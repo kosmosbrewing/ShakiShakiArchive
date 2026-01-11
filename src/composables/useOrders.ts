@@ -35,6 +35,7 @@ export function getStatusVariant(status: OrderStatus): BadgeVariant {
     case "delivered":
       return "default";
     case "cancelled":
+    case "refunded":
       return "destructive";
     default:
       return "outline";
@@ -173,6 +174,7 @@ export function useOrders() {
 export function useOrderStats() {
   const orderCounts = reactive<OrderStatusCounts>({
     pending: 0,
+    payment_confirmed: 0,
     preparing: 0,
     shipped: 0,
     delivered: 0,
@@ -191,19 +193,30 @@ export function useOrderStats() {
 
       // 카운트 초기화
       orderCounts.pending = 0;
+      orderCounts.payment_confirmed = 0;
       orderCounts.preparing = 0;
       orderCounts.shipped = 0;
       orderCounts.delivered = 0;
+
+      // 사용자에게 숨길 상태 (OrderList와 동일하게 유지)
+      const hiddenStatuses = ["cancelled", "paying"];
 
       // 각 주문 아이템의 상태별 카운트
       ordersWithItems.forEach((order) => {
         if (order?.orderItems) {
           order.orderItems.forEach((item: OrderItem) => {
+            // 숨겨진 상태는 카운트하지 않음
+            if (hiddenStatuses.includes(item.status)) {
+              return;
+            }
+
             switch (item.status) {
               case "pending_payment":
                 orderCounts.pending++;
                 break;
               case "payment_confirmed":
+                orderCounts.payment_confirmed++;
+                break;
               case "preparing":
                 orderCounts.preparing++;
                 break;

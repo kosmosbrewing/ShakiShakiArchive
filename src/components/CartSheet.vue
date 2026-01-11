@@ -47,6 +47,8 @@ const {
   cartItems,
   loading,
   totalProductPrice,
+  shippingFee,
+  totalAmount,
   isEmpty,
   loadCart,
   //updateQuantity,
@@ -107,7 +109,7 @@ const continueShopping = () => {
   <Sheet :open="open" @update:open="emit('update:open', $event)">
     <SheetContent
       side="right"
-      class="w-full sm:max-w-md flex flex-col p-0 bg-card rounded-2xl"
+      class="w-full sm:max-w-sm flex flex-col p-0 bg-card rounded-2xl"
     >
       <!-- 헤더 -->
       <SheetHeader class="px-6 py-4 pt-10">
@@ -172,9 +174,7 @@ const continueShopping = () => {
               :key="item.id"
               :class="[
                 'rounded-2xl overflow-hidden',
-                isOutOfStock(item)
-                  ? 'border-primary/30 bg-muted/30'
-                  : '',
+                isOutOfStock(item) ? 'border-primary/30 bg-muted/30' : '',
               ]"
             >
               <CardContent class="flex gap-4 p-3 relative">
@@ -289,14 +289,14 @@ const continueShopping = () => {
           </div>
           <div class="flex justify-between text-body">
             <span class="text-muted-foreground">배송비</span>
-            <span class="text-foreground">무료</span>
+            <span class="text-foreground">
+              {{ shippingFee === 0 ? "무료" : formatPrice(shippingFee) }}
+            </span>
           </div>
 
           <div class="flex justify-between text-heading pb-2">
             <span class="text-foreground">총 결제 금액</span>
-            <span class="text-primary">{{
-              formatPrice(totalProductPrice)
-            }}</span>
+            <span class="text-primary">{{ formatPrice(totalAmount) }}</span>
           </div>
           <Button
             @click="goToCart"

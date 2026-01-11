@@ -71,25 +71,27 @@ const deliveryMessageOptions = [
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
-      <Label class="text-left"
+  <div class="space-y-4 sm:space-y-5">
+    <!-- 받는사람 -->
+    <div class="space-y-2 sm:grid sm:grid-cols-[100px_1fr] sm:gap-3 sm:items-center sm:space-y-0">
+      <Label class="text-left text-body sm:text-body"
         >받는사람 <span class="text-destructive">*</span></Label
       >
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <Input
           ref="recipientInputRef"
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
           type="text"
-          class="w-55"
+          class="flex-1 min-w-0"
         />
-        <Badge v-if="form.saveDefault" variant="secondary"> 기본 배송지 </Badge>
+        <Badge v-if="form.saveDefault" variant="secondary" class="shrink-0"> 기본 배송지 </Badge>
       </div>
     </div>
 
-    <div class="grid grid-cols-[80px_1fr] gap-2 items-start">
-      <Label class="text-left pt-2"
+    <!-- 주소 -->
+    <div class="space-y-2 sm:grid sm:grid-cols-[100px_1fr] sm:gap-3 sm:items-start sm:space-y-0">
+      <Label class="text-left text-body sm:text-body sm:pt-2"
         >주소 <span class="text-destructive">*</span></Label
       >
       <div class="space-y-2">
@@ -97,7 +99,7 @@ const deliveryMessageOptions = [
           <Input
             :model-value="form.zipCode"
             type="text"
-            class="w-24 bg-muted"
+            class="w-20 sm:w-24 bg-muted text-caption sm:text-body"
             readonly
             placeholder="우편번호"
           />
@@ -106,6 +108,7 @@ const deliveryMessageOptions = [
             type="button"
             variant="outline"
             size="sm"
+            class="h-10 px-3 text-caption sm:text-body shrink-0"
             @click="emit('searchAddress')"
           >
             주소검색
@@ -128,8 +131,9 @@ const deliveryMessageOptions = [
       </div>
     </div>
 
-    <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
-      <Label class="text-left"
+    <!-- 휴대전화 -->
+    <div class="space-y-2 sm:grid sm:grid-cols-[100px_1fr] sm:gap-3 sm:items-center sm:space-y-0">
+      <Label class="text-left text-body sm:text-body"
         >휴대전화 <span class="text-destructive">*</span></Label
       >
       <PhoneInput
@@ -143,13 +147,14 @@ const deliveryMessageOptions = [
       />
     </div>
 
+    <!-- 배송 메시지 -->
     <div v-if="showDeliveryMessage" class="space-y-2">
       <select
         :value="form.message"
         @change="
           updateField('message', ($event.target as HTMLSelectElement).value)
         "
-        class="w-full border border-border rounded p-3 text-body bg-background text-foreground"
+        class="w-full border border-border rounded p-2.5 sm:p-3 text-caption sm:text-body bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
       >
         <option
           v-for="opt in deliveryMessageOptions"
@@ -167,10 +172,12 @@ const deliveryMessageOptions = [
         type="text"
         placeholder="배송 기사님께 전달할 메시지를 입력해주세요."
         maxlength="50"
+        class="text-caption sm:text-body"
       />
     </div>
 
-    <div v-if="showSaveDefault" class="flex items-center space-x-2">
+    <!-- 기본 배송지 저장 -->
+    <div v-if="showSaveDefault" class="flex items-center space-x-2 pt-1">
       <input
         type="checkbox"
         id="saveDefault"
@@ -181,11 +188,11 @@ const deliveryMessageOptions = [
             ($event.target as HTMLInputElement).checked
           )
         "
-        class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+        class="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded border-border text-primary focus:ring-primary cursor-pointer"
       />
       <Label
         for="saveDefault"
-        class="text-body font-normal cursor-pointer text-muted-foreground"
+        class="text-caption sm:text-body font-normal cursor-pointer text-muted-foreground"
       >
         이 배송지를 기본 배송지로 저장
       </Label>
