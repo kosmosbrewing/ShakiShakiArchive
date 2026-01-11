@@ -142,26 +142,26 @@ onMounted(() => {
     <!-- 배송지 수정 모달 -->
     <div
       v-if="isEditModalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm"
       @click.self="closeEditModal"
     >
       <Card
-        class="w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200"
+        class="w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200"
       >
         <CardHeader
-          class="flex flex-row items-center justify-between border-b py-4"
+          class="flex flex-row items-center justify-between border-b py-3 px-4 sm:py-4 sm:px-6 shrink-0"
         >
           <CardTitle class="text-heading">배송지 수정</CardTitle>
           <Button
             variant="ghost"
             size="icon"
             @click="closeEditModal"
-            class="h-8 w-8 rounded-full"
+            class="h-8 w-8 rounded-full shrink-0"
           >
             ✕
           </Button>
         </CardHeader>
-        <CardContent class="overflow-y-auto p-6 flex-1">
+        <CardContent class="overflow-y-auto p-4 sm:p-6 flex-1">
           <AddressForm
             :form="shippingForm.form"
             :show-save-default="true"
@@ -170,17 +170,17 @@ onMounted(() => {
             @search-address="openAddressSearch"
           />
 
-          <div class="flex gap-3 mt-6 pt-4 border-t">
+          <div class="flex gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 border-t">
             <Button
               variant="outline"
-              class="flex-1"
+              class="flex-1 h-10 sm:h-11"
               @click="closeEditModal"
               :disabled="isSaving"
             >
               취소
             </Button>
             <Button
-              class="flex-1"
+              class="flex-1 h-10 sm:h-11"
               @click="handleSaveEdit"
               :disabled="isSaving || !shippingForm.isValid.value"
             >

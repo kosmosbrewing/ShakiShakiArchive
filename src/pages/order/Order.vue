@@ -89,9 +89,6 @@ const { submitOrder } = useCreateOrder();
 
 // 🔒 재고 선점 제거: 빈 함수로 정의 (하위 호환성 유지)
 const reservationId = ref<string | null>(null);
-const isReserved = ref(false);
-const isReserving = ref(false);
-const remainingTimeFormatted = ref("");
 const resetReservation = () => {
   // 재고 선점 로직 제거됨 - 아무것도 하지 않음
   console.log("[재고 선점] 제거됨 - resetReservation 호출 무시");

@@ -179,7 +179,28 @@ const loadData = async () => {
       fetchAdminProducts(),
       fetchCategories(),
     ]);
-    products.value = productsData;
+
+    // 각 상품의 totalStock 계산 (백엔드에서 제공하지 않는 경우)
+    const productsWithStock = await Promise.all(
+      productsData.map(async (product: any) => {
+        if (product.totalStock === undefined || product.totalStock === null) {
+          try {
+            const productVariants = await fetchAdminProductVariants(product.id);
+            const totalStock = productVariants.reduce(
+              (sum: number, variant: any) => sum + (variant.stockQuantity || 0),
+              0
+            );
+            return { ...product, totalStock };
+          } catch (error) {
+            console.error(`재고 로드 실패 (상품 ID: ${product.id}):`, error);
+            return { ...product, totalStock: 0 };
+          }
+        }
+        return product;
+      })
+    );
+
+    products.value = productsWithStock;
     categories.value = categoriesData;
   } catch (error) {
     console.error(error);
@@ -371,8 +392,10 @@ const handleSaveVariant = async () => {
         variantForm.id,
         payload
       );
+      showAlert("옵션이 수정되었습니다.");
     } else {
       await createProductVariant(currentProduct.value.id, payload);
+      showAlert("옵션이 추가되었습니다.");
     }
 
     // 목록 갱신
@@ -564,6 +587,7 @@ onMounted(async () => {
                 <th class="px-6 py-5">이미지</th>
                 <th class="px-6 py-5 w-1/3">상품명 / 슬러그</th>
                 <th class="px-6 py-5 text-center">판매가</th>
+                <th class="px-6 py-5 text-center">재고</th>
                 <th class="px-6 py-5 text-center">상태</th>
                 <th class="px-6 py-5 text-center">관리 도구</th>
                 <th class="px-6 py-5 text-center">작업</th>
@@ -619,6 +643,11 @@ onMounted(async () => {
                     class="text-caption text-admin-muted line-through opacity-50"
                   >
                     {{ Number(product.originalPrice).toLocaleString() }}원
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <div class="text-body text-admin">
+                    {{ product.totalStock ?? "-" }}개
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
@@ -1016,8 +1045,11 @@ onMounted(async () => {
                     <tr
                       v-for="variant in variants"
                       :key="variant.id"
-                      :class="{ 'bg-primary/5': variant.id === variantForm.id }"
-                      class="hover:bg-muted/20 transition-colors group"
+                      :class="{
+                        'bg-primary/10': variant.id === variantForm.id,
+                      }"
+                      class="hover:bg-muted/20 transition-colors group cursor-pointer"
+                      @click="handleEditVariant(variant)"
                     >
                       <td class="px-6 py-4 text-tiny text-admin-muted">
                         {{ variant.sku }}
@@ -1045,16 +1077,8 @@ onMounted(async () => {
                       >
                         {{ variant.stockQuantity }}
                       </td>
-                      <td class="px-6 py-4 text-right">
+                      <td class="px-6 py-4 text-right" @click.stop>
                         <div class="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            @click="handleEditVariant(variant)"
-                            class="h-8 w-8 text-muted-foreground hover:text-primary"
-                          >
-                            <Edit3 class="w-4 h-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1109,16 +1133,11 @@ onMounted(async () => {
             </Button>
           </div>
           <Separator></Separator>
-          <div class="mb-10">
-            <p class="text-body text-admin-muted mt-3">
+          <div class="mb-4">
+            <p class="text-body text-admin-muted mt-3 mb-1">
               상품:
               <span class="text-admin-muted">{{ currentProduct?.name }}</span>
             </p>
-            <label
-              class="text-body text-admin-muted uppercase tracking-tighter block mb-1 mt-3"
-            >
-              사이즈 옵션 선택
-            </label>
             <div v-if="variants.length > 0" class="flex flex-wrap gap-2">
               <Button
                 v-for="v in variants"
@@ -1128,7 +1147,9 @@ onMounted(async () => {
                 :class="currentVariant?.id === v.id ? 'scale-105' : ''"
               >
                 <span class="text-caption">{{ v.size }}</span>
-                <span class="text-caption ml-1">({{ v.color }})</span>
+                <span v-if="v.color" class="text-caption ml-1"
+                  >({{ v.color }})</span
+                >
               </Button>
             </div>
             <div
@@ -1157,8 +1178,66 @@ onMounted(async () => {
 
           <div
             v-if="currentVariant"
-            class="space-y-8 animate-in slide-in-from-bottom-2 duration-300"
+            class="space-y-5 animate-in slide-in-from-bottom-2 duration-300"
           >
+            <div
+              class="border border-border rounded-2xl overflow-hidden shadow-sm bg-white"
+            >
+              <table class="w-full text-left border-collapse">
+                <thead
+                  class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+                >
+                  <tr>
+                    <th class="px-6 py-4">총장</th>
+                    <th class="px-6 py-4">어깨</th>
+                    <th class="px-6 py-4">가슴</th>
+                    <th class="px-6 py-4">소매</th>
+                    <th class="px-6 py-4">허리/힙/허벅지</th>
+                    <th class="px-6 py-4 text-right">관리</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border text-body text-admin">
+                  <tr
+                    v-for="m in measurements"
+                    :key="m.id"
+                    :class="{ 'bg-primary/10': m.id === measurementForm.id }"
+                    class="hover:bg-muted/20 transition-colors cursor-pointer"
+                    @click="handleEditMeasurement(m)"
+                  >
+                    <td class="px-6 py-4 text-caption">{{ m.totalLength }}</td>
+                    <td class="px-6 py-4 text-caption">
+                      {{ m.shoulderWidth }}
+                    </td>
+                    <td class="px-6 py-4 text-caption">{{ m.chestSection }}</td>
+                    <td class="px-6 py-4 text-caption">{{ m.sleeveLength }}</td>
+                    <td class="px-6 py-4 text-caption">
+                      {{ m.waistSection }} / {{ m.hipSection }} /
+                      {{ m.thighSection }}
+                    </td>
+                    <td class="px-6 py-4 text-right" @click.stop>
+                      <div class="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          @click="handleDeleteMeasurement(m.id)"
+                          class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 class="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="measurements.length === 0">
+                    <td
+                      colspan="6"
+                      class="px-6 py-12 text-center text-admin-muted text-caption"
+                    >
+                      등록된 치수 정보가 없습니다. 상단 폼을 통해 입력해주세요.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div
               class="bg-muted/30 p-6 rounded-2xl border border-border shadow-inner"
             >
@@ -1211,71 +1290,6 @@ onMounted(async () => {
                   </Button>
                 </div>
               </form>
-            </div>
-
-            <div
-              class="border border-border rounded-2xl overflow-hidden shadow-sm bg-white"
-            >
-              <table class="w-full text-left border-collapse">
-                <thead
-                  class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
-                >
-                  <tr>
-                    <th class="px-6 py-4">총장</th>
-                    <th class="px-6 py-4">어깨</th>
-                    <th class="px-6 py-4">가슴</th>
-                    <th class="px-6 py-4">소매</th>
-                    <th class="px-6 py-4">허리/힙/허벅지</th>
-                    <th class="px-6 py-4 text-right">관리</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-border text-body text-admin">
-                  <tr
-                    v-for="m in measurements"
-                    :key="m.id"
-                    class="hover:bg-muted/20 transition-colors"
-                  >
-                    <td class="px-6 py-4 text-caption">{{ m.totalLength }}</td>
-                    <td class="px-6 py-4 text-caption">
-                      {{ m.shoulderWidth }}
-                    </td>
-                    <td class="px-6 py-4 text-caption">{{ m.chestSection }}</td>
-                    <td class="px-6 py-4 text-caption">{{ m.sleeveLength }}</td>
-                    <td class="px-6 py-4 text-caption">
-                      {{ m.waistSection }} / {{ m.hipSection }} /
-                      {{ m.thighSection }}
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                      <div class="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          @click="handleEditMeasurement(m)"
-                          class="h-8 w-8 text-muted-foreground hover:text-primary"
-                        >
-                          <Edit3 class="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          @click="handleDeleteMeasurement(m.id)"
-                          class="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 class="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="measurements.length === 0">
-                    <td
-                      colspan="6"
-                      class="px-6 py-12 text-center text-admin-muted text-caption"
-                    >
-                      등록된 치수 정보가 없습니다. 상단 폼을 통해 입력해주세요.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </div>

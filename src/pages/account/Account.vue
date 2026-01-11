@@ -239,17 +239,17 @@ onMounted(async () => {
       <CardContent>
         <div class="grid grid-cols-4 gap-2">
           <button
-            @click="goToOrderList('pending')"
+            @click="goToOrderList('payment_confirmed')"
             class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
             >
-              <Package class="w-5 h-5 text-primary" />
+              <CheckCircle class="w-5 h-5 text-primary" />
             </div>
-            <span class="text-caption mb-1">입금전</span>
+            <span class="text-caption mb-1">결제완료</span>
             <span class="text-body font-bold text-foreground">
-              {{ orderCounts.pending }}
+              {{ orderCounts.payment_confirmed }}
             </span>
           </button>
 
@@ -290,7 +290,7 @@ onMounted(async () => {
             <div
               class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
             >
-              <CheckCircle class="w-5 h-5 text-primary" />
+              <Package class="w-5 h-5 text-primary" />
             </div>
             <span class="text-caption mb-1">배송완료</span>
             <span class="text-body font-bold text-foreground">

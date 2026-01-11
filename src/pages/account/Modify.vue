@@ -251,7 +251,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
+  <div class="max-w-md mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 제목 -->
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">
@@ -439,6 +439,5 @@ onMounted(async () => {
       @close="isAddressSearchOpen = false"
       @select="handleAddressSelect"
     />
-
   </div>
 </template>

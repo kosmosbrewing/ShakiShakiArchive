@@ -10,6 +10,7 @@ import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
+import { fetchAllOrders, fetchOrder } from "@/lib/api";
 
 // 공통 컴포넌트
 import {
@@ -33,7 +34,12 @@ const { showAlert } = useAlert();
 useAuthGuard();
 
 // 주문 목록 로직 (무한 스크롤 지원)
-const { orders, loading, loadingMore, hasMore, loadOrders, loadMoreOrders } = useOrders();
+const { orders, loading, loadingMore, hasMore, loadOrders, loadMoreOrders } =
+  useOrders();
+
+// 필터용 전체 주문 데이터
+const allOrders = ref<Order[]>([]);
+const loadingAllOrders = ref(false);
 
 // 무한 스크롤을 위한 옵저버 타겟 ref
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
@@ -85,6 +91,7 @@ const currentFilter = ref<string | null>(null);
 // 상태 필터 레이블 매핑
 const statusLabels: Record<string, string> = {
   pending: "입금전",
+  payment_confirmed: "결제완료",
   preparing: "배송준비중",
   shipped: "배송중",
   delivered: "배송완료 (최근 1주일)",
@@ -92,8 +99,9 @@ const statusLabels: Record<string, string> = {
 
 // 상태별 실제 status 값 매핑
 const statusMapping: Record<string, string[]> = {
-  pending: ["pending_payment", "paying"],
-  preparing: ["payment_confirmed", "preparing"],
+  pending: ["pending_payment"],
+  payment_confirmed: ["payment_confirmed"],
+  preparing: ["preparing"],
   shipped: ["shipped"],
   delivered: ["delivered"],
 };
@@ -107,29 +115,41 @@ const oneWeekAgo = () => {
 
 // 필터링된 주문 목록
 const filteredOrders = computed((): Order[] => {
-  if (!currentFilter.value) {
-    return orders.value;
-  }
-
-  const allowedStatuses = statusMapping[currentFilter.value] || [];
   const weekAgo = oneWeekAgo();
-
   const result: Order[] = [];
 
-  for (const order of orders.value) {
+  // 사용자에게 숨길 상태
+  const hiddenStatuses = ["cancelled", "paying"];
+
+  // 필터가 있으면 전체 주문 데이터, 없으면 페이지네이션된 데이터 사용
+  const sourceOrders = currentFilter.value ? allOrders.value : orders.value;
+
+  for (const order of sourceOrders) {
     if (!order.orderItems) continue;
 
     // 주문 아이템 필터링
     const filteredItems = order.orderItems.filter((item) => {
-      // 상태 필터
-      if (!allowedStatuses.includes(item.status)) {
+      // cancelled, paying, refunded 상태는 항상 숨김
+      if (hiddenStatuses.includes(item.status)) {
         return false;
       }
-      // 배송완료는 최근 1주일만
-      if (currentFilter.value === "delivered") {
-        const itemDate = new Date(item.updatedAt || item.createdAt || order.createdAt);
-        return itemDate >= weekAgo;
+
+      // 필터가 있는 경우
+      if (currentFilter.value) {
+        const allowedStatuses = statusMapping[currentFilter.value] || [];
+        // 상태 필터
+        if (!allowedStatuses.includes(item.status)) {
+          return false;
+        }
+        // 배송완료는 최근 1주일만
+        if (currentFilter.value === "delivered") {
+          const itemDate = new Date(
+            item.updatedAt || item.createdAt || order.createdAt
+          );
+          return itemDate >= weekAgo;
+        }
       }
+
       return true;
     });
 
@@ -157,6 +177,31 @@ watch(
   { immediate: true }
 );
 
+// 필터 변경 시 전체 주문 로드
+watch(
+  currentFilter,
+  async (newFilter) => {
+    if (newFilter) {
+      // 필터가 적용되면 전체 주문 데이터 로드
+      loadingAllOrders.value = true;
+      try {
+        const allOrdersData = await fetchAllOrders();
+        // 각 주문의 상세 정보 로드
+        const detailsPromises = allOrdersData.map((order) =>
+          fetchOrder(order.id)
+        );
+        allOrders.value = await Promise.all(detailsPromises);
+      } catch (e) {
+        console.error("전체 주문 로드 실패:", e);
+        allOrders.value = [];
+      } finally {
+        loadingAllOrders.value = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
 // 취소 다이얼로그 상태
 const cancelDialogOpen = ref(false);
 const cancelTargetOrder = ref<Order | null>(null);
@@ -169,7 +214,7 @@ const goToOrderDetail = (orderId: string | number) => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["pending_payment", "paying", "payment_confirmed", "preparing"].includes(status);
+  return ["pending_payment", "payment_confirmed", "preparing"].includes(status);
 };
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
@@ -198,16 +243,39 @@ const handleConfirmCancel = async (reason: string) => {
   if (result) {
     // 취소 성공 시 주문 목록 갱신
     await loadOrders();
+
+    // 필터가 적용된 경우 전체 주문도 갱신
+    if (currentFilter.value) {
+      loadingAllOrders.value = true;
+      try {
+        const allOrdersData = await fetchAllOrders();
+        const detailsPromises = allOrdersData.map((order) =>
+          fetchOrder(order.id)
+        );
+        allOrders.value = await Promise.all(detailsPromises);
+      } catch (e) {
+        console.error("전체 주문 로드 실패:", e);
+      } finally {
+        loadingAllOrders.value = false;
+      }
+    }
+
     closeCancelDialog();
 
     // 환불 정보가 있으면 알림
     if (result.refund) {
-      showAlert(`주문이 취소되었습니다.\n환불 금액: ${formatPrice(result.refund.cancelAmount)}`);
+      showAlert(
+        `주문이 취소되었습니다.\n환불 금액: ${formatPrice(
+          result.refund.cancelAmount
+        )}`
+      );
     } else {
       showAlert("주문이 취소되었습니다.");
     }
   } else {
-    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", { type: "error" });
+    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", {
+      type: "error",
+    });
   }
 };
 
@@ -237,7 +305,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6 border-b pb-3">
       <div>
         <h3 class="text-heading text-primary tracking-wider">주문 내역</h3>
@@ -258,12 +326,16 @@ onUnmounted(() => {
       </Button>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <LoadingSpinner v-if="currentFilter ? loadingAllOrders : loading" />
 
     <EmptyState
       v-else-if="filteredOrders.length === 0"
       header="주문내역"
-      :message="currentFilter ? `${statusLabels[currentFilter]} 상태의 주문이 없습니다.` : '주문 내역이 없습니다.'"
+      :message="
+        currentFilter
+          ? `${statusLabels[currentFilter]} 상태의 주문이 없습니다.`
+          : '주문 내역이 없습니다.'
+      "
       :button-text="currentFilter ? '전체 주문 보기' : '쇼핑하러 가기'"
       :button-link="currentFilter ? '/orderlist' : '/product/all'"
     />
@@ -324,8 +396,14 @@ onUnmounted(() => {
 
                 <p class="text-body text-foreground font-medium">
                   {{ formatPrice(item.productPrice) }}
-                  <span v-if="item.paymentMethod" class="text-muted-foreground font-normal ml-2">
-                    · {{ item.paymentMethod === 'toss' ? '토스페이' : '네이버페이' }}
+                  <span
+                    v-if="item.paymentMethod"
+                    class="text-muted-foreground font-normal ml-2"
+                  >
+                    ·
+                    {{
+                      item.paymentMethod === "toss" ? "토스페이" : "네이버페이"
+                    }}
                   </span>
                 </p>
               </div>
@@ -366,11 +444,17 @@ onUnmounted(() => {
         ref="loadMoreTrigger"
         class="py-8 flex justify-center"
       >
-        <div v-if="loadingMore" class="flex items-center gap-2 text-muted-foreground">
+        <div
+          v-if="loadingMore"
+          class="flex items-center gap-2 text-muted-foreground"
+        >
           <Loader2 class="w-5 h-5 animate-spin" />
           <span class="text-body">주문 내역을 불러오는 중...</span>
         </div>
-        <div v-else-if="!hasMore && orders.length > 0" class="text-body text-muted-foreground">
+        <div
+          v-else-if="!hasMore && orders.length > 0"
+          class="text-body text-muted-foreground"
+        >
           모든 주문 내역을 불러왔습니다
         </div>
       </div>

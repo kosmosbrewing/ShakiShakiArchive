@@ -96,11 +96,13 @@ export function isValidPhone(parts: PhoneParts): boolean {
 export function formatOrderStatus(status: OrderStatus): string {
   const statusMap: Record<OrderStatus, string> = {
     pending_payment: "입금대기",
+    paying: "결제진행중",
     payment_confirmed: "결제완료",
     preparing: "배송준비중",
     shipped: "배송중",
     delivered: "배송완료",
     cancelled: "주문취소",
+    refunded: "주문취소",
   };
   return statusMap[status] || status;
 }

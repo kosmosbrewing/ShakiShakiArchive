@@ -178,6 +178,7 @@ export interface ShippingFormData {
 // 주문 상태 카운트
 export interface OrderStatusCounts {
   pending: number;
+  payment_confirmed: number;
   preparing: number;
   shipped: number;
   delivered: number;
