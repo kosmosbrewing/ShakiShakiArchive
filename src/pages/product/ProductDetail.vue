@@ -16,9 +16,7 @@ import { useWishlistToggle } from "@/composables/useWishlist";
 import { useAuthCheck } from "@/composables/useAuthGuard";
 import { useCart } from "@/composables/useCart";
 import { useOptimizedImage } from "@/composables";
-import { useSeo } from "@/composables/useSeo";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
-import { fetchProductSeoData } from "@/lib/api";
 
 // 아이콘
 import { Heart } from "lucide-vue-next";
@@ -379,15 +377,6 @@ onMounted(async () => {
 
   // 사이즈 정보 로드
   await sizeMeasurements.loadSizeMeasurements();
-
-  // SEO 메타 태그 설정 (상품 ID 사용)
-  try {
-    const seoData = await fetchProductSeoData(String(productId.value));
-    useSeo(seoData);
-  } catch (error) {
-    console.error("SEO 데이터 로드 실패:", error);
-    // 에러가 발생해도 페이지는 정상적으로 표시됨
-  }
 });
 </script>
 

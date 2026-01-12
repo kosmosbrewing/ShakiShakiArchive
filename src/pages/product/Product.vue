@@ -17,8 +17,6 @@ import { Separator } from "@/components/ui/separator";
 import { useOptimizedImage } from "@/composables";
 import { Input } from "@/components/ui/input";
 import { useDebounceFn } from "@vueuse/core";
-import { useSeo } from "@/composables/useSeo";
-import { fetchProductsSeoData, fetchCategorySeoData } from "@/lib/api";
 
 const route = useRoute();
 const router = useRouter();
@@ -147,26 +145,6 @@ watch(searchQuery, () => {
   debouncedSearch();
 });
 
-// 카테고리 변경 시 SEO 업데이트
-watch(
-  () => route.params.category,
-  async (newCategory) => {
-    if (!newCategory) return;
-
-    try {
-      if (newCategory !== 'all') {
-        const seoData = await fetchCategorySeoData(String(newCategory));
-        useSeo(seoData);
-      } else {
-        const seoData = await fetchProductsSeoData();
-        useSeo(seoData);
-      }
-    } catch (error) {
-      console.error("SEO 데이터 로드 실패:", error);
-    }
-  }
-);
-
 onMounted(async () => {
   await loadProducts();
   if (authStore.isAuthenticated) {
@@ -175,25 +153,6 @@ onMounted(async () => {
   // DOM이 준비된 후 옵저버 설정
   if (loadMoreTrigger.value) {
     setupIntersectionObserver();
-  }
-
-  // SEO 메타 태그 설정
-  try {
-    const categorySlug = route.params.category;
-
-    // 카테고리가 있으면 카테고리별 SEO, 없으면 전체 상품 목록 SEO
-    if (categorySlug && categorySlug !== 'all') {
-      const seoData = await fetchCategorySeoData(String(categorySlug));
-      useSeo(seoData);
-    } else if (hasCategory.value) {
-      // 'all' 카테고리이거나 상품 목록 페이지인 경우
-      const seoData = await fetchProductsSeoData();
-      useSeo(seoData);
-    }
-    // Home에서 사용되는 경우는 홈 SEO가 이미 설정되어 있으므로 변경하지 않음
-  } catch (error) {
-    console.error("SEO 데이터 로드 실패:", error);
-    // 에러가 발생해도 페이지는 정상적으로 표시됨
   }
 });
 

@@ -5,16 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="./src/assets/icon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- 기본 제목 (앱 로드 후 백엔드 API로 동적 설정됨) -->
-    <title>ShakiShaki Archive</title>
-
+    <!-- 기본 제목 -->
     <!--
-      NOTE: SEO 메타 태그는 main.ts의 bootstrap에서 백엔드 API를 통해 동적으로 설정됩니다.
-      - 홈페이지: /api/seo/home
-      - 상품 상세: /api/seo/products/:id
-      - 카테고리: /api/seo/categories/:slug
+      NOTE: SEO 메타 태그는 빌드 시점에 Prerendering 스크립트를 통해
+      백엔드 API(/api/seo/*)에서 가져온 데이터로 동적 생성됩니다.
 
-      백엔드 API를 Single Source of Truth로 사용하여 일관성을 유지합니다.
+      생성되는 메타 태그:
+      - <title>
+      - <meta name="description">
+      - OpenGraph (og:title, og:description, og:image, og:url, og:type, og:site_name, og:locale)
+      - Twitter Card (twitter:card, twitter:title, twitter:description, twitter:image)
+
+      실행 방법: npm run build:full
     -->
 
     <!-- 토스페이먼츠 SDK -->

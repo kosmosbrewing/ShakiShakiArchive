@@ -22,7 +22,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prerender": "node scripts/prerender.js",
+    "build:full": "npm run build && npm run prerender"
   },
   "dependencies": {
     "@selemondev/vue3-marquee": "^0.0.8",

@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'  # v1.0.0 형식의 태그 Push 시 전체 무효화
+  workflow_dispatch:  # 수동 실행 지원
+    inputs:
+      full_invalidation:
+        description: '전체 캐시 무효화 (디자인 변경, 긴급 수정 시)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   NODE_VERSION: "20"
@@ -28,13 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4. 프로덕션 빌드 (환경변수 직접 주입)
-      - name: Build for production
-        run: npm run build
+      # 4. 프로덕션 빌드 + Prerendering (운영 API/DB 기준)
+      - name: Build and Prerender
+        run: npm run build:full
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-      # 6. AWS 자격 증명 설정
+      # 5. AWS 자격 증명 설정
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -42,14 +51,49 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 7. S3에 빌드 파일 업로드
-      - name: Deploy to S3
+      # 6. Assets 파일 업로드 (긴 캐시 TTL: 1년, immutable)
+      - name: Upload Assets to S3
+        run: |
+          aws s3 sync dist/assets/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/assets/ \
+            --cache-control "max-age=31536000, immutable"
+
+      # 7. HTML 파일 업로드 (짧은 캐시 TTL: 5분)
+      - name: Upload HTML files to S3
         run: |
           aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
+            --exclude "assets/*" \
+            --cache-control "max-age=300, must-revalidate" \
             --delete
 
-      # 8. CloudFront 캐시 무효화 테스트
-      - name: Invalidate CloudFront cache
+      # 8. 무효화 전략 판단 및 실행
+      - name: Determine invalidation strategy
+        id: invalidation
+        run: |
+          # 커밋 메시지에 [full-invalidate] 키워드 확인
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+
+          # 조건 체크
+          if [[ "${{ github.ref_type }}" == "tag" ]] || \
+             [[ "${{ inputs.full_invalidation }}" == "true" ]] || \
+             [[ "$COMMIT_MSG" == *"[full-invalidate]"* ]]; then
+            echo "strategy=full" >> $GITHUB_OUTPUT
+            echo "🔄 전체 캐시 무효화 실행"
+          else
+            echo "strategy=selective" >> $GITHUB_OUTPUT
+            echo "📄 HTML만 선택적 무효화 실행"
+          fi
+
+      # 9-A. HTML만 선택적 캐시 무효화 (비용 절감)
+      - name: Invalidate CloudFront cache (HTML only)
+        if: steps.invalidation.outputs.strategy == 'selective'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/index.html" "/product/*" "/productDetail/*"
+
+      # 9-B. 전체 캐시 무효화 (디자인 변경, 긴급 수정 시)
+      - name: Invalidate CloudFront cache (Full)
+        if: steps.invalidation.outputs.strategy == 'full'
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
