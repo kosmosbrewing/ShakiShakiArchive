@@ -734,3 +734,33 @@ export interface UpdateUserRequest {
   detailAddress?: string;
   emailOptIn?: boolean;
 }
+
+// ------------------------------------------------------------------
+// SEO 메타 태그 관련 타입
+// ------------------------------------------------------------------
+
+// Twitter Card 메타 데이터
+export interface TwitterCardMetadata {
+  card: string;
+  title: string;
+  description: string;
+  image?: string;
+}
+
+// OpenGraph 메타 데이터
+export interface OpenGraphMetadata {
+  title: string;
+  description: string;
+  url: string;
+  type: string;
+  image?: string;
+  siteName: string;
+  locale: string;
+  twitter: TwitterCardMetadata;
+}
+
+// SEO 데이터 (백엔드 API 응답)
+export interface SeoData {
+  openGraph: OpenGraphMetadata;
+  jsonLd?: Record<string, any>[]; // JSON-LD 구조화 데이터
+}

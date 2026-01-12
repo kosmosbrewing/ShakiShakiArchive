@@ -11,12 +11,13 @@ interface Props {
   phone3: string;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "update:phone1", value: string): void;
   (e: "update:phone2", value: string): void;
   (e: "update:phone3", value: string): void;
+  (e: "enter"): void; // 마지막 필드에서 Enter 키 이벤트
 }>();
 
 // 첫 번째 자리 옵션
@@ -24,54 +25,86 @@ const prefixOptions = ["010", "011", "016", "017", "018", "019"];
 
 // Input refs
 const phone2InputRef = ref<InstanceType<typeof Input> | null>(null);
+const phone3InputRef = ref<InstanceType<typeof Input> | null>(null);
 
 // 외부에서 첫 번째 입력 필드에 focus (phone2, 실제로 사용자가 입력하는 첫 번째 필드)
 const focusFirst = () => {
   phone2InputRef.value?.$el?.focus();
 };
 
+// 중간 4자리 입력 처리 (자동 focus 이동)
+const handlePhone2Input = (value: string) => {
+  emit("update:phone2", value);
+  if (value.length === 4) {
+    phone3InputRef.value?.$el?.focus();
+  }
+};
+
+// 중간 4자리에서 Enter 키 처리
+const handlePhone2Enter = (event: KeyboardEvent) => {
+  event.preventDefault(); // form submit 방지
+  // 4자리가 모두 입력되었을 때만 다음 필드로 이동
+  if (props.phone2.length === 4) {
+    phone3InputRef.value?.$el?.focus();
+  }
+  // 4자리가 입력되지 않았으면 아무 동작도 하지 않음
+};
+
+// 마지막 4자리에서 Enter 키 처리
+const handlePhone3Enter = (event: KeyboardEvent) => {
+  event.preventDefault(); // form submit 방지
+  // 4자리가 모두 입력되었을 때만 다음 필드로 이동
+  if (props.phone3.length === 4) {
+    emit("enter");
+  }
+  // 4자리가 입력되지 않았으면 아무 동작도 하지 않음
+};
+
 defineExpose({ focusFirst });
 </script>
 
 <template>
-  <div class="flex items-center gap-1.5 sm:gap-2 w-full">
-    <!-- 010 Select - 고정 너비 -->
+  <div class="flex items-center gap-2 w-full">
+    <!-- 010 Select -->
     <select
       :value="phone1"
       @change="
         emit('update:phone1', ($event.target as HTMLSelectElement).value)
       "
-      class="w-[4.2rem] sm:w-20 h-10 text-center rounded-md border border-input bg-background px-1 sm:px-2 py-2 text-caption sm:text-body ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      class="flex-1 min-w-0 h-10 text-center rounded-md border border-input bg-background px-2 py-2 text-body ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <option v-for="opt in prefixOptions" :key="opt" :value="opt">
         {{ opt }}
       </option>
     </select>
 
-    <span class="text-muted-foreground text-caption sm:text-body">-</span>
+    <span class="text-muted-foreground text-body shrink-0">-</span>
 
     <!-- 중간 4자리 -->
     <Input
       ref="phone2InputRef"
       :model-value="phone2"
-      @update:model-value="emit('update:phone2', String($event))"
+      @update:model-value="handlePhone2Input(String($event))"
+      @keydown.enter="handlePhone2Enter"
       type="text"
       inputmode="numeric"
       maxlength="4"
-      class="flex-1 min-w-0 h-10 text-center text-caption sm:text-body"
+      class="flex-1 min-w-0 h-10 text-center text-body"
       placeholder="0000"
     />
 
-    <span class="text-muted-foreground text-caption sm:text-body">-</span>
+    <span class="text-muted-foreground text-body shrink-0">-</span>
 
     <!-- 마지막 4자리 -->
     <Input
+      ref="phone3InputRef"
       :model-value="phone3"
       @update:model-value="emit('update:phone3', String($event))"
+      @keydown.enter="handlePhone3Enter"
       type="text"
       inputmode="numeric"
       maxlength="4"
-      class="flex-1 min-w-0 h-10 text-center text-caption sm:text-body"
+      class="flex-1 min-w-0 h-10 text-center text-body"
       placeholder="0000"
     />
   </div>

@@ -27,7 +27,7 @@ import accountIcon from "@/assets/account.png";
 import cartIcon from "@/assets/cart.png";
 import loginIcon from "@/assets/login.png";
 import logoutIcon from "@/assets/logout.png";
-import qaIcon from "@/assets/QA.png";
+import faqIcon from "@/assets/FAQ.png";
 
 const mode = useColorMode();
 mode.value = "light";
@@ -174,7 +174,7 @@ onUnmounted(() => {
                 class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
                 @click="handleFAQClick"
               >
-                Q&A
+                FAQ
               </Button>
             </div>
             <div class="flex-1"></div>
@@ -338,8 +338,8 @@ onUnmounted(() => {
           @click="handleFAQClick"
         >
           <img
-            :src="qaIcon"
-            alt="Q&A"
+            :src="faqIcon"
+            alt="FAQ"
             class="w-5 h-5 object-contain"
             draggable="false"
           />

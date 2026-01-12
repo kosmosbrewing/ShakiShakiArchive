@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { sendVerification, verifyEmail } from "@/lib/api";
@@ -28,13 +28,79 @@ import {
 
 // Input refs
 const emailInputRef = ref<InstanceType<typeof Input> | null>(null);
+const verificationButtonRef = ref<InstanceType<typeof Button> | null>(null);
+const verificationCodeInputRef = ref<InstanceType<typeof Input> | null>(null);
 const passwordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const confirmPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
 const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
+const addressSearchButtonRef = ref<InstanceType<typeof Button> | null>(null);
+const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
+const emailOptInCheckboxRef = ref<HTMLInputElement | null>(null);
+const signupButtonRef = ref<InstanceType<typeof Button> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+// 간단한 이메일 유효성 검사 (@ 와 . 포함 여부만 체크)
+const isValidEmailFormat = (email: string): boolean => {
+  return email.includes('@') && email.includes('.');
+};
+
+// 이메일 필드에서 Enter 키 처리
+const handleEmailEnter = () => {
+  if (isValidEmailFormat(formData.email)) {
+    verificationButtonRef.value?.$el?.focus();
+  } else {
+    showValidationError('올바른 이메일 형식을 입력해주세요.', emailInputRef);
+  }
+};
+
+// 비밀번호 필드에서 Enter 키 처리 (8자 이상일 때만 이동)
+const handlePasswordEnter = () => {
+  if (formData.password.length >= 8) {
+    confirmPasswordInputRef.value?.$el?.focus();
+  }
+  // 8자 미만이면 아무 동작도 하지 않음
+};
+
+// 비밀번호 확인 필드에서 Enter 키 처리 (8자 이상일 때만 이동)
+const handleConfirmPasswordEnter = () => {
+  if (formData.confirmPassword.length >= 8) {
+    userNameInputRef.value?.$el?.focus();
+  }
+  // 8자 미만이면 아무 동작도 하지 않음
+};
+
+// 이름 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
+const handleUserNameEnter = () => {
+  if (formData.userName.trim().length >= 1) {
+    phoneInputRef.value?.focusFirst();
+  }
+};
+
+// 휴대전화 마지막 입력 후 처리 (우편번호 유무에 따라 분기)
+const handlePhoneEnter = () => {
+  if (formData.zipCode) {
+    // 우편번호가 있으면 상세주소로 이동
+    detailAddressInputRef.value?.$el?.focus();
+  } else {
+    // 우편번호가 없으면 주소검색 버튼으로 이동
+    addressSearchButtonRef.value?.$el?.focus();
+  }
+};
+
+// 상세주소 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
+const handleDetailAddressEnter = () => {
+  if (formData.detailAddress.trim().length >= 1) {
+    emailOptInCheckboxRef.value?.focus();
+  }
+};
+
+// 이메일 수신동의 체크박스에서 Enter 키 처리
+const handleEmailOptInEnter = () => {
+  signupButtonRef.value?.$el?.focus();
+};
 
 // ... (스크립트 로직은 기존과 동일하므로 생략하거나 그대로 유지) ...
 // 1. 회원가입 폼 데이터
@@ -137,6 +203,11 @@ const handleAddressSelect = (address: {
   formData.zipCode = address.zonecode;
   formData.address = address.address;
   formData.detailAddress = ""; // 상세 주소 초기화
+
+  // 주소 선택 후 상세주소 입력 필드로 focus
+  nextTick(() => {
+    detailAddressInputRef.value?.$el?.focus();
+  });
 };
 
 // 유효성 검사 및 Alert 표시 헬퍼
@@ -287,9 +358,11 @@ const handleSignup = async () => {
                 placeholder="example@email.com"
                 v-model="formData.email"
                 :disabled="verificationState.isVerified"
+                @keydown.enter.prevent="handleEmailEnter"
                 class="text-caption sm:text-body"
               />
               <Button
+                ref="verificationButtonRef"
                 type="button"
                 variant="outline"
                 size="sm"
@@ -331,12 +404,14 @@ const handleSignup = async () => {
             <Label for="code" class="text-body">인증번호</Label>
             <div class="flex gap-1.5 sm:gap-2">
               <Input
+                ref="verificationCodeInputRef"
                 id="code"
                 type="text"
                 placeholder="인증번호 6자리"
                 maxlength="6"
                 v-model="verificationState.code"
                 :disabled="verificationState.isVerifying"
+                @keyup.enter="verifyCode"
                 class="text-caption sm:text-body"
               />
               <Button
@@ -389,6 +464,7 @@ const handleSignup = async () => {
               type="password"
               placeholder="8자 이상"
               v-model="formData.password"
+              @keydown.enter.prevent="handlePasswordEnter"
               class="text-caption sm:text-body"
             />
           </div>
@@ -402,6 +478,7 @@ const handleSignup = async () => {
               type="password"
               placeholder="비밀번호 재입력"
               v-model="formData.confirmPassword"
+              @keydown.enter.prevent="handleConfirmPasswordEnter"
               class="text-caption sm:text-body"
             />
           </div>
@@ -416,6 +493,7 @@ const handleSignup = async () => {
               type="text"
               placeholder="실명 입력"
               v-model="formData.userName"
+              @keydown.enter.prevent="handleUserNameEnter"
               class="text-caption sm:text-body"
             />
           </div>
@@ -428,6 +506,7 @@ const handleSignup = async () => {
               v-model:phone1="formData.phone1"
               v-model:phone2="formData.phone2"
               v-model:phone3="formData.phone3"
+              @enter="handlePhoneEnter"
             />
           </div>
           <div class="space-y-2">
@@ -442,6 +521,7 @@ const handleSignup = async () => {
                   class="w-20 sm:w-28 bg-muted text-caption sm:text-body"
                 />
                 <Button
+                  ref="addressSearchButtonRef"
                   type="button"
                   variant="outline"
                   size="sm"
@@ -459,9 +539,11 @@ const handleSignup = async () => {
                 class="bg-muted text-caption sm:text-body"
               />
               <Input
+                ref="detailAddressInputRef"
                 v-model="formData.detailAddress"
                 type="text"
                 placeholder="상세 주소 입력"
+                @keydown.enter.prevent="handleDetailAddressEnter"
                 class="text-caption sm:text-body"
               />
             </div>
@@ -469,10 +551,12 @@ const handleSignup = async () => {
 
           <div class="flex items-center space-x-2 mt-2">
             <input
+              ref="emailOptInCheckboxRef"
               id="email-opt-in"
               type="checkbox"
               v-model="formData.emailOptIn"
               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              @keydown.enter.prevent="handleEmailOptInEnter"
             />
             <label
               for="email-opt-in"
@@ -489,6 +573,7 @@ const handleSignup = async () => {
           </Alert>
 
           <Button
+            ref="signupButtonRef"
             type="submit"
             class="w-full mt-2"
             size="lg"

@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./src/assets/icon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 기본 제목 (앱 로드 후 백엔드 API로 동적 설정됨) -->
     <title>ShakiShaki Archive</title>
 
-    <!-- Primary Meta Tags -->
-    <meta name="title" content="ShakiShaki Archive" />
-    <meta
-      name="description"
-      content="Shop and download ShakiShaki's exclusive digital content, including photos, and more."
-    />
+    <!--
+      NOTE: SEO 메타 태그는 main.ts의 bootstrap에서 백엔드 API를 통해 동적으로 설정됩니다.
+      - 홈페이지: /api/seo/home
+      - 상품 상세: /api/seo/products/:id
+      - 카테고리: /api/seo/categories/:slug
+
+      백엔드 API를 Single Source of Truth로 사용하여 일관성을 유지합니다.
+    -->
 
     <!-- 토스페이먼츠 SDK -->
     <script src="https://js.tosspayments.com/v2/standard"></script>

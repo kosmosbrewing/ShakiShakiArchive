@@ -31,6 +31,8 @@ const recipientInputRef = ref<InstanceType<typeof Input> | null>(null);
 const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
 const addressButtonRef = ref<HTMLButtonElement | null>(null);
 const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
+const deliveryMessageSelectRef = ref<HTMLSelectElement | null>(null);
+const customMessageInputRef = ref<InstanceType<typeof Input> | null>(null);
 
 // 외부에서 특정 필드에 focus할 수 있도록 expose
 const focusField = (field: "recipient" | "phone" | "address" | "detailAddress") => {
@@ -60,6 +62,34 @@ const updateField = <K extends keyof ShippingFormData>(
   emit("update:form", { ...props.form, [key]: value });
 };
 
+// 받는사람 필드 Enter 키 처리 (1자 이상일 때만 이동)
+const handleRecipientEnter = () => {
+  if (props.form.recipient.trim().length >= 1) {
+    // 우편번호가 있으면 상세주소로, 없으면 주소검색 버튼으로 이동
+    if (props.form.zipCode) {
+      detailAddressInputRef.value?.$el?.focus();
+    } else {
+      addressButtonRef.value?.focus();
+    }
+  }
+};
+
+// 휴대전화 마지막 입력 후 처리
+const handlePhoneEnter = () => {
+  // showDeliveryMessage가 true이면 배송 메시지 Select로 이동
+  if (props.showDeliveryMessage) {
+    deliveryMessageSelectRef.value?.focus();
+  }
+};
+
+// 배송 메시지 Select에서 Enter 키 처리
+const handleDeliveryMessageEnter = () => {
+  // "직접 입력" 선택 시 직접입력 Input으로 focus
+  if (props.form.message === 'self') {
+    customMessageInputRef.value?.$el?.focus();
+  }
+};
+
 // 배송 메시지 옵션
 const deliveryMessageOptions = [
   { value: "", label: "-- 배송 메시지 선택 (선택사항) --" },
@@ -82,6 +112,7 @@ const deliveryMessageOptions = [
           ref="recipientInputRef"
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
+          @keydown.enter.prevent="handleRecipientEnter"
           type="text"
           class="flex-1 min-w-0"
         />
@@ -125,6 +156,7 @@ const deliveryMessageOptions = [
           ref="detailAddressInputRef"
           :model-value="form.detailAddress"
           @update:model-value="updateField('detailAddress', String($event))"
+          @keydown.enter.prevent="phoneInputRef?.focusFirst()"
           type="text"
           placeholder="상세 주소를 입력하세요"
         />
@@ -144,16 +176,19 @@ const deliveryMessageOptions = [
         @update:phone1="updateField('phone1', $event)"
         @update:phone2="updateField('phone2', $event)"
         @update:phone3="updateField('phone3', $event)"
+        @enter="handlePhoneEnter"
       />
     </div>
 
     <!-- 배송 메시지 -->
     <div v-if="showDeliveryMessage" class="space-y-2">
       <select
+        ref="deliveryMessageSelectRef"
         :value="form.message"
         @change="
           updateField('message', ($event.target as HTMLSelectElement).value)
         "
+        @keydown.enter.prevent="handleDeliveryMessageEnter"
         class="w-full border border-border rounded p-2.5 sm:p-3 text-caption sm:text-body bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
       >
         <option
@@ -167,6 +202,7 @@ const deliveryMessageOptions = [
 
       <Input
         v-if="form.message === 'self'"
+        ref="customMessageInputRef"
         :model-value="form.customMessage"
         @update:model-value="updateField('customMessage', String($event))"
         type="text"

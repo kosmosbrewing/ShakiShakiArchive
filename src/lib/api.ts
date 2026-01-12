@@ -46,6 +46,7 @@ import type {
   AdminUsersResponse,
   AdminUserDetailResponse,
   UpdateUserRequest,
+  SeoData,
 } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -1276,4 +1277,34 @@ export async function fetchShippingConstants(): Promise<ShippingConstants> {
 // 폼 검증 규칙만 조회
 export async function fetchValidationConstants(): Promise<ValidationConstants> {
   return apiRequest<ValidationConstants>("/api/constants/validation");
+}
+
+// ------------------------------------------------------------------
+// [12] SEO 메타 태그
+// ------------------------------------------------------------------
+
+// 홈페이지 SEO 데이터 조회
+export async function fetchHomeSeoData(): Promise<SeoData> {
+  return apiRequest<SeoData>("/api/seo/home");
+}
+
+// 전체 상품 목록 SEO 데이터 조회
+export async function fetchProductsSeoData(): Promise<SeoData> {
+  return apiRequest<SeoData>("/api/seo/products");
+}
+
+// 상품 상세 SEO 데이터 조회
+export async function fetchProductSeoData(slug: string): Promise<SeoData> {
+  return apiRequest<SeoData>(`/api/seo/products/${slug}`);
+}
+
+// 카테고리 SEO 데이터 조회
+export async function fetchCategorySeoData(slug: string): Promise<SeoData> {
+  return apiRequest<SeoData>(`/api/seo/categories/${slug}`);
+}
+
+// 검색 결과 SEO 데이터 조회
+export async function fetchSearchSeoData(query: string): Promise<SeoData> {
+  const queryParams = new URLSearchParams({ q: query });
+  return apiRequest<SeoData>(`/api/seo/search?${queryParams.toString()}`);
 }

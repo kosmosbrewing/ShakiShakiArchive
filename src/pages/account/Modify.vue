@@ -2,7 +2,7 @@
 // src/pages/Modify.vue
 // 회원정보 수정 페이지
 
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -21,18 +21,81 @@ import { Separator } from "@/components/ui/separator";
 
 // Input refs - 기본 정보
 const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
+const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
+const addressSearchButtonRef = ref<InstanceType<typeof Button> | null>(null);
+const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
 const currentPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const emailOptInCheckboxRef = ref<HTMLInputElement | null>(null);
+const updateProfileButtonRef = ref<InstanceType<typeof Button> | null>(null);
 
 // Input refs - 비밀번호 변경
 const pwCurrentPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const newPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const confirmNewPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
+const changePasswordButtonRef = ref<InstanceType<typeof Button> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { showAlert, showDestructiveConfirm, showPromptConfirm } = useAlert();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
+
+// 이름 필드 Enter 키 처리 (1자 이상일 때만 이동)
+const handleUserNameEnter = () => {
+  if (form.userName.trim().length >= 1) {
+    phoneInputRef.value?.focusFirst();
+  }
+};
+
+// 휴대전화 마지막 입력 후 처리 (우편번호 유무에 따라 분기)
+const handlePhoneEnter = () => {
+  if (form.zipCode) {
+    // 우편번호가 있으면 상세주소로 이동
+    detailAddressInputRef.value?.$el?.focus();
+  } else {
+    // 우편번호가 없으면 주소검색 버튼으로 이동
+    addressSearchButtonRef.value?.$el?.focus();
+  }
+};
+
+// 상세주소 필드 Enter 키 처리 (1자 이상일 때만 이동)
+const handleDetailAddressEnter = () => {
+  if (form.detailAddress.trim().length >= 1) {
+    currentPasswordInputRef.value?.$el?.focus();
+  }
+};
+
+// 비밀번호 필드 Enter 키 처리 (8자 이상일 때만 이동)
+const handlePwCurrentPasswordEnter = () => {
+  if (passwordForm.currentPassword.length >= 8) {
+    newPasswordInputRef.value?.$el?.focus();
+  }
+};
+
+const handleNewPasswordEnter = () => {
+  if (passwordForm.newPassword.length >= 8) {
+    confirmNewPasswordInputRef.value?.$el?.focus();
+  }
+};
+
+// 기본정보 현재 비밀번호 필드 Enter 키 처리 (8자 이상일 때만 이동)
+const handleCurrentPasswordEnter = () => {
+  if (form.currentPassword.length >= 8) {
+    emailOptInCheckboxRef.value?.focus();
+  }
+};
+
+// 이메일 수신동의 체크박스 Enter 키 처리
+const handleEmailOptInEnter = () => {
+  updateProfileButtonRef.value?.$el?.focus();
+};
+
+// 새 비밀번호 확인 필드 Enter 키 처리 (8자 이상일 때만 이동)
+const handleConfirmNewPasswordEnter = () => {
+  if (passwordForm.confirmNewPassword.length >= 8) {
+    changePasswordButtonRef.value?.$el?.focus();
+  }
+};
 
 // 폼 데이터
 const form = reactive({
@@ -89,6 +152,11 @@ const handleAddressSelect = (address: {
   form.zipCode = address.zonecode;
   form.address = address.address;
   form.detailAddress = ""; // 상세 주소 초기화
+
+  // 주소 선택 후 상세주소 입력 필드로 focus
+  nextTick(() => {
+    detailAddressInputRef.value?.$el?.focus();
+  });
 };
 
 // 유효성 검사 및 Alert 표시 헬퍼
@@ -318,6 +386,18 @@ onMounted(async () => {
               id="userName"
               v-model="form.userName"
               type="text"
+              @keydown.enter.prevent="handleUserNameEnter"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <Label>휴대전화</Label>
+            <PhoneInput
+              ref="phoneInputRef"
+              v-model:phone1="form.phone1"
+              v-model:phone2="form.phone2"
+              v-model:phone3="form.phone3"
+              @enter="handlePhoneEnter"
             />
           </div>
 
@@ -333,6 +413,7 @@ onMounted(async () => {
                   class="w-20 sm:w-28 bg-muted text-caption sm:text-body"
                 />
                 <Button
+                  ref="addressSearchButtonRef"
                   type="button"
                   variant="outline"
                   size="sm"
@@ -350,21 +431,14 @@ onMounted(async () => {
                 class="bg-muted text-caption sm:text-body"
               />
               <Input
+                ref="detailAddressInputRef"
                 v-model="form.detailAddress"
                 type="text"
                 placeholder="상세 주소 입력"
+                @keydown.enter.prevent="handleDetailAddressEnter"
                 class="text-caption sm:text-body"
               />
             </div>
-          </div>
-
-          <div class="space-y-2">
-            <Label>휴대전화</Label>
-            <PhoneInput
-              v-model:phone1="form.phone1"
-              v-model:phone2="form.phone2"
-              v-model:phone3="form.phone3"
-            />
           </div>
 
           <div class="space-y-2">
@@ -380,15 +454,18 @@ onMounted(async () => {
               v-model="form.currentPassword"
               type="password"
               placeholder="현재 비밀번호 입력"
+              @keydown.enter.prevent="handleCurrentPasswordEnter"
             />
           </div>
 
           <div class="flex items-center space-x-2">
             <input
+              ref="emailOptInCheckboxRef"
               id="opt-in"
               v-model="form.emailOptIn"
               type="checkbox"
               class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+              @keydown.enter.prevent="handleEmailOptInEnter"
             />
             <Label for="opt-in" class="text-body font-normal cursor-pointer">
               이메일 수신 동의
@@ -400,6 +477,7 @@ onMounted(async () => {
       <!-- 제출 버튼 -->
       <div class="text-right">
         <Button
+          ref="updateProfileButtonRef"
           type="submit"
           :disabled="isLoading"
           size="lg"
@@ -427,6 +505,7 @@ onMounted(async () => {
               v-model="passwordForm.currentPassword"
               type="password"
               placeholder="현재 비밀번호 입력"
+              @keydown.enter.prevent="handlePwCurrentPasswordEnter"
             />
           </div>
 
@@ -438,6 +517,7 @@ onMounted(async () => {
               v-model="passwordForm.newPassword"
               type="password"
               placeholder="새 비밀번호 입력 (8자 이상)"
+              @keydown.enter.prevent="handleNewPasswordEnter"
             />
           </div>
 
@@ -449,6 +529,7 @@ onMounted(async () => {
               v-model="passwordForm.confirmNewPassword"
               type="password"
               placeholder="새 비밀번호 재입력"
+              @keydown.enter.prevent="handleConfirmNewPasswordEnter"
             />
           </div>
         </CardContent>
@@ -456,6 +537,7 @@ onMounted(async () => {
 
       <div class="text-right">
         <Button
+          ref="changePasswordButtonRef"
           type="submit"
           :disabled="isPasswordLoading"
           size="lg"

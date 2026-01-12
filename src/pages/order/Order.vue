@@ -2,7 +2,7 @@
 // src/pages/Order.vue
 // 주문/결제 페이지
 
-import { ref, computed, onMounted, watch, onUnmounted } from "vue";
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 
 // Production 환경 체크
@@ -194,6 +194,11 @@ const handleAddressSelect = (address: {
   shippingForm.form.zipCode = address.zonecode;
   shippingForm.form.address = address.address;
   shippingForm.form.detailAddress = ""; // 상세 주소 초기화
+
+  // 주소 선택 후 상세주소 입력 필드로 focus
+  nextTick(() => {
+    addressFormRef.value?.focusField("detailAddress");
+  });
 };
 
 // 유효성 검사 및 Alert 표시 헬퍼
