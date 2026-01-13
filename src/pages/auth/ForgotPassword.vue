@@ -5,12 +5,17 @@
 import { ref, reactive, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { sendVerification, verifyEmail, resetPassword } from "@/lib/api";
+import { getPasswordErrorMessage } from "@/utils/password-validation";
+import { validateEmail } from "@/utils/email-validation";
 import {
   Loader2,
   CheckCircle2,
   AlertCircle,
   Mail,
 } from "lucide-vue-next";
+
+// Common Components
+import { PasswordStrengthIndicator } from "@/components/common";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -74,8 +79,10 @@ const stepTitle = computed(() => {
 
 // 인증코드 발송
 const sendVerificationCode = async () => {
-  if (!formData.email || !formData.email.includes("@")) {
-    verificationState.errorMessage = "유효한 이메일을 입력해주세요.";
+  // 형식 검증
+  const emailValidation = validateEmail(formData.email);
+  if (!emailValidation.valid) {
+    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
     return;
   }
 
@@ -84,11 +91,7 @@ const sendVerificationCode = async () => {
 
   try {
     await sendVerification(formData.email, "password_reset");
-  } catch (error: unknown) {
-    // 보안을 위해 이메일 존재 여부와 관계없이 동일하게 처리
-    console.log("Password reset request processed");
-  } finally {
-    // 성공/실패와 관계없이 동일하게 다음 단계로 이동
+    // 성공 시 다음 단계로 이동
     verificationState.isSent = true;
     verificationState.isLoading = false;
     currentStep.value = 2;
@@ -98,6 +101,33 @@ const sendVerificationCode = async () => {
     const codeInput = document.getElementById("code") as HTMLInputElement;
     if (codeInput) {
       codeInput.focus();
+    }
+  } catch (error: any) {
+    verificationState.isLoading = false;
+
+    // 소셜 로그인 계정 에러 처리 (키워드 체크 강화)
+    const errorMsg = error.message?.toLowerCase() || "";
+    if (
+      errorMsg.includes("소셜") ||
+      errorMsg.includes("social") ||
+      errorMsg.includes("카카오") ||
+      errorMsg.includes("네이버") ||
+      errorMsg.includes("kakao") ||
+      errorMsg.includes("naver")
+    ) {
+      verificationState.errorMessage = error.message;
+    } else {
+      // 보안: 다른 에러(존재하지 않는 이메일 등)는 성공으로 위장
+      // 백엔드에서 200 응답으로 보내지만, 만약 에러가 발생하면 여기서 처리
+      verificationState.isSent = true;
+      currentStep.value = 2;
+
+      // 인증번호 입력란으로 포커스 이동
+      await nextTick();
+      const codeInput = document.getElementById("code") as HTMLInputElement;
+      if (codeInput) {
+        codeInput.focus();
+      }
     }
   }
 };
@@ -142,8 +172,9 @@ const handleResetPassword = async () => {
     return;
   }
 
-  if (formData.newPassword.length < 8) {
-    errorMessage.value = "비밀번호는 최소 8자 이상이어야 합니다.";
+  const passwordError = getPasswordErrorMessage(formData.newPassword);
+  if (passwordError) {
+    errorMessage.value = passwordError;
     return;
   }
 
@@ -343,9 +374,12 @@ watch(
             <Input
               id="newPassword"
               type="password"
-              placeholder="8자 이상"
+              placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
               v-model="formData.newPassword"
             />
+
+            <!-- 비밀번호 강도 표시 -->
+            <PasswordStrengthIndicator :password="formData.newPassword" />
           </div>
 
           <div class="flex flex-col gap-1.5">

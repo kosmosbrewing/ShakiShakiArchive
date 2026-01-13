@@ -3,6 +3,7 @@ import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
+import { validateEmail } from "@/utils/email-validation";
 import axios from "axios";
 import { Loader2, AlertCircle } from "lucide-vue-next";
 
@@ -48,15 +49,6 @@ const alertType = ref<AlertType>("success"); // Alert 타입 (success/error)
 // ------------------------------------------------------------------
 
 /**
- * 이메일 형식 검증 (최소한의 검증: @ 및 . 포함)
- */
-const isValidEmail = (email: string): boolean => {
-  if (!email) return false;
-  const trimmedEmail = email.trim();
-  return trimmedEmail.includes("@") && trimmedEmail.includes(".");
-};
-
-/**
  * 비밀번호 최소 길이 검증 (8자 이상)
  */
 const isValidPassword = (password: string): boolean => {
@@ -79,8 +71,9 @@ const validateForm = (): {
     };
   }
 
-  // 이메일 형식 체크 (타이핑 실수 방지를 위해 구체적 안내)
-  if (!isValidEmail(loginForm.id)) {
+  // 이메일 형식 체크 (일회용 이메일 차단 포함)
+  const emailValidation = validateEmail(loginForm.id);
+  if (!emailValidation.valid) {
     return {
       isValid: false,
       errorMessage: "올바른 이메일 형식을 입력하세요.",

@@ -13,3 +13,4 @@ export { default as PhoneInput } from "./PhoneInput.vue";
 export { default as CancelOrderDialog } from "./CancelOrderDialog.vue";
 export { default as ProductCardSkeleton } from "./ProductCardSkeleton.vue";
 export { default as ProductDetailSkeleton } from "./ProductDetailSkeleton.vue";
+export { default as PasswordStrengthIndicator } from "./PasswordStrengthIndicator.vue";

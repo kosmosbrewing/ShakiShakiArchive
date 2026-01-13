@@ -2,7 +2,10 @@
 import { ref, computed, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useAlert } from "@/composables/useAlert";
 import { sendVerification, verifyEmail } from "@/lib/api";
+import { getPasswordErrorMessage } from "@/utils/password-validation";
+import { validateEmail } from "@/utils/email-validation";
 
 // 환경 체크: Production 환경에서는 준비중 표시
 const isProduction = computed(() => import.meta.env.MODE === "production");
@@ -13,18 +16,12 @@ import {
   Mail,
   KeyRound,
 } from "lucide-vue-next";
-import { PhoneInput, AddressSearchModal } from "@/components/common";
+import { PhoneInput, AddressSearchModal, PasswordStrengthIndicator } from "@/components/common";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  type AlertType,
-} from "@/components/ui/alert";
 
 // Input refs
 const emailInputRef = ref<InstanceType<typeof Input> | null>(null);
@@ -41,18 +38,15 @@ const signupButtonRef = ref<InstanceType<typeof Button> | null>(null);
 
 const router = useRouter();
 const authStore = useAuthStore();
-
-// 간단한 이메일 유효성 검사 (@ 와 . 포함 여부만 체크)
-const isValidEmailFormat = (email: string): boolean => {
-  return email.includes('@') && email.includes('.');
-};
+const { showAlert: showAlertMessage } = useAlert();
 
 // 이메일 필드에서 Enter 키 처리
 const handleEmailEnter = () => {
-  if (isValidEmailFormat(formData.email)) {
+  const emailValidation = validateEmail(formData.email);
+  if (emailValidation.valid) {
     verificationButtonRef.value?.$el?.focus();
   } else {
-    showValidationError('올바른 이메일 형식을 입력해주세요.', emailInputRef);
+    showValidationError(emailValidation.error || '올바른 이메일 형식을 입력해주세요.', emailInputRef);
   }
 };
 
@@ -133,15 +127,36 @@ const isSubmitting = ref(false);
 const errorMessage = ref("");
 const isAddressSearchOpen = ref(false);
 
-// 4. Alert 상태
-const showAlert = ref(false);
-const alertMessage = ref("");
-const alertType = ref<AlertType>("success");
+// 이메일 형식 검증 (blur 이벤트용)
+// 실시간 피드백을 제공하되, API 호출은 하지 않음 (중복 호출 방지)
+const checkEmailFormat = () => {
+  // 이미 인증 완료되었으면 검증 스킵
+  if (verificationState.isVerified) {
+    return;
+  }
+
+  // 빈 값은 검증하지 않음 (blur 이벤트이므로)
+  if (!formData.email) {
+    verificationState.errorMessage = "";
+    return;
+  }
+
+  // 형식 검증만 수행 (API 호출 없음)
+  const emailValidation = validateEmail(formData.email);
+  if (!emailValidation.valid) {
+    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
+  } else {
+    // 형식이 유효하면 에러 메시지 제거
+    verificationState.errorMessage = "";
+  }
+};
 
 // 인증코드 발송
 const sendVerificationCode = async () => {
-  if (!formData.email || !formData.email.includes("@")) {
-    verificationState.errorMessage = "유효한 이메일을 입력해주세요.";
+  // 형식 검증
+  const emailValidation = validateEmail(formData.email);
+  if (!emailValidation.valid) {
+    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
     return;
   }
 
@@ -153,8 +168,20 @@ const sendVerificationCode = async () => {
     verificationState.isSent = true;
     verificationState.errorMessage = "";
   } catch (error: any) {
-    verificationState.errorMessage =
-      error.message || "인증코드 발송에 실패했습니다.";
+    // 중복된 이메일 감지 (여러 키워드 체크로 견고성 강화)
+    const errorMsg = error.message?.toLowerCase() || "";
+    if (
+      errorMsg.includes("이미 사용") ||
+      errorMsg.includes("중복") ||
+      errorMsg.includes("이미 가입") ||
+      errorMsg.includes("이미 등록") ||
+      errorMsg.includes("already exists") ||
+      errorMsg.includes("duplicate")
+    ) {
+      verificationState.errorMessage = "이미 가입된 이메일입니다";
+    } else {
+      verificationState.errorMessage = error.message || "인증코드 발송에 실패했습니다.";
+    }
   } finally {
     verificationState.isLoading = false;
   }
@@ -216,9 +243,7 @@ const showValidationError = (
   focusRef?: any,
   isPhoneInput = false
 ) => {
-  alertMessage.value = message;
-  alertType.value = "error";
-  showAlert.value = true;
+  showAlertMessage(message, { type: "error" });
 
   if (focusRef) {
     // Alert가 표시된 후 해당 필드에 focus
@@ -248,11 +273,9 @@ const handleSignup = async () => {
     showValidationError("비밀번호를 입력해주세요.", passwordInputRef);
     return;
   }
-  if (formData.password.length < 8) {
-    showValidationError(
-      "비밀번호는 최소 8자 이상이어야 합니다.",
-      passwordInputRef
-    );
+  const passwordError = getPasswordErrorMessage(formData.password);
+  if (passwordError) {
+    showValidationError(passwordError, passwordInputRef);
     return;
   }
   if (!formData.confirmPassword) {
@@ -299,9 +322,7 @@ const handleSignup = async () => {
     });
 
     // 성공 Alert 표시
-    alertMessage.value = "회원가입이 완료되었습니다!";
-    alertType.value = "success";
-    showAlert.value = true;
+    showAlertMessage("회원가입이 완료되었습니다!");
 
     // 잠시 후 로그인 페이지로 이동
     setTimeout(() => {
@@ -358,6 +379,7 @@ const handleSignup = async () => {
                 placeholder="example@email.com"
                 v-model="formData.email"
                 :disabled="verificationState.isVerified"
+                @blur="checkEmailFormat"
                 @keydown.enter.prevent="handleEmailEnter"
                 class="text-caption sm:text-body"
               />
@@ -462,11 +484,14 @@ const handleSignup = async () => {
               ref="passwordInputRef"
               id="password"
               type="password"
-              placeholder="8자 이상"
+              placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
               v-model="formData.password"
               @keydown.enter.prevent="handlePasswordEnter"
               class="text-caption sm:text-body"
             />
+
+            <!-- 비밀번호 강도 표시 -->
+            <PasswordStrengthIndicator :password="formData.password" />
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="confirmPassword" class="text-body"
@@ -600,12 +625,5 @@ const handleSignup = async () => {
       @select="handleAddressSelect"
     />
 
-    <!-- Alert 모달 (성공/오류) -->
-    <Alert
-      v-if="showAlert"
-      :type="alertType"
-      :message="alertMessage"
-      @close="showAlert = false"
-    />
   </section>
 </template>

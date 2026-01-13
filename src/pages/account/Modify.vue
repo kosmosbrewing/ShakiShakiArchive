@@ -2,12 +2,13 @@
 // src/pages/Modify.vue
 // 회원정보 수정 페이지
 
-import { ref, reactive, onMounted, nextTick } from "vue";
+import { ref, reactive, onMounted, nextTick, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
+import { getPasswordErrorMessage, getPasswordStrength } from "@/utils/password-validation";
 
 // 공통 컴포넌트
 import { PhoneInput, AddressSearchModal } from "@/components/common";
@@ -119,6 +120,14 @@ const passwordForm = reactive({
 });
 
 const isPasswordLoading = ref(false);
+
+// 비밀번호 강도 계산 (실시간)
+const passwordStrength = computed(() => {
+  if (!passwordForm.newPassword) {
+    return null;
+  }
+  return getPasswordStrength(passwordForm.newPassword);
+});
 
 // 사용자 정보로 폼 초기화
 const initializeForm = () => {
@@ -239,11 +248,9 @@ const handleChangePassword = async () => {
     showValidationError("새 비밀번호를 입력해주세요.", newPasswordInputRef);
     return;
   }
-  if (passwordForm.newPassword.length < 8) {
-    showValidationError(
-      "새 비밀번호는 8자 이상이어야 합니다.",
-      newPasswordInputRef
-    );
+  const passwordError = getPasswordErrorMessage(passwordForm.newPassword);
+  if (passwordError) {
+    showValidationError(passwordError, newPasswordInputRef);
     return;
   }
   if (!passwordForm.confirmNewPassword) {
@@ -516,9 +523,41 @@ onMounted(async () => {
               id="newPassword"
               v-model="passwordForm.newPassword"
               type="password"
-              placeholder="새 비밀번호 입력 (8자 이상)"
+              placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
               @keydown.enter.prevent="handleNewPasswordEnter"
             />
+
+            <!-- 비밀번호 강도 표시 (2가지: 진행 바, 메시지) -->
+            <div v-if="passwordForm.newPassword" class="space-y-2 mt-1">
+              <!-- 1. 진행 바 -->
+              <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  class="h-full transition-all duration-300"
+                  :class="{
+                    'bg-red-500': passwordStrength?.strength === '약함',
+                    'bg-yellow-500': passwordStrength?.strength === '보통',
+                    'bg-green-500': passwordStrength?.strength === '강함',
+                    'w-0': !passwordStrength?.checks.length,
+                    'w-1/4': passwordStrength?.checks.length && passwordStrength?.score === 1,
+                    'w-1/2': passwordStrength?.checks.length && passwordStrength?.score === 2,
+                    'w-3/4': passwordStrength?.checks.length && passwordStrength?.score === 3,
+                    'w-full': passwordStrength?.checks.length && passwordStrength?.score === 4,
+                  }"
+                ></div>
+              </div>
+
+              <!-- 2. 상세 메시지 -->
+              <p
+                class="text-caption"
+                :class="{
+                  'text-red-600': passwordStrength?.strength === '약함',
+                  'text-yellow-600': passwordStrength?.strength === '보통',
+                  'text-green-600': passwordStrength?.strength === '강함',
+                }"
+              >
+                {{ passwordStrength?.message }}
+              </p>
+            </div>
           </div>
 
           <div class="space-y-2">
