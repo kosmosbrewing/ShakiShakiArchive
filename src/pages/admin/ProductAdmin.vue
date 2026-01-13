@@ -41,10 +41,26 @@ import {
   X,
   Check,
   PlusCircle,
+  Eye,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
 import { Alert } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  useVariantSelection,
+  useSizeMeasurements,
+  useProductTabs,
+} from "@/composables/useProduct";
+import { useOptimizedImage } from "@/composables";
+import { formatPrice, formatSizeValue } from "@/lib/formatters";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -60,6 +76,7 @@ const isLoading = ref(false);
 const isProductModalOpen = ref(false);
 const isVariantModalOpen = ref(false);
 const isSizeManagerOpen = ref(false); // [변경] 사이즈 관리 모달 상태 독립
+const isPreviewModalOpen = ref(false); // 미리보기 모달 상태
 const isEditMode = ref(false);
 const isMeasurementEditMode = ref(false);
 const errorMessage = ref("");
@@ -70,6 +87,8 @@ const itemsPerPage = 20;
 
 const currentProduct = ref<any>(null);
 const currentVariant = ref<any>(null); // 현재 선택된 변종 (사이즈 관리용)
+const previewProduct = ref<any>(null); // 미리보기 모달용 상품 데이터
+const previewVariants = ref<any[]>([]); // 미리보기 모달용 변종 데이터
 
 // 삭제 확인 다이얼로그 상태
 const showDeleteConfirm = ref(false);
@@ -496,6 +515,26 @@ const handleDeleteMeasurement = (id: string) => {
   openDeleteConfirm("measurement", id, "삭제하시겠습니까?");
 };
 
+// --- [모달 4] 미리보기 로직 ---
+const { detail } = useOptimizedImage();
+
+// 미리보기 모달용 composables
+const previewVariantSelection = useVariantSelection(previewVariants);
+const previewSizeMeasurements = useSizeMeasurements(previewVariants);
+const { activeTab: previewActiveTab, setTab: setPreviewTab } = useProductTabs();
+
+// 미리보기 모달 열기
+const openPreviewModal = async (product: any) => {
+  previewProduct.value = product;
+  await loadVariants(product.id);
+  previewVariants.value = variants.value;
+
+  // 사이즈 측정 데이터 로드
+  await previewSizeMeasurements.loadSizeMeasurements();
+
+  isPreviewModalOpen.value = true;
+};
+
 // 상품명 변경 시 Slug 자동 생성
 watch(
   () => productForm.name,
@@ -679,6 +718,14 @@ onMounted(async () => {
                       class="gap-1.5 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
                     >
                       <Ruler class="w-3.5 h-3.5" /> 사이즈
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      @click="openPreviewModal(product)"
+                      class="gap-1.5 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                    >
+                      <Eye class="w-3.5 h-3.5" /> 미리보기
                     </Button>
                   </div>
                 </td>
@@ -1308,6 +1355,261 @@ onMounted(async () => {
       @cancel="showDeleteConfirm = false"
       @close="showDeleteConfirm = false"
     />
+
+    <!-- 미리보기 모달 -->
+    <div
+      v-if="isPreviewModalOpen && previewProduct"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200"
+      >
+        <!-- 헤더 영역 (고정) -->
+        <div class="p-8 pb-0 shrink-0">
+          <div class="flex justify-between items-center mb-6">
+            <h2
+              class="text-heading font-semibold text-admin tracking-wide flex items-center gap-2"
+            >
+              <Eye class="w-5 h-5 text-blue-600" />
+              상품 미리보기
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              @click="isPreviewModalOpen = false"
+            >
+              <X class="w-5 h-5" />
+            </Button>
+          </div>
+          <Separator class="mb-8" />
+        </div>
+
+        <!-- 스크롤 영역 -->
+        <div class="overflow-y-auto px-8 pb-8">
+          <!-- ProductDetail과 동일한 레이아웃 -->
+          <div class="flex flex-col lg:grid lg:grid-cols-2 gap-8">
+            <!-- 상세 이미지 섹션 (왼쪽) -->
+            <div
+              v-if="
+                previewProduct.detailImages &&
+                previewProduct.detailImages.length > 0
+              "
+              class="order-3 lg:order-1 space-y-6"
+            >
+              <div
+                v-for="(detailImg, idx) in previewProduct.detailImages"
+                :key="`detail-${idx}`"
+                class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
+              >
+                <img
+                  :src="detail(detailImg)"
+                  class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+                  loading="lazy"
+                  decoding="async"
+                  draggable="false"
+                  :alt="`상품 상세 이미지 ${idx + 1}`"
+                />
+              </div>
+            </div>
+
+            <!-- 상품 정보 카드 (오른쪽) -->
+            <div class="order-2 lg:order-2">
+              <Card class="sticky top-8">
+                <CardContent class="p-6">
+                  <div class="flex justify-between items-end gap-3 mb-3">
+                    <div>
+                      <h3 class="text-body font-medium">
+                        {{ previewProduct.name }}
+                      </h3>
+                      <div class="flex items-baseline gap-2 pt-1.5">
+                        <span class="text-body text-muted-foreground">
+                          {{ formatPrice(previewProduct.price) }}
+                        </span>
+                        <span
+                          v-if="previewProduct.originalPrice"
+                          class="text-caption text-muted-foreground/70 line-through -translate-y-1"
+                        >
+                          {{ formatPrice(previewProduct.originalPrice) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator class="mb-4" />
+
+                  <!-- 사이즈 선택 -->
+                  <div
+                    v-if="previewVariants.length > 0"
+                    class="mb-6"
+                  >
+                    <label
+                      class="block text-body font-semibold text-foreground mb-2"
+                      >사이즈</label
+                    >
+                    <div class="flex flex-wrap gap-2">
+                      <Button
+                        v-for="variant in previewVariants"
+                        :key="variant.id"
+                        @click="previewVariantSelection.selectVariant(variant)"
+                        :disabled="
+                          variant.stockQuantity <= 0 || !variant.isAvailable
+                        "
+                        :variant="
+                          previewVariantSelection.selectedVariantId.value ===
+                          variant.id
+                            ? 'default'
+                            : 'outline'
+                        "
+                        :class="[
+                          'min-w-[3rem]',
+                          variant.stockQuantity <= 0 || !variant.isAvailable
+                            ? 'opacity-40 line-through'
+                            : '',
+                        ]"
+                      >
+                        {{ variant.size }}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <!-- 미리보기용 안내 메시지 -->
+                  <div
+                    class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-caption text-blue-700"
+                  >
+                    <div class="flex items-center gap-2">
+                      <Eye class="w-4 h-4" />
+                      <span>관리자 미리보기 모드입니다.</span>
+                    </div>
+                  </div>
+
+                  <Separator></Separator>
+
+                  <!-- Description / Size 탭 -->
+                  <div class="mt-6">
+                    <div class="flex border-b border-border">
+                      <button
+                        @click="setPreviewTab('description')"
+                        :class="[
+                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                          previewActiveTab === 'description'
+                            ? 'text-foreground'
+                            : 'text-muted-foreground hover:text-foreground',
+                        ]"
+                      >
+                        Description
+                        <span
+                          v-if="previewActiveTab === 'description'"
+                          class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"
+                        />
+                      </button>
+                      <button
+                        @click="setPreviewTab('size')"
+                        :class="[
+                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                          previewActiveTab === 'size'
+                            ? 'text-foreground'
+                            : 'text-muted-foreground hover:text-foreground',
+                        ]"
+                      >
+                        Size
+                        <span
+                          v-if="previewActiveTab === 'size'"
+                          class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"
+                        />
+                      </button>
+                    </div>
+
+                    <div class="py-6 min-h-[180px]">
+                      <!-- Description 탭 -->
+                      <div
+                        v-show="previewActiveTab === 'description'"
+                        class="animate-fade-in max-h-[175px] overflow-y-auto pr-2 scrollbar-thin"
+                      >
+                        <p
+                          class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption tracking-wide"
+                        >
+                          {{ previewProduct.description }}
+                        </p>
+                      </div>
+
+                      <!-- Size 탭 -->
+                      <div
+                        v-show="previewActiveTab === 'size'"
+                        class="animate-fade-in"
+                      >
+                        <div v-if="previewSizeMeasurements.hasSizeData.value">
+                          <div class="overflow-x-auto">
+                            <Table class="table-fixed">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead
+                                    class="font-medium text-caption text-center"
+                                  >
+                                    Size
+                                  </TableHead>
+                                  <TableHead
+                                    v-for="col in previewSizeMeasurements
+                                      .activeColumns.value"
+                                    :key="col.key"
+                                    class="text-caption text-center"
+                                  >
+                                    {{ col.label }}
+                                  </TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow
+                                  v-for="(
+                                    data, idx
+                                  ) in previewSizeMeasurements.allSizeData.value"
+                                  :key="idx"
+                                >
+                                  <TableCell
+                                    class="font-medium text-caption text-center"
+                                  >
+                                    {{ data.variantSize }}
+                                  </TableCell>
+                                  <TableCell
+                                    v-for="col in previewSizeMeasurements
+                                      .activeColumns.value"
+                                    :key="col.key"
+                                    class="text-center text-caption text-muted-foreground"
+                                  >
+                                    {{
+                                      formatSizeValue(
+                                        data[
+                                          col.key as keyof typeof data
+                                        ] as number
+                                      )
+                                    }}
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                          <p
+                            class="mt-4 text-caption text-muted-foreground text-right"
+                          >
+                            * 단위: cm / 측정 방법에 따라 오차가 있을 수 있습니다.
+                          </p>
+                        </div>
+                        <p
+                          v-else
+                          class="py-10 text-center text-muted-foreground text-body"
+                        >
+                          등록된 상세 사이즈 정보가 없습니다.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+        <!-- 스크롤 영역 끝 -->
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1318,5 +1620,59 @@ onMounted(async () => {
 }
 .form-input-custom-small {
   @apply w-full border border-border rounded-xl p-2.5 text-caption text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
+}
+
+/* 미리보기 모달 애니메이션 */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.detail-image-wrapper {
+  animation: slideUp 0.6s ease-out both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Description 스크롤바 스타일 */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
 }
 </style>

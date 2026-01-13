@@ -6,12 +6,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import { Heart, Search, X, Loader2 } from "lucide-vue-next";
+import { Heart, Search, X } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useAlert } from "@/composables/useAlert";
 import { useProductList } from "@/composables/useProduct";
-import { ProductCardSkeleton, EmptyState } from "@/components/common";
+import {
+  ProductCardSkeleton,
+  EmptyState,
+  LoadingSpinner,
+} from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { useOptimizedImage } from "@/composables";
@@ -59,6 +63,10 @@ let observer: IntersectionObserver | null = null;
 
 // 호버 상태 관리 (이미지 전환용)
 const hoveredProductId = ref<string | null>(null);
+
+// 스켈레톤 노출 지연 (150ms)
+const showLoadingSpinner = ref(false);
+let loadingDelayTimer: NodeJS.Timeout | null = null;
 
 // Intersection Observer 설정
 const setupIntersectionObserver = () => {
@@ -145,6 +153,25 @@ watch(searchQuery, () => {
   debouncedSearch();
 });
 
+// 로딩 스피너 지연 표시 (150ms)
+watch(loadingMore, (newValue) => {
+  // 타이머가 있으면 먼저 정리
+  if (loadingDelayTimer) {
+    clearTimeout(loadingDelayTimer);
+    loadingDelayTimer = null;
+  }
+
+  if (newValue) {
+    // 로딩 시작: 150ms 후 스피너 표시
+    loadingDelayTimer = setTimeout(() => {
+      showLoadingSpinner.value = true;
+    }, 150);
+  } else {
+    // 로딩 종료: 즉시 스피너 숨김
+    showLoadingSpinner.value = false;
+  }
+});
+
 onMounted(async () => {
   await loadProducts();
   if (authStore.isAuthenticated) {
@@ -158,6 +185,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupObserver();
+  // 타이머 정리
+  if (loadingDelayTimer) {
+    clearTimeout(loadingDelayTimer);
+    loadingDelayTimer = null;
+  }
 });
 </script>
 
@@ -309,12 +341,9 @@ onUnmounted(() => {
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >
-      <div
-        v-if="loadingMore"
-        class="flex items-center gap-2 text-muted-foreground"
-      >
-        <Loader2 class="w-5 h-5 animate-spin" />
-        <span class="text-body">상품을 불러오는 중...</span>
+      <div v-if="showLoadingSpinner" class="flex flex-col items-center gap-3">
+        <LoadingSpinner size="md" variant="dots" :center="false" />
+        <span class="text-body text-muted-foreground">상품을 불러오는 중...</span>
       </div>
       <div
         v-else-if="!hasMore && displayProducts.length > 0"

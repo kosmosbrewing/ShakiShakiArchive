@@ -26,7 +26,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, X, Loader2, Search } from "lucide-vue-next";
+import { ChevronRight, X, Search } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -47,6 +47,10 @@ const loadingAllOrders = ref(false);
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
+// 스켈레톤 노출 지연 (150ms)
+const showLoadingSpinner = ref(false);
+let loadingDelayTimer: NodeJS.Timeout | null = null;
+
 // Intersection Observer 설정
 const setupIntersectionObserver = () => {
   observer = new IntersectionObserver(
@@ -58,7 +62,7 @@ const setupIntersectionObserver = () => {
       }
     },
     {
-      rootMargin: "100px", // 100px 전에 미리 로드 시작
+      rootMargin: "200px", // 200px 전에 미리 로드 시작
       threshold: 0.1,
     }
   );
@@ -251,6 +255,25 @@ watch(searchQuery, () => {
   debouncedSearch();
 });
 
+// 로딩 스피너 지연 표시 (150ms)
+watch(loadingMore, (newValue) => {
+  // 타이머가 있으면 먼저 정리
+  if (loadingDelayTimer) {
+    clearTimeout(loadingDelayTimer);
+    loadingDelayTimer = null;
+  }
+
+  if (newValue) {
+    // 로딩 시작: 150ms 후 스피너 표시
+    loadingDelayTimer = setTimeout(() => {
+      showLoadingSpinner.value = true;
+    }, 150);
+  } else {
+    // 로딩 종료: 즉시 스피너 숨김
+    showLoadingSpinner.value = false;
+  }
+});
+
 // 취소 다이얼로그 상태
 const cancelDialogOpen = ref(false);
 const cancelTargetOrder = ref<Order | null>(null);
@@ -350,6 +373,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanupObserver();
+  // 타이머 정리
+  if (loadingDelayTimer) {
+    clearTimeout(loadingDelayTimer);
+    loadingDelayTimer = null;
+  }
 });
 </script>
 
@@ -543,12 +571,11 @@ onUnmounted(() => {
         ref="loadMoreTrigger"
         class="py-8 flex justify-center"
       >
-        <div
-          v-if="loadingMore"
-          class="flex items-center gap-2 text-muted-foreground"
-        >
-          <Loader2 class="w-5 h-5 animate-spin" />
-          <span class="text-body">주문 내역을 불러오는 중...</span>
+        <div v-if="showLoadingSpinner" class="flex flex-col items-center gap-3">
+          <LoadingSpinner size="md" variant="dots" :center="false" />
+          <span class="text-body text-muted-foreground"
+            >주문 내역을 불러오는 중...</span
+          >
         </div>
         <div
           v-else-if="!hasMore && orders.length > 0"
