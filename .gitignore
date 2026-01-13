@@ -31,3 +31,4 @@ deploy-s3.sh
 .claudeignore
 CLAUDE copy.md
 Portfolio.vue
+CLOUDFRONT_SETUP.md

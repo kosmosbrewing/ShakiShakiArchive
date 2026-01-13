@@ -2,7 +2,7 @@
 // src/components/common/AddressForm.vue
 // 배송지 입력 폼 컴포넌트
 
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,17 @@ const handlePhoneEnter = () => {
 const handleDeliveryMessageEnter = () => {
   // "직접 입력" 선택 시 직접입력 Input으로 focus
   if (props.form.message === 'self') {
+    customMessageInputRef.value?.$el?.focus();
+  }
+};
+
+// 배송 메시지 Select 변경 처리 (선택 시 자동 포커스)
+const handleDeliveryMessageChange = async (value: string) => {
+  updateField('message', value);
+
+  // "직접 입력" 선택 시 자동으로 직접입력 Input으로 focus
+  if (value === 'self') {
+    await nextTick(); // DOM 업데이트 대기
     customMessageInputRef.value?.$el?.focus();
   }
 };
@@ -186,7 +197,7 @@ const deliveryMessageOptions = [
         ref="deliveryMessageSelectRef"
         :value="form.message"
         @change="
-          updateField('message', ($event.target as HTMLSelectElement).value)
+          handleDeliveryMessageChange(($event.target as HTMLSelectElement).value)
         "
         @keydown.enter.prevent="handleDeliveryMessageEnter"
         class="w-full border border-border rounded p-2.5 sm:p-3 text-caption sm:text-body bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"

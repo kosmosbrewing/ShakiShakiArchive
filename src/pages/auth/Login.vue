@@ -44,6 +44,112 @@ const showAlert = ref<boolean>(false); // Alert 모달 표시 상태
 const alertMessage = ref<string>(""); // Alert 메시지
 const alertType = ref<AlertType>("success"); // Alert 타입 (success/error)
 
+// ------------------------------------------------------------------
+// [Security First] 클라이언트 사이드 검증 함수
+// ------------------------------------------------------------------
+
+/**
+ * 이메일 형식 검증 (최소한의 검증: @ 및 . 포함)
+ */
+const isValidEmail = (email: string): boolean => {
+  if (!email) return false;
+  const trimmedEmail = email.trim();
+  return trimmedEmail.includes("@") && trimmedEmail.includes(".");
+};
+
+/**
+ * 비밀번호 최소 길이 검증 (8자 이상)
+ */
+const isValidPassword = (password: string): boolean => {
+  return password && password.length >= 8;
+};
+
+/**
+ * 폼 검증 (이메일 형식 + 비밀번호 길이)
+ * [Security First] 보안을 위해 통합 에러 메시지 사용
+ */
+const validateForm = (): {
+  isValid: boolean;
+  errorMessage: string | null;
+} => {
+  // 빈 값 체크
+  if (!loginForm.id || !loginForm.password) {
+    return {
+      isValid: false,
+      errorMessage: "이메일과 비밀번호를 모두 입력해주세요.",
+    };
+  }
+
+  // 이메일 형식 체크 (타이핑 실수 방지를 위해 구체적 안내)
+  if (!isValidEmail(loginForm.id)) {
+    return {
+      isValid: false,
+      errorMessage: "올바른 이메일 형식을 입력하세요.",
+    };
+  }
+
+  // 비밀번호 길이 체크 (보안을 위해 통합 메시지)
+  if (!isValidPassword(loginForm.password)) {
+    return {
+      isValid: false,
+      errorMessage: "이메일 또는 비밀번호를 확인해주세요.",
+    };
+  }
+
+  return { isValid: true, errorMessage: null };
+};
+
+// ------------------------------------------------------------------
+// [UX] 스마트 엔터 키 핸들링
+// ------------------------------------------------------------------
+
+/**
+ * 이메일 입력란에서 엔터 키 처리
+ * - 이메일이 1자 이상이고 비밀번호가 비어있으면: 비밀번호 칸으로 포커스 이동
+ * - 이메일이 1자 이상이고 비밀번호가 채워져 있으면: 즉시 로그인 시도
+ */
+const handleEmailEnter = () => {
+  // 중복 제출 방지
+  if (isLoading.value) return;
+
+  // 이메일이 1자 이상일 때만 동작
+  if (!loginForm.id || loginForm.id.trim().length === 0) {
+    return;
+  }
+
+  if (!loginForm.password) {
+    // 비밀번호 없음 → 포커스 이동
+    const passwordEl = document.getElementById(
+      "user-password"
+    ) as HTMLInputElement;
+    if (passwordEl) {
+      passwordEl.focus();
+    }
+  } else {
+    // 비밀번호 있음 → 즉시 로그인
+    handleSubmit();
+  }
+};
+
+/**
+ * 비밀번호 입력란에서 엔터 키 처리
+ * - 이메일과 비밀번호가 모두 1자 이상일 때만 로그인 시도
+ */
+const handlePasswordEnter = () => {
+  // 중복 제출 방지
+  if (isLoading.value) return;
+
+  // 이메일과 비밀번호가 모두 1자 이상일 때만 폼 제출
+  if (
+    loginForm.id &&
+    loginForm.id.trim().length > 0 &&
+    loginForm.password &&
+    loginForm.password.length > 0
+  ) {
+    handleSubmit();
+  }
+};
+
 // 커스텀 Axios 인스턴스 생성
 const apiClient = axios.create({
   timeout: 5000,
@@ -54,63 +160,105 @@ const apiClient = axios.create({
  * 로그인 폼 제출 및 POST 요청 처리
  */
 const handleSubmit = async () => {
-  // 1. 유효성 검사 및 초기화
+  // 0. 중복 제출 방지 (Throttle)
+  if (isLoading.value) {
+    console.warn("이미 로그인 요청이 진행 중입니다.");
+    return;
+  }
+
+  // 1. 초기화
   invalidInputForm.value = false;
   loginError.value = null;
   isAuthenticated.value = false;
 
-  if (!loginForm.id || !loginForm.password) {
+  // 2. [Security First] 클라이언트 사이드 검증
+  const validation = validateForm();
+  if (!validation.isValid) {
     invalidInputForm.value = true;
-    loginError.value = ERROR_MESSAGES.inputError;
-    alertMessage.value = loginError.value;
+    loginError.value = validation.errorMessage;
+    alertMessage.value = validation.errorMessage || ERROR_MESSAGES.inputError;
     alertType.value = "error";
     showAlert.value = true;
     return;
   }
 
-  // 2. 로딩 상태 시작
+  // 3. 로딩 상태 시작 (중복 제출 방지)
   isLoading.value = true;
 
-  // 3. 서버로 전송할 데이터 (Payload)
+  // 4. 서버로 전송할 데이터 (Payload)
   const payload = {
-    email: loginForm.id,
+    email: loginForm.id.trim(), // trim으로 공백 제거
     password: loginForm.password,
   };
 
   try {
-    // 4. axios POST 요청 실행
+    // 5. axios POST 요청 실행
     await apiClient.post("/api/auth/login", payload);
 
-    // 5. 성공 시 처리
+    // 6. 성공 시 처리
     isLoading.value = false;
     isAuthenticated.value = true;
     isProcessingAuth.value = true; // 전체 화면 로딩 표시
 
-    // 6. 사용자 정보 로드 후 바로 홈으로 이동
-    await authStore.loadUser();
+    try {
+      // 7. 사용자 정보 로드 후 바로 홈으로 이동
+      await authStore.loadUser();
 
-    // 환영 메시지 설정
-    const userName = authStore.user?.userName || "회원";
-    authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
+      // 환영 메시지 설정
+      const userName = authStore.user?.userName || "회원";
+      authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
 
-    router.replace("/");
+      router.replace("/");
+    } catch (userLoadError) {
+      // 사용자 정보 로드 실패 시에도 로딩 해제
+      console.error("사용자 정보 로드 실패:", userLoadError);
+      isProcessingAuth.value = false;
+
+      // 로그인은 성공했으나 정보 로드 실패
+      loginError.value = "로그인은 성공했으나 사용자 정보를 불러오는데 실패했습니다.";
+      alertMessage.value = loginError.value;
+      alertType.value = "error";
+      showAlert.value = true;
+    }
   } catch (error: any) {
-    // 7. 실패(에러) 시 처리
+    // 8. 실패(에러) 시 처리
     isLoading.value = false;
+    isProcessingAuth.value = false; // 추가: 모든 로딩 상태 해제
     invalidInputForm.value = true;
 
     if (axios.isAxiosError(error) && error.response) {
-      // 서버 응답 메시지 우선, 없으면 HTTP 상태 코드에 따른 기본 메시지
-      const serverMessage = error.response.data?.message;
-      loginError.value =
-        serverMessage || getErrorMessageByStatus(error.response.status);
+      // [Security First] 보안을 위한 통합 에러 메시지
+      // 공격자가 이메일 존재 여부나 어떤 필드가 잘못되었는지 알 수 없도록 함
+      const status = error.response.status;
+
+      // 인증 관련 에러 (401, 403, 404 등)는 모두 통합 메시지
+      if (status === 401 || status === 403 || status === 404) {
+        loginError.value = "이메일 또는 비밀번호를 확인해주세요.";
+      } else if (status === 429) {
+        // 너무 많은 시도 (Rate Limiting)
+        loginError.value = "로그인 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해주세요.";
+      } else if (status >= 500) {
+        // 서버 오류
+        loginError.value = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      } else {
+        // 기타 오류
+        loginError.value = "로그인 정보가 일치하지 않습니다.";
+      }
+
+      console.error("로그인 실패 (HTTP " + status + "):", error.response.data);
+    } else if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
+      // 타임아웃 오류
+      loginError.value = "요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.";
+    } else if (axios.isAxiosError(error) && !error.response) {
+      // 네트워크 오류 (서버 미응답)
+      loginError.value = "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
     } else {
-      // 네트워크 오류
-      loginError.value = ERROR_MESSAGES.network;
+      // 알 수 없는 오류
+      loginError.value = "로그인 중 오류가 발생했습니다. 다시 시도해주세요.";
     }
 
     // 에러 Alert 표시
-    alertMessage.value = ERROR_MESSAGES.serverError;
+    alertMessage.value = loginError.value;
     alertType.value = "error";
     showAlert.value = true;
 
@@ -332,6 +480,7 @@ const handleKakaoLogin = () => {
               placeholder="이메일"
               v-model="loginForm.id"
               :disabled="isLoading"
+              @keydown.enter.prevent="handleEmailEnter"
             />
           </div>
 
@@ -342,6 +491,7 @@ const handleKakaoLogin = () => {
               placeholder="비밀번호"
               v-model="loginForm.password"
               :disabled="isLoading"
+              @keydown.enter.prevent="handlePasswordEnter"
             />
           </div>
 
@@ -354,7 +504,12 @@ const handleKakaoLogin = () => {
             <div class="text-caption">{{ loginError }}</div>
           </AlertDescription>
 
-          <Button class="w-full mt-1" type="submit" :disabled="isLoading">
+          <Button
+            id="login-button"
+            class="w-full mt-1"
+            type="submit"
+            :disabled="isLoading"
+          >
             <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
             <span class="text-[16px] tracking-tight">
               {{ isLoading ? "로그인 중..." : "로그인" }}

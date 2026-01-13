@@ -2,7 +2,7 @@
 // src/pages/auth/ForgotPassword.vue
 // 비밀번호 찾기 페이지
 
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { sendVerification, verifyEmail, resetPassword } from "@/lib/api";
 import {
@@ -93,6 +93,13 @@ const sendVerificationCode = async () => {
     verificationState.isSent = true;
     verificationState.isLoading = false;
     currentStep.value = 2;
+
+    // 인증번호 입력란으로 포커스 이동
+    await nextTick();
+    const codeInput = document.getElementById("code") as HTMLInputElement;
+    if (codeInput) {
+      codeInput.focus();
+    }
   }
 };
 
@@ -173,6 +180,35 @@ const handleResetPassword = async () => {
 const goToLogin = () => {
   router.push("/login");
 };
+
+// 이메일 입력란에서 엔터 키 처리 (1자 이상일 때 인증요청 버튼으로 포커스)
+const handleEmailEnter = () => {
+  // 이메일이 1자 이상일 때만 포커스 이동
+  if (formData.email && formData.email.trim().length > 0) {
+    const sendButton = document.getElementById(
+      "send-verification-button"
+    ) as HTMLButtonElement;
+    if (sendButton) {
+      sendButton.focus();
+    }
+  }
+};
+
+// 인증번호 6자리 입력 시 확인 버튼으로 포커스 이동
+watch(
+  () => verificationState.code,
+  async (newCode) => {
+    if (newCode.length === 6) {
+      await nextTick();
+      const verifyButton = document.getElementById(
+        "verify-button"
+      ) as HTMLButtonElement;
+      if (verifyButton) {
+        verifyButton.focus();
+      }
+    }
+  }
+);
 </script>
 
 <template>
@@ -209,8 +245,10 @@ const goToLogin = () => {
                 placeholder="example@email.com"
                 v-model="formData.email"
                 :disabled="verificationState.isSent"
+                @keydown.enter.prevent="handleEmailEnter"
               />
               <Button
+                id="send-verification-button"
                 type="button"
                 variant="outline"
                 @click="sendVerificationCode"
@@ -254,8 +292,8 @@ const goToLogin = () => {
                 :disabled="verificationState.isVerifying"
               />
               <Button
+                id="verify-button"
                 type="button"
-                variant="outline"
                 class="w-28 shrink-0"
                 @click="verifyCode"
                 :disabled="
@@ -265,10 +303,11 @@ const goToLogin = () => {
               >
                 <Loader2
                   v-if="verificationState.isVerifying"
-                  class="animate-spin h-4 w-4 mr-2"
+                  class="mr-2 h-4 w-4 animate-spin"
                 />
-                <KeyRound v-else class="w-4 h-4 mr-2" />
-                {{ verificationState.isVerifying ? "확인중" : "확인" }}
+                <span class="text-[16px] tracking-tight">
+                  {{ verificationState.isVerifying ? "확인중" : "확인" }}
+                </span>
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">

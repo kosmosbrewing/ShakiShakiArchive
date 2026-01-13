@@ -50,6 +50,15 @@ const handlePhone2Enter = (event: KeyboardEvent) => {
   // 4자리가 입력되지 않았으면 아무 동작도 하지 않음
 };
 
+// 마지막 4자리 입력 처리 (자동 focus 이동)
+const handlePhone3Input = (value: string) => {
+  emit("update:phone3", value);
+  // 4자리가 모두 입력되면 자동으로 다음 필드로 이동
+  if (value.length === 4) {
+    emit("enter");
+  }
+};
+
 // 마지막 4자리에서 Enter 키 처리
 const handlePhone3Enter = (event: KeyboardEvent) => {
   event.preventDefault(); // form submit 방지
@@ -99,7 +108,7 @@ defineExpose({ focusFirst });
     <Input
       ref="phone3InputRef"
       :model-value="phone3"
-      @update:model-value="emit('update:phone3', String($event))"
+      @update:model-value="handlePhone3Input(String($event))"
       @keydown.enter="handlePhone3Enter"
       type="text"
       inputmode="numeric"
