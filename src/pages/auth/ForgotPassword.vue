@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Mail,
-  KeyRound,
 } from "lucide-vue-next";
 
 // UI Components

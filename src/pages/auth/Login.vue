@@ -14,7 +14,6 @@ import {
   AlertDescription,
   type AlertType,
   ERROR_MESSAGES,
-  getErrorMessageByStatus,
 } from "@/components/ui/alert";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { LoadingSpinner } from "@/components/common";
@@ -61,7 +60,7 @@ const isValidEmail = (email: string): boolean => {
  * 비밀번호 최소 길이 검증 (8자 이상)
  */
 const isValidPassword = (password: string): boolean => {
-  return password && password.length >= 8;
+  return !!password && password.length >= 8;
 };
 
 /**
