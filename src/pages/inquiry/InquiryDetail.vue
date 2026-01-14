@@ -11,7 +11,7 @@ import {
   deleteInquiryReply,
   updateInquiryStatus,
 } from "@/lib/api";
-import { formatDate, maskUserName } from "@/lib/formatters";
+import { formatDateTimeWithSeconds } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -191,7 +191,11 @@ const handleReplyDelete = async () => {
     await loadInquiry(); // 새로고침
 
     // 답변이 모두 삭제된 경우 자동으로 상태를 pending으로 변경
-    if (inquiry.value?.replies && inquiry.value.replies.length === 0 && inquiry.value.status === "answered") {
+    if (
+      inquiry.value?.replies &&
+      inquiry.value.replies.length === 0 &&
+      inquiry.value.status === "answered"
+    ) {
       await updateInquiryStatus(inquiryId.value, {
         status: "pending",
       });
@@ -225,7 +229,9 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div class="mb-8 pb-4 border-b border-border flex items-center justify-between">
+    <div
+      class="mb-8 pb-4 border-b border-border flex items-center justify-between"
+    >
       <div class="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -302,13 +308,11 @@ onMounted(() => {
             </Select>
           </div>
 
-          <!-- 작성자 & 날짜 -->
+          <!-- 작성일 -->
           <div
-            class="flex items-center gap-2 text-caption sm:text-sm text-muted-foreground mt-2"
+            class="flex items-center gap-2 text-caption text-muted-foreground"
           >
-            <span class="font-medium">{{ maskUserName(inquiry.user?.userName) }}</span>
-            <span>·</span>
-            <span>{{ formatDate(inquiry.createdAt) }}</span>
+            <span>{{ formatDateTimeWithSeconds(inquiry.createdAt) }}</span>
           </div>
           <Separator class="mt-4"></Separator>
         </CardHeader>
@@ -356,7 +360,9 @@ onMounted(() => {
         </div>
 
         <!-- 답변 위계 표시를 위한 왼쪽 여백 및 시각적 구분 -->
-        <div class="ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-4 border-primary/30 space-y-4">
+        <div
+          class="ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-4 border-primary/30 space-y-4"
+        >
           <Card
             v-for="reply in inquiry.replies"
             :key="reply.id"
@@ -372,10 +378,10 @@ onMounted(() => {
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm sm:text-base font-semibold text-foreground">
-                    {{ maskUserName(reply.user.userName) }}
+                    {{ reply.user.userName }}
                   </p>
                   <p class="text-xs text-muted-foreground">
-                    {{ formatDate(reply.createdAt) }}
+                    {{ formatDateTimeWithSeconds(reply.createdAt) }}
                   </p>
                 </div>
                 <!-- 답변 삭제 버튼 (관리자만) -->

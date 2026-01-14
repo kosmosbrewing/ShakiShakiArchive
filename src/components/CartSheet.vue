@@ -2,7 +2,7 @@
 // src/components/CartSheet.vue
 // 오른쪽 슬라이드 장바구니 Sheet
 
-import { computed, watch } from "vue";
+import { computed, watch, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
 import { formatPrice } from "@/lib/formatters";
@@ -103,6 +103,40 @@ const continueShopping = () => {
   closeSheet();
   router.push("/product/all");
 };
+
+// 스와이프로 닫기 기능
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+const isSwiping = ref(false);
+
+// 터치 시작
+const handleTouchStart = (e: TouchEvent) => {
+  touchStartX.value = e.touches[0].clientX;
+  isSwiping.value = true;
+};
+
+// 터치 이동
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isSwiping.value) return;
+  touchEndX.value = e.touches[0].clientX;
+};
+
+// 터치 종료
+const handleTouchEnd = () => {
+  if (!isSwiping.value) return;
+
+  const swipeDistance = touchEndX.value - touchStartX.value;
+  const minSwipeDistance = 100; // 최소 스와이프 거리 (px)
+
+  // 오른쪽으로 스와이프 (Sheet 닫기)
+  if (swipeDistance > minSwipeDistance) {
+    closeSheet();
+  }
+
+  isSwiping.value = false;
+  touchStartX.value = 0;
+  touchEndX.value = 0;
+};
 </script>
 
 <template>
@@ -110,6 +144,9 @@ const continueShopping = () => {
     <SheetContent
       side="right"
       class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-2xl"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
     >
       <!-- 헤더 -->
       <SheetHeader class="px-6 py-4 pt-10">

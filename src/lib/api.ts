@@ -1211,6 +1211,32 @@ export async function updateInquiryStatus(
 }
 
 // ------------------------------------------------------------------
+// [9-1] 문의하기 관리자 전용 API
+// ------------------------------------------------------------------
+
+// 문의 목록 조회 (관리자 전용 - 마스킹된 사용자 정보 포함)
+export async function fetchAdminInquiries(
+  params?: InquiryListParams
+): Promise<Inquiry[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.productId) searchParams.append("productId", params.productId);
+  if (params?.type) searchParams.append("type", params.type);
+  if (params?.status) searchParams.append("status", params.status);
+  if (params?.userId) searchParams.append("userId", params.userId);
+
+  const queryString = searchParams.toString();
+  const url = queryString
+    ? `/api/admin/inquiries?${queryString}`
+    : "/api/admin/inquiries";
+  return apiRequest<Inquiry[]>(url);
+}
+
+// 문의 상세 조회 (관리자 전용 - 마스킹된 사용자 정보 포함)
+export async function fetchAdminInquiry(id: string): Promise<Inquiry> {
+  return apiRequest<Inquiry>(`/api/admin/inquiries/${id}`);
+}
+
+// ------------------------------------------------------------------
 // [10] 회원 관리 (Admin Only)
 // ------------------------------------------------------------------
 

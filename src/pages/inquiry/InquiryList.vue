@@ -5,7 +5,7 @@
 import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { fetchInquiries } from "@/lib/api";
-import { formatDate, maskUserName } from "@/lib/formatters";
+import { formatDate } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -319,7 +319,7 @@ onMounted(() => {
 
                 <!-- 모바일: 작성자 & 작성일 -->
                 <div class="md:hidden text-xs text-muted-foreground mt-0.5">
-                  <span>{{ maskUserName(inquiry.user?.userName) }}</span>
+                  <span>{{ inquiry.user?.userName }}</span>
                   <span class="mx-1">·</span>
                   <span class="lg:hidden">{{
                     formatDate(inquiry.createdAt)
@@ -332,7 +332,7 @@ onMounted(() => {
             <TableCell
               class="hidden md:table-cell text-center text-caption text-muted-foreground"
             >
-              {{ maskUserName(inquiry.user?.userName) }}
+              {{ inquiry.user?.userName }}
             </TableCell>
 
             <!-- 작성일 (lg 이상) -->

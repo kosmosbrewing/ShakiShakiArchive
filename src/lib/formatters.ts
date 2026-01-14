@@ -28,6 +28,28 @@ export function formatDateTime(dateStr: string): string {
 }
 
 /**
+ * 날짜 문자열을 한국어 형식으로 변환
+ * 예: "2024년 9월 15일 오후 8시 32분"
+ */
+export function formatDateTimeWithSeconds(dateStr: string): string {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 1~12
+  const day = date.getDate(); // 1~31
+  const hours24 = date.getHours(); // 0~23
+  const minutes = date.getMinutes(); // 0~59
+
+  // 오전/오후 구분
+  const period = hours24 < 12 ? "오전" : "오후";
+
+  // 12시간 형식으로 변환
+  let hours12 = hours24 % 12;
+  if (hours12 === 0) hours12 = 12; // 0시 → 12시, 12시 → 12시
+
+  return `${year}년 ${month}월 ${day}일 ${period} ${hours12}시 ${minutes}분`;
+}
+
+/**
  * 숫자 또는 문자열을 한국 원화 형식으로 변환
  */
 export function formatPrice(price: number | string): string {

@@ -2,9 +2,9 @@
 // src/pages/admin/InquiryAdmin.vue
 // 문의 관리 페이지 (관리자 전용)
 
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
-import { fetchInquiries } from "@/lib/api";
+import { fetchAdminInquiries } from "@/lib/api";
 import { formatDate } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
@@ -64,31 +64,40 @@ const statusVariants: Record<
   answered: "default",
 };
 
-// 필터링된 문의 목록
-const filteredInquiries = computed(() => {
-  return inquiries.value.filter((inquiry) => {
-    const typeMatch = selectedType.value === "all" || inquiry.type === selectedType.value;
-    const statusMatch = selectedStatus.value === "all" || inquiry.status === selectedStatus.value;
-    return typeMatch && statusMatch;
-  });
-});
-
 // 답변 대기 중인 문의 수
 const pendingCount = computed(() => {
   return inquiries.value.filter((inquiry) => inquiry.status === "pending").length;
 });
 
-// 문의 목록 로드
+// 문의 목록 로드 (서버 사이드 필터링)
 const loadInquiries = async () => {
   loading.value = true;
   try {
-    inquiries.value = await fetchInquiries();
+    const params: {
+      type?: InquiryType;
+      status?: InquiryStatus;
+    } = {};
+
+    // 필터가 'all'이 아니면 파라미터 추가
+    if (selectedType.value !== "all") {
+      params.type = selectedType.value as InquiryType;
+    }
+    if (selectedStatus.value !== "all") {
+      params.status = selectedStatus.value as InquiryStatus;
+    }
+
+    inquiries.value = await fetchAdminInquiries(params);
   } catch (error) {
     console.error("문의 목록 로드 실패:", error);
   } finally {
     loading.value = false;
   }
 };
+
+// 필터 변경 시 자동으로 데이터 다시 로드
+watch([selectedType, selectedStatus], () => {
+  loadInquiries();
+});
 
 // 문의 상세로 이동 (관리자는 모든 문의 접근 가능)
 const goToDetail = (inquiry: Inquiry) => {
@@ -136,7 +145,7 @@ onMounted(() => {
         </Select>
 
         <span class="text-body text-muted-foreground self-center ml-2">
-          필터 결과: <span class="font-bold text-foreground">{{ filteredInquiries.length }}</span>건
+          필터 결과: <span class="font-bold text-foreground">{{ inquiries.length }}</span>건
         </span>
       </div>
 
@@ -148,7 +157,7 @@ onMounted(() => {
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
-      v-else-if="filteredInquiries.length === 0"
+      v-else-if="inquiries.length === 0"
       header="문의 관리"
       message="필터 조건에 해당하는 문의가 없습니다."
     />
@@ -180,7 +189,7 @@ onMounted(() => {
         </TableHeader>
         <TableBody>
           <TableRow
-            v-for="(inquiry, index) in filteredInquiries"
+            v-for="(inquiry, index) in inquiries"
             :key="inquiry.id"
             class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
             @click="goToDetail(inquiry)"

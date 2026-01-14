@@ -589,10 +589,7 @@ export interface InquiryReply {
   userId: string;
   content: string;
   createdAt: string;
-  user: {
-    id: string;
-    userName: string;
-  };
+  user: User; // 답변 작성자 (관리자) - 전체 User 객체 반환
 }
 
 // 문의 정보
@@ -607,7 +604,7 @@ export interface Inquiry {
   status: InquiryStatus;
   createdAt: string;
   updatedAt: string;
-  user?: InquiryUser;
+  user?: User; // 관리자용 API에서는 전체 User 객체 반환 (마스킹됨)
   product?: InquiryProduct;
   replies?: InquiryReply[]; // 문의 상세에서만 사용
   replyCount?: number; // 문의 목록에서 사용
@@ -627,6 +624,7 @@ export interface InquiryListParams {
   productId?: string;
   type?: InquiryType;
   status?: InquiryStatus;
+  userId?: string; // 관리자용: 특정 사용자의 문의만 조회
 }
 
 // 답변 생성 요청

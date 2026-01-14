@@ -48,6 +48,11 @@ const userName = computed(() => {
   return authStore.user?.userName || "고객";
 });
 
+// 권한 표시
+const userRole = computed(() => {
+  return authStore.user?.isAdmin ? "관리자" : "일반회원";
+});
+
 // 관리자 통계 로드
 const loadAdminStats = async () => {
   if (!authStore.user?.isAdmin) return;
@@ -170,7 +175,7 @@ onMounted(async () => {
             <p class="text-heading font-bold text-foreground">
               {{ userName }}님, 안녕하세요!
             </p>
-            <p class="text-body text-muted-foreground">일반회원</p>
+            <p class="text-body text-muted-foreground">{{ userRole }}</p>
           </div>
         </div>
       </CardContent>
@@ -224,7 +229,11 @@ onMounted(async () => {
               </div>
               주문/배송 관리
             </div>
-            <Badge v-if="orderCounts.payment_confirmed > 0" variant="default" class="ml-auto">
+            <Badge
+              v-if="orderCounts.payment_confirmed > 0"
+              variant="default"
+              class="ml-auto"
+            >
               {{ orderCounts.payment_confirmed }}
             </Badge>
           </Button>
@@ -255,7 +264,11 @@ onMounted(async () => {
               </div>
               문의 관리
             </div>
-            <Badge v-if="pendingInquiriesCount > 0" variant="default" class="ml-auto">
+            <Badge
+              v-if="pendingInquiriesCount > 0"
+              variant="default"
+              class="ml-auto"
+            >
               {{ pendingInquiriesCount }}
             </Badge>
           </Button>
@@ -273,7 +286,11 @@ onMounted(async () => {
               </div>
               회원 관리
             </div>
-            <Badge v-if="todayNewUsersCount > 0" variant="default" class="ml-auto">
+            <Badge
+              v-if="todayNewUsersCount > 0"
+              variant="default"
+              class="ml-auto"
+            >
               {{ todayNewUsersCount }}
             </Badge>
           </Button>
