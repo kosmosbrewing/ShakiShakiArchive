@@ -65,12 +65,14 @@ const updateField = <K extends keyof ShippingFormData>(
 // 받는사람 필드 Enter 키 처리 (1자 이상일 때만 이동)
 const handleRecipientEnter = () => {
   if (props.form.recipient.trim().length >= 1) {
-    // 우편번호가 있으면 상세주소로, 없으면 주소검색 버튼으로 이동
-    if (props.form.zipCode) {
-      detailAddressInputRef.value?.$el?.focus();
-    } else {
-      addressButtonRef.value?.focus();
-    }
+    nextTick(() => {
+      // 우편번호가 있으면 상세주소로, 없으면 주소검색 버튼으로 이동
+      if (props.form.zipCode) {
+        detailAddressInputRef.value?.$el?.focus();
+      } else {
+        addressButtonRef.value?.focus();
+      }
+    });
   }
 };
 
@@ -78,7 +80,9 @@ const handleRecipientEnter = () => {
 const handlePhoneEnter = () => {
   // showDeliveryMessage가 true이면 배송 메시지 Select로 이동
   if (props.showDeliveryMessage) {
-    deliveryMessageSelectRef.value?.focus();
+    nextTick(() => {
+      deliveryMessageSelectRef.value?.focus();
+    });
   }
 };
 
@@ -86,8 +90,17 @@ const handlePhoneEnter = () => {
 const handleDeliveryMessageEnter = () => {
   // "직접 입력" 선택 시 직접입력 Input으로 focus
   if (props.form.message === 'self') {
-    customMessageInputRef.value?.$el?.focus();
+    nextTick(() => {
+      customMessageInputRef.value?.$el?.focus();
+    });
   }
+};
+
+// 상세주소 필드 Enter 키 처리
+const handleDetailAddressEnter = () => {
+  nextTick(() => {
+    phoneInputRef.value?.focusFirst();
+  });
 };
 
 // 배송 메시지 Select 변경 처리 (선택 시 자동 포커스)
@@ -167,7 +180,7 @@ const deliveryMessageOptions = [
           ref="detailAddressInputRef"
           :model-value="form.detailAddress"
           @update:model-value="updateField('detailAddress', String($event))"
-          @keydown.enter.prevent="phoneInputRef?.focusFirst()"
+          @keydown.enter.prevent="handleDetailAddressEnter"
           type="text"
           placeholder="상세 주소를 입력하세요"
         />

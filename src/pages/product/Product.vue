@@ -292,7 +292,7 @@ onUnmounted(() => {
             <!-- SOLD OUT 배지 -->
             <div
               v-if="totalStock !== undefined && totalStock === 0"
-              class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
+              class="absolute top-2 right-2 z-10 px-1 text-body text-muted-foreground font-medium"
             >
               SOLD OUT
             </div>
@@ -343,7 +343,9 @@ onUnmounted(() => {
     >
       <div v-if="showLoadingSpinner" class="flex flex-col items-center gap-3">
         <LoadingSpinner size="md" variant="dots" :center="false" />
-        <span class="text-body text-muted-foreground">상품을 불러오는 중...</span>
+        <span class="text-body text-muted-foreground"
+          >상품을 불러오는 중...</span
+        >
       </div>
       <div
         v-else-if="!hasMore && displayProducts.length > 0"

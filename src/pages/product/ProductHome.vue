@@ -93,16 +93,15 @@ const fetchProductData = async () => {
     });
 
     // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
-    const mappedProducts = response.data
-      .map((item) => ({
-        id: item.id,
-        imageUrl: item.imageUrl,
-        images: item.images ?? [],
-        name: item.name,
-        price: Number(item.price),
-        totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
-        isAvailable: item.isAvailable,
-      }));
+    const mappedProducts = response.data.map((item) => ({
+      id: item.id,
+      imageUrl: item.imageUrl,
+      images: item.images ?? [],
+      name: item.name,
+      price: Number(item.price),
+      totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
+      isAvailable: item.isAvailable,
+    }));
 
     productList.value = sortByStock(mappedProducts);
   } catch (error) {
@@ -215,7 +214,7 @@ watch(
           <!-- SOLD OUT 배지 -->
           <div
             v-if="totalStock !== undefined && totalStock === 0"
-            class="absolute top-2 right-2 z-10 px-1 text-caption text-muted-foreground"
+            class="absolute top-2 right-2 z-10 px-1 text-body text-muted-foreground font-medium"
           >
             SOLD OUT
           </div>

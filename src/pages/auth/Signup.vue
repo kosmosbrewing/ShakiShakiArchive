@@ -44,7 +44,9 @@ const { showAlert: showAlertMessage } = useAlert();
 const handleEmailEnter = () => {
   const emailValidation = validateEmail(formData.email);
   if (emailValidation.valid) {
-    verificationButtonRef.value?.$el?.focus();
+    nextTick(() => {
+      verificationButtonRef.value?.$el?.focus();
+    });
   } else {
     showValidationError(emailValidation.error || '올바른 이메일 형식을 입력해주세요.', emailInputRef);
   }
@@ -53,7 +55,9 @@ const handleEmailEnter = () => {
 // 비밀번호 필드에서 Enter 키 처리 (8자 이상일 때만 이동)
 const handlePasswordEnter = () => {
   if (formData.password.length >= 8) {
-    confirmPasswordInputRef.value?.$el?.focus();
+    nextTick(() => {
+      confirmPasswordInputRef.value?.$el?.focus();
+    });
   }
   // 8자 미만이면 아무 동작도 하지 않음
 };
@@ -61,7 +65,9 @@ const handlePasswordEnter = () => {
 // 비밀번호 확인 필드에서 Enter 키 처리 (8자 이상일 때만 이동)
 const handleConfirmPasswordEnter = () => {
   if (formData.confirmPassword.length >= 8) {
-    userNameInputRef.value?.$el?.focus();
+    nextTick(() => {
+      userNameInputRef.value?.$el?.focus();
+    });
   }
   // 8자 미만이면 아무 동작도 하지 않음
 };
@@ -69,31 +75,40 @@ const handleConfirmPasswordEnter = () => {
 // 이름 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
 const handleUserNameEnter = () => {
   if (formData.userName.trim().length >= 1) {
-    phoneInputRef.value?.focusFirst();
+    // nextTick을 사용하여 현재 키 이벤트가 완전히 끝난 후 포커스 이동
+    nextTick(() => {
+      phoneInputRef.value?.focusFirst();
+    });
   }
 };
 
 // 휴대전화 마지막 입력 후 처리 (우편번호 유무에 따라 분기)
 const handlePhoneEnter = () => {
-  if (formData.zipCode) {
-    // 우편번호가 있으면 상세주소로 이동
-    detailAddressInputRef.value?.$el?.focus();
-  } else {
-    // 우편번호가 없으면 주소검색 버튼으로 이동
-    addressSearchButtonRef.value?.$el?.focus();
-  }
+  nextTick(() => {
+    if (formData.zipCode) {
+      // 우편번호가 있으면 상세주소로 이동
+      detailAddressInputRef.value?.$el?.focus();
+    } else {
+      // 우편번호가 없으면 주소검색 버튼으로 이동
+      addressSearchButtonRef.value?.$el?.focus();
+    }
+  });
 };
 
 // 상세주소 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
 const handleDetailAddressEnter = () => {
   if (formData.detailAddress.trim().length >= 1) {
-    emailOptInCheckboxRef.value?.focus();
+    nextTick(() => {
+      emailOptInCheckboxRef.value?.focus();
+    });
   }
 };
 
 // 이메일 수신동의 체크박스에서 Enter 키 처리
 const handleEmailOptInEnter = () => {
-  signupButtonRef.value?.$el?.focus();
+  nextTick(() => {
+    signupButtonRef.value?.$el?.focus();
+  });
 };
 
 // ... (스크립트 로직은 기존과 동일하므로 생략하거나 그대로 유지) ...

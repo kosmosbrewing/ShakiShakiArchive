@@ -44,57 +44,73 @@ const isAddressSearchOpen = ref(false);
 // 이름 필드 Enter 키 처리 (1자 이상일 때만 이동)
 const handleUserNameEnter = () => {
   if (form.userName.trim().length >= 1) {
-    phoneInputRef.value?.focusFirst();
+    nextTick(() => {
+      phoneInputRef.value?.focusFirst();
+    });
   }
 };
 
 // 휴대전화 마지막 입력 후 처리 (우편번호 유무에 따라 분기)
 const handlePhoneEnter = () => {
-  if (form.zipCode) {
-    // 우편번호가 있으면 상세주소로 이동
-    detailAddressInputRef.value?.$el?.focus();
-  } else {
-    // 우편번호가 없으면 주소검색 버튼으로 이동
-    addressSearchButtonRef.value?.$el?.focus();
-  }
+  nextTick(() => {
+    if (form.zipCode) {
+      // 우편번호가 있으면 상세주소로 이동
+      detailAddressInputRef.value?.$el?.focus();
+    } else {
+      // 우편번호가 없으면 주소검색 버튼으로 이동
+      addressSearchButtonRef.value?.$el?.focus();
+    }
+  });
 };
 
 // 상세주소 필드 Enter 키 처리 (1자 이상일 때만 이동)
 const handleDetailAddressEnter = () => {
   if (form.detailAddress.trim().length >= 1) {
-    currentPasswordInputRef.value?.$el?.focus();
+    nextTick(() => {
+      currentPasswordInputRef.value?.$el?.focus();
+    });
   }
 };
 
 // 비밀번호 필드 Enter 키 처리 (8자 이상일 때만 이동)
 const handlePwCurrentPasswordEnter = () => {
   if (passwordForm.currentPassword.length >= 8) {
-    newPasswordInputRef.value?.$el?.focus();
+    nextTick(() => {
+      newPasswordInputRef.value?.$el?.focus();
+    });
   }
 };
 
 const handleNewPasswordEnter = () => {
   if (passwordForm.newPassword.length >= 8) {
-    confirmNewPasswordInputRef.value?.$el?.focus();
+    nextTick(() => {
+      confirmNewPasswordInputRef.value?.$el?.focus();
+    });
   }
 };
 
 // 기본정보 현재 비밀번호 필드 Enter 키 처리 (8자 이상일 때만 이동)
 const handleCurrentPasswordEnter = () => {
   if (form.currentPassword.length >= 8) {
-    emailOptInCheckboxRef.value?.focus();
+    nextTick(() => {
+      emailOptInCheckboxRef.value?.focus();
+    });
   }
 };
 
 // 이메일 수신동의 체크박스 Enter 키 처리
 const handleEmailOptInEnter = () => {
-  updateProfileButtonRef.value?.$el?.focus();
+  nextTick(() => {
+    updateProfileButtonRef.value?.$el?.focus();
+  });
 };
 
 // 새 비밀번호 확인 필드 Enter 키 처리 (8자 이상일 때만 이동)
 const handleConfirmNewPasswordEnter = () => {
   if (passwordForm.confirmNewPassword.length >= 8) {
-    changePasswordButtonRef.value?.$el?.focus();
+    nextTick(() => {
+      changePasswordButtonRef.value?.$el?.focus();
+    });
   }
 };
 

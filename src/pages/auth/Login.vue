@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
@@ -111,12 +111,14 @@ const handleEmailEnter = () => {
 
   if (!loginForm.password) {
     // 비밀번호 없음 → 포커스 이동
-    const passwordEl = document.getElementById(
-      "user-password"
-    ) as HTMLInputElement;
-    if (passwordEl) {
-      passwordEl.focus();
-    }
+    nextTick(() => {
+      const passwordEl = document.getElementById(
+        "user-password"
+      ) as HTMLInputElement;
+      if (passwordEl) {
+        passwordEl.focus();
+      }
+    });
   } else {
     // 비밀번호 있음 → 즉시 로그인
     handleSubmit();

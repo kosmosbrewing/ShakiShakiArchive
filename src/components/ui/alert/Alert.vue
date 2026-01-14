@@ -129,7 +129,7 @@ onUnmounted(() => {
       :class="[
         'fixed z-50 flex justify-center pointer-events-none',
         confirmMode
-          ? 'inset-0 items-end pb-24 sm:items-center sm:pb-[8vh]'
+          ? 'inset-0 items-end pb-48 sm:items-center sm:pb-[8vh]'
           : 'top-8 left-0 right-0',
       ]"
     >

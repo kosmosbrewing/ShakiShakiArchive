@@ -117,7 +117,7 @@ onUnmounted(() => {
 <template>
   <header
     :class="{
-      'w-11/12 max-w-screen-2xl top-5 mx-auto sticky z-40 shadow-light border-zinc-200 rounded-2xl flex items-center p-4 bg-card shadow-md transition-all duration-300': true,
+      'w-11/12 max-w-screen-2xl top-5 mx-auto sticky z-40 shadow-light border-zinc-200 rounded-2xl flex items-center px-4 p-3 lg:p-4 bg-card shadow-md transition-all duration-300': true,
     }"
     :style="{
       backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.9)',
@@ -125,7 +125,8 @@ onUnmounted(() => {
   >
     <!-- Mobile -->
     <div
-      class="relative flex items-center justify-between lg:hidden w-full h-10"
+      class="relative flex items-center justify-between lg:hidden w-full"
+      style="min-height: 40px"
     >
       <div class="flex justify-start z-10">
         <Sheet v-model:open="isOpen">
@@ -137,7 +138,7 @@ onUnmounted(() => {
             side="left"
             class="flex flex-col rounded-tr-2xl rounded-br-2xl bg-card"
           >
-            <SheetHeader class="mb-4 text-left">
+            <SheetHeader class="mb-4 text-left pl-1">
               <SheetTitle
                 class="flex items-center cursor-pointer"
                 @click="goHome"
@@ -145,7 +146,7 @@ onUnmounted(() => {
                 <img
                   src="@/assets/logo03.png"
                   alt="Logo"
-                  class="h-10 w-auto ml-1 mt-10 object-contain"
+                  class="h-7 w-auto ml-1 mt-10 object-contain"
                   draggable="false"
                 />
               </SheetTitle>
@@ -156,26 +157,24 @@ onUnmounted(() => {
                 v-for="route in categoryRoutes"
                 :key="route.label"
                 :to="route.path"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3"
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 pl-3"
                 @click="isOpen = false"
               >
                 {{ route.label }}
               </RouterLink>
-              <Button
-                variant="ghost"
-                class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
+              <button
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
                 @click="handleInstagram"
               >
                 INSTAGRAM
-              </Button>
+              </button>
 
-              <Button
-                variant="ghost"
-                class="text-body font-medium hover:text-primary hover:bg-transparent transition-colors tracking-wider py-3 justify-start px-0"
+              <button
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
                 @click="handleFAQClick"
               >
                 FAQ
-              </Button>
+              </button>
             </div>
             <div class="flex-1"></div>
 
@@ -219,22 +218,23 @@ onUnmounted(() => {
       </div>
 
       <div
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer"
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer overflow-visible"
         @click="goHome"
       >
         <img
           src="@/assets/logo01.png"
           alt="Logo"
-          class="h-8 w-auto object-contain"
+          class="w-auto max-h-[38px] min-h-[24px] max-w-[65vw]"
+          style="height: clamp(24px, 7vw, 38px)"
           draggable="false"
         />
       </div>
 
-      <div class="flex items-center justify-end gap-1 z-10">
+      <div class="flex items-center justify-end gap-1.5 z-10">
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 hover:bg-transparent p-1"
+          class="h-5 w-5 hover:bg-transparent p-0"
           @click="handleAccountClick"
         >
           <img
@@ -248,7 +248,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 relative hover:bg-transparent overflow-visible p-1"
+          class="h-5 w-5 relative hover:bg-transparent overflow-visible p-0"
           @click="handleCartClick"
         >
           <div class="relative w-full h-full">
