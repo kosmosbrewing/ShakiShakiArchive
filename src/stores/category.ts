@@ -4,6 +4,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { fetchCategories } from "@/lib/api";
+import { apiCache } from "@/lib/apiCache";
 
 export interface Category {
   id: number;
@@ -31,7 +32,11 @@ export const useCategoryStore = defineStore("category", () => {
   });
 
   // Navbar용 라우트 목록 (ALL 포함)
+  // 카테고리가 로드되지 않았으면 빈 배열 반환 (ALL만 먼저 나타나는 것 방지)
   const categoryRoutes = computed(() => {
+    if (categories.value.length === 0) {
+      return [];
+    }
     const dynamicRoutes = categories.value.map((cat) => ({
       path: `/product/${cat.slug}`,
       label: cat.name.toUpperCase(),
@@ -80,6 +85,7 @@ export const useCategoryStore = defineStore("category", () => {
   // 캐시 초기화 (관리자가 카테고리 수정 시 호출)
   function invalidateCache() {
     lastFetchedAt.value = null;
+    apiCache.invalidate('/api/categories'); // HTTP 캐시도 무효화
   }
 
   return {

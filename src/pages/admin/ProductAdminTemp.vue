@@ -446,7 +446,7 @@ onMounted(async () => {
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >상품명 <span class="text-red-500">*</span></label
+                  >상품명 <span class="text-primary">*</span></label
                 >
                 <input
                   v-model="productForm.name"
@@ -459,7 +459,7 @@ onMounted(async () => {
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >Slug (URL용) <span class="text-red-500">*</span></label
+                  >Slug (URL용) <span class="text-primary">*</span></label
                 >
                 <input
                   v-model="productForm.slug"
@@ -475,7 +475,7 @@ onMounted(async () => {
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >판매가 <span class="text-red-500">*</span></label
+                  >판매가 <span class="text-primary">*</span></label
                 >
                 <input
                   v-model.number="productForm.price"
@@ -498,7 +498,7 @@ onMounted(async () => {
               <div>
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                  >카테고리 <span class="text-red-500">*</span></label
+                  >카테고리 <span class="text-primary">*</span></label
                 >
                 <select
                   v-model="productForm.categoryId"
@@ -520,7 +520,7 @@ onMounted(async () => {
             <div>
               <label
                 class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >대표 이미지 URL <span class="text-red-500">*</span></label
+                >대표 이미지 URL <span class="text-primary">*</span></label
               >
               <input
                 v-model="productForm.imageUrl"
@@ -548,7 +548,7 @@ onMounted(async () => {
                 <label
                   class="block text-body text-admin font-semibold mb-2 ml-0.5"
                   >상세 이미지 (콤마 구분)
-                  <span class="text-red-500">*</span></label
+                  <span class="text-primary">*</span></label
                 >
                 <textarea
                   v-model="productForm.detailImagesStr"
@@ -563,7 +563,7 @@ onMounted(async () => {
             <div>
               <label
                 class="block text-body text-admin font-semibold mb-2 ml-0.5"
-                >상품 설명 <span class="text-red-500">*</span></label
+                >상품 설명 <span class="text-primary">*</span></label
               >
               <textarea
                 v-model="productForm.description"

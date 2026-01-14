@@ -248,7 +248,7 @@ const deliveryMessageOptions = [
             ($event.target as HTMLInputElement).checked
           )
         "
-        class="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+        class="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded border-border accent-primary focus:ring-primary cursor-pointer"
       />
       <Label
         for="saveDefault"

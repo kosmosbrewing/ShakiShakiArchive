@@ -27,7 +27,15 @@ const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
 const { showAlert, showConfirm } = useAlert();
-const { card } = useOptimizedImage();
+const { getResponsiveAttrs } = useOptimizedImage();
+
+// 상품 카드 반응형 이미지 속성 (srcset 포함)
+const getProductImageAttrs = (url: string) => {
+  return getResponsiveAttrs(url, {
+    widths: [320, 480, 640], // 모바일~태블릿 대응
+    sizes: '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw', // 반응형 그리드
+  });
+};
 
 // 카테고리 파라미터가 있는지 확인 (라우트에서 사용될 때)
 const hasCategory = computed(() => !!route.params.category);
@@ -265,7 +273,7 @@ onUnmounted(() => {
           >
             <!-- 기본 이미지 -->
             <img
-              :src="card(imageUrl)"
+              v-bind="getProductImageAttrs(imageUrl)"
               :alt="name"
               class="w-full aspect-square object-cover size-full absolute inset-0 transition-opacity duration-300"
               :class="
@@ -273,19 +281,15 @@ onUnmounted(() => {
                   ? 'opacity-0'
                   : 'opacity-100'
               "
-              loading="lazy"
-              decoding="async"
               draggable="false"
             />
             <!-- 호버 이미지 -->
             <img
               v-if="images && images.length > 0"
-              :src="card(images[0])"
+              v-bind="getProductImageAttrs(images[0])"
               :alt="`${name} - 호버`"
               class="w-full aspect-square object-cover size-full transition-opacity duration-300"
               :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
-              loading="lazy"
-              decoding="async"
               draggable="false"
             />
 

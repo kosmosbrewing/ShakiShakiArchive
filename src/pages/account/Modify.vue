@@ -487,7 +487,7 @@ onMounted(async () => {
               id="opt-in"
               v-model="form.emailOptIn"
               type="checkbox"
-              class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+              class="h-4 w-4 rounded border-border accent-primary focus:ring-primary"
               @keydown.enter.prevent="handleEmailOptInEnter"
             />
             <Label for="opt-in" class="text-body font-normal cursor-pointer">

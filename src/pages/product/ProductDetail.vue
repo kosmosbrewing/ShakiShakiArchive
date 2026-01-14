@@ -365,6 +365,11 @@ const handleContinueShopping = () => {
 onMounted(async () => {
   await productData.loadProduct(String(productId.value));
 
+  // 페이지 타이틀 업데이트 (상품명으로)
+  if (productData.product.value?.name) {
+    document.title = `${productData.product.value.name} | 샤키샤키 아카이브(ShakiShaki Archive)`;
+  }
+
   // 이미지 초기화
   if (productData.product.value?.imageUrl) {
     gallery.initializeImage(productData.product.value.imageUrl);

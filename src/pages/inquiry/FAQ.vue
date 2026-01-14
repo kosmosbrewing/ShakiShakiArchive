@@ -2,8 +2,6 @@
 // src/pages/inquiry/FAQ.vue
 // FAQ 페이지
 
-import { useRouter } from "vue-router";
-
 // 공통 컴포넌트
 import {
   Accordion,
@@ -11,8 +9,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-const router = useRouter();
 
 // FAQ 데이터
 interface FAQItem {
@@ -47,11 +43,6 @@ const FAQList: FAQItem[] = [
     value: "item-4",
   },
 ];
-
-// 문의 내역 페이지로 이동
-const goToInquiryList = () => {
-  router.push("/inquiry");
-};
 </script>
 
 <template>
@@ -74,11 +65,11 @@ const goToInquiryList = () => {
         </AccordionItem>
       </Accordion>
 
-      <p class="text-sm text-muted-foreground pt-4 text-center">
+      <p class="text-center pt-4 text-muted-foreground">
         찾으시는 답변이 없으신가요?
-        <span class="text-primary underline cursor-pointer" @click="goToInquiryList">
+        <router-link to="/inquiry" class="text-primary hover:underline font-medium">
           문의 내역 보기
-        </span>
+        </router-link>
       </p>
     </section>
   </div>

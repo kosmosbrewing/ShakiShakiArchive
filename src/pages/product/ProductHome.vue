@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
 import { Heart } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
@@ -15,6 +14,7 @@ import { ProductCardSkeleton, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { useOptimizedImage } from "@/composables";
+import { fetchProducts } from "@/lib/api";
 
 // 1. 데이터 인터페이스
 interface ProductItem {
@@ -27,24 +27,20 @@ interface ProductItem {
   isAvailable?: boolean; // 판매 가능 여부
 }
 
-interface ProductApiResponse {
-  id: string; // UUID
-  imageUrl: string;
-  images?: string[]; // 추가 이미지 목록
-  categoryId: number; // 카테고리는 serial
-  name: string;
-  price: number;
-  totalStock?: number; // 총 재고 수량
-  stockQuantity?: number; // 대체 필드
-  isAvailable?: boolean; // 판매 가능 여부
-}
-
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
 const { showAlert, showConfirm } = useAlert();
-const { card } = useOptimizedImage();
+const { getResponsiveAttrs } = useOptimizedImage();
+
+// 상품 카드 반응형 이미지 속성 (srcset 포함)
+const getProductImageAttrs = (url: string) => {
+  return getResponsiveAttrs(url, {
+    widths: [320, 480, 640], // 모바일~태블릿 대응
+    sizes: '(max-width: 640px) 50vw, 33vw', // 2열 → 50vw, 그 외 33vw
+  });
+};
 
 const productList = ref<ProductItem[]>([]);
 const loading = ref(false);
@@ -68,7 +64,7 @@ const sortByStock = (items: ProductItem[]): ProductItem[] => {
   });
 };
 
-// [핵심] 상품 데이터 불러오기 (백엔드 필터링 적용)
+// [핵심] 상품 데이터 불러오기 (api.ts 캐싱 레이어 활용)
 const fetchProductData = async () => {
   loading.value = true;
 
@@ -84,16 +80,14 @@ const fetchProductData = async () => {
         ? undefined
         : categoryParam.trim().toLowerCase();
 
-    // 2. 백엔드에 요청 (필터링은 서버가 담당)
-    // 요청 URL 예시: GET /api/products?category=outerwear
-    const response = await axios.get<ProductApiResponse[]>("/api/products", {
-      params: {
-        category: currentSlug,
-      },
+    // 2. api.ts의 fetchProducts 사용 (HTTP 캐싱 레이어 적용)
+    // cachePolicy: 'products' (1분 캐싱)
+    const response = await fetchProducts({
+      category: currentSlug,
     });
 
     // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
-    const mappedProducts = response.data.map((item) => ({
+    const mappedProducts = response.products.map((item: any) => ({
       id: item.id,
       imageUrl: item.imageUrl,
       images: item.images ?? [],
@@ -187,7 +181,7 @@ watch(
         >
           <!-- 기본 이미지 -->
           <img
-            :src="card(imageUrl)"
+            v-bind="getProductImageAttrs(imageUrl)"
             :alt="name"
             class="w-full aspect-square object-cover size-full absolute inset-0 transition-opacity duration-300"
             :class="
@@ -195,19 +189,15 @@ watch(
                 ? 'opacity-0'
                 : 'opacity-100'
             "
-            loading="lazy"
-            decoding="async"
             draggable="false"
           />
           <!-- 호버 이미지 -->
           <img
             v-if="images && images.length > 0"
-            :src="card(images[0])"
+            v-bind="getProductImageAttrs(images[0])"
             :alt="`${name} - 호버`"
             class="w-full aspect-square object-cover size-full transition-opacity duration-300"
             :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
-            loading="lazy"
-            decoding="async"
             draggable="false"
           />
 

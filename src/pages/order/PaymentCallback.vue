@@ -432,7 +432,7 @@ const goToCart = () => {
           <div
             class="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6"
           >
-            <CheckCircle class="w-12 h-12 text-green-500" />
+            <CheckCircle class="w-12 h-12 text-primary" />
           </div>
           <h2 class="text-xl font-semibold mb-2">결제가 완료되었습니다!</h2>
           <p class="text-muted-foreground mb-6">주문해 주셔서 감사합니다.</p>
@@ -526,7 +526,7 @@ const goToCart = () => {
             결제 처리 중 일부 상품의 재고가 부족하여 결제가 자동으로
             취소되었습니다.
           </p>
-          <p class="text-sm text-green-600 dark:text-green-400 mb-6">
+          <p class="text-sm text-primary mb-6">
             결제하신 금액은 자동으로 환불됩니다.
           </p>
 

@@ -47,6 +47,7 @@ import type {
   AdminUserDetailResponse,
   UpdateUserRequest,
 } from "@/types/api";
+import { apiCache, cachePolicies } from "./apiCache";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -78,20 +79,84 @@ export class ApiError extends Error {
 }
 
 // ------------------------------------------------------------------
-// [0] Core: 공통 요청 함수
+// [0] Core: 공통 요청 함수 (캐싱 지원 + Mutation 시 자동 무효화)
 // ------------------------------------------------------------------
+
+/**
+ * Mutation(POST/PUT/PATCH/DELETE) 발생 시 관련 캐시를 자동 무효화하는 규칙
+ * 데이터 무결성을 보장하기 위해 변경된 리소스의 캐시를 즉시 제거
+ */
+function invalidateCacheAfterMutation(endpoint: string, method: string) {
+  // POST, PUT, PATCH, DELETE 요청만 처리
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return;
+  }
+
+  // 엔드포인트별 캐시 무효화 규칙
+  // 장바구니 변경 → 장바구니 캐시 무효화
+  if (endpoint.includes('/api/cart')) {
+    apiCache.invalidate('/api/cart');
+    console.debug(`[Cache INVALIDATE] Cart updated - cleared /api/cart`);
+  }
+
+  // 상품 변경 (관리자) → 상품 목록 캐시 무효화
+  if (endpoint.includes('/api/admin/products') || endpoint.includes('/api/products/')) {
+    apiCache.invalidate('/api/products');
+    console.debug(`[Cache INVALIDATE] Product updated - cleared /api/products`);
+  }
+
+  // 카테고리 변경 (관리자) → 카테고리 캐시 무효화
+  if (endpoint.includes('/api/admin/categories') || endpoint.includes('/api/categories/')) {
+    apiCache.invalidate('/api/categories');
+    console.debug(`[Cache INVALIDATE] Category updated - cleared /api/categories`);
+  }
+
+  // 사이트 이미지 변경 (관리자) → 사이트 이미지 캐시 무효화
+  if (endpoint.includes('/api/admin/site-images') || endpoint.includes('/api/site-images/')) {
+    apiCache.invalidate('/api/site-images');
+    console.debug(`[Cache INVALIDATE] Site images updated - cleared /api/site-images`);
+  }
+
+  // 주문 생성/변경 → 주문 목록 캐시 무효화
+  if (endpoint.includes('/api/orders')) {
+    apiCache.invalidate('/api/orders');
+    console.debug(`[Cache INVALIDATE] Order updated - cleared /api/orders`);
+  }
+
+  // 위시리스트 변경 → 위시리스트 캐시 무효화
+  if (endpoint.includes('/api/wishlist')) {
+    apiCache.invalidate('/api/wishlist');
+    console.debug(`[Cache INVALIDATE] Wishlist updated - cleared /api/wishlist`);
+  }
+}
+
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit & { cachePolicy?: keyof typeof cachePolicies } = {}
 ): Promise<T> {
+  const { cachePolicy, ...fetchOptions } = options;
   const url = `${API_BASE}${endpoint}`;
+  const method = fetchOptions.method || 'GET';
+  const cacheKey = `${method}:${url}`;
+
+  // GET 요청만 캐싱
+  if (method === 'GET') {
+    const policy = cachePolicy ? cachePolicies[cachePolicy] : cachePolicies.none;
+
+    // 캐시 확인
+    const cached = apiCache.get<T>(cacheKey, policy.maxAge);
+    if (cached) {
+      console.debug(`[Cache HIT] ${cacheKey}`);
+      return cached;
+    }
+  }
 
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     credentials: "include", // [중요] 세션 쿠키 전송
     headers: {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...fetchOptions.headers,
     },
   });
 
@@ -102,10 +167,24 @@ async function apiRequest<T>(
 
   // 204 No Content 처리 (삭제 요청 등)
   if (response.status === 204) {
+    // Mutation 성공 시 관련 캐시 무효화
+    invalidateCacheAfterMutation(endpoint, method);
     return {} as T;
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // GET 결과 캐싱
+  if (method === 'GET') {
+    const etag = response.headers.get('etag');
+    apiCache.set(cacheKey, data, etag || undefined);
+    console.debug(`[Cache SET] ${cacheKey}`);
+  } else {
+    // Mutation 성공 시 관련 캐시 무효화
+    invalidateCacheAfterMutation(endpoint, method);
+  }
+
+  return data;
 }
 
 // ------------------------------------------------------------------
@@ -317,7 +396,8 @@ export async function fetchProducts(
 
   try {
     const response = await apiRequest<PaginatedProductsResponse | any[]>(
-      `/api/products?${params.toString()}`
+      `/api/products?${params.toString()}`,
+      { cachePolicy: 'products' }
     );
 
     // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
@@ -360,19 +440,19 @@ export async function fetchAllProducts(
 
 // 상품 상세 조회
 export async function fetchProduct(id: string | number): Promise<any> {
-  return apiRequest(`/api/products/${id}`);
+  return apiRequest(`/api/products/${id}`, { cachePolicy: 'products' });
 }
 
 // 상품 옵션(Variants) 조회
 export async function fetchProductVariants(
   productId: string | number
 ): Promise<any[]> {
-  return apiRequest(`/api/products/${productId}/variants`);
+  return apiRequest(`/api/products/${productId}/variants`, { cachePolicy: 'products' });
 }
 
 // 카테고리 목록 조회
 export async function fetchCategories(): Promise<any[]> {
-  return apiRequest("/api/categories");
+  return apiRequest("/api/categories", { cachePolicy: 'categories' });
 }
 
 // ------------------------------------------------------------------
@@ -1032,7 +1112,8 @@ export async function deleteImages(
 // 활성화된 전체 사이트 이미지 조회
 export async function fetchSiteImages(): Promise<SiteImage[]> {
   const response = await apiRequest<{ images: SiteImage[] }>(
-    "/api/site-images"
+    "/api/site-images",
+    { cachePolicy: 'siteImages' }
   );
   return response.images || [];
 }
@@ -1040,7 +1121,8 @@ export async function fetchSiteImages(): Promise<SiteImage[]> {
 // Hero 이미지만 조회
 export async function fetchHeroImages(): Promise<SiteImage[]> {
   const response = await apiRequest<{ images: SiteImage[] }>(
-    "/api/site-images/hero"
+    "/api/site-images/hero",
+    { cachePolicy: 'siteImages' }
   );
   return response.images || [];
 }
@@ -1048,7 +1130,8 @@ export async function fetchHeroImages(): Promise<SiteImage[]> {
 // Marquee 이미지만 조회
 export async function fetchMarqueeImages(): Promise<SiteImage[]> {
   const response = await apiRequest<{ images: SiteImage[] }>(
-    "/api/site-images/marquee"
+    "/api/site-images/marquee",
+    { cachePolicy: 'siteImages' }
   );
   return response.images || [];
 }
@@ -1291,16 +1374,16 @@ export async function deleteAdminUser(
 
 // 전체 상수 조회
 export async function fetchConstants(): Promise<AppConstants> {
-  return apiRequest<AppConstants>("/api/constants");
+  return apiRequest<AppConstants>("/api/constants", { cachePolicy: 'constants' });
 }
 
 // 배송비 설정만 조회
 export async function fetchShippingConstants(): Promise<ShippingConstants> {
-  return apiRequest<ShippingConstants>("/api/constants/shipping");
+  return apiRequest<ShippingConstants>("/api/constants/shipping", { cachePolicy: 'constants' });
 }
 
 // 폼 검증 규칙만 조회
 export async function fetchValidationConstants(): Promise<ValidationConstants> {
-  return apiRequest<ValidationConstants>("/api/constants/validation");
+  return apiRequest<ValidationConstants>("/api/constants/validation", { cachePolicy: 'constants' });
 }
 

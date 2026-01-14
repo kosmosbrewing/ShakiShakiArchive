@@ -279,7 +279,7 @@ onMounted(async () => {
           <form @submit.prevent="handleSave" class="space-y-6">
             <div class="space-y-2">
               <Label class="text-admin">
-                카테고리명 <span class="text-red-500">*</span>
+                카테고리명 <span class="text-primary">*</span>
               </Label>
               <Input
                 v-model="formData.name"
@@ -292,7 +292,7 @@ onMounted(async () => {
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-2">
                 <Label class="text-admin">
-                  Category ID (숫자) <span class="text-red-500">*</span>
+                  Category ID (숫자) <span class="text-primary">*</span>
                 </Label>
                 <Input
                   v-model="formData.categoryId"
@@ -306,7 +306,7 @@ onMounted(async () => {
 
               <div class="space-y-2">
                 <Label class="text-admin">
-                  Slug (URL용) <span class="text-red-500">*</span>
+                  Slug (URL용) <span class="text-primary">*</span>
                 </Label>
                 <Input
                   v-model="formData.slug"

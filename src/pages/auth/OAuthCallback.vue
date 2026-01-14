@@ -70,7 +70,10 @@ onMounted(async () => {
       // 일반 리다이렉트: 환영 메시지 설정 후 홈으로 이동
       const userName = authStore.user?.userName || "회원";
       authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
-      router.replace(returnUrl);
+
+      // 리다이렉트 전 약간의 딜레이로 로딩 상태 안정화
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await router.replace(returnUrl);
     } else {
       throw new Error("로그인 처리에 실패했습니다. 다시 시도해주세요.");
     }
@@ -132,13 +135,22 @@ const closePopup = () => {
 </script>
 
 <template>
-  <!-- 로딩/성공 상태: 전체 화면 로딩 -->
+  <!-- 로딩 상태: 전체 화면 로딩 -->
   <LoadingSpinner
-    v-if="status === 'loading' || status === 'success'"
+    v-if="status === 'loading'"
     fullscreen
     variant="dots"
     size="lg"
     message="로그인 처리 중..."
+  />
+
+  <!-- 성공 상태: 리다이렉트 중 -->
+  <LoadingSpinner
+    v-else-if="status === 'success'"
+    fullscreen
+    variant="dots"
+    size="lg"
+    message="로그인 완료! 페이지 이동 중..."
   />
 
   <!-- 에러 상태: 카드로 표시 -->

@@ -4,6 +4,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { fetchHeroImages, fetchMarqueeImages } from "@/lib/api";
+import { apiCache } from "@/lib/apiCache";
 import type { SiteImage } from "@/types/api";
 
 export const useSiteImageStore = defineStore("siteImage", () => {
@@ -92,6 +93,7 @@ export const useSiteImageStore = defineStore("siteImage", () => {
   // 캐시 무효화 (관리자가 이미지 수정 시 호출)
   function invalidateCache() {
     lastFetchedAt.value = null;
+    apiCache.invalidate('/api/site-images'); // HTTP 캐시도 무효화
   }
 
   return {

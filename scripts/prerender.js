@@ -132,9 +132,24 @@ async function prerenderHome(template) {
 async function prerenderProductList(template) {
   console.log('\n📄 상품 목록 페이지 Prerendering...');
 
-  // 전체 상품 목록
-  const seoData = await fetchSeoData('/api/seo/products');
-  if (!seoData) return;
+  // 전체 상품 목록 - 하드코딩된 SEO 데이터 사용
+  const seoData = {
+    openGraph: {
+      title: 'TOP | 샤키샤키 아카이브',
+      description: '샤키샤키가 엄선한 감도 높은 빈티지 컬렉션',
+      url: 'https://shakishaki.kr/product/all',
+      type: 'website',
+      siteName: '샤키샤키 아카이브',
+      locale: 'ko_KR',
+      image: '',
+      twitter: {
+        card: 'summary_large_image',
+        title: 'TOP | 샤키샤키 아카이브',
+        description: '샤키샤키가 엄선한 감도 높은 빈티지 컬렉션',
+        image: ''
+      }
+    }
+  };
 
   const metaTags = generateMetaTags(seoData);
   const html = injectMetaTags(template, metaTags);
@@ -154,8 +169,32 @@ async function prerenderCategories(template) {
     console.log(`   📦 카테고리 ${categories.length}개 발견`);
 
     for (const category of categories) {
-      const seoData = await fetchSeoData(`/api/seo/categories/${category.slug}`);
-      if (!seoData) continue;
+      let seoData;
+
+      // TOP 카테고리는 하드코딩된 SEO 데이터 사용
+      if (category.slug.toLowerCase() === 'top') {
+        seoData = {
+          openGraph: {
+            title: 'TOP | 샤키샤키 아카이브',
+            description: '샤키샤키가 엄선한 감도 높은 빈티지 컬렉션',
+            url: `https://shakishaki.kr/product/${category.slug}`,
+            type: 'website',
+            siteName: '샤키샤키 아카이브',
+            locale: 'ko_KR',
+            image: '',
+            twitter: {
+              card: 'summary_large_image',
+              title: 'TOP | 샤키샤키 아카이브',
+              description: '샤키샤키가 엄선한 감도 높은 빈티지 컬렉션',
+              image: ''
+            }
+          }
+        };
+      } else {
+        // 다른 카테고리는 API에서 가져오기
+        seoData = await fetchSeoData(`/api/seo/categories/${category.slug}`);
+        if (!seoData) continue;
+      }
 
       const metaTags = generateMetaTags(seoData);
       const html = injectMetaTags(template, metaTags);

@@ -282,3 +282,65 @@ export const validateOrderAmount = (
   // 1원 이내 오차 허용 (부동소수점 오류 대비)
   return Math.abs(calculatedTotal - expectedTotal) <= 1;
 };
+
+/**
+ * 사이즈 측정값 문자열 검증
+ *
+ * 허용 형식:
+ * - "" (빈 문자열 - 측정값 없음)
+ * - "-" (측정값 없음을 명시적으로 표현)
+ * - "1" ~ "999" (1 이상 1000 미만의 정수)
+ * - "95.5" (소수점 포함)
+ * - "95-100" (범위 표현)
+ *
+ * 차단 형식:
+ * - "0" (0값)
+ * - "00", "0123" (앞에 0이 있는 숫자)
+ * - "9999" (1000 이상)
+ */
+export const isValidSizeMeasurement = (value: string): boolean => {
+  // 빈 문자열 또는 "-"만 있는 경우 허용 (측정값 없음)
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "-") {
+    return true;
+  }
+
+  // 범위 형식 (예: "95-100") 검증
+  if (trimmed.includes("-") && trimmed !== "-") {
+    const parts = trimmed.split("-");
+    if (parts.length !== 2) return false;
+
+    // 각 부분이 유효한 숫자인지 검증
+    return parts.every(part => {
+      const num = parseFloat(part.trim());
+      if (isNaN(num)) return false;
+      if (num <= 0 || num >= 1000) return false;
+      // 앞에 0이 있는지 확인 (예: "00", "0123")
+      if (part.trim().startsWith("0") && part.trim().length > 1 && !part.trim().startsWith("0.")) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // 단일 숫자 검증
+  const num = parseFloat(trimmed);
+
+  // 숫자가 아니면 차단
+  if (isNaN(num)) {
+    return false;
+  }
+
+  // 0 이하 또는 1000 이상이면 차단
+  if (num <= 0 || num >= 1000) {
+    return false;
+  }
+
+  // 앞에 0이 있는 경우 차단 (예: "00", "0123")
+  // 단, "0.5" 같은 소수점은 허용
+  if (trimmed.startsWith("0") && trimmed.length > 1 && !trimmed.startsWith("0.")) {
+    return false;
+  }
+
+  return true;
+};

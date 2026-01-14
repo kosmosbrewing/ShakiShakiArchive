@@ -126,7 +126,7 @@ const removeImage = (index: number) => {
   <div class="space-y-3">
     <label class="block text-body text-admin font-semibold mb-2 ml-0.5">
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="text-primary">*</span>
     </label>
 
     <!-- 업로드 버튼 -->
@@ -158,7 +158,7 @@ const removeImage = (index: number) => {
     </div>
 
     <!-- 에러 메시지 -->
-    <p v-if="errorMessage" class="text-caption text-red-500">
+    <p v-if="errorMessage" class="text-caption text-destructive">
       {{ errorMessage }}
     </p>
 

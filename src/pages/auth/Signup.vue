@@ -384,7 +384,7 @@ const handleSignup = async () => {
         <form @submit.prevent="handleSignup" class="grid gap-4 sm:gap-5">
           <div class="flex flex-col gap-1.5 mt-2">
             <Label for="email" class="text-body"
-              >이메일 <span class="text-red-500">*</span></Label
+              >이메일 <span class="text-primary">*</span></Label
             >
             <div class="flex gap-1.5 sm:gap-2">
               <Input
@@ -428,7 +428,7 @@ const handleSignup = async () => {
             </div>
             <p
               v-if="verificationState.errorMessage && !verificationState.isSent"
-              class="text-caption text-red-500"
+              class="text-caption text-destructive"
             >
               {{ verificationState.errorMessage }}
             </p>
@@ -475,7 +475,7 @@ const handleSignup = async () => {
             </p>
             <p
               v-if="verificationState.errorMessage"
-              class="text-caption text-red-500"
+              class="text-caption text-destructive"
             >
               {{ verificationState.errorMessage }}
             </p>
@@ -483,7 +483,7 @@ const handleSignup = async () => {
 
           <Alert
             v-if="verificationState.isVerified"
-            class="bg-green-50 text-green-700 border-green-200 py-2"
+            class="bg-green-50 text-primary border-green-200 py-2"
           >
             <CheckCircle2 class="h-4 w-4" />
             <AlertTitle class="ml-2 text-body font-medium"
@@ -493,7 +493,7 @@ const handleSignup = async () => {
 
           <div class="flex flex-col gap-1.5">
             <Label for="password" class="text-body"
-              >비밀번호 <span class="text-red-500">*</span></Label
+              >비밀번호 <span class="text-primary">*</span></Label
             >
             <Input
               ref="passwordInputRef"
@@ -510,7 +510,7 @@ const handleSignup = async () => {
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="confirmPassword" class="text-body"
-              >비밀번호 확인 <span class="text-red-500">*</span></Label
+              >비밀번호 확인 <span class="text-primary">*</span></Label
             >
             <Input
               ref="confirmPasswordInputRef"
@@ -525,7 +525,7 @@ const handleSignup = async () => {
 
           <div class="flex flex-col gap-1.5">
             <Label for="userName" class="text-body"
-              >이름 <span class="text-red-500">*</span></Label
+              >이름 <span class="text-primary">*</span></Label
             >
             <Input
               ref="userNameInputRef"
@@ -539,7 +539,7 @@ const handleSignup = async () => {
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="phone" class="text-body"
-              >휴대전화 <span class="text-red-500">*</span></Label
+              >휴대전화 <span class="text-primary">*</span></Label
             >
             <PhoneInput
               ref="phoneInputRef"
@@ -595,7 +595,7 @@ const handleSignup = async () => {
               id="email-opt-in"
               type="checkbox"
               v-model="formData.emailOptIn"
-              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              class="h-4 w-4 rounded border-border accent-primary focus:ring-primary"
               @keydown.enter.prevent="handleEmailOptInEnter"
             />
             <label

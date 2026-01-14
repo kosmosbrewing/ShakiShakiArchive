@@ -266,7 +266,7 @@ watch(
           <!-- 이메일 입력 -->
           <div class="flex flex-col gap-1.5 mt-6">
             <Label for="email">
-              이메일 <span class="text-red-500">*</span>
+              이메일 <span class="text-primary">*</span>
             </Label>
             <div class="flex gap-2">
               <Input
@@ -300,7 +300,7 @@ watch(
             </p>
             <p
               v-if="verificationState.errorMessage && !verificationState.isSent"
-              class="text-caption text-red-500"
+              class="text-caption text-destructive"
             >
               {{ verificationState.errorMessage }}
             </p>
@@ -346,7 +346,7 @@ watch(
             </p>
             <p
               v-if="verificationState.errorMessage"
-              class="text-caption text-red-500"
+              class="text-caption text-destructive"
             >
               {{ verificationState.errorMessage }}
             </p>
@@ -360,7 +360,7 @@ watch(
           class="grid gap-6"
         >
           <!-- 이메일 인증 완료 알림 -->
-          <Alert class="bg-green-50 text-green-700 border-green-200 py-2 mt-8">
+          <Alert class="bg-green-50 text-primary border-green-200 py-2 mt-8">
             <CheckCircle2 class="h-4 w-4" />
             <AlertTitle class="ml-2 text-body font-medium">
               이메일 인증 완료
@@ -369,7 +369,7 @@ watch(
 
           <div class="flex flex-col gap-1.5 pt-6">
             <Label for="newPassword">
-              새 비밀번호 <span class="text-red-500">*</span>
+              새 비밀번호 <span class="text-primary">*</span>
             </Label>
             <Input
               id="newPassword"
@@ -384,7 +384,7 @@ watch(
 
           <div class="flex flex-col gap-1.5">
             <Label for="confirmPassword">
-              새 비밀번호 확인 <span class="text-red-500">*</span>
+              새 비밀번호 확인 <span class="text-primary">*</span>
             </Label>
             <Input
               id="confirmPassword"
@@ -411,7 +411,7 @@ watch(
           <div
             class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
           >
-            <CheckCircle2 class="w-8 h-8 text-green-600" />
+            <CheckCircle2 class="w-8 h-8 text-primary" />
           </div>
           <h3 class="text-heading font-semibold mb-2">
             비밀번호가 변경되었습니다

@@ -61,6 +61,7 @@ import {
 } from "@/composables/useProduct";
 import { useOptimizedImage } from "@/composables";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
+import { isValidSizeMeasurement } from "@/lib/validators";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -127,26 +128,26 @@ const variantForm = reactive({ ...initialVariantForm });
 
 interface MeasurementForm {
   id: string;
-  totalLength: number;
-  shoulderWidth: number;
-  chestSection: number;
-  sleeveLength: number;
-  waistSection: number;
-  hipSection: number;
-  thighSection: number;
+  totalLength: string;
+  shoulderWidth: string;
+  chestSection: string;
+  sleeveLength: string;
+  waistSection: string;
+  hipSection: string;
+  thighSection: string;
   displayOrder: number;
 }
 
 // --- 폼 데이터 (사이즈 측정) ---
 const initialMeasurementForm = {
   id: "",
-  totalLength: 0,
-  shoulderWidth: 0,
-  chestSection: 0,
-  sleeveLength: 0,
-  waistSection: 0,
-  hipSection: 0,
-  thighSection: 0,
+  totalLength: "",
+  shoulderWidth: "",
+  chestSection: "",
+  sleeveLength: "",
+  waistSection: "",
+  hipSection: "",
+  thighSection: "",
   displayOrder: 0,
 };
 const measurementForm = reactive({ ...initialMeasurementForm });
@@ -471,27 +472,51 @@ const handleEditMeasurement = (measurement: any) => {
   isMeasurementEditMode.value = true;
   Object.assign(measurementForm, {
     ...measurement,
-    totalLength: Number(measurement.totalLength),
-    shoulderWidth: Number(measurement.shoulderWidth),
-    chestSection: Number(measurement.chestSection),
-    sleeveLength: Number(measurement.sleeveLength),
-    waistSection: Number(measurement.waistSection),
-    hipSection: Number(measurement.hipSection),
-    thighSection: Number(measurement.thighSection),
+    totalLength: String(measurement.totalLength || ""),
+    shoulderWidth: String(measurement.shoulderWidth || ""),
+    chestSection: String(measurement.chestSection || ""),
+    sleeveLength: String(measurement.sleeveLength || ""),
+    waistSection: String(measurement.waistSection || ""),
+    hipSection: String(measurement.hipSection || ""),
+    thighSection: String(measurement.thighSection || ""),
   });
 };
 
 const handleSaveMeasurement = async () => {
   if (!currentVariant.value) return;
   try {
+    // 사이즈 측정값 검증
+    const measurementValues = [
+      { field: "총장", value: measurementForm.totalLength },
+      { field: "어깨너비", value: measurementForm.shoulderWidth },
+      { field: "가슴단면", value: measurementForm.chestSection },
+      { field: "소매길이", value: measurementForm.sleeveLength },
+      { field: "허리단면", value: measurementForm.waistSection },
+      { field: "엉덩이단면", value: measurementForm.hipSection },
+      { field: "허벅지단면", value: measurementForm.thighSection },
+    ];
+
+    const invalidFields = measurementValues.filter(
+      ({ value }) => value.trim() !== "" && !isValidSizeMeasurement(value)
+    );
+
+    if (invalidFields.length > 0) {
+      const fieldNames = invalidFields.map(({ field }) => field).join(", ");
+      showAlert(
+        `잘못된 측정값입니다 (${fieldNames}). 1~999 범위의 숫자, 소수점, 범위(95-100) 형식만 허용됩니다.`,
+        { type: "error" }
+      );
+      return;
+    }
+
     const payload = {
-      totalLength: String(measurementForm.totalLength),
-      shoulderWidth: String(measurementForm.shoulderWidth),
-      chestSection: String(measurementForm.chestSection),
-      sleeveLength: String(measurementForm.sleeveLength),
-      waistSection: String(measurementForm.waistSection),
-      hipSection: String(measurementForm.hipSection),
-      thighSection: String(measurementForm.thighSection),
+      totalLength: measurementForm.totalLength.trim() || "",
+      shoulderWidth: measurementForm.shoulderWidth.trim() || "",
+      chestSection: measurementForm.chestSection.trim() || "",
+      sleeveLength: measurementForm.sleeveLength.trim() || "",
+      waistSection: measurementForm.waistSection.trim() || "",
+      hipSection: measurementForm.hipSection.trim() || "",
+      thighSection: measurementForm.thighSection.trim() || "",
       displayOrder: measurementForm.displayOrder,
     };
 
@@ -707,7 +732,7 @@ onMounted(async () => {
                       variant="outline"
                       size="sm"
                       @click="openVariantManager(product)"
-                      class="gap-1.5"
+                      class="gap-1.5 text-xs"
                     >
                       <Settings class="w-3.5 h-3.5" /> 옵션
                     </Button>
@@ -715,7 +740,7 @@ onMounted(async () => {
                       variant="outline"
                       size="sm"
                       @click="openSizeManager(product)"
-                      class="gap-1.5 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
+                      class="gap-1.5 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 text-xs"
                     >
                       <Ruler class="w-3.5 h-3.5" /> 사이즈
                     </Button>
@@ -723,7 +748,7 @@ onMounted(async () => {
                       variant="outline"
                       size="sm"
                       @click="openPreviewModal(product)"
-                      class="gap-1.5 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                      class="gap-1.5 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 text-xs"
                     >
                       <Eye class="w-3.5 h-3.5" /> 미리보기
                     </Button>
@@ -805,7 +830,7 @@ onMounted(async () => {
             <div class="grid grid-cols-2 gap-6 mt-6">
               <div class="space-y-2">
                 <Label class="text-admin">
-                  상품명 <span class="text-red-500">*</span>
+                  상품명 <span class="text-primary">*</span>
                 </Label>
                 <Input
                   v-model="productForm.name"
@@ -816,7 +841,7 @@ onMounted(async () => {
               </div>
               <div class="space-y-2">
                 <Label class="text-admin">
-                  Slug (URL용) <span class="text-red-500">*</span>
+                  Slug (URL용) <span class="text-primary">*</span>
                 </Label>
                 <Input
                   v-model="productForm.slug"
@@ -830,7 +855,7 @@ onMounted(async () => {
             <div class="grid grid-cols-3 gap-6">
               <div class="space-y-2">
                 <Label class="text-admin">
-                  판매 가격 <span class="text-red-500">*</span>
+                  판매 가격 <span class="text-primary">*</span>
                 </Label>
                 <Input
                   v-model.number="productForm.price"
@@ -849,7 +874,7 @@ onMounted(async () => {
               </div>
               <div class="space-y-2">
                 <Label class="text-admin">
-                  카테고리 <span class="text-red-500">*</span>
+                  카테고리 <span class="text-primary">*</span>
                 </Label>
                 <Select v-model="productForm.categoryId">
                   <SelectTrigger>
@@ -874,7 +899,7 @@ onMounted(async () => {
                 v-model="productForm.isAvailable"
                 type="checkbox"
                 id="productIsAvailable"
-                class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                class="w-4 h-4 rounded border-border accent-primary focus:ring-primary/20"
               />
               <Label for="productIsAvailable" class="cursor-pointer">
                 판매 가능 상태
@@ -921,7 +946,7 @@ onMounted(async () => {
               <!-- 상품 설명 -->
               <div class="space-y-2">
                 <Label class="text-admin">
-                  상품 설명 <span class="text-red-500">*</span>
+                  상품 설명 <span class="text-primary">*</span>
                 </Label>
                 <Textarea
                   v-model="productForm.description"
@@ -1309,10 +1334,9 @@ onMounted(async () => {
                       {{ field.label }} (cm)
                     </Label>
                     <Input
-                      v-model.number="measurementForm[field.id]"
-                      type="number"
-                      step="0.1"
-                      placeholder="0.0"
+                      v-model="measurementForm[field.id]"
+                      type="text"
+                      placeholder="예: 95, 95.5, 95-100"
                     />
                   </div>
                 </div>

@@ -413,7 +413,7 @@ onMounted(async () => {
                     <a
                       :href="image.linkUrl"
                       target="_blank"
-                      class="text-caption text-blue-600 hover:underline flex items-center gap-1"
+                      class="text-caption text-primary hover:underline flex items-center gap-1"
                     >
                       {{ image.linkUrl.substring(0, 40) }}{{ image.linkUrl.length > 40 ? '...' : '' }}
                       <ExternalLink class="w-3 h-3" />
@@ -503,7 +503,7 @@ onMounted(async () => {
             <!-- 이미지 업로드 -->
             <div class="space-y-3">
               <Label class="text-admin">
-                이미지 <span class="text-red-500">*</span>
+                이미지 <span class="text-primary">*</span>
               </Label>
 
               <div class="flex items-center gap-3">
@@ -576,7 +576,7 @@ onMounted(async () => {
                 v-model="form.isActive"
                 type="checkbox"
                 id="isActive"
-                class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                class="w-4 h-4 rounded border-border accent-primary focus:ring-primary/20"
               />
               <Label for="isActive" class="cursor-pointer">
                 활성화 (체크 해제 시 사이트에 표시되지 않음)
