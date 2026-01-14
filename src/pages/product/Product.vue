@@ -295,8 +295,8 @@ onUnmounted(() => {
 
             <!-- SOLD OUT 배지 -->
             <div
-              v-if="totalStock !== undefined && totalStock === 0"
-              class="absolute top-2 right-2 z-10 px-1 text-body text-muted-foreground font-medium"
+              v-if="totalStock !== undefined && Number(totalStock) === 0"
+              class="absolute top-2 right-2 z-10 px-2 py-1 text-caption font-bold bg-primary/80 text-white rounded"
             >
               SOLD OUT
             </div>
