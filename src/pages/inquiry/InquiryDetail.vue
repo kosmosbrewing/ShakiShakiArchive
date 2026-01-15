@@ -251,7 +251,7 @@ onMounted(() => {
         v-if="canDelete && inquiry"
         variant="ghost"
         size="sm"
-        class="text-primary hover:text-primary hover:bg-primary/10 transition-colors"
+        class="text-primary hover:text-primary hover:bg-primary/5 transition-colors"
         :disabled="deleteLoading"
         @click="confirmDelete"
       >
@@ -373,7 +373,7 @@ onMounted(() => {
           <Card
             v-for="reply in inquiry.replies"
             :key="reply.id"
-            class="bg-primary/10 border-primary/20 shadow-sm rounded-xl"
+            class="bg-primary/5 border-primary/20 shadow-sm rounded-xl"
           >
             <CardContent class="p-4 sm:p-5">
               <!-- 답변자 정보 -->
@@ -396,7 +396,7 @@ onMounted(() => {
                   v-if="isAdmin"
                   variant="ghost"
                   size="sm"
-                  class="text-primary hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                  class="text-primary hover:text-primary hover:bg-primary/5 transition-colors shrink-0"
                   @click="confirmReplyDelete(String(reply.id))"
                 >
                   <Trash2 class="w-4 h-4" />

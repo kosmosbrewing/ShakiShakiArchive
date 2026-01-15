@@ -324,7 +324,10 @@ const handlePayment = async () => {
       throw new Error("주문 생성에 실패했습니다. 재고 부족일 수 있습니다.");
     }
 
-    console.log("[결제 프로세스] 주문 생성 성공 (재고 차감 완료):", orderData.orderId);
+    console.log(
+      "[결제 프로세스] 주문 생성 성공 (재고 차감 완료):",
+      orderData.orderId
+    );
 
     // 현재 주문 ID 저장 (결제 취소 시 주문 취소용)
     currentOrderId.value = orderData.orderId;
@@ -353,7 +356,9 @@ const handlePayment = async () => {
       try {
         console.log("[결제 프로세스] 주문 삭제:", orderData.orderId);
         await deleteOrder(orderData.orderId);
-        console.log("[결제 프로세스] 주문 삭제 성공 (백엔드에서 재고 자동 복구)");
+        console.log(
+          "[결제 프로세스] 주문 삭제 성공 (백엔드에서 재고 자동 복구)"
+        );
       } catch (deleteError) {
         console.error("[결제 프로세스] 주문 삭제 실패:", deleteError);
       }
@@ -488,7 +493,9 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       showAlert("결제가 취소되었습니다.");
     } else {
       // iframe이 닫힌 경우는 정상 결제 진행일 수 있으므로 에러 메시지 표시하지 않음
-      console.log("[토스페이] 결제창이 닫혔습니다 - PaymentCallback에서 처리 예정");
+      console.log(
+        "[토스페이] 결제창이 닫혔습니다 - PaymentCallback에서 처리 예정"
+      );
     }
 
     // 상태 복구
@@ -589,7 +596,6 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
 
     // PC 팝업 방식: focus 이벤트 및 localStorage로 결제 결과 수신
     if (!isMobile.value) {
-
       // 팝업 강제 종료 처리 함수 (먼저 정의)
       const handlePopupForceClosed = async () => {
         console.log("[네이버페이] 팝업 강제 종료 처리 시작");
@@ -601,7 +607,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             await cancelOrder(currentOrderId.value, {
               cancelReason: "네이버페이 팝업 강제 종료",
             });
-            console.log("[팝업 강제 종료] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+            console.log(
+              "[팝업 강제 종료] 주문 취소 완료 (백엔드에서 재고 자동 복구)"
+            );
             currentOrderId.value = null;
             resetReservation();
           } catch (cancelError) {
@@ -699,7 +707,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             currentOrderId.value = null; // 주문 ID 초기화
 
             // ✅ 결제 확인 화면으로 이동 (PaymentCallback.vue에서 Alert 표시)
-            router.replace(`/checkout/success?result=success&orderId=${orderId}&provider=naverpay`)
+            router.replace(
+              `/checkout/success?result=success&orderId=${orderId}&provider=naverpay`
+            );
           } else if (type === "PAYMENT_ERROR") {
             // 결제 실패: 주문 취소
             isPaymentPopupOpen.value = false;
@@ -710,7 +720,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
                 await cancelOrder(orderId, {
                   cancelReason: "네이버페이 결제 실패",
                 });
-                console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+                console.log(
+                  "[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)"
+                );
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
@@ -718,7 +730,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
                 currentOrderId.value = null;
               }
             } else {
-              console.warn("[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.");
+              console.warn(
+                "[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다."
+              );
             }
 
             showAlert(message || "결제 처리 중 오류가 발생했습니다.", {
@@ -734,7 +748,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
                 await cancelOrder(orderId, {
                   cancelReason: "사용자가 결제를 취소했습니다.",
                 });
-                console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+                console.log(
+                  "[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)"
+                );
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
@@ -742,7 +758,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
                 currentOrderId.value = null;
               }
             } else {
-              console.warn("[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.");
+              console.warn(
+                "[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다."
+              );
             }
 
             showAlert("결제가 취소되었습니다.");
@@ -847,7 +865,10 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 🔒 Security First: 에러 발생 시 주문 취소 API 호출 (재고는 백엔드가 복구)
     if (orderData.orderId) {
       try {
-        console.log("[네이버페이] 주문 취소 API 호출 (오류):", orderData.orderId);
+        console.log(
+          "[네이버페이] 주문 취소 API 호출 (오류):",
+          orderData.orderId
+        );
         await cancelOrder(orderData.orderId, {
           cancelReason: "네이버페이 결제 호출 오류",
         });
@@ -910,10 +931,16 @@ const handleBeforeUnload = () => {
 
   // 주문이 생성되었으면 cleanup API 호출 (sendBeacon으로 보장)
   if (currentOrderId.value) {
-    console.log("[페이지 이탈] 주문 정리 (브라우저 강제 종료 대응):", currentOrderId.value);
+    console.log(
+      "[페이지 이탈] 주문 정리 (브라우저 강제 종료 대응):",
+      currentOrderId.value
+    );
     // sendBeacon으로 paying 상태 주문의 재고 즉시 복구
     const sent = cleanupOrder(currentOrderId.value);
-    console.log("[페이지 이탈] cleanup 요청 전송:", sent ? "성공" : "실패 (Cron이 처리)");
+    console.log(
+      "[페이지 이탈] cleanup 요청 전송:",
+      sent ? "성공" : "실패 (Cron이 처리)"
+    );
   }
   // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
   // 주문 생성 전에는 재고가 차감되지 않으므로 정리할 필요 없음
@@ -967,7 +994,10 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
 
         // 프론트엔드 상태만 정리
         if (currentOrderId.value) {
-          console.log("[팝업 종료] 프론트엔드 상태 정리:", currentOrderId.value);
+          console.log(
+            "[팝업 종료] 프론트엔드 상태 정리:",
+            currentOrderId.value
+          );
           currentOrderId.value = null;
         }
 
@@ -1229,7 +1259,7 @@ onUnmounted(() => {
 
           <Button
             @click="handlePayment"
-            class="w-full font-bold"
+            class="w-full font-bold hover:bg-primary/80"
             size="lg"
             :disabled="isPaymentProcessing || isPaymentPopupOpen"
           >

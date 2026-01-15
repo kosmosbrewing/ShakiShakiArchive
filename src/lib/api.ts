@@ -397,7 +397,7 @@ export async function fetchProducts(
   try {
     const response = await apiRequest<PaginatedProductsResponse | any[]>(
       `/api/products?${params.toString()}`,
-      { cachePolicy: 'products' }
+      { cachePolicy: 'productList' }
     );
 
     // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
@@ -440,14 +440,14 @@ export async function fetchAllProducts(
 
 // 상품 상세 조회
 export async function fetchProduct(id: string | number): Promise<any> {
-  return apiRequest(`/api/products/${id}`, { cachePolicy: 'products' });
+  return apiRequest(`/api/products/${id}`, { cachePolicy: 'productDetail' });
 }
 
 // 상품 옵션(Variants) 조회
 export async function fetchProductVariants(
   productId: string | number
 ): Promise<any[]> {
-  return apiRequest(`/api/products/${productId}/variants`, { cachePolicy: 'products' });
+  return apiRequest(`/api/products/${productId}/variants`, { cachePolicy: 'productDetail' });
 }
 
 // 카테고리 목록 조회
@@ -798,7 +798,7 @@ export async function deleteProductVariant(
 export async function fetchSizeMeasurements(
   variantId: number | string
 ): Promise<any[]> {
-  return apiRequest(`/api/variants/${variantId}/measurements`);
+  return apiRequest(`/api/variants/${variantId}/measurements`, { cachePolicy: 'productDetail' });
 }
 
 export async function createSizeMeasurement(

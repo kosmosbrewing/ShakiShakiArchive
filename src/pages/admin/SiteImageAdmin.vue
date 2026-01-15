@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
 import {
   Trash2,
@@ -623,12 +624,9 @@ onMounted(async () => {
             </div>
 
             <!-- 에러 메시지 -->
-            <div
-              v-if="errorMessage"
-              class="bg-destructive/10 text-destructive text-caption p-4 rounded-xl border border-destructive/20 font-bold animate-pulse"
-            >
+            <AlertDescription v-if="errorMessage" class="animate-pulse">
               {{ errorMessage }}
-            </div>
+            </AlertDescription>
 
             <!-- 버튼 -->
             <div

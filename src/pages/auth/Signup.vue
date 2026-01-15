@@ -9,18 +9,19 @@ import { validateEmail } from "@/utils/email-validation";
 
 // 환경 체크: Production 환경에서는 준비중 표시
 const isProduction = computed(() => import.meta.env.MODE === "production");
+import { CheckCircle2, AlertCircle, Mail, KeyRound } from "lucide-vue-next";
 import {
-  CheckCircle2,
-  AlertCircle,
-  Mail,
-  KeyRound,
-} from "lucide-vue-next";
-import { PhoneInput, AddressSearchModal, PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
+  PhoneInput,
+  AddressSearchModal,
+  PasswordStrengthIndicator,
+  LoadingSpinner,
+} from "@/components/common";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Input refs
 const emailInputRef = ref<InstanceType<typeof Input> | null>(null);
@@ -47,7 +48,10 @@ const handleEmailEnter = () => {
       verificationButtonRef.value?.$el?.focus();
     });
   } else {
-    showValidationError(emailValidation.error || '올바른 이메일 형식을 입력해주세요.', emailInputRef);
+    showValidationError(
+      emailValidation.error || "올바른 이메일 형식을 입력해주세요.",
+      emailInputRef
+    );
   }
 };
 
@@ -158,7 +162,8 @@ const checkEmailFormat = () => {
   // 형식 검증만 수행 (API 호출 없음)
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
-    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
+    verificationState.errorMessage =
+      emailValidation.error || "유효한 이메일을 입력해주세요.";
   } else {
     // 형식이 유효하면 에러 메시지 제거
     verificationState.errorMessage = "";
@@ -170,7 +175,8 @@ const sendVerificationCode = async () => {
   // 형식 검증
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
-    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
+    verificationState.errorMessage =
+      emailValidation.error || "유효한 이메일을 입력해주세요.";
     return;
   }
 
@@ -194,7 +200,8 @@ const sendVerificationCode = async () => {
     ) {
       verificationState.errorMessage = "이미 가입된 이메일입니다";
     } else {
-      verificationState.errorMessage = error.message || "인증코드 발송에 실패했습니다.";
+      verificationState.errorMessage =
+        error.message || "인증코드 발송에 실패했습니다.";
     }
   } finally {
     verificationState.isLoading = false;
@@ -371,7 +378,9 @@ const handleSignup = async () => {
             빠른 시일 내에 서비스를 오픈할 예정입니다.
           </p>
           <router-link to="/">
-            <Button variant="outline" class="mt-4 font-medium">홈으로 돌아가기</Button>
+            <Button variant="outline" class="mt-4 font-medium"
+              >홈으로 돌아가기</Button
+            >
           </router-link>
         </div>
       </CardContent>
@@ -613,16 +622,14 @@ const handleSignup = async () => {
             </label>
           </div>
 
-          <Alert v-if="errorMessage" variant="destructive">
-            <AlertCircle class="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{{ errorMessage }}</AlertDescription>
-          </Alert>
+          <AlertDescription v-if="errorMessage">
+            {{ errorMessage }}
+          </AlertDescription>
 
           <Button
             ref="signupButtonRef"
             type="submit"
-            class="w-full mt-2 font-bold"
+            class="w-full mt-2 font-bold hover:bg-primary/80"
             size="lg"
             :disabled="isSubmitting || !verificationState.isVerified"
           >
@@ -640,7 +647,10 @@ const handleSignup = async () => {
       </CardContent>
     </Card>
 
-    <p v-if="!isProduction" class="text-center text-muted-foreground mt-4 text-caption sm:text-body px-2">
+    <p
+      v-if="!isProduction"
+      class="text-center text-muted-foreground mt-4 text-caption sm:text-body px-2"
+    >
       이미 계정이 있으신가요?
       <router-link to="/login" class="text-primary hover:underline font-medium"
         >로그인하기</router-link
@@ -653,6 +663,5 @@ const handleSignup = async () => {
       @close="isAddressSearchOpen = false"
       @select="handleAddressSelect"
     />
-
   </section>
 </template>

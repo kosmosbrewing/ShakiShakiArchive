@@ -437,29 +437,45 @@ export function useProductList() {
       : categoryParam.trim().toLowerCase();
   };
 
-  // 상품 정렬 (품절 상품 맨 뒤로)
+  // 상품 정렬 (재고 있음 → SOLD OUT 순서, isAvailable=false는 제외)
   const sortByStock = (items: ProductListItem[]): ProductListItem[] => {
-    return [...items].sort((a, b) => {
-      const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
-      const bStock = b.totalStock ?? 1;
+    // 1. 판매 가능 상품만 필터링 (isAvailable=false는 화면에서 제외)
+    const available = items.filter((item) => item.isAvailable === true);
 
-      // 품절(재고 0) 상품을 뒤로 정렬
-      if (aStock === 0 && bStock > 0) return 1;
-      if (aStock > 0 && bStock === 0) return -1;
-      return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
-    });
+    // 2. 판매 가능 상품 중 재고 있는 것과 품절 분리
+    const inStock = available.filter((item) => (item.totalStock ?? 1) > 0);
+    const soldOut = available.filter((item) => item.totalStock !== undefined && item.totalStock === 0);
+
+    // 3. 순서: 재고 있음 → SOLD OUT
+    return [...inStock, ...soldOut];
   };
 
   // API 응답을 ProductListItem으로 변환
-  const mapProduct = (item: any): ProductListItem => ({
-    id: item.id,
-    imageUrl: item.imageUrl,
-    images: item.images ?? [],
-    name: item.name,
-    price: Number(item.price),
-    totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
-    isAvailable: item.isAvailable,
-  });
+  const mapProduct = (item: any): ProductListItem => {
+    const stock = item.totalStock ?? item.stockQuantity;
+
+    // isAvailable을 포괄적으로 boolean 변환
+    // false로 간주되는 값: false, "false", "False", 0, "0", null, undefined
+    const available = !(
+      item.isAvailable === false ||
+      item.isAvailable === "false" ||
+      item.isAvailable === "False" ||
+      item.isAvailable === 0 ||
+      item.isAvailable === "0" ||
+      item.isAvailable === null ||
+      item.isAvailable === undefined
+    );
+
+    return {
+      id: item.id,
+      imageUrl: item.imageUrl,
+      images: item.images ?? [],
+      name: item.name,
+      price: Number(item.price),
+      totalStock: stock !== undefined && stock !== null ? Number(stock) : undefined,
+      isAvailable: available,
+    };
+  };
 
   // 상품 목록 초기 로드
   const loadProducts = async (search?: string) => {

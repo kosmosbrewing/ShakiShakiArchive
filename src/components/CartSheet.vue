@@ -8,7 +8,7 @@ import { useCart } from "@/composables/useCart";
 import { formatPrice } from "@/lib/formatters";
 
 // 아이콘
-import { AlertCircle, X } from "lucide-vue-next";
+import { X } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import {
@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AlertDescription } from "@/components/ui/alert";
 import {
   Sheet,
   SheetContent,
@@ -179,7 +180,7 @@ const handleTouchEnd = () => {
           <Button
             variant="outline"
             @click="continueShopping"
-            class="rounded-lg bg-primary px-6 py-2 text-body font-medium text-primary-foreground transition-colors"
+            class="rounded-lg bg-primary hover:bg-primary/80 px-6 py-2 text-body font-medium text-primary-foreground transition-colors"
           >
             쇼핑하러 가기
           </Button>
@@ -191,18 +192,14 @@ const handleTouchEnd = () => {
             <!-- 재고 부족 경고 -->
             <Card
               v-if="hasOutOfStockItems"
-              class="border-primary/50 bg-primary/10 rounded-2xl"
+              class="border-primary/50 bg-primary/5 rounded-2xl"
             >
-              <CardContent class="flex items-center gap-2 p-3">
-                <AlertCircle class="w-4 h-4 text-primary flex-shrink-0" />
-                <div class="flex-1">
-                  <p class="text-caption font-semibold text-primary">
-                    재고 부족 상품이 있습니다
-                  </p>
-                  <p class="text-caption text-muted-foreground">
-                    재고 부족 상품을 삭제해주세요.
-                  </p>
-                </div>
+              <CardContent class="p-3">
+                <AlertDescription>
+                  아쉽게도 일부 상품의 재고가 소진되었습니다.
+                  <p />
+                  원활한 주문을 위해 목록에서 제외해 주세요.
+                </AlertDescription>
               </CardContent>
             </Card>
 
@@ -211,7 +208,7 @@ const handleTouchEnd = () => {
               :key="item.id"
               :class="[
                 'rounded-2xl overflow-hidden',
-                isOutOfStock(item) ? 'border-primary/30 bg-muted/30' : '',
+                isOutOfStock(item) ? 'border-primary/30 bg-primary/5 ' : '',
               ]"
             >
               <CardContent class="flex gap-4 p-3 relative">
@@ -253,7 +250,7 @@ const handleTouchEnd = () => {
                         variant="ghost"
                         size="sm"
                         @click="removeItem(item.id)"
-                        class="text-muted-foreground hover:text-primary h-auto p-0.5 flex-shrink-0"
+                        class="text-muted-foreground hover:text-primary hover:bg-transparent h-auto p-0.5 flex-shrink-0"
                       >
                         <X class="h-3.5 w-3.5" />
                       </Button>
@@ -273,15 +270,11 @@ const handleTouchEnd = () => {
                     </p>
 
                     <!-- 재고 부족 메시지 -->
-                    <p
-                      v-if="isOutOfStock(item)"
-                      class="text-caption text-primary mt-1 font-medium"
-                    >
-                      재고 부족
-                      <span v-if="item.variant"
-                        >(남은 재고: {{ item.variant.stockQuantity }}개)</span
+                    <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
+                      재고 부족<span v-if="item.variant">
+                        (남은 재고: {{ item.variant.stockQuantity }}개)</span
                       >
-                    </p>
+                    </AlertDescription>
                   </div>
 
                   <div class="flex justify-between items-center mt-2">
@@ -338,7 +331,7 @@ const handleTouchEnd = () => {
           <Button
             @click="goToCart"
             :disabled="hasOutOfStockItems"
-            class="w-full font-bold"
+            class="w-full font-bold hover:bg-primary/80"
             size="lg"
           >
             {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}

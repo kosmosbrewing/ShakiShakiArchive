@@ -95,10 +95,9 @@ const loadData = async () => {
     pagination.value = response.pagination;
   } catch (error: any) {
     console.error("회원 목록 로드 실패:", error);
-    showAlert(
-      error.message || "회원 목록을 불러오는데 실패했습니다.",
-      { type: "error" }
-    );
+    showAlert(error.message || "회원 목록을 불러오는데 실패했습니다.", {
+      type: "error",
+    });
   } finally {
     loading.value = false;
   }
@@ -119,10 +118,9 @@ const openDetailModal = async (user: User) => {
     userStats.value = response.stats;
   } catch (error: any) {
     console.error("회원 상세 정보 로드 실패:", error);
-    showAlert(
-      error.message || "회원 상세 정보를 불러오는데 실패했습니다.",
-      { type: "error" }
-    );
+    showAlert(error.message || "회원 상세 정보를 불러오는데 실패했습니다.", {
+      type: "error",
+    });
   } finally {
     loadingDetail.value = false;
   }
@@ -169,7 +167,10 @@ const formatDate = (dateStr: string | null | undefined) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "-";
 
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(date.getDate()).padStart(2, "0")}`;
   } catch (error) {
     console.error("날짜 포맷팅 오류:", error);
     return "-";
@@ -183,7 +184,12 @@ const formatDateTime = (dateStr: string | null | undefined) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "-";
 
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(date.getDate()).padStart(2, "0")} ${String(
+      date.getHours()
+    ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
   } catch (error) {
     console.error("날짜/시간 포맷팅 오류:", error);
     return "-";
@@ -216,7 +222,11 @@ onMounted(async () => {
           전체 {{ pagination.total }}명의 회원이 가입되어 있습니다.
         </p>
       </div>
-      <Button variant="outline" @click="loadData" class="mb-2 gap-2 text-admin font-semibold">
+      <Button
+        variant="outline"
+        @click="loadData"
+        class="mb-2 gap-2 text-admin font-semibold"
+      >
         <RotateCcw class="w-4 h-4" />
         새로고침
       </Button>
@@ -285,7 +295,7 @@ onMounted(async () => {
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div
-                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                    class="h-10 w-10 bg-primary/5 rounded-full flex items-center justify-center"
                   >
                     <span class="text-body font-bold text-primary">
                       {{ user.userName.charAt(0) }}
@@ -428,217 +438,243 @@ onMounted(async () => {
           </div>
 
           <div class="space-y-6">
-          <!-- 로딩 상태 -->
-          <LoadingSpinner v-if="loadingDetail" :center="false" class="py-12" />
+            <!-- 로딩 상태 -->
+            <LoadingSpinner
+              v-if="loadingDetail"
+              :center="false"
+              class="py-12"
+            />
 
-          <div v-else>
-            <!-- 회원 통계 -->
-            <div v-if="userStats" class="mb-6">
-              <h3 class="text-body font-bold text-admin mb-4">활동 통계</h3>
-              <div class="grid grid-cols-2 gap-4">
-                <div
-                  class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3"
-                >
+            <div v-else>
+              <!-- 회원 통계 -->
+              <div v-if="userStats" class="mb-6">
+                <h3 class="text-body font-bold text-admin mb-4">활동 통계</h3>
+                <div class="grid grid-cols-2 gap-4">
                   <div
-                    class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"
+                    class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3"
                   >
-                    <ShoppingBag class="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p class="text-caption text-blue-700">총 주문</p>
-                    <p class="text-heading font-bold text-blue-900">
-                      {{ userStats.totalOrders }}건
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div
-                    class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"
-                  >
-                    <ShoppingBag class="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p class="text-caption text-green-700">총 구매액</p>
-                    <p class="text-heading font-bold text-green-900">
-                      {{ formatCurrency(userStats.totalSpent) }}
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  class="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div
-                    class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"
-                  >
-                    <Calendar class="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p class="text-caption text-purple-700">최근 주문일</p>
-                    <p class="text-body font-semibold text-purple-900">
-                      {{
-                        userStats.lastOrderDate
-                          ? formatDate(userStats.lastOrderDate)
-                          : "없음"
-                      }}
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  class="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3"
-                >
-                  <div
-                    class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center"
-                  >
-                    <MessageCircle class="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p class="text-caption text-orange-700">총 문의</p>
-                    <p class="text-heading font-bold text-orange-900">
-                      {{ userStats.totalInquiries }}건
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator class="my-6" />
-
-            <!-- 기본 정보 -->
-            <div>
-              <h3 class="text-body font-bold text-admin mb-4">기본 정보</h3>
-              <div class="grid grid-cols-2 gap-6">
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    회원명
-                  </label>
-                  <div class="text-body text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ selectedUser.userName }}
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    이메일
-                  </label>
-                  <div class="text-body text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ selectedUser.email }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator class="my-6" />
-
-            <!-- 연락처 정보 -->
-            <div>
-              <h3 class="text-body font-bold text-admin mb-4">연락처 정보</h3>
-              <div class="grid grid-cols-2 gap-6">
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    연락처
-                  </label>
-                  <div class="text-body text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ selectedUser.phone }}
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    우편번호
-                  </label>
-                  <div class="text-body text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ selectedUser.zipCode }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator class="my-6" />
-
-            <!-- 주소 정보 -->
-            <div>
-              <h3 class="text-body font-bold text-admin mb-4">주소 정보</h3>
-              <div class="space-y-2">
-                <label class="text-admin text-caption font-semibold">
-                  주소
-                </label>
-                <div class="text-body text-admin bg-muted/30 px-3 py-2 rounded">
-                  {{ selectedUser.address }}
-                </div>
-                <div class="text-caption text-admin-muted bg-muted/20 px-3 py-2 rounded">
-                  {{ selectedUser.detailAddress || "상세 주소 없음" }}
-                </div>
-              </div>
-            </div>
-
-            <Separator class="my-6" />
-
-            <!-- 기타 정보 -->
-            <div>
-              <h3 class="text-body font-bold text-admin mb-4">기타 정보</h3>
-              <div class="grid grid-cols-2 gap-6">
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    권한
-                  </label>
-                  <div>
-                    <Badge
-                      :variant="selectedUser.isAdmin ? 'default' : 'outline'"
+                    <div
+                      class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"
                     >
-                      {{ selectedUser.isAdmin ? "관리자" : "일반회원" }}
-                    </Badge>
+                      <ShoppingBag class="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p class="text-caption text-blue-700">총 주문</p>
+                      <p class="text-heading font-bold text-blue-900">
+                        {{ userStats.totalOrders }}건
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    이메일 수신 동의
-                  </label>
-                  <div>
-                    <Badge
-                      :variant="selectedUser.emailOptIn ? 'default' : 'outline'"
+
+                  <div
+                    class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3"
+                  >
+                    <div
+                      class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"
                     >
-                      {{ selectedUser.emailOptIn ? "동의" : "미동의" }}
-                    </Badge>
+                      <ShoppingBag class="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p class="text-caption text-green-700">총 구매액</p>
+                      <p class="text-heading font-bold text-green-900">
+                        {{ formatCurrency(userStats.totalSpent) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-center gap-3"
+                  >
+                    <div
+                      class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"
+                    >
+                      <Calendar class="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p class="text-caption text-purple-700">최근 주문일</p>
+                      <p class="text-body font-semibold text-purple-900">
+                        {{
+                          userStats.lastOrderDate
+                            ? formatDate(userStats.lastOrderDate)
+                            : "없음"
+                        }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3"
+                  >
+                    <div
+                      class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center"
+                    >
+                      <MessageCircle class="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p class="text-caption text-orange-700">총 문의</p>
+                      <p class="text-heading font-bold text-orange-900">
+                        {{ userStats.totalInquiries }}건
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator class="my-6" />
+
+              <!-- 기본 정보 -->
+              <div>
+                <h3 class="text-body font-bold text-admin mb-4">기본 정보</h3>
+                <div class="grid grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      회원명
+                    </label>
+                    <div
+                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ selectedUser.userName }}
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      이메일
+                    </label>
+                    <div
+                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ selectedUser.email }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator class="my-6" />
+
+              <!-- 연락처 정보 -->
+              <div>
+                <h3 class="text-body font-bold text-admin mb-4">연락처 정보</h3>
+                <div class="grid grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      연락처
+                    </label>
+                    <div
+                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ selectedUser.phone }}
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      우편번호
+                    </label>
+                    <div
+                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ selectedUser.zipCode }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator class="my-6" />
+
+              <!-- 주소 정보 -->
+              <div>
+                <h3 class="text-body font-bold text-admin mb-4">주소 정보</h3>
+                <div class="space-y-2">
+                  <label class="text-admin text-caption font-semibold">
+                    주소
+                  </label>
+                  <div
+                    class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
+                  >
+                    {{ selectedUser.address }}
+                  </div>
+                  <div
+                    class="text-caption text-admin-muted bg-muted/20 px-3 py-2 rounded"
+                  >
+                    {{ selectedUser.detailAddress || "상세 주소 없음" }}
+                  </div>
+                </div>
+              </div>
+
+              <Separator class="my-6" />
+
+              <!-- 기타 정보 -->
+              <div>
+                <h3 class="text-body font-bold text-admin mb-4">기타 정보</h3>
+                <div class="grid grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      권한
+                    </label>
+                    <div>
+                      <Badge
+                        :variant="selectedUser.isAdmin ? 'default' : 'outline'"
+                      >
+                        {{ selectedUser.isAdmin ? "관리자" : "일반회원" }}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      이메일 수신 동의
+                    </label>
+                    <div>
+                      <Badge
+                        :variant="
+                          selectedUser.emailOptIn ? 'default' : 'outline'
+                        "
+                      >
+                        {{ selectedUser.emailOptIn ? "동의" : "미동의" }}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator class="my-6" />
+
+              <!-- 가입/수정 일시 -->
+              <div>
+                <h3 class="text-body font-bold text-admin mb-4">활동 이력</h3>
+                <div class="grid grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      가입일시
+                    </label>
+                    <div
+                      class="text-caption text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ formatDateTime(selectedUser.createdAt) }}
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-admin text-caption font-semibold">
+                      최종 수정일시
+                    </label>
+                    <div
+                      class="text-caption text-admin bg-muted/30 px-3 py-2 rounded"
+                    >
+                      {{ formatDateTime(selectedUser.updatedAt) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <Separator class="my-6" />
-
-            <!-- 가입/수정 일시 -->
-            <div>
-              <h3 class="text-body font-bold text-admin mb-4">활동 이력</h3>
-              <div class="grid grid-cols-2 gap-6">
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    가입일시
-                  </label>
-                  <div class="text-caption text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ formatDateTime(selectedUser.createdAt) }}
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
-                    최종 수정일시
-                  </label>
-                  <div class="text-caption text-admin bg-muted/30 px-3 py-2 rounded">
-                    {{ formatDateTime(selectedUser.updatedAt) }}
-                  </div>
-                </div>
-              </div>
+            <!-- 하단 버튼 -->
+            <div class="flex justify-end gap-2 mt-8 pt-6 border-t">
+              <Button
+                variant="outline"
+                class="font-medium"
+                @click="closeDetailModal"
+              >
+                닫기
+              </Button>
             </div>
-          </div>
-
-          <!-- 하단 버튼 -->
-          <div class="flex justify-end gap-2 mt-8 pt-6 border-t">
-            <Button variant="outline" class="font-medium" @click="closeDetailModal">
-              닫기
-            </Button>
-          </div>
           </div>
         </div>
       </div>

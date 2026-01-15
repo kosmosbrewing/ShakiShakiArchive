@@ -334,16 +334,8 @@ const handleConfirmCancel = async (reason: string) => {
 
     closeCancelDialog();
 
-    // 환불 정보가 있으면 알림
-    if (result.refund) {
-      showAlert(
-        `주문이 취소되었습니다.\n환불 금액: ${formatPrice(
-          result.refund.cancelAmount
-        )}`
-      );
-    } else {
-      showAlert("주문이 취소되었습니다.");
-    }
+    // 취소 완료 알림
+    showAlert("주문이 취소되었습니다.");
   } else {
     showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", {
       type: "error",

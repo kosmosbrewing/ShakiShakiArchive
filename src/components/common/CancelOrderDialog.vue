@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 주문 취소 다이얼로그 컴포넌트
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
+import { useAlert } from "@/composables/useAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,9 @@ const emit = defineEmits<{
   (e: "confirm", reason: string): void;
 }>();
 
+// Alert composable
+const { showConfirm } = useAlert();
+
 // 취소 사유 목록
 const cancelReasons = [
   "단순 변심",
@@ -35,6 +39,7 @@ const cancelReasons = [
 
 const selectedReason = ref<string>("");
 const customReason = ref<string>("");
+const customReasonInput = ref<any>(null);
 
 // 최종 취소 사유
 const finalReason = computed(() => {
@@ -53,8 +58,17 @@ const canConfirm = computed(() => {
 });
 
 // 취소 확인
-const handleConfirm = () => {
+const handleConfirm = async () => {
   if (!canConfirm.value || props.loading) return;
+
+  // 최종 확인
+  const confirmed = await showConfirm(
+    "주문을 취소하시겠습니까?\n취소된 주문은 되돌릴 수 없습니다.",
+    { confirmText: "취소하기", cancelText: "돌아가기" }
+  );
+
+  if (!confirmed) return;
+
   emit("confirm", finalReason.value);
 };
 
@@ -67,10 +81,16 @@ const handleClose = () => {
 };
 
 // 사유 선택
-const selectReason = (reason: string) => {
+const selectReason = async (reason: string) => {
   selectedReason.value = reason;
   if (reason !== "기타") {
     customReason.value = "";
+  } else {
+    // "기타" 선택 시 상세 사유 입력란으로 포커스 이동
+    await nextTick();
+    // Textarea 컴포넌트의 $el을 통해 실제 textarea 엘리먼트에 접근
+    const textarea = customReasonInput.value?.$el || customReasonInput.value;
+    textarea?.focus();
   }
 };
 </script>
@@ -93,8 +113,8 @@ const selectReason = (reason: string) => {
           <CardHeader class="pb-4">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-destructive/10 rounded-full">
-                  <AlertTriangle class="w-5 h-5 text-destructive" />
+                <div class="p-2 bg-primary/10 rounded-full">
+                  <AlertTriangle class="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <CardTitle class="text-heading">주문 취소</CardTitle>
@@ -136,7 +156,7 @@ const selectReason = (reason: string) => {
                   class="px-3 py-2 text-body text-left rounded-md border transition-colors"
                   :class="[
                     selectedReason === reason
-                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50',
                   ]"
                   :disabled="loading"
@@ -155,6 +175,7 @@ const selectReason = (reason: string) => {
                 </Label>
                 <Textarea
                   id="custom-reason"
+                  ref="customReasonInput"
                   v-model="customReason"
                   placeholder="취소 사유를 입력해주세요"
                   class="min-h-[80px] resize-none"
@@ -174,8 +195,7 @@ const selectReason = (reason: string) => {
                 취소
               </Button>
               <Button
-                variant="destructive"
-                class="flex-1"
+                class="flex-1 hover:bg-primary/80"
                 :disabled="!canConfirm || loading"
                 @click="handleConfirm"
               >

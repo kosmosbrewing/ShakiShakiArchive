@@ -9,7 +9,6 @@ import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
 import {
   CheckCircle2,
-  AlertCircle,
   Mail,
 } from "lucide-vue-next";
 
@@ -401,11 +400,9 @@ watch(
             />
           </div>
 
-          <Alert v-if="errorMessage" variant="destructive">
-            <AlertCircle class="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{{ errorMessage }}</AlertDescription>
-          </Alert>
+          <AlertDescription v-if="errorMessage">
+            {{ errorMessage }}
+          </AlertDescription>
 
           <Button type="submit" class="w-full mt-2" :disabled="isSubmitting">
             <LoadingSpinner

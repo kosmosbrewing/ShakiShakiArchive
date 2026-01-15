@@ -10,9 +10,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 
-// 아이콘
-import { AlertCircle } from "lucide-vue-next";
-
 // 공통 컴포넌트
 import {
   LoadingSpinner,
@@ -26,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { AlertDescription } from "@/components/ui/alert";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -137,24 +135,22 @@ watch(
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-4">
         <!-- 재고 부족 경고 -->
-        <Card v-if="hasOutOfStockItems" class="border-primary/50 bg-primary/10">
-          <CardContent class="flex items-center gap-3 p-4">
-            <AlertCircle class="w-5 h-5 text-primary flex-shrink-0" />
-            <div class="flex-1">
-              <p class="text-body font-semibold text-primary">
-                재고 부족 상품이 있습니다
-              </p>
-              <p class="text-caption text-muted-foreground mt-0.5">
-                재고가 부족한 상품을 삭제한 후 주문해주세요.
-              </p>
-            </div>
+        <!-- 재고 부족 경고 -->
+        <Card
+          v-if="hasOutOfStockItems"
+          class="border-primary/50 bg-primary/5 rounded-2xl"
+        >
+          <CardContent class="p-3">
+            <AlertDescription>
+              아쉽게도 일부 상품의 재고가 소진되었습니다.<br class="sm:hidden" />
+              <span class="hidden sm:inline">&nbsp;</span>원활한 주문을 위해 목록에서 제외해 주세요.
+            </AlertDescription>
           </CardContent>
         </Card>
-
         <Card
           v-for="item in cartItems"
           :key="item.id"
-          :class="[isOutOfStock(item) ? 'border-primary/30 bg-muted/30' : '']"
+          :class="[isOutOfStock(item) ? 'border-primary/30 bg-primary/5' : '']"
         >
           <CardContent class="flex gap-6 p-4 relative">
             <!-- SOLD OUT 배지 -->
@@ -189,7 +185,7 @@ watch(
                     variant="ghost"
                     size="sm"
                     @click="removeItem(item.id)"
-                    class="text-muted-foreground hover:text-primary h-auto p-1"
+                    class="text-muted-foreground hover:text-primary hover:bg-transparent h-auto p-1"
                   >
                     삭제
                   </Button>
@@ -209,15 +205,9 @@ watch(
                 </p>
 
                 <!-- 재고 부족 메시지 -->
-                <p
-                  v-if="isOutOfStock(item)"
-                  class="text-caption text-primary mt-1 font-medium"
-                >
-                  재고가 부족합니다
-                  <span v-if="item.variant"
-                    >(남은 재고: {{ item.variant.stockQuantity }}개)</span
-                  >
-                </p>
+                <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
+                  재고가 부족합니다<span v-if="item.variant"> (남은 재고: {{ item.variant.stockQuantity }}개)</span>
+                </AlertDescription>
               </div>
 
               <div class="flex justify-between items-end mt-2">
@@ -274,7 +264,7 @@ watch(
             <Button
               @click="goToOrder"
               :disabled="hasOutOfStockItems"
-              class="w-full font-bold"
+              class="w-full font-bold hover:bg-primary/80"
               size="lg"
             >
               {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}

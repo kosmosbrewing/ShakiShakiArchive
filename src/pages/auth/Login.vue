@@ -5,7 +5,6 @@ import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
 import { validateEmail } from "@/utils/email-validation";
 import axios from "axios";
-import { AlertCircle } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -497,15 +496,14 @@ const handleKakaoLogin = () => {
           <!-- 오류 상세 메시지 -->
           <AlertDescription
             v-if="invalidInputForm && loginError"
-            class="flex items-center text-primary mt-1"
+            class="mt-1"
           >
-            <AlertCircle class="w-4 h-4 pr-1 flex-shrink-0" />
-            <div class="text-caption">{{ loginError }}</div>
+            {{ loginError }}
           </AlertDescription>
 
           <Button
             id="login-button"
-            class="w-full mt-1 font-medium h-11"
+            class="w-full mt-1 font-medium h-11 hover:bg-primary/80"
             type="submit"
             :disabled="isLoading"
           >

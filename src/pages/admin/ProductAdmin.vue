@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -510,22 +511,28 @@ const handleSaveMeasurement = async () => {
       return;
     }
 
-    const payload = {
-      totalLength: measurementForm.totalLength.trim() || "",
-      shoulderWidth: measurementForm.shoulderWidth.trim() || "",
-      chestSection: measurementForm.chestSection.trim() || "",
-      sleeveLength: measurementForm.sleeveLength.trim() || "",
-      waistSection: measurementForm.waistSection.trim() || "",
-      hipSection: measurementForm.hipSection.trim() || "",
-      thighSection: measurementForm.thighSection.trim() || "",
+    // 측정값 payload 생성 (빈 값은 undefined로 처리)
+    const payload: Record<string, string | number | undefined> = {
+      totalLength: measurementForm.totalLength.trim() || undefined,
+      shoulderWidth: measurementForm.shoulderWidth.trim() || undefined,
+      chestSection: measurementForm.chestSection.trim() || undefined,
+      sleeveLength: measurementForm.sleeveLength.trim() || undefined,
+      waistSection: measurementForm.waistSection.trim() || undefined,
+      hipSection: measurementForm.hipSection.trim() || undefined,
+      thighSection: measurementForm.thighSection.trim() || undefined,
       displayOrder: measurementForm.displayOrder,
     };
 
+    // undefined 필드 제거 (백엔드에 전송하지 않음)
+    const cleanedPayload = Object.fromEntries(
+      Object.entries(payload).filter(([_, v]) => v !== undefined)
+    ) as Record<string, string | number>;
+
     if (isMeasurementEditMode.value) {
-      await updateSizeMeasurement(measurementForm.id, payload);
+      await updateSizeMeasurement(measurementForm.id, cleanedPayload);
       showAlert("수정되었습니다.");
     } else {
-      await createSizeMeasurement(currentVariant.value.id, payload);
+      await createSizeMeasurement(currentVariant.value.id, cleanedPayload);
       showAlert("등록되었습니다.");
     }
 
@@ -967,12 +974,9 @@ onMounted(async () => {
               />
             </div>
 
-            <div
-              v-if="errorMessage"
-              class="bg-destructive/10 text-destructive text-caption p-4 rounded-xl border border-destructive/20 font-bold animate-pulse"
-            >
-              ⚠️ {{ errorMessage }}
-            </div>
+            <AlertDescription v-if="errorMessage" class="animate-pulse">
+              {{ errorMessage }}
+            </AlertDescription>
 
             <div
               class="flex justify-end gap-3 pt-6 border-t border-border mt-4"
@@ -1125,7 +1129,7 @@ onMounted(async () => {
                       v-for="variant in variants"
                       :key="variant.id"
                       :class="{
-                        'bg-primary/10': variant.id === variantForm.id,
+                        'bg-primary/5': variant.id === variantForm.id,
                       }"
                       class="hover:bg-muted/20 transition-colors group cursor-pointer"
                       @click="handleEditVariant(variant)"
@@ -1279,7 +1283,7 @@ onMounted(async () => {
                   <tr
                     v-for="m in measurements"
                     :key="m.id"
-                    :class="{ 'bg-primary/10': m.id === measurementForm.id }"
+                    :class="{ 'bg-primary/5': m.id === measurementForm.id }"
                     class="hover:bg-muted/20 transition-colors cursor-pointer"
                     @click="handleEditMeasurement(m)"
                   >

@@ -40,7 +40,8 @@ watch(
 // 주소 선택 핸들러
 const handleSelect = (result: AddressSearchResult) => {
   // 도로명 주소 우선, 없으면 지번 주소 사용
-  const address = result.roadAddress || result.jibunAddress || result.addressName;
+  const address =
+    result.roadAddress || result.jibunAddress || result.addressName;
 
   emit("select", {
     zonecode: result.zonecode,
@@ -100,7 +101,9 @@ const handleKeydown = (e: KeyboardEvent) => {
           />
           <Button
             @click="handleSearch"
-            :disabled="addressSearch.loading.value || !addressSearch.hasQuery.value"
+            :disabled="
+              addressSearch.loading.value || !addressSearch.hasQuery.value
+            "
           >
             <LoadingSpinner
               v-if="addressSearch.loading.value"
@@ -115,7 +118,10 @@ const handleKeydown = (e: KeyboardEvent) => {
         </div>
 
         <!-- 에러 메시지 -->
-        <p v-if="addressSearch.error.value" class="text-caption text-destructive">
+        <p
+          v-if="addressSearch.error.value"
+          class="text-caption text-destructive"
+        >
           {{ addressSearch.error.value }}
         </p>
 
@@ -123,15 +129,26 @@ const handleKeydown = (e: KeyboardEvent) => {
         <div class="flex-1 overflow-y-auto space-y-2 min-h-[200px]">
           <!-- 로딩 -->
           <div
-            v-if="addressSearch.loading.value && !addressSearch.hasResults.value"
+            v-if="
+              addressSearch.loading.value && !addressSearch.hasResults.value
+            "
             class="flex items-center justify-center py-8"
           >
-            <LoadingSpinner variant="dots" size="md" color="muted" :center="false" />
+            <LoadingSpinner
+              variant="dots"
+              size="md"
+              color="muted"
+              :center="false"
+            />
           </div>
 
           <!-- 결과 없음 -->
           <div
-            v-else-if="!addressSearch.hasResults.value && addressSearch.hasQuery.value && !addressSearch.loading.value"
+            v-else-if="
+              !addressSearch.hasResults.value &&
+              addressSearch.hasQuery.value &&
+              !addressSearch.loading.value
+            "
             class="text-center py-8 text-muted-foreground"
           >
             <p>검색 결과가 없습니다.</p>
@@ -145,7 +162,9 @@ const handleKeydown = (e: KeyboardEvent) => {
           >
             <MapPin class="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>도로명, 건물명 또는 지번으로 검색해주세요.</p>
-            <p class="text-caption mt-1">예: 테헤란로 123, 강남역, 역삼동 123-45</p>
+            <p class="text-caption mt-1">
+              예: 테헤란로 123, 강남역, 역삼동 123-45
+            </p>
           </div>
 
           <!-- 검색 결과 목록 -->
@@ -157,7 +176,7 @@ const handleKeydown = (e: KeyboardEvent) => {
           >
             <div class="flex items-start gap-2">
               <span
-                class="shrink-0 px-1.5 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded"
+                class="shrink-0 px-1.5 py-0.5 text-xs font-medium bg-primary/5 text-primary rounded"
               >
                 {{ result.zonecode }}
               </span>

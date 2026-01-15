@@ -167,7 +167,7 @@ onMounted(async () => {
       <CardContent class="py-6">
         <div class="flex items-center gap-4">
           <div
-            class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
+            class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
           >
             <User class="w-7 h-7 text-primary" />
           </div>
@@ -312,7 +312,7 @@ onMounted(async () => {
             class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
             >
               <CheckCircle class="w-5 h-5 text-primary" />
             </div>
@@ -327,7 +327,7 @@ onMounted(async () => {
             class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
             >
               <Settings class="w-5 h-5 text-primary" />
             </div>
@@ -342,7 +342,7 @@ onMounted(async () => {
             class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
             >
               <Truck class="w-5 h-5 text-primary" />
             </div>
@@ -357,7 +357,7 @@ onMounted(async () => {
             class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
             >
               <Package class="w-5 h-5 text-primary" />
             </div>

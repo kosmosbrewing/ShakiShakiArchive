@@ -88,10 +88,16 @@ export const cachePolicies = {
   // 카테고리: 5분 (자주 변경되지 않는 정적 데이터)
   categories: { maxAge: 5 * 60 * 1000 },
 
-  // 상품: 1분 (재고 변동 가능한 동적 데이터)
-  products: { maxAge: 60 * 1000 },
+  // 상품 목록: 30초 (목록 갱신 주기를 단축하여 '판매 종료' 상품 노출 시간 최소화)
+  productList: { maxAge: 30 * 1000 },
 
-  // 사이트 이미지 (Hero, Marquee): 10분 (수동 변경)
+  // 상품 상세: 0초 (캐싱 안함 - [Security First] 비활성화/가격 변동의 즉시 반영)
+  productDetail: { maxAge: 0 },
+
+  // 레거시 호환용 (기본 상품 정책)
+  products: { maxAge: import.meta.env.DEV ? 5 * 1000 : 60 * 1000 },
+
+  // 사이트 이미지 (Hero, Marquee): 10분 (Cloudinary 메타데이터)
   siteImages: { maxAge: 10 * 60 * 1000 },
 
   // 공통 상수: 1시간 (거의 변경 안됨)

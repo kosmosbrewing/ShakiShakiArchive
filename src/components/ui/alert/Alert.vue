@@ -164,14 +164,14 @@ onUnmounted(() => {
               <!-- 성공 아이콘 -->
               <div
                 v-if="!isDestructive"
-                class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
+                class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
               >
                 <CheckCircle2 class="w-8 h-8 text-primary" />
               </div>
               <!-- 삭제/경고 아이콘 -->
               <div
                 v-else
-                class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
+                class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
               >
                 <AlertTriangle class="w-8 h-8 text-primary" />
               </div>
@@ -192,12 +192,12 @@ onUnmounted(() => {
                   )
                 "
                 :placeholder="promptPlaceholder"
-                class="w-full px-3 py-2 mt-2 border border-border rounded-md text-caption sm:text-body focus:outline-none focus:ring-2 focus:ring-primary"
+                class="w-full px-3 py-2 mt-2 border border-border rounded-md text-body focus:outline-none focus:ring-2 focus:ring-primary"
                 autocomplete="off"
               />
               <p
                 v-if="promptMode && promptRequired"
-                class="text-caption text-muted-foreground text-center"
+                class="text-body text-muted-foreground text-center"
               >
                 {{ promptPlaceholder || `'${promptRequired}'를 입력하세요` }}
               </p>
@@ -207,13 +207,13 @@ onUnmounted(() => {
             <div class="flex border-t border-border">
               <button
                 @click="handleCancel"
-                class="flex-1 py-3.5 text-caption font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
+                class="flex-1 py-3.5 text-body font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
               >
                 {{ cancelText }}
               </button>
               <button
                 @click="handleConfirm"
-                class="flex-1 py-3.5 text-caption font-semibold transition-colors text-primary hover:bg-primary/10"
+                class="flex-1 py-3.5 text-body font-semibold transition-colors text-primary hover:bg-primary/5"
               >
                 {{ confirmText }}
               </button>
@@ -225,7 +225,7 @@ onUnmounted(() => {
             <slot>
               <Check v-if="type === 'success'" class="w-4 h-4" />
               <X v-else class="w-4 h-4" />
-              <p class="text-caption font-medium">{{ message }}</p>
+              <p class="text-body font-medium">{{ message }}</p>
             </slot>
           </template>
         </div>

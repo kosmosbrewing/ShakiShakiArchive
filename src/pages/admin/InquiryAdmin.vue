@@ -211,7 +211,7 @@ onMounted(() => {
           <TableRow
             v-for="(inquiry, index) in inquiries"
             :key="inquiry.id"
-            class="cursor-pointer hover:bg-primary/10 transition-all duration-200 border-b border-border/50 last:border-0"
+            class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
             @click="goToDetail(inquiry)"
           >
             <!-- 번호 (항상 표시) -->

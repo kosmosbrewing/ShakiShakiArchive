@@ -508,7 +508,7 @@ onMounted(async () => {
               <Button
                 v-if="!variantSelection.needsVariantSelection.value"
                 @click="handleAddToCart"
-                class="w-full text-primary hover:text-primary font-medium"
+                class="w-full text-primary hover:bg-primary/5 hover:text-primary font-medium"
                 size="lg"
                 variant="outline"
               >
@@ -519,7 +519,7 @@ onMounted(async () => {
                 :disabled="
                   isOutOfStock || variantSelection.needsVariantSelection.value
                 "
-                class="w-full font-bold"
+                class="w-full font-bold hover:bg-primary/80"
                 size="lg"
               >
                 {{

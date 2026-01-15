@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
 
 const router = useRouter();
@@ -342,12 +342,9 @@ onMounted(async () => {
               />
             </div>
 
-            <div
-              v-if="errorMessage"
-              class="bg-destructive/10 text-destructive text-caption p-3 rounded-lg border border-destructive/20 font-medium animate-pulse"
-            >
-              ⚠️ {{ errorMessage }}
-            </div>
+            <AlertDescription v-if="errorMessage" class="animate-pulse">
+              {{ errorMessage }}
+            </AlertDescription>
 
             <div
               class="flex justify-end gap-3 pt-6 mt-4 border-t border-border"

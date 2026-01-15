@@ -41,11 +41,17 @@ const emit = defineEmits<{
             <span class="text-heading text-foreground">
               {{ address.recipient }}
             </span>
-            <Badge v-if="address.isDefault" variant="default" class="text-[10px]">
+            <Badge
+              v-if="address.isDefault"
+              variant="default"
+              class="text-[10px]"
+            >
               기본 배송지
             </Badge>
           </div>
-          <span class="text-body text-muted-foreground">{{ address.phone }}</span>
+          <span class="text-body text-muted-foreground">{{
+            address.phone
+          }}</span>
         </div>
 
         <div v-if="showActions" class="flex items-center gap-2">
@@ -88,7 +94,7 @@ const emit = defineEmits<{
 
       <!-- 배송 메모 -->
       <div v-if="address.requestNote" class="mt-auto">
-        <p class="text-caption text-primary bg-primary/10 p-2 rounded truncate">
+        <p class="text-caption text-primary bg-primary/5 p-2 rounded truncate">
           "{{ address.requestNote }}"
         </p>
       </div>

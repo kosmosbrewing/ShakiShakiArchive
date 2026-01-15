@@ -51,17 +51,17 @@ const hoveredProductId = ref<string | null>(null);
 // 위시리스트 Set (스토어에서 반응성 유지)
 const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 
-// 상품 정렬 (품절 상품 맨 뒤로)
+// 상품 정렬 (재고 있음 → SOLD OUT 순서, isAvailable=false는 제외)
 const sortByStock = (items: ProductItem[]): ProductItem[] => {
-  return [...items].sort((a, b) => {
-    const aStock = a.totalStock ?? 1; // totalStock이 없으면 재고 있음으로 간주
-    const bStock = b.totalStock ?? 1;
+  // 1. 판매 가능 상품만 필터링 (isAvailable=false는 화면에서 제외)
+  const available = items.filter((item) => item.isAvailable === true);
 
-    // 품절(재고 0) 상품을 뒤로 정렬
-    if (aStock === 0 && bStock > 0) return 1;
-    if (aStock > 0 && bStock === 0) return -1;
-    return 0; // 둘 다 재고 있거나 둘 다 품절이면 순서 유지
-  });
+  // 2. 판매 가능 상품 중 재고 있는 것과 품절 분리
+  const inStock = available.filter((item) => (item.totalStock ?? 1) > 0);
+  const soldOut = available.filter((item) => item.totalStock !== undefined && item.totalStock === 0);
+
+  // 3. 순서: 재고 있음 → SOLD OUT
+  return [...inStock, ...soldOut];
 };
 
 // [핵심] 상품 데이터 불러오기 (api.ts 캐싱 레이어 활용)
@@ -87,15 +87,31 @@ const fetchProductData = async () => {
     });
 
     // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
-    const mappedProducts = response.products.map((item: any) => ({
-      id: item.id,
-      imageUrl: item.imageUrl,
-      images: item.images ?? [],
-      name: item.name,
-      price: Number(item.price),
-      totalStock: item.totalStock ?? item.stockQuantity ?? undefined,
-      isAvailable: item.isAvailable,
-    }));
+    const mappedProducts = response.products.map((item: any) => {
+      const stock = item.totalStock ?? item.stockQuantity;
+
+      // isAvailable을 포괄적으로 boolean 변환
+      // false로 간주되는 값: false, "false", "False", 0, "0", null, undefined
+      const available = !(
+        item.isAvailable === false ||
+        item.isAvailable === "false" ||
+        item.isAvailable === "False" ||
+        item.isAvailable === 0 ||
+        item.isAvailable === "0" ||
+        item.isAvailable === null ||
+        item.isAvailable === undefined
+      );
+
+      return {
+        id: item.id,
+        imageUrl: item.imageUrl,
+        images: item.images ?? [],
+        name: item.name,
+        price: Number(item.price),
+        totalStock: stock !== undefined && stock !== null ? Number(stock) : undefined,
+        isAvailable: available,
+      };
+    });
 
     productList.value = sortByStock(mappedProducts);
   } catch (error) {
@@ -201,7 +217,7 @@ watch(
             draggable="false"
           />
 
-          <!-- SOLD OUT 배지 -->
+          <!-- SOLD OUT 배지 (재고 소진) -->
           <div
             v-if="totalStock !== undefined && Number(totalStock) === 0"
             class="absolute top-2 right-2 z-10 px-2 py-1 text-caption font-bold bg-primary text-white rounded"

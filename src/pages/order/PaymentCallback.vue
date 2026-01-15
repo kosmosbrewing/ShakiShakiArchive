@@ -477,7 +477,11 @@ const goToCart = () => {
               <Package class="w-4 h-4 mr-2" />
               주문 상세 보기
             </Button>
-            <Button variant="outline" class="w-full font-medium" @click="goToHome">
+            <Button
+              variant="outline"
+              class="w-full font-medium"
+              @click="goToHome"
+            >
               쇼핑 계속하기
             </Button>
           </div>
@@ -486,7 +490,7 @@ const goToCart = () => {
         <!-- 에러 상태 -->
         <div v-else-if="status === 'error'" class="text-center w-full">
           <div
-            class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6"
+            class="w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center mx-auto mb-6"
           >
             <XCircle class="w-12 h-12 text-primary" />
           </div>
@@ -508,7 +512,11 @@ const goToCart = () => {
             <Button @click="goToCart" class="w-full">
               장바구니로 돌아가기
             </Button>
-            <Button variant="outline" class="w-full font-medium" @click="goToHome">
+            <Button
+              variant="outline"
+              class="w-full font-medium"
+              @click="goToHome"
+            >
               홈으로
             </Button>
           </div>
@@ -575,7 +583,11 @@ const goToCart = () => {
             <Button @click="goToCart" class="w-full">
               장바구니에서 수량 조정하기
             </Button>
-            <Button variant="outline" class="w-full font-medium" @click="goToHome">
+            <Button
+              variant="outline"
+              class="w-full font-medium"
+              @click="goToHome"
+            >
               쇼핑 계속하기
             </Button>
           </div>
