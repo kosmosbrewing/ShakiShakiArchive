@@ -163,7 +163,7 @@ const deliveryMessageOptions = [
             type="button"
             variant="outline"
             size="sm"
-            class="h-10 px-3 text-caption sm:text-body shrink-0"
+            class="h-10 px-3 text-caption sm:text-body shrink-0 font-medium"
             @click="emit('searchAddress')"
           >
             주소검색

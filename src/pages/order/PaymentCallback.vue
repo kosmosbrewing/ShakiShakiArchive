@@ -418,7 +418,7 @@ const goToCart = () => {
   <LoadingSpinner
     v-if="status === 'loading'"
     fullscreen
-    variant="heart"
+    variant="dots"
     size="lg"
     message="결제를 확인하고 있습니다..."
   />
@@ -477,7 +477,7 @@ const goToCart = () => {
               <Package class="w-4 h-4 mr-2" />
               주문 상세 보기
             </Button>
-            <Button variant="outline" @click="goToHome" class="w-full">
+            <Button variant="outline" class="w-full font-medium" @click="goToHome">
               쇼핑 계속하기
             </Button>
           </div>
@@ -508,7 +508,7 @@ const goToCart = () => {
             <Button @click="goToCart" class="w-full">
               장바구니로 돌아가기
             </Button>
-            <Button variant="outline" @click="goToHome" class="w-full">
+            <Button variant="outline" class="w-full font-medium" @click="goToHome">
               홈으로
             </Button>
           </div>
@@ -575,7 +575,7 @@ const goToCart = () => {
             <Button @click="goToCart" class="w-full">
               장바구니에서 수량 조정하기
             </Button>
-            <Button variant="outline" @click="goToHome" class="w-full">
+            <Button variant="outline" class="w-full font-medium" @click="goToHome">
               쇼핑 계속하기
             </Button>
           </div>

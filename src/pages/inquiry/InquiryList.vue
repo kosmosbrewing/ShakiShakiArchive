@@ -31,12 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Lock,
-  MessageCircle,
-  PenLine,
-  ArrowLeft,
-} from "lucide-vue-next";
+import { Lock, MessageCircle, PenLine, ArrowLeft } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -242,7 +237,7 @@ onMounted(() => {
           <TableRow
             v-for="(inquiry, index) in filteredInquiries"
             :key="inquiry.id"
-            class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
+            class="cursor-pointer hover:bg-primary/10 transition-all duration-200 border-b border-border/50 last:border-0"
             @click="goToDetail(inquiry)"
           >
             <!-- 번호 (항상 표시) -->
@@ -297,14 +292,14 @@ onMounted(() => {
                     v-if="inquiry.replyCount && inquiry.replyCount > 0"
                     class="flex items-center gap-1.5 shrink-0"
                   >
-                    <div class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                    <div
+                      class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded"
+                    >
                       RE
                     </div>
                     <div class="flex items-center gap-0.5 text-xs text-primary">
                       <MessageCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span class="font-medium">{{
-                        inquiry.replyCount
-                      }}</span>
+                      <span class="font-medium">{{ inquiry.replyCount }}</span>
                     </div>
                   </div>
                 </div>

@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert } from "@/components/ui/alert";
+import { LoadingSpinner } from "@/components/common";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -158,18 +159,17 @@ onMounted(async () => {
           상품 분류 체계를 구성하고 관리합니다.
         </p>
       </div>
-      <Button @click="openCreateModal" class="mb-2 gap-2">
+      <Button
+        @click="openCreateModal"
+        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+      >
         <Plus class="w-4 h-4" />
         추가
       </Button>
     </div>
     <Separator class="mb-6"></Separator>
 
-    <div v-if="isLoading" class="text-center py-20">
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"
-      ></div>
-    </div>
+    <LoadingSpinner v-if="isLoading" />
 
     <Card v-else class="overflow-hidden border-none shadow-md">
       <CardContent class="p-0">
@@ -355,11 +355,15 @@ onMounted(async () => {
               <Button
                 type="button"
                 variant="outline"
+                class="font-medium"
                 @click="isModalOpen = false"
               >
                 취소
               </Button>
-              <Button type="submit">
+              <Button
+                type="submit"
+                class="bg-admin hover:bg-admin/80 text-white font-semibold"
+              >
                 {{ isEditMode ? "저장하기" : "등록하기" }}
               </Button>
             </div>

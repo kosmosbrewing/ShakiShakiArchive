@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/common";
 import {
   Trash2,
   Edit3,
@@ -30,7 +31,6 @@ import {
   GripVertical,
   ExternalLink,
   Upload,
-  Loader2,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -103,8 +103,14 @@ const loadData = async (showLoading = true) => {
 // 모달 열기 (추가)
 const openCreateModal = () => {
   if (!canAddMore.value) {
-    const max = activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
-    showAlert(`${activeTab.value === "hero" ? "Hero" : "Marquee"} 이미지는 최대 ${max}개까지 등록 가능합니다.`, { type: "error" });
+    const max =
+      activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
+    showAlert(
+      `${
+        activeTab.value === "hero" ? "Hero" : "Marquee"
+      } 이미지는 최대 ${max}개까지 등록 가능합니다.`,
+      { type: "error" }
+    );
     return;
   }
   isEditMode.value = false;
@@ -252,7 +258,10 @@ const moveUp = async (index: number) => {
 
   const images = currentImages.value;
   const imageIds = images.map((img) => img.id);
-  [imageIds[index - 1], imageIds[index]] = [imageIds[index], imageIds[index - 1]];
+  [imageIds[index - 1], imageIds[index]] = [
+    imageIds[index],
+    imageIds[index - 1],
+  ];
 
   // 낙관적 업데이트: displayOrder 스왑
   const prevOrder = images[index - 1].displayOrder;
@@ -275,7 +284,10 @@ const moveDown = async (index: number) => {
 
   const images = currentImages.value;
   const imageIds = images.map((img) => img.id);
-  [imageIds[index], imageIds[index + 1]] = [imageIds[index + 1], imageIds[index]];
+  [imageIds[index], imageIds[index + 1]] = [
+    imageIds[index + 1],
+    imageIds[index],
+  ];
 
   // 낙관적 업데이트: displayOrder 스왑
   const currentOrder = images[index].displayOrder;
@@ -307,12 +319,18 @@ onMounted(async () => {
   <div class="w-11/12 max-w-screen-2xl mx-auto py-24 sm:py-16">
     <div class="flex justify-between items-end">
       <div>
-        <h3 class="text-heading text-admin tracking-wider">사이트 이미지 관리</h3>
+        <h3 class="text-heading text-admin tracking-wider">
+          사이트 이미지 관리
+        </h3>
         <p class="text-body text-admin-muted mt-1 mb-3">
           Hero 및 Marquee 이미지를 관리합니다.
         </p>
       </div>
-      <Button @click="openCreateModal" class="mb-2 gap-2" :disabled="!canAddMore">
+      <Button
+        @click="openCreateModal"
+        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+        :disabled="!canAddMore"
+      >
         <Plus class="w-4 h-4" />
         이미지 추가
       </Button>
@@ -323,16 +341,24 @@ onMounted(async () => {
     <div class="flex gap-2 mb-6">
       <Button
         @click="activeTab = 'hero'"
-        :variant="activeTab === 'hero' ? 'default' : 'outline'"
-        class="gap-2"
+        :variant="activeTab === 'hero' ? undefined : 'outline'"
+        :class="
+          activeTab === 'hero'
+            ? 'gap-2 bg-admin hover:bg-admin/80 text-white font-semibold'
+            : 'gap-2'
+        "
       >
         <ImageIcon class="w-4 h-4" />
         Hero ({{ heroImages.length }}/{{ MAX_HERO_IMAGES }})
       </Button>
       <Button
         @click="activeTab = 'marquee'"
-        :variant="activeTab === 'marquee' ? 'default' : 'outline'"
-        class="gap-2"
+        :variant="activeTab === 'marquee' ? undefined : 'outline'"
+        :class="
+          activeTab === 'marquee'
+            ? 'gap-2 bg-admin hover:bg-admin/80 text-white font-semibold'
+            : 'gap-2'
+        "
       >
         <ImageIcon class="w-4 h-4" />
         Marquee ({{ marqueeImages.length }}/{{ MAX_MARQUEE_IMAGES }})
@@ -340,11 +366,7 @@ onMounted(async () => {
     </div>
 
     <!-- 로딩 -->
-    <div v-if="isLoading" class="text-center py-20">
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"
-      ></div>
-    </div>
+    <LoadingSpinner v-if="isLoading" />
 
     <!-- 이미지 목록 -->
     <Card v-else class="overflow-hidden border-none shadow-lg">
@@ -415,7 +437,8 @@ onMounted(async () => {
                       target="_blank"
                       class="text-caption text-primary hover:underline flex items-center gap-1"
                     >
-                      {{ image.linkUrl.substring(0, 40) }}{{ image.linkUrl.length > 40 ? '...' : '' }}
+                      {{ image.linkUrl.substring(0, 40)
+                      }}{{ image.linkUrl.length > 40 ? "..." : "" }}
                       <ExternalLink class="w-3 h-3" />
                     </a>
                   </div>
@@ -456,8 +479,13 @@ onMounted(async () => {
                 </td>
               </tr>
               <tr v-if="currentImages.length === 0">
-                <td colspan="5" class="px-6 py-16 text-center text-admin-muted text-caption">
-                  등록된 {{ activeTab === 'hero' ? 'Hero' : 'Marquee' }} 이미지가 없습니다.
+                <td
+                  colspan="5"
+                  class="px-6 py-16 text-center text-admin-muted text-caption"
+                >
+                  등록된
+                  {{ activeTab === "hero" ? "Hero" : "Marquee" }} 이미지가
+                  없습니다.
                 </td>
               </tr>
             </tbody>
@@ -476,7 +504,9 @@ onMounted(async () => {
       >
         <div class="p-8">
           <div class="flex justify-between items-end">
-            <h2 class="text-heading font-semibold text-admin tracking-wide mb-3">
+            <h2
+              class="text-heading font-semibold text-admin tracking-wide mb-3"
+            >
               {{ isEditMode ? "이미지 수정" : "이미지 추가" }}
             </h2>
             <Button
@@ -496,7 +526,7 @@ onMounted(async () => {
             <div class="space-y-2">
               <Label class="text-admin">타입</Label>
               <div class="px-4 py-2 bg-muted rounded-lg text-body">
-                {{ form.type === 'hero' ? 'Hero' : 'Marquee' }}
+                {{ form.type === "hero" ? "Hero" : "Marquee" }}
               </div>
             </div>
 
@@ -509,11 +539,20 @@ onMounted(async () => {
               <div class="flex items-center gap-3">
                 <label
                   class="inline-flex items-center gap-2 px-4 py-2 bg-admin text-white rounded-lg transition-colors text-body font-medium"
-                  :class="isUploading
-                    ? 'opacity-50 cursor-not-allowed pointer-events-none'
-                    : 'cursor-pointer hover:bg-blue-700'"
+                  :class="
+                    isUploading
+                      ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                      : 'cursor-pointer hover:bg-blue-700'
+                  "
                 >
-                  <Loader2 v-if="isUploading" class="w-4 h-4 animate-spin" />
+                  <LoadingSpinner
+                    v-if="isUploading"
+                    variant="spinner"
+                    size="sm"
+                    color="white"
+                    :center="false"
+                    class="w-4 h-4"
+                  />
                   <Upload v-else class="w-4 h-4" />
                   {{ isUploading ? "업로드 중..." : "이미지 선택" }}
                   <input
@@ -592,10 +631,13 @@ onMounted(async () => {
             </div>
 
             <!-- 버튼 -->
-            <div class="flex justify-end gap-3 pt-6 border-t border-border mt-4">
+            <div
+              class="flex justify-end gap-3 pt-6 border-t border-border mt-4"
+            >
               <Button
                 type="button"
                 variant="outline"
+                class="font-medium"
                 @click="isModalOpen = false"
                 :disabled="isSaving || isUploading"
               >
@@ -604,10 +646,23 @@ onMounted(async () => {
               <Button
                 type="submit"
                 :disabled="isSaving || isUploading || !form.imageUrl"
-                class="gap-2"
+                class="gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
               >
-                <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
-                {{ isSaving ? "저장 중..." : isEditMode ? "수정 완료" : "추가하기" }}
+                <LoadingSpinner
+                  v-if="isSaving"
+                  variant="spinner"
+                  size="sm"
+                  color="white"
+                  :center="false"
+                  class="w-4 h-4"
+                />
+                {{
+                  isSaving
+                    ? "저장 중..."
+                    : isEditMode
+                    ? "수정 완료"
+                    : "추가하기"
+                }}
               </Button>
             </div>
           </form>

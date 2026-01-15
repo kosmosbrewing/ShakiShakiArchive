@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, AlertTriangle, Loader2 } from "lucide-vue-next";
+import { LoadingSpinner } from "@/components/common";
+import { X, AlertTriangle } from "lucide-vue-next";
 
 interface Props {
   open: boolean;
@@ -46,7 +47,8 @@ const finalReason = computed(() => {
 // 확인 버튼 활성화 여부
 const canConfirm = computed(() => {
   if (!selectedReason.value) return false;
-  if (selectedReason.value === "기타" && !customReason.value.trim()) return false;
+  if (selectedReason.value === "기타" && !customReason.value.trim())
+    return false;
   return true;
 });
 
@@ -96,7 +98,10 @@ const selectReason = (reason: string) => {
                 </div>
                 <div>
                   <CardTitle class="text-heading">주문 취소</CardTitle>
-                  <p v-if="productName" class="text-body text-muted-foreground mt-1">
+                  <p
+                    v-if="productName"
+                    class="text-body text-muted-foreground mt-1"
+                  >
                     {{ productName }}
                   </p>
                 </div>
@@ -116,7 +121,8 @@ const selectReason = (reason: string) => {
           <CardContent class="space-y-4">
             <!-- 안내 메시지 -->
             <p class="text-body text-muted-foreground">
-              주문 취소 사유를 선택해주세요. 결제가 완료된 주문은 환불 처리됩니다.
+              주문 취소 사유를 선택해주세요. 결제가 완료된 주문은 환불
+              처리됩니다.
             </p>
 
             <!-- 취소 사유 선택 -->
@@ -130,7 +136,7 @@ const selectReason = (reason: string) => {
                   class="px-3 py-2 text-body text-left rounded-md border transition-colors"
                   :class="[
                     selectedReason === reason
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      ? 'border-primary bg-primary/10 text-primary font-medium'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50',
                   ]"
                   :disabled="loading"
@@ -161,7 +167,7 @@ const selectReason = (reason: string) => {
             <div class="flex gap-3 pt-2">
               <Button
                 variant="outline"
-                class="flex-1"
+                class="flex-1 font-medium"
                 :disabled="loading"
                 @click="handleClose"
               >
@@ -173,7 +179,14 @@ const selectReason = (reason: string) => {
                 :disabled="!canConfirm || loading"
                 @click="handleConfirm"
               >
-                <Loader2 v-if="loading" class="w-4 h-4 mr-2 animate-spin" />
+                <LoadingSpinner
+                  v-if="loading"
+                  variant="spinner"
+                  size="sm"
+                  color="white"
+                  :center="false"
+                  class="mr-2"
+                />
                 {{ loading ? "처리 중..." : "주문 취소" }}
               </Button>
             </div>

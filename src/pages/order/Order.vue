@@ -1099,6 +1099,7 @@ onUnmounted(() => {
               <Button
                 variant="outline"
                 size="sm"
+                class="font-medium"
                 @click="isAddressModalOpen = true"
               >
                 배송지 목록 변경
@@ -1228,7 +1229,7 @@ onUnmounted(() => {
 
           <Button
             @click="handlePayment"
-            class="w-full"
+            class="w-full font-bold"
             size="lg"
             :disabled="isPaymentProcessing || isPaymentPopupOpen"
           >

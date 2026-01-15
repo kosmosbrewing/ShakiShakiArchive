@@ -3,7 +3,8 @@
 // 관리자용 이미지 업로드 컴포넌트
 
 import { ref, computed } from "vue";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-vue-next";
+import { Upload, X, Image as ImageIcon } from "lucide-vue-next";
+import { LoadingSpinner } from "@/components/common";
 import {
   uploadProductImage,
   uploadProductImages,
@@ -135,7 +136,14 @@ const removeImage = (index: number) => {
         class="inline-flex items-center gap-2 px-4 py-2 bg-admin text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-body font-medium"
         :class="{ 'opacity-50 cursor-not-allowed': isUploading }"
       >
-        <Loader2 v-if="isUploading" class="w-4 h-4 animate-spin" />
+        <LoadingSpinner
+          v-if="isUploading"
+          variant="spinner"
+          size="sm"
+          color="white"
+          :center="false"
+          class="w-4 h-4"
+        />
         <Upload v-else class="w-4 h-4" />
         {{ isUploading ? "업로드 중..." : "이미지 선택" }}
         <input

@@ -72,10 +72,9 @@ const goToOrder = async () => {
 
   // 재고 부족 상품 확인
   if (hasOutOfStockItems.value) {
-    showAlert(
-      "재고가 부족한 상품이 있습니다.\n해당 상품을 삭제해주세요.",
-      { type: "error" }
-    );
+    showAlert("재고가 부족한 상품이 있습니다.\n해당 상품을 삭제해주세요.", {
+      type: "error",
+    });
     return;
   }
 
@@ -138,10 +137,7 @@ watch(
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-4">
         <!-- 재고 부족 경고 -->
-        <Card
-          v-if="hasOutOfStockItems"
-          class="border-primary/50 bg-primary/5"
-        >
+        <Card v-if="hasOutOfStockItems" class="border-primary/50 bg-primary/10">
           <CardContent class="flex items-center gap-3 p-4">
             <AlertCircle class="w-5 h-5 text-primary flex-shrink-0" />
             <div class="flex-1">
@@ -158,11 +154,7 @@ watch(
         <Card
           v-for="item in cartItems"
           :key="item.id"
-          :class="[
-            isOutOfStock(item)
-              ? 'border-primary/30 bg-muted/30'
-              : '',
-          ]"
+          :class="[isOutOfStock(item) ? 'border-primary/30 bg-muted/30' : '']"
         >
           <CardContent class="flex gap-6 p-4 relative">
             <!-- SOLD OUT 배지 -->
@@ -206,7 +198,7 @@ watch(
                 <p
                   v-if="item.variant"
                   :class="[
-                    'text-body text-muted-foreground mt-1',
+                    'text-body text-muted-foreground',
                     isOutOfStock(item) ? 'opacity-60' : '',
                   ]"
                 >
@@ -219,7 +211,7 @@ watch(
                 <!-- 재고 부족 메시지 -->
                 <p
                   v-if="isOutOfStock(item)"
-                  class="text-caption text-primary mt-2 font-medium"
+                  class="text-caption text-primary mt-1 font-medium"
                 >
                   재고가 부족합니다
                   <span v-if="item.variant"
@@ -228,7 +220,7 @@ watch(
                 </p>
               </div>
 
-              <div class="flex justify-between items-end mt-4">
+              <div class="flex justify-between items-end mt-2">
                 <!-- 수량 비활성화
                 <QuantitySelector
                   :model-value="item.quantity"
@@ -268,7 +260,7 @@ watch(
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
               <span class="text-foreground">
-                {{ shippingFee === 0 ? '무료배송' : formatPrice(shippingFee) }}
+                {{ shippingFee === 0 ? "무료배송" : formatPrice(shippingFee) }}
               </span>
             </div>
 
@@ -276,15 +268,13 @@ watch(
 
             <div class="flex justify-between text-heading">
               <span class="text-foreground">총 결제 금액</span>
-              <span class="text-primary">{{
-                formatPrice(totalAmount)
-              }}</span>
+              <span class="text-primary">{{ formatPrice(totalAmount) }}</span>
             </div>
 
             <Button
               @click="goToOrder"
               :disabled="hasOutOfStockItems"
-              class="w-full"
+              class="w-full font-bold"
               size="lg"
             >
               {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}

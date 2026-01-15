@@ -66,7 +66,8 @@ const statusVariants: Record<
 
 // 답변 대기 중인 문의 수
 const pendingCount = computed(() => {
-  return inquiries.value.filter((inquiry) => inquiry.status === "pending").length;
+  return inquiries.value.filter((inquiry) => inquiry.status === "pending")
+    .length;
 });
 
 // 문의 목록 로드 (서버 사이드 필터링)
@@ -145,12 +146,16 @@ onMounted(() => {
         </Select>
 
         <span class="text-body text-muted-foreground self-center ml-2">
-          필터 결과: <span class="font-bold text-foreground">{{ inquiries.length }}</span>건
+          필터 결과:
+          <span class="font-bold text-foreground">{{ inquiries.length }}</span
+          >건
         </span>
       </div>
 
       <span class="text-body text-muted-foreground self-center">
-        답변 대기 중: <span class="font-bold text-primary">{{ pendingCount }}</span>건
+        답변 대기 중:
+        <span class="font-bold text-primary">{{ pendingCount }}</span
+        >건
       </span>
     </div>
 
@@ -163,26 +168,41 @@ onMounted(() => {
     />
 
     <!-- 문의 목록 -->
-    <div v-else class="bg-background border border-border rounded-xl overflow-hidden shadow-sm">
+    <div
+      v-else
+      class="bg-background border border-border rounded-xl overflow-hidden shadow-sm"
+    >
       <Table>
         <TableHeader>
-          <TableRow class="bg-muted/30 hover:bg-muted/30 border-b border-border">
+          <TableRow
+            class="bg-muted/30 hover:bg-muted/30 border-b border-border"
+          >
             <!-- 번호 (항상 표시) -->
-            <TableHead class="w-[60px] sm:w-[80px] text-center font-semibold text-foreground">
+            <TableHead
+              class="w-[60px] sm:w-[80px] text-center font-semibold text-foreground"
+            >
               <span class="hidden sm:inline">번호</span>
               <span class="sm:hidden">#</span>
             </TableHead>
-            <TableHead class="hidden sm:table-cell w-[100px] md:w-[120px] font-semibold text-foreground">
+            <TableHead
+              class="hidden sm:table-cell w-[100px] md:w-[120px] font-semibold text-foreground"
+            >
               유형
             </TableHead>
             <TableHead class="font-semibold text-foreground">제목</TableHead>
-            <TableHead class="hidden md:table-cell w-[140px] text-center font-semibold text-foreground">
+            <TableHead
+              class="hidden md:table-cell w-[140px] text-center font-semibold text-foreground"
+            >
               작성자
             </TableHead>
-            <TableHead class="hidden lg:table-cell w-[140px] text-center font-semibold text-foreground">
+            <TableHead
+              class="hidden lg:table-cell w-[140px] text-center font-semibold text-foreground"
+            >
               작성일
             </TableHead>
-            <TableHead class="w-[100px] sm:w-[110px] text-center font-semibold text-foreground">
+            <TableHead
+              class="w-[100px] sm:w-[110px] text-center font-semibold text-foreground"
+            >
               상태
             </TableHead>
           </TableRow>
@@ -191,12 +211,14 @@ onMounted(() => {
           <TableRow
             v-for="(inquiry, index) in inquiries"
             :key="inquiry.id"
-            class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
+            class="cursor-pointer hover:bg-primary/10 transition-all duration-200 border-b border-border/50 last:border-0"
             @click="goToDetail(inquiry)"
           >
             <!-- 번호 (항상 표시) -->
             <TableCell class="text-center">
-              <span class="text-caption sm:text-body font-semibold text-primary">
+              <span
+                class="text-caption sm:text-body font-semibold text-primary"
+              >
                 {{ index + 1 }}
               </span>
             </TableCell>
@@ -224,7 +246,9 @@ onMounted(() => {
                     v-if="inquiry.isPrivate"
                     class="w-3.5 h-3.5 text-muted-foreground shrink-0"
                   />
-                  <span class="font-medium text-foreground truncate text-caption sm:text-body">
+                  <span
+                    class="font-medium text-foreground truncate text-caption sm:text-body"
+                  >
                     <template
                       v-if="
                         inquiry.isPrivate &&
@@ -242,7 +266,9 @@ onMounted(() => {
                     v-if="inquiry.replyCount && inquiry.replyCount > 0"
                     class="flex items-center gap-1.5 shrink-0"
                   >
-                    <div class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                    <div
+                      class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded"
+                    >
                       RE
                     </div>
                     <div class="flex items-center gap-0.5 text-xs text-primary">
@@ -263,9 +289,13 @@ onMounted(() => {
                 <!-- 모바일: 작성자 & 작성일 -->
                 <div class="md:hidden text-xs text-muted-foreground mt-0.5">
                   <span>{{ inquiry.user?.userName }}</span>
-                  <span v-if="inquiry.user?.email" class="text-xs">({{ inquiry.user.email }})</span>
+                  <span v-if="inquiry.user?.email" class="text-xs"
+                    >({{ inquiry.user.email }})</span
+                  >
                   <span class="mx-1">·</span>
-                  <span class="lg:hidden">{{ formatDate(inquiry.createdAt) }}</span>
+                  <span class="lg:hidden">{{
+                    formatDate(inquiry.createdAt)
+                  }}</span>
                 </div>
               </div>
             </TableCell>
@@ -273,13 +303,21 @@ onMounted(() => {
             <!-- 작성자 (md 이상) -->
             <TableCell class="hidden md:table-cell text-center text-caption">
               <div class="flex flex-col items-center">
-                <span class="font-medium text-foreground">{{ inquiry.user?.userName }}</span>
-                <span v-if="inquiry.user?.email" class="text-xs text-muted-foreground">{{ inquiry.user.email }}</span>
+                <span class="font-medium text-foreground">{{
+                  inquiry.user?.userName
+                }}</span>
+                <span
+                  v-if="inquiry.user?.email"
+                  class="text-xs text-muted-foreground"
+                  >{{ inquiry.user.email }}</span
+                >
               </div>
             </TableCell>
 
             <!-- 작성일 (lg 이상) -->
-            <TableCell class="hidden lg:table-cell text-center text-caption text-muted-foreground">
+            <TableCell
+              class="hidden lg:table-cell text-center text-caption text-muted-foreground"
+            >
               {{ formatDate(inquiry.createdAt) }}
             </TableCell>
 

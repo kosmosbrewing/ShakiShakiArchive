@@ -4,13 +4,14 @@
 
 import { watch } from "vue";
 import { useAddressSearch } from "@/composables/useAddressSearch";
-import { Search, MapPin, Loader2 } from "lucide-vue-next";
+import { Search, MapPin } from "lucide-vue-next";
 import type { AddressSearchResult } from "@/types/api";
 
 // UI 컴포넌트
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/common";
 
 interface Props {
   open: boolean;
@@ -101,9 +102,13 @@ const handleKeydown = (e: KeyboardEvent) => {
             @click="handleSearch"
             :disabled="addressSearch.loading.value || !addressSearch.hasQuery.value"
           >
-            <Loader2
+            <LoadingSpinner
               v-if="addressSearch.loading.value"
-              class="w-4 h-4 animate-spin"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+              class="w-4 h-4"
             />
             <Search v-else class="w-4 h-4" />
           </Button>
@@ -121,7 +126,7 @@ const handleKeydown = (e: KeyboardEvent) => {
             v-if="addressSearch.loading.value && !addressSearch.hasResults.value"
             class="flex items-center justify-center py-8"
           >
-            <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
+            <LoadingSpinner variant="dots" size="md" color="muted" :center="false" />
           </div>
 
           <!-- 결과 없음 -->
@@ -183,14 +188,18 @@ const handleKeydown = (e: KeyboardEvent) => {
           >
             <Button
               variant="outline"
-              class="w-full"
+              class="w-full font-medium"
               size="sm"
               @click="addressSearch.loadMore"
               :disabled="addressSearch.loading.value"
             >
-              <Loader2
+              <LoadingSpinner
                 v-if="addressSearch.loading.value"
-                class="w-4 h-4 mr-2 animate-spin"
+                variant="spinner"
+                size="sm"
+                color="foreground"
+                :center="false"
+                class="mr-2"
               />
               더 보기
             </Button>

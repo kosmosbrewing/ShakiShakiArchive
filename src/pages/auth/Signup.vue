@@ -10,13 +10,12 @@ import { validateEmail } from "@/utils/email-validation";
 // 환경 체크: Production 환경에서는 준비중 표시
 const isProduction = computed(() => import.meta.env.MODE === "production");
 import {
-  Loader2,
   CheckCircle2,
   AlertCircle,
   Mail,
   KeyRound,
 } from "lucide-vue-next";
-import { PhoneInput, AddressSearchModal, PasswordStrengthIndicator } from "@/components/common";
+import { PhoneInput, AddressSearchModal, PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -372,7 +371,7 @@ const handleSignup = async () => {
             빠른 시일 내에 서비스를 오픈할 예정입니다.
           </p>
           <router-link to="/">
-            <Button variant="outline" class="mt-4">홈으로 돌아가기</Button>
+            <Button variant="outline" class="mt-4 font-medium">홈으로 돌아가기</Button>
           </router-link>
         </div>
       </CardContent>
@@ -403,17 +402,21 @@ const handleSignup = async () => {
                 type="button"
                 variant="outline"
                 size="sm"
+                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem] font-medium"
                 @click="sendVerificationCode"
                 :disabled="
                   verificationState.isVerified ||
                   verificationState.isLoading ||
                   !formData.email
                 "
-                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem]"
               >
-                <Loader2
+                <LoadingSpinner
                   v-if="verificationState.isLoading"
-                  class="animate-spin h-4 w-4 mr-2"
+                  variant="spinner"
+                  size="sm"
+                  color="foreground"
+                  :center="false"
+                  class="mr-2"
                 />
                 <Mail
                   v-else-if="!verificationState.isVerified"
@@ -455,16 +458,20 @@ const handleSignup = async () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem]"
+                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem] font-medium"
                 @click="verifyCode"
                 :disabled="
                   verificationState.isVerifying ||
                   verificationState.code.length !== 6
                 "
               >
-                <Loader2
+                <LoadingSpinner
                   v-if="verificationState.isVerifying"
-                  class="animate-spin h-4 w-4 mr-2"
+                  variant="spinner"
+                  size="sm"
+                  color="white"
+                  :center="false"
+                  class="mr-2"
                 />
                 <KeyRound v-else class="w-4 h-4 mr-2" />
                 {{ verificationState.isVerifying ? "확인중" : "확인" }}
@@ -565,7 +572,7 @@ const handleSignup = async () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  class="h-10 px-3 sm:px-4 text-caption sm:text-body shrink-0"
+                  class="h-10 px-3 sm:px-4 text-caption sm:text-body shrink-0 font-medium"
                   @click="openAddressSearch"
                 >
                   주소검색
@@ -615,11 +622,18 @@ const handleSignup = async () => {
           <Button
             ref="signupButtonRef"
             type="submit"
-            class="w-full mt-2"
+            class="w-full mt-2 font-bold"
             size="lg"
             :disabled="isSubmitting || !verificationState.isVerified"
           >
-            <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+            <LoadingSpinner
+              v-if="isSubmitting"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+              class="mr-2"
+            />
             {{ isSubmitting ? "처리 중..." : "회원가입 완료" }}
           </Button>
         </form>

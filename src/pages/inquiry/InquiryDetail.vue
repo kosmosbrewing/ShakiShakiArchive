@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Lock, Loader2, Trash2, User } from "lucide-vue-next";
+import { ArrowLeft, Lock, Trash2, User } from "lucide-vue-next";
 import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
@@ -255,7 +255,14 @@ onMounted(() => {
         :disabled="deleteLoading"
         @click="confirmDelete"
       >
-        <Loader2 v-if="deleteLoading" class="w-4 h-4 mr-1 animate-spin" />
+        <LoadingSpinner
+          v-if="deleteLoading"
+          variant="spinner"
+          size="sm"
+          color="primary"
+          :center="false"
+          class="w-4 h-4 mr-1"
+        />
         <Trash2 v-else class="w-4 h-4 mr-1" />
         <span class="hidden sm:inline">삭제</span>
       </Button>
@@ -366,7 +373,7 @@ onMounted(() => {
           <Card
             v-for="reply in inquiry.replies"
             :key="reply.id"
-            class="bg-primary/5 border-primary/20 shadow-sm rounded-xl"
+            class="bg-primary/10 border-primary/20 shadow-sm rounded-xl"
           >
             <CardContent class="p-4 sm:p-5">
               <!-- 답변자 정보 -->
@@ -428,7 +435,14 @@ onMounted(() => {
               @click="handleReply"
               class="shadow-sm hover:shadow"
             >
-              <Loader2 v-if="replyLoading" class="w-4 h-4 mr-2 animate-spin" />
+              <LoadingSpinner
+                v-if="replyLoading"
+                variant="spinner"
+                size="sm"
+                color="white"
+                :center="false"
+                class="mr-2"
+              />
               {{ replyLoading ? "등록 중..." : "답변 등록" }}
             </Button>
           </div>
@@ -444,7 +458,7 @@ onMounted(() => {
         </p>
         <Button
           variant="outline"
-          class="shadow-sm hover:shadow border-border/60"
+          class="shadow-sm hover:shadow border-border/60 font-medium"
           @click="router.push('/inquiry')"
         >
           목록으로 돌아가기

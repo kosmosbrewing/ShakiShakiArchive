@@ -165,7 +165,7 @@ const closePopup = () => {
             <Button @click="closePopup">창 닫기</Button>
           </template>
           <template v-else>
-            <Button variant="outline" @click="goToHome">홈으로</Button>
+            <Button variant="outline" class="font-medium" @click="goToHome">홈으로</Button>
             <Button @click="goToLogin">다시 로그인</Button>
           </template>
         </div>

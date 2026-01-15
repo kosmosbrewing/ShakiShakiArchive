@@ -179,7 +179,7 @@ const handleTouchEnd = () => {
           <Button
             variant="outline"
             @click="continueShopping"
-            class="rounded-lg bg-primary px-6 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            class="rounded-lg bg-primary px-6 py-2 text-body font-medium text-primary-foreground transition-colors"
           >
             쇼핑하러 가기
           </Button>
@@ -191,7 +191,7 @@ const handleTouchEnd = () => {
             <!-- 재고 부족 경고 -->
             <Card
               v-if="hasOutOfStockItems"
-              class="border-primary/50 bg-primary/5 rounded-2xl"
+              class="border-primary/50 bg-primary/10 rounded-2xl"
             >
               <CardContent class="flex items-center gap-2 p-3">
                 <AlertCircle class="w-4 h-4 text-primary flex-shrink-0" />
@@ -338,7 +338,7 @@ const handleTouchEnd = () => {
           <Button
             @click="goToCart"
             :disabled="hasOutOfStockItems"
-            class="w-full"
+            class="w-full font-bold"
             size="lg"
           >
             {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}

@@ -46,6 +46,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
 import { Alert } from "@/components/ui/alert";
+import { LoadingSpinner } from "@/components/common";
 import {
   Table,
   TableBody,
@@ -628,17 +629,16 @@ onMounted(async () => {
           >개 상품
         </p>
       </div>
-      <Button @click="openCreateProductModal" class="mb-2 gap-2">
+      <Button
+        @click="openCreateProductModal"
+        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+      >
         <Plus class="w-4 h-4" />
         새 상품 등록
       </Button>
     </div>
     <Separator class="mb-6"></Separator>
-    <div v-if="isLoading" class="text-center py-20">
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"
-      ></div>
-    </div>
+    <LoadingSpinner v-if="isLoading" />
 
     <Card v-else class="overflow-hidden border-none shadow-lg">
       <CardContent class="p-0">
@@ -980,11 +980,15 @@ onMounted(async () => {
               <Button
                 type="button"
                 variant="outline"
+                class="font-medium"
                 @click="isProductModalOpen = false"
               >
                 취소
               </Button>
-              <Button type="submit">
+              <Button
+                type="submit"
+                class="bg-admin hover:bg-admin/80 text-white font-semibold"
+              >
                 {{ isEditMode ? "수정 내용 저장" : "상품 등록하기" }}
               </Button>
             </div>
@@ -1077,14 +1081,17 @@ onMounted(async () => {
                 </div>
 
                 <div class="pt-2 space-y-2">
-                  <Button type="submit" class="w-full">
+                  <Button
+                    type="submit"
+                    class="w-full bg-admin hover:bg-admin/80 text-white font-semibold"
+                  >
                     {{ isEditMode ? "수정 내용 저장" : "옵션 추가하기" }}
                   </Button>
                   <Button
                     v-if="isEditMode"
                     type="button"
                     variant="outline"
-                    class="w-full"
+                    class="w-full font-medium"
                     @click="
                       () => {
                         isEditMode = false;
@@ -1355,7 +1362,10 @@ onMounted(async () => {
                   >
                     취소
                   </Button>
-                  <Button type="submit" class="gap-2">
+                  <Button
+                    type="submit"
+                    class="gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+                  >
                     <Check class="w-4 h-4" />
                     {{ isMeasurementEditMode ? "수정 완료" : "수치 등록하기" }}
                   </Button>
@@ -1462,10 +1472,7 @@ onMounted(async () => {
                   <Separator class="mb-4" />
 
                   <!-- 사이즈 선택 -->
-                  <div
-                    v-if="previewVariants.length > 0"
-                    class="mb-6"
-                  >
+                  <div v-if="previewVariants.length > 0" class="mb-6">
                     <label
                       class="block text-body font-semibold text-foreground mb-2"
                       >사이즈</label
@@ -1583,9 +1590,8 @@ onMounted(async () => {
                               </TableHeader>
                               <TableBody>
                                 <TableRow
-                                  v-for="(
-                                    data, idx
-                                  ) in previewSizeMeasurements.allSizeData.value"
+                                  v-for="(data, idx) in previewSizeMeasurements
+                                    .allSizeData.value"
                                   :key="idx"
                                 >
                                   <TableCell
@@ -1614,7 +1620,8 @@ onMounted(async () => {
                           <p
                             class="mt-4 text-caption text-muted-foreground text-right"
                           >
-                            * 단위: cm / 측정 방법에 따라 오차가 있을 수 있습니다.
+                            * 단위: cm / 측정 방법에 따라 오차가 있을 수
+                            있습니다.
                           </p>
                         </div>
                         <p

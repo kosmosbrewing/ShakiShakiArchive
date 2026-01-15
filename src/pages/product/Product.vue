@@ -33,7 +33,7 @@ const { getResponsiveAttrs } = useOptimizedImage();
 const getProductImageAttrs = (url: string) => {
   return getResponsiveAttrs(url, {
     widths: [320, 480, 640], // 모바일~태블릿 대응
-    sizes: '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw', // 반응형 그리드
+    sizes: "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw", // 반응형 그리드
   });
 };
 
@@ -296,7 +296,7 @@ onUnmounted(() => {
             <!-- SOLD OUT 배지 -->
             <div
               v-if="totalStock !== undefined && Number(totalStock) === 0"
-              class="absolute top-2 right-2 z-10 px-2 py-1 text-caption font-bold bg-primary/80 text-white rounded"
+              class="absolute top-2 right-2 z-10 px-2 py-1 text-caption font-bold bg-primary text-white rounded"
             >
               SOLD OUT
             </div>

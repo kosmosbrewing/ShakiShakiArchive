@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Lock } from "lucide-vue-next";
+import { LoadingSpinner } from "@/components/common";
+import { ArrowLeft, Lock } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -210,7 +211,7 @@ onMounted(() => {
         <div class="flex gap-3 pt-4">
           <Button
             variant="outline"
-            class="flex-1"
+            class="flex-1 font-medium"
             :disabled="loading"
             @click="goBack"
           >
@@ -221,7 +222,14 @@ onMounted(() => {
             :disabled="loading || !isFormValid"
             @click="handleSubmit"
           >
-            <Loader2 v-if="loading" class="w-4 h-4 mr-2 animate-spin" />
+            <LoadingSpinner
+              v-if="loading"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+              class="mr-2"
+            />
             {{ loading ? "등록 중..." : "등록하기" }}
           </Button>
         </div>

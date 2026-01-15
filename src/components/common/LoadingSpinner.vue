@@ -2,10 +2,14 @@
 // src/components/common/LoadingSpinner.vue
 // 귀여운 로딩 스피너 컴포넌트
 
+import { Loader2 } from "lucide-vue-next";
+import { computed } from "vue";
+
 interface Props {
   size?: "sm" | "md" | "lg";
   center?: boolean;
-  variant?: "dots" | "heart" | "hanger";
+  variant?: "dots" | "heart" | "hanger" | "spinner"; // spinner 추가
+  color?: "primary" | "white" | "muted" | "foreground"; // 색상 옵션 추가
   fullscreen?: boolean; // 전체 화면 오버레이 모드
   message?: string; // 로딩 메시지
 }
@@ -14,6 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
   size: "md",
   center: true,
   variant: "dots",
+  color: "primary",
   fullscreen: false,
   message: "",
 });
@@ -38,6 +43,24 @@ const hangerSizes = {
   md: "w-12 h-12",
   lg: "w-16 h-16",
 };
+
+// 사이즈별 spinner 크기
+const spinnerSizes = {
+  sm: "w-4 h-4",
+  md: "w-6 h-6",
+  lg: "w-8 h-8",
+};
+
+// 색상 클래스 매핑
+const colorClasses = computed(() => {
+  const colors = {
+    primary: "text-primary",
+    white: "text-white",
+    muted: "text-muted-foreground",
+    foreground: "text-foreground",
+  };
+  return colors[props.color];
+});
 </script>
 
 <template>
@@ -46,8 +69,14 @@ const hangerSizes = {
     v-if="fullscreen"
     class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
   >
+    <!-- Spinner 회전 애니메이션 -->
+    <Loader2
+      v-if="variant === 'spinner'"
+      :class="[spinnerSizes[props.size], colorClasses, 'animate-spin']"
+    />
+
     <!-- Dots 바운스 애니메이션 -->
-    <div v-if="variant === 'dots'" class="flex items-center gap-1.5">
+    <div v-else-if="variant === 'dots'" class="flex items-center gap-1.5">
       <span
         v-for="i in 3"
         :key="i"
@@ -108,8 +137,14 @@ const hangerSizes = {
       center ? 'flex justify-center items-center py-20' : '',
     ]"
   >
+    <!-- Spinner 회전 애니메이션 -->
+    <Loader2
+      v-if="variant === 'spinner'"
+      :class="[spinnerSizes[props.size], colorClasses, 'animate-spin']"
+    />
+
     <!-- Dots 바운스 애니메이션 -->
-    <div v-if="variant === 'dots'" class="flex items-center gap-1.5">
+    <div v-else-if="variant === 'dots'" class="flex items-center gap-1.5">
       <span
         v-for="i in 3"
         :key="i"

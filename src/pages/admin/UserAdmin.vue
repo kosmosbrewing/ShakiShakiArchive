@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/common";
 import {
   Users,
   Search,
@@ -215,7 +216,7 @@ onMounted(async () => {
           전체 {{ pagination.total }}명의 회원이 가입되어 있습니다.
         </p>
       </div>
-      <Button variant="outline" @click="loadData" class="mb-2 gap-2">
+      <Button variant="outline" @click="loadData" class="mb-2 gap-2 text-admin font-semibold">
         <RotateCcw class="w-4 h-4" />
         새로고침
       </Button>
@@ -250,11 +251,7 @@ onMounted(async () => {
     </div>
 
     <!-- 로딩 스피너 -->
-    <div v-if="loading" class="text-center py-32">
-      <div
-        class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"
-      ></div>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
     <!-- 회원 목록 테이블 -->
     <Card v-else class="overflow-hidden border-none shadow-lg">
@@ -353,6 +350,7 @@ onMounted(async () => {
                   size="sm"
                   variant="outline"
                   @click="openDetailModal(user)"
+                  class="text-admin font-semibold"
                 >
                   상세보기
                 </Button>
@@ -431,11 +429,7 @@ onMounted(async () => {
 
           <div class="space-y-6">
           <!-- 로딩 상태 -->
-          <div v-if="loadingDetail" class="text-center py-12">
-            <div
-              class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"
-            ></div>
-          </div>
+          <LoadingSpinner v-if="loadingDetail" :center="false" class="py-12" />
 
           <div v-else>
             <!-- 회원 통계 -->
@@ -641,7 +635,7 @@ onMounted(async () => {
 
           <!-- 하단 버튼 -->
           <div class="flex justify-end gap-2 mt-8 pt-6 border-t">
-            <Button variant="outline" @click="closeDetailModal">
+            <Button variant="outline" class="font-medium" @click="closeDetailModal">
               닫기
             </Button>
           </div>

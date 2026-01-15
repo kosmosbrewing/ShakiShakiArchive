@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
 import { validateEmail } from "@/utils/email-validation";
 import axios from "axios";
-import { Loader2, AlertCircle } from "lucide-vue-next";
+import { AlertCircle } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,7 +209,8 @@ const handleSubmit = async () => {
       isProcessingAuth.value = false;
 
       // 로그인은 성공했으나 정보 로드 실패
-      loginError.value = "로그인은 성공했으나 사용자 정보를 불러오는데 실패했습니다.";
+      loginError.value =
+        "로그인은 성공했으나 사용자 정보를 불러오는데 실패했습니다.";
       alertMessage.value = loginError.value;
       alertType.value = "error";
       showAlert.value = true;
@@ -230,10 +231,12 @@ const handleSubmit = async () => {
         loginError.value = "이메일 또는 비밀번호를 확인해주세요.";
       } else if (status === 429) {
         // 너무 많은 시도 (Rate Limiting)
-        loginError.value = "로그인 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해주세요.";
+        loginError.value =
+          "로그인 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해주세요.";
       } else if (status >= 500) {
         // 서버 오류
-        loginError.value = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        loginError.value =
+          "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
       } else {
         // 기타 오류
         loginError.value = "로그인 정보가 일치하지 않습니다.";
@@ -242,10 +245,12 @@ const handleSubmit = async () => {
       console.error("로그인 실패 (HTTP " + status + "):", error.response.data);
     } else if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
       // 타임아웃 오류
-      loginError.value = "요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.";
+      loginError.value =
+        "요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.";
     } else if (axios.isAxiosError(error) && !error.response) {
       // 네트워크 오류 (서버 미응답)
-      loginError.value = "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
+      loginError.value =
+        "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
     } else {
       // 알 수 없는 오류
       loginError.value = "로그인 중 오류가 발생했습니다. 다시 시도해주세요.";
@@ -500,12 +505,19 @@ const handleKakaoLogin = () => {
 
           <Button
             id="login-button"
-            class="w-full mt-1"
+            class="w-full mt-1 font-medium h-11"
             type="submit"
             :disabled="isLoading"
           >
-            <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-            <span class="text-[16px] tracking-tight">
+            <LoadingSpinner
+              v-if="isLoading"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+              class="mr-2"
+            />
+            <span class="text-base tracking-tight">
               {{ isLoading ? "로그인 중..." : "로그인" }}
             </span>
           </Button>
@@ -531,7 +543,13 @@ const handleKakaoLogin = () => {
             :disabled="isLoading || isNaverLoading || isKakaoLoading"
             @click="handleNaverLogin"
           >
-            <Loader2 v-if="isNaverLoading" class="h-5 w-5 animate-spin" />
+            <LoadingSpinner
+              v-if="isNaverLoading"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+            />
 
             <template v-else>
               <div class="inline-flex items-center leading-none text-white">
@@ -546,7 +564,8 @@ const handleKakaoLogin = () => {
                     d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
                   />
                 </svg>
-                <span class="text-[16px] tracking-tight ml-2 text-white"
+                <span
+                  class="text-base font-medium tracking-tight ml-2 text-white"
                   >네이버 로그인</span
                 >
               </div>
@@ -562,9 +581,12 @@ const handleKakaoLogin = () => {
             :disabled="isLoading || isNaverLoading || isKakaoLoading"
             @click="handleKakaoLogin"
           >
-            <Loader2
+            <LoadingSpinner
               v-if="isKakaoLoading"
-              class="h-5 w-5 animate-spin text-[#191919]"
+              variant="spinner"
+              size="sm"
+              color="foreground"
+              :center="false"
             />
 
             <template v-else>
@@ -579,7 +601,8 @@ const handleKakaoLogin = () => {
                     d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
                   />
                 </svg>
-                <span class="text-[16px] tracking-tight ml-2 text-[#191919]"
+                <span
+                  class="text-base font-medium tracking-tight ml-2 text-[#191919]"
                   >카카오 로그인</span
                 >
               </div>

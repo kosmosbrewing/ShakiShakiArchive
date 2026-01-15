@@ -8,14 +8,13 @@ import { sendVerification, verifyEmail, resetPassword } from "@/lib/api";
 import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
 import {
-  Loader2,
   CheckCircle2,
   AlertCircle,
   Mail,
 } from "lucide-vue-next";
 
 // Common Components
-import { PasswordStrengthIndicator } from "@/components/common";
+import { PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -283,11 +282,15 @@ watch(
                 variant="outline"
                 @click="sendVerificationCode"
                 :disabled="verificationState.isLoading || !formData.email"
-                class="w-28 shrink-0"
+                class="w-28 shrink-0 font-medium"
               >
-                <Loader2
+                <LoadingSpinner
                   v-if="verificationState.isLoading"
-                  class="animate-spin h-4 w-4 mr-2"
+                  variant="spinner"
+                  size="sm"
+                  color="foreground"
+                  :center="false"
+                  class="mr-2"
                 />
                 <Mail v-else class="w-4 h-4 mr-2" />
                 <span v-if="verificationState.isLoading">전송중</span>
@@ -331,9 +334,13 @@ watch(
                   verificationState.code.length !== 6
                 "
               >
-                <Loader2
+                <LoadingSpinner
                   v-if="verificationState.isVerifying"
-                  class="mr-2 h-4 w-4 animate-spin"
+                  variant="spinner"
+                  size="sm"
+                  color="white"
+                  :center="false"
+                  class="mr-2"
                 />
                 <span class="text-[16px] tracking-tight">
                   {{ verificationState.isVerifying ? "확인중" : "확인" }}
@@ -401,7 +408,14 @@ watch(
           </Alert>
 
           <Button type="submit" class="w-full mt-2" :disabled="isSubmitting">
-            <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+            <LoadingSpinner
+              v-if="isSubmitting"
+              variant="spinner"
+              size="sm"
+              color="white"
+              :center="false"
+              class="mr-2"
+            />
             {{ isSubmitting ? "처리 중..." : "비밀번호 재설정" }}
           </Button>
         </form>

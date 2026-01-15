@@ -17,13 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LoadingSpinner } from "@/components/common";
 import {
   ShoppingBag,
   User,
   Calendar,
   MapPin,
   Image as ImageIcon,
-  Loader2,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -190,7 +190,7 @@ watch(selectedStatus, async () => {
   currentPage.value = 1;
   // DOM 업데이트 후 스크롤을 맨 위로 이동
   await nextTick();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 const handleSaveItem = async (item: any) => {
@@ -206,7 +206,11 @@ const handleSaveItem = async (item: any) => {
   try {
     // 배송준비중 상태에서 운송장 번호가 입력되면 자동으로 배송중으로 변경
     let finalStatus = item.status;
-    if (item.status === "preparing" && item.trackingNumber && item.trackingNumber.trim()) {
+    if (
+      item.status === "preparing" &&
+      item.trackingNumber &&
+      item.trackingNumber.trim()
+    ) {
       finalStatus = "shipped";
     }
 
@@ -304,11 +308,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-32">
-      <div
-        class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"
-      ></div>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
     <div v-else class="space-y-10">
       <Card
@@ -464,7 +464,11 @@ onUnmounted(() => {
                 </td>
 
                 <td class="px-8 py-5 text-right">
-                  <Button size="sm" @click="handleSaveItem(item)">
+                  <Button
+                    size="sm"
+                    @click="handleSaveItem(item)"
+                    class="bg-admin hover:bg-admin/80 text-white font-semibold"
+                  >
                     저장
                   </Button>
                 </td>
@@ -492,15 +496,17 @@ onUnmounted(() => {
       </Card>
 
       <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
-      <div
-        ref="loadMoreTrigger"
-        class="py-8 flex justify-center"
-      >
+      <div ref="loadMoreTrigger" class="py-8 flex justify-center">
         <div
           v-if="loadingMore"
           class="flex items-center gap-2 text-muted-foreground"
         >
-          <Loader2 class="w-5 h-5 animate-spin" />
+          <LoadingSpinner
+            variant="dots"
+            size="md"
+            color="muted"
+            :center="false"
+          />
           <span class="text-body">주문 내역을 불러오는 중...</span>
         </div>
         <div
