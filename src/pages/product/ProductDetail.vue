@@ -19,7 +19,7 @@ import { useOptimizedImage } from "@/composables";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
 
 // 아이콘
-import { Heart } from "lucide-vue-next";
+import { Heart, Share2, Check } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import {
@@ -93,6 +93,27 @@ const displayAlert = (message: string, type: AlertType = "error") => {
   alertMessage.value = message;
   alertType.value = type;
   showAlert.value = true;
+};
+
+// 링크 복사 상태
+const isCopied = ref(false);
+
+// 링크 복사 핸들러
+const handleCopyLink = async () => {
+  try {
+    const url = window.location.href;
+    await navigator.clipboard.writeText(url);
+    isCopied.value = true;
+    displayAlert("링크가 복사되었습니다.", "success");
+
+    // 3초 후 아이콘 원래대로
+    setTimeout(() => {
+      isCopied.value = false;
+    }, 3000);
+  } catch (error) {
+    console.error("링크 복사 실패:", error);
+    displayAlert("링크 복사에 실패했습니다.");
+  }
 };
 
 // 장바구니 이동 확인 다이얼로그 상태
@@ -406,21 +427,40 @@ onMounted(async () => {
               alt="Product Main Image"
             />
 
-            <!-- 모바일 위시리스트 버튼 -->
-            <button
-              @click.stop="handleToggleWishlist"
-              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md lg:hidden"
-              title="위시리스트 담기"
-            >
-              <Heart
-                class="w-5 h-5 transition-colors duration-200"
-                :class="
-                  wishlistToggle.isWishlisted.value
-                    ? 'fill-primary text-primary'
-                    : 'text-muted-foreground'
-                "
-              />
-            </button>
+            <!-- 모바일 액션 버튼들 -->
+            <div class="absolute bottom-3 right-3 z-10 flex gap-2 lg:hidden">
+              <!-- 링크 복사 버튼 -->
+              <button
+                @click.stop="handleCopyLink"
+                class="p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md"
+                title="링크 복사"
+              >
+                <Share2
+                  v-if="!isCopied"
+                  class="w-5 h-5 text-muted-foreground transition-colors duration-200"
+                />
+                <Check
+                  v-else
+                  class="w-5 h-5 text-primary transition-colors duration-200"
+                />
+              </button>
+
+              <!-- 위시리스트 버튼 -->
+              <button
+                @click.stop="handleToggleWishlist"
+                class="p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md"
+                title="위시리스트 담기"
+              >
+                <Heart
+                  class="w-5 h-5 transition-colors duration-200"
+                  :class="
+                    wishlistToggle.isWishlisted.value
+                      ? 'fill-primary text-primary'
+                      : 'text-muted-foreground'
+                  "
+                />
+              </button>
+            </div>
           </div>
         </Card>
       </div>
@@ -431,7 +471,7 @@ onMounted(async () => {
           <CardContent class="p-6">
             <div class="flex justify-between items-end gap-3 mb-3">
               <div>
-                <h3 class="text-body font-medium">
+                <h3 class="text-body text-foreground font-medium">
                   {{ productData.product.value.name }}
                 </h3>
                 <div class="flex items-baseline gap-2 pt-1.5">
@@ -447,21 +487,40 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- 데스크톱 위시리스트 버튼 -->
-              <button
-                @click="handleToggleWishlist"
-                class="hidden lg:flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all shrink-0 lg:-translate-y-3"
-                title="위시리스트 담기"
-              >
-                <Heart
-                  class="w-5 h-5 transition-colors duration-200"
-                  :class="
-                    wishlistToggle.isWishlisted.value
-                      ? 'fill-primary text-primary'
-                      : 'text-muted-foreground hover:text-primary'
-                  "
-                />
-              </button>
+              <!-- 데스크톱 액션 버튼들 -->
+              <div class="hidden lg:flex gap-2 shrink-0 lg:-translate-y-3">
+                <!-- 링크 복사 버튼 -->
+                <button
+                  @click="handleCopyLink"
+                  class="flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all"
+                  title="링크 복사"
+                >
+                  <Share2
+                    v-if="!isCopied"
+                    class="w-5 h-5 text-muted-foreground hover:text-primary transition-colors duration-200"
+                  />
+                  <Check
+                    v-else
+                    class="w-5 h-5 text-primary transition-colors duration-200"
+                  />
+                </button>
+
+                <!-- 위시리스트 버튼 -->
+                <button
+                  @click="handleToggleWishlist"
+                  class="flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all"
+                  title="위시리스트 담기"
+                >
+                  <Heart
+                    class="w-5 h-5 transition-colors duration-200"
+                    :class="
+                      wishlistToggle.isWishlisted.value
+                        ? 'fill-primary text-primary'
+                        : 'text-muted-foreground hover:text-primary'
+                    "
+                  />
+                </button>
+              </div>
             </div>
 
             <Separator class="mb-4" />
@@ -539,10 +598,10 @@ onMounted(async () => {
                 <button
                   @click="setTab('description')"
                   :class="[
-                    'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                    'flex-1 py-3 text-body font-semibold uppercase tracking-wide relative',
                     activeTab === 'description'
                       ? 'text-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
+                      : 'text-muted-foreground hover:underline',
                   ]"
                 >
                   Description
@@ -554,10 +613,10 @@ onMounted(async () => {
                 <button
                   @click="setTab('size')"
                   :class="[
-                    'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                    'flex-1 py-3 text-body font-semibold uppercase tracking-wide relative',
                     activeTab === 'size'
                       ? 'text-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
+                      : 'text-muted-foreground hover:underline',
                   ]"
                 >
                   Size

@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Lock, MessageCircle, PenLine, ArrowLeft } from "lucide-vue-next";
+import { Lock, MessageCircle, PenLine } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -114,11 +114,6 @@ const goToCreate = () => {
   router.push("/inquiry/create");
 };
 
-// 뒤로 가기
-const goBack = () => {
-  router.back();
-};
-
 onMounted(() => {
   loadInquiries();
 });
@@ -131,14 +126,6 @@ onMounted(() => {
       class="mb-8 pb-4 border-b border-border flex items-center justify-between"
     >
       <div class="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          @click="goBack"
-          class="shrink-0 -ml-2 hover:bg-muted/80"
-        >
-          <ArrowLeft class="w-5 h-5" />
-        </Button>
         <h3 class="text-heading text-primary tracking-wider font-semibold">
           문의 내역
         </h3>

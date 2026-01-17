@@ -468,7 +468,7 @@ const handleKakaoLogin = () => {
     <div class="mb-6 text-center">
       <h3 class="text-heading text-primary mb-2 tracking-wider">LOGIN</h3>
     </div>
-    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+    <Card class="w-11/12 mx-auto">
       <CardContent>
         <form @submit.prevent="handleSubmit" class="grid gap-4 mt-4 mb-2">
           <div class="flex flex-col w-full gap-1.5 pt-10">

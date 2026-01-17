@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
-import { formatDate, formatPrice } from "@/lib/formatters";
+import {
+  formatDate,
+  formatPrice,
+  maskUserName,
+  maskPhone,
+  maskDetailAddress,
+} from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
 
@@ -19,15 +25,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-// [수정] UI 강화를 위한 아이콘 추가
-import {
-  MapPin,
-  CreditCard,
-  Package,
-  Truck,
-  ClipboardList,
-  AlertCircle,
-} from "lucide-vue-next";
+// UI 강화를 위한 아이콘
+import { AlertCircle } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
@@ -44,12 +43,24 @@ const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
 const cancelDialogOpen = ref(false);
 const cancelTargetItem = ref<OrderItem | null>(null);
 
+// 배송비 (백엔드에서 제공)
+const shippingFee = computed(() => {
+  if (!order.value || !order.value.shippingFee) return 0;
+  return Number(order.value.shippingFee);
+});
+
+// 배송비 텍스트
+const shippingFeeText = computed(() => {
+  return shippingFee.value === 0 ? "무료" : formatPrice(shippingFee.value);
+});
+
 // 데이터 로드
 onMounted(async () => {
   const orderId = route.params.id as string;
-  const data = await loadOrder(orderId);
-  if (data) {
-    order.value = data;
+  const orderData = await loadOrder(orderId);
+
+  if (orderData) {
+    order.value = orderData;
   }
 });
 
@@ -92,7 +103,9 @@ const handleConfirmCancel = async (reason: string) => {
     // 취소 완료 알림
     showAlert("주문이 취소되었습니다.");
   } else {
-    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", { type: "error" });
+    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", {
+      type: "error",
+    });
   }
 };
 
@@ -124,15 +137,18 @@ const getPaymentProviderLabel = (provider: string): string => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">주문 상세</h3>
       <Separator></Separator>
     </div>
 
-    <div class="mb-5">
+    <div class="mb-5 pl-2">
       <p v-if="order" class="text-body text-foreground">
-        {{ formatDate(order.createdAt) }}({{ getDayName(order.createdAt) }})
+        <span class="text-heading text-foreground font-semibold"
+          >{{ formatDate(order.createdAt) }}({{ getDayName(order.createdAt) }})
+        </span>
+
         <br />
         주문번호: {{ order.externalOrderId || order.id }}
       </p>
@@ -157,79 +173,144 @@ const getPaymentProviderLabel = (provider: string): string => {
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-6">
+        <!-- 배송지 정보 -->
         <Card>
-          <CardHeader
-            class="bg-muted/30 py-3 px-6 flex flex-row items-center justify-between border-b"
-          >
-            <div class="flex items-center gap-2">
-              <span class="font-semibold text-heading text-foreground">
-                주문 상품 ({{ order?.orderItems?.length ?? 0 }}개)
-              </span>
+          <CardHeader class="pb-6">
+            <CardTitle class="flex items-center gap-2 text-heading">
+              배송지 정보
+            </CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="text-body">
+              <div class="flex flex-col gap-1">
+                <span class="text-heading text-foreground font-semibold">
+                  {{ maskUserName(order.shippingName) }}
+                </span>
+              </div>
+              <p class="text-foreground pt-2">
+                {{ order.shippingAddress }}
+                <span v-if="order.shippingDetailAddress">
+                  {{ maskDetailAddress(order.shippingDetailAddress) }}
+                </span>
+              </p>
+              <p class="pt-1">
+                <span class="text-body text-muted-foreground">
+                  {{ maskPhone(order.shippingPhone) }}
+                </span>
+              </p>
+              <!-- 배송 요청사항 -->
+              <p class="pt-1">
+                <span
+                  v-if="order.shippingRequestNote"
+                  class="text-caption text-muted-foreground"
+                >
+                  {{ order.shippingRequestNote }}
+                </span>
+              </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <!-- 주문 상품 -->
+        <Card>
+          <CardHeader class="pb-3">
+            <CardTitle class="flex items-center gap-2 text-heading">
+              주문 상품 {{ order?.orderItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0 }}개
+            </CardTitle>
           </CardHeader>
           <CardContent class="p-0 divide-y divide-border">
             <div
               v-for="item in order.orderItems"
               :key="item.id"
-              class="p-6 flex flex-col sm:flex-row gap-6"
+              class="pl-6 pr-6 pb-6 pt-3 flex flex-col gap-3"
             >
-              <div class="relative">
+              <!-- 배송상태 뱃지 -->
+              <OrderStatusBadge
+                :status="item.status"
+                class="shadow-sm self-start"
+              />
+
+              <div class="flex flex-col sm:flex-row gap-6">
                 <ProductThumbnail
                   :image-url="item.product?.imageUrl"
                   :product-id="item.productId"
                 />
-                <!-- 모바일: 이미지 우측 상단에 뱃지 -->
-                <OrderStatusBadge
-                  :status="item.status"
-                  class="absolute top-2 right-2 sm:hidden shadow-sm"
-                />
-              </div>
 
-              <div class="flex-1 flex flex-col justify-between min-h-[100px]">
-                <div>
-                  <div class="flex justify-between items-start mb-1 gap-2">
-                    <h3
-                      class="font-bold text-foreground text-body cursor-pointer hover:underline line-clamp-2"
-                      @click="router.push(`/productDetail/${item.productId}`)"
+                <div class="flex-1 flex flex-col justify-between min-h-[100px]">
+                  <div>
+                    <div class="flex justify-between items-start mb-1 gap-2">
+                      <h3
+                        class="text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2"
+                        @click="router.push(`/productDetail/${item.productId}`)"
+                      >
+                        {{ item.productName }}
+                      </h3>
+                    </div>
+
+                    <p class="text-body text-muted-foreground mt-1">
+                      <template v-if="item.options"
+                        >{{ item.options }} / </template
+                      >{{ item.quantity }}개
+                    </p>
+
+                    <!-- 모바일: 금액과 버튼을 같은 라인에 배치 -->
+                    <div
+                      class="flex items-baseline justify-between gap-2 mt-1 sm:block"
                     >
-                      {{ item.productName }}
-                    </h3>
-                    <!-- 데스크톱: 제목 우측에 뱃지 -->
-                    <OrderStatusBadge :status="item.status" class="shrink-0 hidden sm:inline-flex" />
+                      <p class="text-body text-foreground font-medium">
+                        {{ formatPrice(item.productPrice) }}
+                      </p>
+
+                      <!-- 모바일 버튼 (금액과 같은 라인) -->
+                      <div class="flex gap-2 sm:hidden">
+                        <Button
+                          v-if="canCancel(item.status)"
+                          variant="outline"
+                          size="sm"
+                          class="text-caption px-2.5 py-1"
+                          @click="openCancelDialog(item)"
+                        >
+                          주문취소
+                        </Button>
+
+                        <Button
+                          v-if="canTrack(item.status)"
+                          variant="outline"
+                          size="sm"
+                          class="text-caption px-2.5 py-1"
+                          @click="handleTrackShipment(item)"
+                        >
+                          배송조회
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
-                  <p class="text-body text-muted-foreground mb-1">
-                    {{ item.options || "옵션 없음" }} / {{ item.quantity }}개
-                  </p>
+                  <!-- 데스크톱 버튼 (하단 우측) -->
+                  <div class="mt-4 hidden sm:flex items-end justify-between">
+                    <div></div>
 
-                  <p class="text-body text-foreground font-medium">
-                    {{ formatPrice(item.productPrice) }}
-                  </p>
-                </div>
+                    <div class="flex gap-2">
+                      <Button
+                        v-if="canCancel(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-3 py-1.5"
+                        @click="openCancelDialog(item)"
+                      >
+                        주문취소
+                      </Button>
 
-                <div class="mt-4 flex items-end justify-between">
-                  <div></div>
-
-                  <div class="flex gap-2">
-                    <Button
-                      v-if="canCancel(item.status)"
-                      variant="outline"
-                      size="sm"
-                      class="text-caption h-8"
-                      @click="openCancelDialog(item)"
-                    >
-                      주문취소
-                    </Button>
-
-                    <Button
-                      v-if="canTrack(item.status)"
-                      variant="outline"
-                      size="sm"
-                      class="text-caption h-8"
-                      @click="handleTrackShipment(item)"
-                    >
-                      배송조회
-                    </Button>
+                      <Button
+                        v-if="canTrack(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-3 py-1.5"
+                        @click="handleTrackShipment(item)"
+                      >
+                        배송조회
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -238,114 +319,39 @@ const getPaymentProviderLabel = (provider: string): string => {
         </Card>
       </div>
 
+      <!-- 우측: 결제 정보 -->
       <div class="lg:col-span-1 space-y-6">
         <Card>
-          <CardHeader class="pb-3">
-            <CardTitle class="flex items-center gap-2 text-body">
-              <MapPin class="w-4 h-4" />
-              배송지 정보
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-4 text-body">
-            <div>
-              <p class="font-bold mb-1">{{ order.shippingName }}</p>
-              <p class="text-muted-foreground">{{ order.shippingPhone }}</p>
-            </div>
-
-            <div>
-              <p class="text-muted-foreground">
-                ({{ order.shippingPostalCode }})
-              </p>
-              <p>{{ order.shippingAddress }}</p>
-              <p
-                v-if="order.shippingDetailAddress"
-                class="text-foreground mt-0.5"
-              >
-                {{ order.shippingDetailAddress }}
-              </p>
-            </div>
-
-            <Separator class="my-2" />
-
-            <div class="space-y-3">
-              <div class="flex items-start gap-3">
-                <Truck class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <span class="block text-caption text-muted-foreground mb-0.5"
-                    >배송 방법</span
-                  >
-                  <span class="font-medium">일반 택배 (무료)</span>
-                </div>
-              </div>
-
-              <div class="flex items-start gap-3">
-                <ClipboardList
-                  class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"
-                />
-                <div>
-                  <span class="block text-caption text-muted-foreground mb-0.5"
-                    >배송 요청사항</span
-                  >
-                  <span class="font-medium text-foreground/90 break-keep">
-                    {{ order.shippingRequestNote || "배송 요청사항 없음" }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="order.trackingNumber" class="pt-2 border-t mt-2">
-              <div class="flex items-start gap-3">
-                <Package
-                  class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5"
-                />
-                <div>
-                  <span class="block text-caption text-muted-foreground mb-0.5"
-                    >전체 운송장 번호</span
-                  >
-                  <span class="font-mono font-medium">{{
-                    order.trackingNumber
-                  }}</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader class="pb-3">
-            <CardTitle class="flex items-center gap-2 text-body">
-              <CreditCard class="w-4 h-4" />
+          <CardHeader class="pb-6">
+            <CardTitle class="flex items-center gap-2 text-heading">
               결제 정보
             </CardTitle>
           </CardHeader>
-          <CardContent class="space-y-4">
+          <CardContent class="space-y-2">
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">상품 금액</span>
               <span>{{ formatPrice(order.totalAmount) }}</span>
             </div>
-            <div class="flex justify-between text-body">
+            <div class="flex justify-between text-body pb-2">
               <span class="text-muted-foreground">배송비</span>
-              <span>무료</span>
+              <span :class="shippingFee === 0 ? 'text-primary font-medium' : ''">{{ shippingFeeText }}</span>
             </div>
             <Separator />
-            <div class="flex justify-between items-center">
-              <span class="font-bold">총 결제금액</span>
+            <div class="flex justify-between items-center pt-2">
+              <span class="font-bold">결제 금액</span>
               <span class="text-heading text-primary">
                 {{ formatPrice(order.totalAmount) }}
               </span>
             </div>
 
-            <div v-if="order.paymentProvider" class="pt-3 border-t space-y-2">
-              <div class="flex justify-between text-sm items-center">
-                <span class="text-muted-foreground flex items-center gap-1">
+            <div v-if="order.paymentProvider">
+              <div class="flex justify-between items-center">
+                <span class="text-muted-foreground text-sm flex items-center">
                   결제 수단
                 </span>
-                <span class="font-medium">{{
+                <span class="text-sm">{{
                   getPaymentProviderLabel(order.paymentProvider)
                 }}</span>
-              </div>
-              <div v-if="order.paidAt" class="flex justify-between text-sm">
-                <span class="text-muted-foreground">승인 일시</span>
-                <span>{{ formatDate(order.paidAt) }}</span>
               </div>
             </div>
 

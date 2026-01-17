@@ -368,7 +368,7 @@ const handleSignup = async () => {
     </div>
 
     <!-- Production 환경: 준비중 안내 -->
-    <Card v-if="isProduction" class="w-full bg-muted/5 dark:bg-card mx-auto">
+    <Card v-if="isProduction" class="w-full mx-auto">
       <CardContent class="py-16 text-center">
         <div class="flex flex-col items-center gap-4">
           <AlertCircle class="w-16 h-16 text-muted-foreground" />
@@ -387,7 +387,7 @@ const handleSignup = async () => {
     </Card>
 
     <!-- 개발 환경: 기존 회원가입 폼 -->
-    <Card v-else class="w-full bg-muted/5 dark:bg-card mx-auto">
+    <Card v-else class="w-full mx-auto">
       <CardContent class="px-4 sm:px-6 py-5 sm:py-6">
         <form @submit.prevent="handleSignup" class="grid gap-4 sm:gap-5">
           <div class="flex flex-col gap-1.5 mt-2">

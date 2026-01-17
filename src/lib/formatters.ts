@@ -165,3 +165,38 @@ export function maskUserName(name: string | undefined | null): string {
 
   return firstChar + middleMask + lastChar;
 }
+
+/**
+ * 전화번호 마스킹 처리
+ * 예: "010-1234-5678" → "010-****-5678"
+ */
+export function maskPhone(phone: string | undefined | null): string {
+  if (!phone) return "";
+
+  // 하이픈으로 분리된 경우
+  if (phone.includes("-")) {
+    const parts = phone.split("-");
+    if (parts.length === 3) {
+      return `${parts[0]}-****-${parts[2]}`;
+    }
+  }
+
+  // 하이픈 없이 숫자만 있는 경우 (예: 01012345678)
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 11) {
+    return `${cleaned.substring(0, 3)}-****-${cleaned.substring(7)}`;
+  } else if (cleaned.length === 10) {
+    return `${cleaned.substring(0, 3)}-****-${cleaned.substring(6)}`;
+  }
+
+  return phone; // 형식이 맞지 않으면 원본 반환
+}
+
+/**
+ * 상세주소 마스킹 처리
+ * 예: "101동 1004호" → "****"
+ */
+export function maskDetailAddress(detailAddress: string | undefined | null): string {
+  if (!detailAddress) return "";
+  return "****";
+}

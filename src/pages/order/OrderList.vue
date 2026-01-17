@@ -26,7 +26,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, X, Search } from "lucide-vue-next";
+import { X, Search } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -131,7 +131,8 @@ const filteredOrders = computed((): Order[] => {
   const hiddenStatuses = ["cancelled", "paying", "pending_payment"];
 
   // 검색어나 필터가 있으면 전체 주문 데이터, 없으면 페이지네이션된 데이터 사용
-  const sourceOrders = currentFilter.value || searchQuery.value ? allOrders.value : orders.value;
+  const sourceOrders =
+    currentFilter.value || searchQuery.value ? allOrders.value : orders.value;
 
   for (const order of sourceOrders) {
     if (!order.orderItems) continue;
@@ -189,12 +190,6 @@ const clearFilter = () => {
 // 검색어 초기화
 const clearSearch = () => {
   searchQuery.value = "";
-};
-
-// 모든 필터 해제
-const clearAllFilters = () => {
-  clearFilter();
-  clearSearch();
 };
 
 // 디바운스된 검색 함수 (300ms 후 전체 주문 로드)
@@ -374,7 +369,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6 border-b pb-3">
       <div>
         <h3 class="text-heading text-primary tracking-wider">주문 내역</h3>
@@ -385,7 +380,9 @@ onUnmounted(() => {
     <div class="mb-6 space-y-4">
       <!-- 검색 입력 -->
       <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search
+          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+        />
         <Input
           v-model="searchQuery"
           type="text"
@@ -404,7 +401,10 @@ onUnmounted(() => {
       </div>
 
       <!-- 적용된 필터 표시 -->
-      <div v-if="currentFilter || searchQuery" class="flex items-center gap-2 flex-wrap">
+      <div
+        v-if="currentFilter || searchQuery"
+        class="flex items-center gap-2 flex-wrap"
+      >
         <span class="text-caption text-muted-foreground">적용된 필터:</span>
         <Button
           v-if="currentFilter"
@@ -426,18 +426,12 @@ onUnmounted(() => {
           검색: {{ searchQuery }}
           <X class="w-3 h-3" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          class="h-7 text-xs text-muted-foreground hover:text-foreground"
-          @click="clearAllFilters"
-        >
-          전체 초기화
-        </Button>
       </div>
     </div>
 
-    <LoadingSpinner v-if="(currentFilter || searchQuery) ? loadingAllOrders : loading" />
+    <LoadingSpinner
+      v-if="currentFilter || searchQuery ? loadingAllOrders : loading"
+    />
 
     <EmptyState
       v-else-if="filteredOrders.length === 0"
@@ -447,8 +441,12 @@ onUnmounted(() => {
           ? '조건에 맞는 주문이 없습니다.'
           : '주문 내역이 없습니다.'
       "
-      :button-text="currentFilter || searchQuery ? '전체 주문 보기' : '쇼핑하러 가기'"
-      :button-link="currentFilter || searchQuery ? '/orderlist' : '/product/all'"
+      :button-text="
+        currentFilter || searchQuery ? '전체 주문 보기' : '쇼핑하러 가기'
+      "
+      :button-link="
+        currentFilter || searchQuery ? '/orderlist' : '/product/all'
+      "
     />
 
     <div v-else class="space-y-6">
@@ -458,10 +456,10 @@ onUnmounted(() => {
         class="overflow-hidden border-border/60"
       >
         <CardHeader
-          class="bg-muted/30 py-3 px-6 flex flex-row items-center justify-between border-b"
+          class="py-3 px-6 flex flex-row items-center justify-between"
         >
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-heading text-foreground">
+            <span class="font-semibold text-heading text-foreground pt-1">
               {{ formatDate(order.createdAt) }}
               ({{ getDayName(order.createdAt) }})
             </span>
@@ -470,86 +468,118 @@ onUnmounted(() => {
           <Button
             variant="ghost"
             size="sm"
-            class="text-body text-muted-foreground font-semibold hover:text-foreground h-8 px-2"
+            class="text-body text-muted-foreground underline font-semibold h-8 px-2 pt-1"
             @click="goToOrderDetail(order.id)"
           >
             주문 상세
-            <ChevronRight class="w-4 h-4 ml-1" />
           </Button>
         </CardHeader>
 
-        <CardContent class="p-0 divide-y divide-border">
+        <CardContent class="p-0">
           <div
             v-for="item in order.orderItems"
             :key="item.id"
-            class="p-6 flex flex-col sm:flex-row gap-6"
+            class="pl-6 pr-6 pb-6 pt-2 flex flex-col gap-3"
           >
-            <div class="relative">
+            <!-- 배송상태 뱃지 -->
+
+            <OrderStatusBadge
+              :status="item.status"
+              class="shadow-sm self-start l"
+            />
+
+            <div class="flex flex-col sm:flex-row gap-6">
               <ProductThumbnail
                 :image-url="item.product?.imageUrl"
                 :product-id="item.productId"
               />
-              <!-- 모바일: 이미지 우측 상단에 뱃지 -->
-              <OrderStatusBadge
-                :status="item.status"
-                class="absolute top-2 right-2 sm:hidden shadow-sm"
-              />
-            </div>
 
-            <div class="flex-1 flex flex-col justify-between min-h-[100px]">
-              <div>
-                <div class="flex justify-between items-start mb-1 gap-2">
-                  <h3
-                    class="font-bold text-foreground text-body cursor-pointer hover:underline line-clamp-2"
-                    @click="router.push(`/productDetail/${item.productId}`)"
+              <div class="flex-1 flex flex-col justify-between min-h-[100px]">
+                <div>
+                  <div class="flex justify-between items-start gap-2">
+                    <h3
+                      class="text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2"
+                      @click="router.push(`/productDetail/${item.productId}`)"
+                    >
+                      {{ item.productName }}
+                    </h3>
+                  </div>
+
+                  <p class="text-body text-muted-foreground mt-1">
+                    <template v-if="item.options"
+                      >{{ item.options }} / </template
+                    >{{ item.quantity }}개
+                  </p>
+
+                  <!-- 모바일: 금액과 버튼을 같은 라인에 배치 -->
+                  <div
+                    class="flex items-baseline justify-between gap-2 mt-1 sm:block"
                   >
-                    {{ item.productName }}
-                  </h3>
-                  <!-- 데스크톱: 제목 우측에 뱃지 -->
-                  <OrderStatusBadge :status="item.status" class="shrink-0 hidden sm:inline-flex" />
+                    <p class="text-body text-foreground font-medium">
+                      {{ formatPrice(item.productPrice) }}
+                      <span
+                        v-if="item.paymentMethod"
+                        class="text-muted-foreground font-normal ml-2"
+                      >
+                        ·
+                        {{
+                          item.paymentMethod === "toss"
+                            ? "토스페이"
+                            : "네이버페이"
+                        }}
+                      </span>
+                    </p>
+
+                    <!-- 모바일 버튼 (금액과 같은 라인) -->
+                    <div class="flex gap-2 sm:hidden">
+                      <Button
+                        v-if="canCancel(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-2.5 py-1"
+                        @click="openCancelDialog(order, item)"
+                      >
+                        주문취소
+                      </Button>
+
+                      <Button
+                        v-if="canTrack(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-2.5 py-1"
+                        @click="handleTrackShipment(item)"
+                      >
+                        배송조회
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
-                <p class="text-body text-muted-foreground mb-1">
-                  {{ item.options || "옵션 없음" }} / {{ item.quantity }}개
-                </p>
+                <!-- 데스크톱 버튼 (하단 우측) -->
+                <div class="hidden sm:flex items-end justify-between">
+                  <div></div>
 
-                <p class="text-body text-foreground font-medium">
-                  {{ formatPrice(item.productPrice) }}
-                  <span
-                    v-if="item.paymentMethod"
-                    class="text-muted-foreground font-normal ml-2"
-                  >
-                    ·
-                    {{
-                      item.paymentMethod === "toss" ? "토스페이" : "네이버페이"
-                    }}
-                  </span>
-                </p>
-              </div>
+                  <div class="flex gap-2">
+                    <Button
+                      v-if="canCancel(item.status)"
+                      variant="outline"
+                      size="sm"
+                      class="text-caption px-3 py-1.5"
+                      @click="openCancelDialog(order, item)"
+                    >
+                      주문취소
+                    </Button>
 
-              <div class="mt-4 flex items-end justify-between">
-                <div></div>
-
-                <div class="flex gap-2">
-                  <Button
-                    v-if="canCancel(item.status)"
-                    variant="outline"
-                    size="sm"
-                    class="text-caption h-8"
-                    @click="openCancelDialog(order, item)"
-                  >
-                    주문취소
-                  </Button>
-
-                  <Button
-                    v-if="canTrack(item.status)"
-                    variant="outline"
-                    size="sm"
-                    class="text-caption h-8"
-                    @click="handleTrackShipment(item)"
-                  >
-                    배송조회
-                  </Button>
+                    <Button
+                      v-if="canTrack(item.status)"
+                      variant="outline"
+                      size="sm"
+                      class="text-caption px-3 py-1.5"
+                      @click="handleTrackShipment(item)"
+                    >
+                      배송조회
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

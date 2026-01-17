@@ -40,9 +40,9 @@ const sizeClasses = {
 <template>
   <div
     :class="[
-      'bg-muted rounded-md border border-border overflow-hidden flex-shrink-0',
+      'rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm transition-all',
       sizeClasses[props.size],
-      clickable && productId ? 'cursor-pointer' : '',
+      clickable && productId ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : '',
     ]"
     @click="handleClick"
   >
@@ -57,7 +57,7 @@ const sizeClasses = {
     />
     <div
       v-else
-      class="w-full h-full flex items-center justify-center text-muted-foreground text-caption"
+      class="w-full h-full flex items-center justify-center text-muted-foreground text-caption border border-border bg-background"
     >
       No Img
     </div>

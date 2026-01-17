@@ -32,6 +32,7 @@ import {
   AddressCard,
   AddressForm,
   AddressSearchModal,
+  ProductThumbnail,
 } from "@/components/common";
 
 // Shadcn UI 컴포넌트
@@ -114,7 +115,7 @@ const isMobile = computed(() => {
 const isAddressModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
-const paymentProvider = ref<"toss" | "naverpay">("toss");
+const paymentProvider = ref<"toss" | "naverpay" | null>(null);
 
 // 유효성 검사 상태
 const showValidationAlert = ref(false);
@@ -133,13 +134,15 @@ const paymentMethods = [
 watch(deliveryMode, (newMode) => {
   if (newMode === "member" && authStore.user) {
     shippingForm.fillFromUser(authStore.user as User);
-    shippingForm.form.saveDefault = true;
+    shippingForm.form.saveDefault = false; // 회원 정보 모드에서는 기본 배송지 뱃지 표시 안 함
   } else if (newMode === "new") {
     shippingForm.clearForm();
+    shippingForm.form.saveDefault = false; // 신규 입력 모드에서는 기본 배송지 뱃지 표시 안 함
   } else if (newMode === "saved") {
     const defaultAddr =
       addresses.value.find((a) => a.isDefault) || addresses.value[0];
     if (defaultAddr) shippingForm.fillFromAddress(defaultAddr);
+    // fillFromAddress에서 주소의 isDefault 값을 saveDefault에 설정하므로 기본 배송지일 때만 뱃지 표시
   }
 });
 
@@ -164,9 +167,11 @@ const loadData = async () => {
     if (defaultAddr) {
       deliveryMode.value = "saved";
       shippingForm.fillFromAddress(defaultAddr);
+      // fillFromAddress에서 주소의 isDefault 값을 saveDefault에 설정
     } else if (authStore.user) {
       deliveryMode.value = "member";
       shippingForm.fillFromUser(authStore.user as User);
+      shippingForm.form.saveDefault = false; // 회원 정보 모드에서는 기본 배송지 뱃지 표시 안 함
     }
   } catch (error) {
     console.error(error);
@@ -285,6 +290,12 @@ const handlePayment = async () => {
   // 8. 상세 주소 유효성 검사
   if (!isNonEmptyString(shippingForm.form.detailAddress)) {
     showValidationError("상세 주소를 입력해주세요.", "detailAddress");
+    return;
+  }
+
+  // 9. 결제 수단 선택 유효성 검사
+  if (!paymentProvider.value) {
+    showValidationError("결제 수단을 선택해주세요.");
     return;
   }
 
@@ -1109,7 +1120,7 @@ onUnmounted(() => {
                   'flex-1 py-2 text-body font-medium rounded-md transition-all',
                   deliveryMode === mode
                     ? 'bg-background shadow text-foreground'
-                    : 'text-muted-foreground hover:text-foreground disabled:opacity-50',
+                    : 'text-muted-foreground hover:underline disabled:opacity-50',
                 ]"
               >
                 {{
@@ -1150,43 +1161,38 @@ onUnmounted(() => {
         <Card>
           <CardHeader>
             <CardTitle class="text-heading"
-              >주문 상품 ({{ orderItems.length }}개)</CardTitle
+              >주문 상품
+              {{
+                orderItems.reduce((sum, item) => sum + item.quantity, 0)
+              }}개</CardTitle
             >
           </CardHeader>
           <CardContent class="p-0">
-            <div class="divide-y divide-border">
-              <div
-                v-for="item in orderItems"
-                :key="item.id"
-                class="flex gap-4 pl-4 pr-7 pb-4 items-start"
-              >
-                <div
-                  class="w-20 h-24 bg-muted rounded overflow-hidden shrink-0 border border-border"
-                >
-                  <img
-                    :src="item.product.imageUrl"
-                    class="w-full h-full object-cover"
-                    draggable="false"
-                  />
-                </div>
+            <div
+              v-for="item in orderItems"
+              :key="item.id"
+              class="pl-6 pr-6 pb-6 pt-1 flex flex-col sm:flex-row gap-6"
+            >
+              <ProductThumbnail
+                :image-url="item.product.imageUrl"
+                :product-id="item.product.id"
+                :clickable="false"
+              />
 
-                <div class="flex-1 min-w-0">
-                  <h3 class="text-body font-bold truncate">
-                    {{ item.product.name }}
-                  </h3>
-                  <p class="text-caption text-muted-foreground mt-1">
-                    옵션: {{ item.variant?.size || "-" }}
-                    <span v-if="item.variant?.color"
-                      >/ {{ item.variant.color }}</span
-                    >
-                  </p>
-                  <div class="flex justify-between items-end mt-2">
-                    <span class="text-body">수량 {{ item.quantity }}개</span>
-                    <span class="font-bold">
-                      {{ formatPrice(item.product.price * item.quantity) }}
-                    </span>
-                  </div>
-                </div>
+              <div class="flex-1 flex flex-col">
+                <h3 class="text-body font-medium text-foreground line-clamp-2">
+                  {{ item.product.name }}
+                </h3>
+                <p class="text-body text-muted-foreground mt-1">
+                  Size : {{ item.variant?.size || "-" }}
+                  <span v-if="item.variant?.color">
+                    / Color : {{ item.variant.color }}</span
+                  >
+                  / {{ item.quantity }}개
+                </p>
+                <p class="text-body font-medium text-foreground mt-1">
+                  {{ formatPrice(item.product.price * item.quantity) }}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -1205,10 +1211,20 @@ onUnmounted(() => {
                 <span>{{ formatPrice(orderSubtotal) }}</span>
               </div>
               <div class="flex justify-between text-body">
-                <span class="text-muted-foreground">배송비</span>
-                <span>{{ formatPrice(orderShippingFee) }}</span>
+                <span class="text-muted-foreground pb-1">배송비</span>
+                <span
+                  :class="
+                    orderShippingFee === 0 ? 'text-primary font-medium' : ''
+                  "
+                  >{{
+                    orderShippingFee === 0
+                      ? "무료"
+                      : formatPrice(orderShippingFee)
+                  }}</span
+                >
               </div>
-              <div class="border-t pt-3 flex justify-between items-center">
+              <Separator />
+              <div class="pt-1 flex justify-between items-center">
                 <span class="font-bold text-heading">합계</span>
                 <span class="font-bold text-heading text-primary">{{
                   formatPrice(orderTotalAmount)
@@ -1226,9 +1242,10 @@ onUnmounted(() => {
                 <button
                   v-for="method in paymentMethods"
                   :key="method.value"
+                  type="button"
                   @click="paymentProvider = method.value as any"
                   :class="[
-                    'flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all',
+                    'flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
                     paymentProvider === method.value
                       ? 'border-primary'
                       : 'border-border',

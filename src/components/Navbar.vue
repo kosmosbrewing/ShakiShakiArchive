@@ -45,6 +45,9 @@ const { itemCount: cartItemCount } = storeToRefs(cartStore);
 const isOpen = ref<boolean>(false);
 const cartSheetOpen = ref<boolean>(false);
 
+// 뒤로가기로 시트를 닫는지 여부를 추적
+const closingByPopState = ref(false);
+
 // 장바구니 카운트 업데이트 (스토어 활용, 강제 새로고침)
 const updateCartCount = async () => {
   try {
@@ -60,8 +63,25 @@ watch(isAuthenticated, async () => {
 });
 
 watch(route, () => {
-  isOpen.value = false;
+  // 라우트 변경 시 모바일 메뉴 닫기 (history.back() 방지)
+  if (isOpen.value) {
+    closingByPopState.value = true;
+    isOpen.value = false;
+  }
   updateCartCount();
+});
+
+// 모바일 시트 열림/닫힘에 따른 history 관리
+watch(isOpen, (newValue, oldValue) => {
+  if (newValue && !oldValue) {
+    // 시트가 열릴 때: history에 가상 상태 추가
+    window.history.pushState({ mobileMenuOpen: true }, '');
+  } else if (!newValue && oldValue && !closingByPopState.value) {
+    // 시트가 닫힐 때 (뒤로가기가 아닌 경우): history에서 제거
+    window.history.back();
+  }
+  // 플래그 리셋
+  closingByPopState.value = false;
 });
 
 // CartSheet 닫힐 때 카운트 동기화
@@ -104,13 +124,24 @@ const handleFAQClick = () => {
   router.push("/faq");
 };
 
+// 뒤로가기 이벤트 핸들러
+const handlePopState = () => {
+  if (isOpen.value) {
+    // 시트가 열려있는 경우 뒤로가기로 시트 닫기
+    closingByPopState.value = true;
+    isOpen.value = false;
+  }
+};
+
 onMounted(async () => {
   await Promise.all([cartStore.loadCart(), categoryStore.loadCategories()]);
   window.addEventListener("cart-updated", updateCartCount);
+  window.addEventListener("popstate", handlePopState);
 });
 
 onUnmounted(() => {
   window.removeEventListener("cart-updated", updateCartCount);
+  window.removeEventListener("popstate", handlePopState);
 });
 </script>
 
@@ -137,6 +168,7 @@ onUnmounted(() => {
           <SheetContent
             side="left"
             class="flex flex-col rounded-tr-2xl rounded-br-2xl bg-card"
+            @open-auto-focus="(event) => event.preventDefault()"
           >
             <SheetHeader class="mb-4 text-left pl-1">
               <SheetTitle
@@ -279,7 +311,7 @@ onUnmounted(() => {
           :key="label"
           as-child
           variant="ghost"
-          class="h-9 pl-1 px-2.5 text-caption font-medium hover:bg-muted/10 tracking-wider"
+          class="h-9 pl-1 px-2.5 text-caption font-medium hover:bg-transparent tracking-wider"
         >
           <RouterLink
             :to="path"

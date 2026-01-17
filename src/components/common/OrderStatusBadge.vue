@@ -17,7 +17,7 @@ const props = defineProps<Props>();
 <template>
   <Badge
     :variant="getStatusVariant(props.status)"
-    :class="getStatusClass(props.status)"
+    :class="['text-xs px-2 py-0.5', getStatusClass(props.status)]"
   >
     {{ formatOrderStatus(props.status) }}
   </Badge>

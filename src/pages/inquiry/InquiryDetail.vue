@@ -77,6 +77,24 @@ const statusVariants: Record<
 // 문의 ID
 const inquiryId = computed(() => route.params.id as string);
 
+// 안전한 이미지 URL인지 검증 (XSS 방지)
+const safeProductImageUrl = computed(() => {
+  if (!inquiry.value?.product?.imageUrl) return null;
+
+  try {
+    const url = new URL(inquiry.value.product.imageUrl, window.location.origin);
+    // HTTP(S) 프로토콜만 허용 (javascript:, data: 등 차단)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return inquiry.value.product.imageUrl;
+    }
+  } catch {
+    // 유효하지 않은 URL
+    console.warn('Invalid product image URL:', inquiry.value.product.imageUrl);
+  }
+
+  return null; // 안전하지 않은 URL은 null 반환
+});
+
 // 내 문의인지 확인
 const isMyInquiry = computed(() => {
   return authStore.user && inquiry.value?.userId === authStore.user.id;
@@ -332,8 +350,8 @@ onMounted(() => {
             @click="goToProduct(inquiry.product.id)"
           >
             <img
-              v-if="inquiry.product.imageUrl"
-              :src="inquiry.product.imageUrl"
+              v-if="safeProductImageUrl"
+              :src="safeProductImageUrl"
               :alt="inquiry.product.name"
               class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-md border border-border/30"
             />

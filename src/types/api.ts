@@ -107,6 +107,7 @@ export interface Order {
   id: string; // UUID
   userId: string; // UUID
   totalAmount: string;
+  shippingFee?: string; // 배송비
   status: OrderStatus;
   // 배송 정보
   shippingName: string;

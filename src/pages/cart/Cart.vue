@@ -133,8 +133,7 @@ watch(
     />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div class="lg:col-span-2 space-y-4">
-        <!-- 재고 부족 경고 -->
+      <div class="lg:col-span-2 space-y-6">
         <!-- 재고 부족 경고 -->
         <Card
           v-if="hasOutOfStockItems"
@@ -142,40 +141,52 @@ watch(
         >
           <CardContent class="p-3">
             <AlertDescription>
-              아쉽게도 일부 상품의 재고가 소진되었습니다.<br class="sm:hidden" />
-              <span class="hidden sm:inline">&nbsp;</span>원활한 주문을 위해 목록에서 제외해 주세요.
+              아쉽게도 일부 상품의 재고가 소진되었습니다.<br
+                class="sm:hidden"
+              />
+              <span class="hidden sm:inline">&nbsp;</span>원활한 주문을 위해
+              목록에서 제외해 주세요.
             </AlertDescription>
           </CardContent>
         </Card>
-        <Card
-          v-for="item in cartItems"
-          :key="item.id"
-          :class="[isOutOfStock(item) ? 'border-primary/30 bg-primary/5' : '']"
-        >
-          <CardContent class="flex gap-6 p-4 relative">
-            <!-- SOLD OUT 배지 -->
-            <Badge
-              v-if="isOutOfStock(item)"
-              class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
+
+        <!-- 장바구니 상품 -->
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-heading"
+              >상품 목록
+              {{
+                cartItems.reduce((sum, item) => sum + item.quantity, 0)
+              }}개</CardTitle
             >
-              SOLD OUT
-            </Badge>
+          </CardHeader>
+          <CardContent class="p-0">
+            <div
+              v-for="item in cartItems"
+              :key="item.id"
+              class="pl-6 pr-6 pb-6 pt-1 flex flex-col sm:flex-row gap-6 relative"
+              :class="[isOutOfStock(item) ? 'bg-primary/5' : '']"
+            >
+              <!-- SOLD OUT 배지 -->
+              <Badge
+                v-if="isOutOfStock(item)"
+                class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
+              >
+                SOLD OUT
+              </Badge>
 
-            <ProductThumbnail
-              :image-url="item.product?.imageUrl"
-              :product-id="item.productId"
-              :class="[isOutOfStock(item) ? 'opacity-50' : '']"
-            />
+              <ProductThumbnail
+                :image-url="item.product?.imageUrl"
+                :product-id="item.productId"
+                :class="[isOutOfStock(item) ? 'opacity-50' : '']"
+              />
 
-            <div class="flex-1 flex flex-col justify-between">
-              <div>
+              <div class="flex-1 flex flex-col">
                 <div class="flex justify-between items-start">
                   <h3
                     :class="[
-                      'font-bold cursor-pointer hover:underline',
-                      isOutOfStock(item)
-                        ? 'text-muted-foreground opacity-60'
-                        : 'text-foreground',
+                      'text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2',
+                      isOutOfStock(item) ? 'opacity-60' : '',
                     ]"
                     @click="router.push(`/productDetail/${item.productId}`)"
                   >
@@ -185,7 +196,7 @@ watch(
                     variant="ghost"
                     size="sm"
                     @click="removeItem(item.id)"
-                    class="text-muted-foreground hover:text-primary hover:bg-transparent h-auto p-1"
+                    class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto p-1 flex-shrink-0"
                   >
                     삭제
                   </Button>
@@ -194,41 +205,32 @@ watch(
                 <p
                   v-if="item.variant"
                   :class="[
-                    'text-body text-muted-foreground',
+                    'text-body text-muted-foreground mt-1',
                     isOutOfStock(item) ? 'opacity-60' : '',
                   ]"
                 >
                   Size : {{ item.variant.size }}
-                  <span v-if="item.variant.color"
-                    >/ {{ item.variant.color }}</span
+                  <span v-if="item.variant.color">
+                    / Color : {{ item.variant.color }}</span
                   >
+                  / {{ item.quantity }}개
                 </p>
 
                 <!-- 재고 부족 메시지 -->
                 <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
-                  재고가 부족합니다<span v-if="item.variant"> (남은 재고: {{ item.variant.stockQuantity }}개)</span>
+                  재고가 부족합니다<span v-if="item.variant">
+                    (남은 재고: {{ item.variant.stockQuantity }}개)</span
+                  >
                 </AlertDescription>
-              </div>
 
-              <div class="flex justify-between items-end mt-2">
-                <!-- 수량 비활성화
-                <QuantitySelector
-                  :model-value="item.quantity"
-                  size="sm"
-                  @change="(change) => updateQuantity(item, change)"
-                />
-                -->
-
-                <div
+                <p
                   :class="[
-                    'font-bold',
-                    isOutOfStock(item)
-                      ? 'text-muted-foreground opacity-60'
-                      : 'text-foreground',
+                    'text-body font-medium text-foreground mt-1',
+                    isOutOfStock(item) ? 'opacity-60' : '',
                   ]"
                 >
                   {{ formatPrice(Number(item.product?.price) * item.quantity) }}
-                </div>
+                </p>
               </div>
             </div>
           </CardContent>
@@ -249,7 +251,7 @@ watch(
             </div>
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
-              <span class="text-foreground">
+              <span :class="shippingFee === 0 ? 'text-primary font-medium' : 'text-foreground'">
                 {{ shippingFee === 0 ? "무료배송" : formatPrice(shippingFee) }}
               </span>
             </div>

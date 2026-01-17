@@ -472,15 +472,25 @@ const selectVariantForSize = async (variant: any) => {
 
 const handleEditMeasurement = (measurement: any) => {
   isMeasurementEditMode.value = true;
+
+  // 0을 빈 문자열로 변환하는 헬퍼 함수
+  const convertValue = (value: any): string => {
+    // 0, "0", null, undefined, 빈 문자열을 모두 빈 문자열로 변환
+    if (value === null || value === undefined || value === "" || value === 0 || value === "0") {
+      return "";
+    }
+    return String(value);
+  };
+
   Object.assign(measurementForm, {
     ...measurement,
-    totalLength: String(measurement.totalLength || ""),
-    shoulderWidth: String(measurement.shoulderWidth || ""),
-    chestSection: String(measurement.chestSection || ""),
-    sleeveLength: String(measurement.sleeveLength || ""),
-    waistSection: String(measurement.waistSection || ""),
-    hipSection: String(measurement.hipSection || ""),
-    thighSection: String(measurement.thighSection || ""),
+    totalLength: convertValue(measurement.totalLength),
+    shoulderWidth: convertValue(measurement.shoulderWidth),
+    chestSection: convertValue(measurement.chestSection),
+    sleeveLength: convertValue(measurement.sleeveLength),
+    waistSection: convertValue(measurement.waistSection),
+    hipSection: convertValue(measurement.hipSection),
+    thighSection: convertValue(measurement.thighSection),
   });
 };
 
@@ -665,7 +675,7 @@ onMounted(async () => {
                 <th class="px-6 py-5 text-right pr-10">
                   <button
                     @click="toggleSortOrder"
-                    class="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                    class="inline-flex items-center gap-1 hover:underline"
                   >
                     수정일
                   </button>
@@ -1525,10 +1535,10 @@ onMounted(async () => {
                       <button
                         @click="setPreviewTab('description')"
                         :class="[
-                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide relative',
                           previewActiveTab === 'description'
                             ? 'text-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
+                            : 'text-muted-foreground hover:underline',
                         ]"
                       >
                         Description
@@ -1540,10 +1550,10 @@ onMounted(async () => {
                       <button
                         @click="setPreviewTab('size')"
                         :class="[
-                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide transition-colors relative',
+                          'flex-1 py-3 text-body font-semibold uppercase tracking-wide relative',
                           previewActiveTab === 'size'
                             ? 'text-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
+                            : 'text-muted-foreground hover:underline',
                         ]"
                       >
                         Size

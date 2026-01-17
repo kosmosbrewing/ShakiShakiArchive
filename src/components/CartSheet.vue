@@ -2,7 +2,7 @@
 // src/components/CartSheet.vue
 // 오른쪽 슬라이드 장바구니 Sheet
 
-import { computed, watch, ref } from "vue";
+import { computed, watch, ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
 import { formatPrice } from "@/lib/formatters";
@@ -43,6 +43,9 @@ const emit = defineEmits<{
 
 const router = useRouter();
 
+// 뒤로가기로 시트를 닫는지 여부를 추적
+const closingByPopState = ref(false);
+
 // 장바구니 로직
 const {
   cartItems,
@@ -72,13 +75,20 @@ const isOutOfStock = (item: any) => {
   return availableStock === 0 || item.quantity > availableStock;
 };
 
-// Sheet가 열릴 때 장바구니 로드
+// Sheet가 열릴 때 장바구니 로드 및 history 관리
 watch(
   () => props.open,
-  (isOpen) => {
-    if (isOpen) {
+  (newValue, oldValue) => {
+    if (newValue && !oldValue) {
       loadCart();
+      // 시트가 열릴 때: history에 가상 상태 추가
+      window.history.pushState({ cartSheetOpen: true }, '');
+    } else if (!newValue && oldValue && !closingByPopState.value) {
+      // 시트가 닫힐 때 (뒤로가기가 아닌 경우): history에서 제거
+      window.history.back();
     }
+    // 플래그 리셋
+    closingByPopState.value = false;
   }
 );
 
@@ -89,15 +99,36 @@ const closeSheet = () => {
 
 // 상품 상세 페이지로 이동
 const goToProductDetail = (productId: number | string) => {
-  closeSheet();
+  // 라우터 네비게이션 시 history.back() 방지
+  closingByPopState.value = true;
+  emit("update:open", false);
   router.push(`/productDetail/${productId}`);
 };
 
 // 장바구니 페이지로 이동
 const goToCart = () => {
-  closeSheet();
+  // 라우터 네비게이션 시 history.back() 방지
+  closingByPopState.value = true;
+  emit("update:open", false);
   router.push("/cart");
 };
+
+// 뒤로가기 이벤트 핸들러
+const handlePopState = () => {
+  if (props.open) {
+    // 시트가 열려있는 경우 뒤로가기로 시트 닫기
+    closingByPopState.value = true;
+    emit("update:open", false);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("popstate", handlePopState);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("popstate", handlePopState);
+});
 
 // 쇼핑 계속하기
 const continueShopping = () => {
@@ -145,6 +176,7 @@ const handleTouchEnd = () => {
     <SheetContent
       side="right"
       class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-2xl"
+      @open-auto-focus="(event) => event.preventDefault()"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -211,93 +243,76 @@ const handleTouchEnd = () => {
                 isOutOfStock(item) ? 'border-primary/30 bg-primary/5 ' : '',
               ]"
             >
-              <CardContent class="flex gap-4 p-3 relative">
+              <CardContent class="flex gap-6 p-4 relative">
                 <!-- SOLD OUT 배지 -->
                 <Badge
                   v-if="isOutOfStock(item)"
-                  class="absolute top-2 left-2 z-10 text-xs bg-primary text-primary-foreground"
+                  class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
                 >
                   SOLD OUT
                 </Badge>
 
                 <!-- 상품 이미지 -->
-                <div class="flex-shrink-0">
-                  <ProductThumbnail
-                    :image-url="item.product?.imageUrl"
-                    :product-id="item.productId"
-                    size="sm"
-                    :class="[isOutOfStock(item) ? 'opacity-50' : '']"
-                    @click="goToProductDetail(item.productId)"
-                  />
-                </div>
+                <ProductThumbnail
+                  :image-url="item.product?.imageUrl"
+                  :product-id="item.productId"
+                  :class="[isOutOfStock(item) ? 'opacity-50' : '']"
+                  @click="goToProductDetail(item.productId)"
+                />
 
                 <!-- 상품 정보 -->
-                <div class="flex-1 flex flex-col justify-between min-w-0">
-                  <div>
-                    <div class="flex justify-between items-start gap-2">
-                      <h4
-                        :class="[
-                          'text-body font-medium truncate cursor-pointer hover:underline',
-                          isOutOfStock(item)
-                            ? 'text-muted-foreground opacity-60'
-                            : 'text-foreground',
-                        ]"
-                        @click="goToProductDetail(item.productId)"
-                      >
-                        {{ item.product?.name }}
-                      </h4>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        @click="removeItem(item.id)"
-                        class="text-muted-foreground hover:text-primary hover:bg-transparent h-auto p-0.5 flex-shrink-0"
-                      >
-                        <X class="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-
-                    <p
-                      v-if="item.variant"
+                <div class="flex-1 flex flex-col min-w-0">
+                  <div class="flex justify-between items-start gap-2">
+                    <h3
                       :class="[
-                        'text-caption text-muted-foreground mt-0.5',
+                        'text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2',
                         isOutOfStock(item) ? 'opacity-60' : '',
                       ]"
+                      @click="goToProductDetail(item.productId)"
                     >
-                      Size : {{ item.variant.size }}
-                      <span v-if="item.variant.color"
-                        >/ {{ item.variant.color }}</span
-                      >
-                    </p>
-
-                    <!-- 재고 부족 메시지 -->
-                    <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
-                      재고 부족<span v-if="item.variant">
-                        (남은 재고: {{ item.variant.stockQuantity }}개)</span
-                      >
-                    </AlertDescription>
-                  </div>
-
-                  <div class="flex justify-between items-center mt-2">
-                    <!-- 수량 비활성화
-                    <QuantitySelector
-                      :model-value="item.quantity"
+                      {{ item.product?.name }}
+                    </h3>
+                    <Button
+                      variant="ghost"
                       size="sm"
-                      @change="(change) => updateQuantity(item, change)"
-                    />
-                    -->
-                    <span
-                      :class="[
-                        'text-body font-medium',
-                        isOutOfStock(item)
-                          ? 'text-muted-foreground opacity-60'
-                          : 'text-foreground',
-                      ]"
+                      @click="removeItem(item.id)"
+                      class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto p-0.5 flex-shrink-0"
                     >
-                      {{
-                        formatPrice(Number(item.product?.price) * item.quantity)
-                      }}
-                    </span>
+                      <X class="h-3.5 w-3.5" />
+                    </Button>
                   </div>
+
+                  <p
+                    v-if="item.variant"
+                    :class="[
+                      'text-body text-muted-foreground mt-1',
+                      isOutOfStock(item) ? 'opacity-60' : '',
+                    ]"
+                  >
+                    Size : {{ item.variant.size }}
+                    <span v-if="item.variant.color">
+                      / Color : {{ item.variant.color }}</span
+                    >
+                    / {{ item.quantity }}개
+                  </p>
+
+                  <!-- 재고 부족 메시지 -->
+                  <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
+                    재고 부족<span v-if="item.variant">
+                      (남은 재고: {{ item.variant.stockQuantity }}개)</span
+                    >
+                  </AlertDescription>
+
+                  <p
+                    :class="[
+                      'text-body font-medium text-foreground mt-1',
+                      isOutOfStock(item) ? 'opacity-60' : '',
+                    ]"
+                  >
+                    {{
+                      formatPrice(Number(item.product?.price) * item.quantity)
+                    }}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -319,7 +334,7 @@ const handleTouchEnd = () => {
           </div>
           <div class="flex justify-between text-body">
             <span class="text-muted-foreground">배송비</span>
-            <span class="text-foreground">
+            <span :class="shippingFee === 0 ? 'text-primary font-medium' : 'text-foreground'">
               {{ shippingFee === 0 ? "무료" : formatPrice(shippingFee) }}
             </span>
           </div>

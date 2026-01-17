@@ -2,7 +2,7 @@
 // src/pages/inquiry/InquiryCreate.vue
 // 문의 작성 페이지
 
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useAlert } from "@/composables/useAlert";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/common";
 import { ArrowLeft, Lock } from "lucide-vue-next";
+import { Alert } from "@/components/ui/alert";
 
 const router = useRouter();
 const route = useRoute();
@@ -36,6 +37,7 @@ useAuthGuard();
 const loading = ref(false);
 const productLoading = ref(false);
 const product = ref<Product | null>(null);
+const showSubmitConfirm = ref(false);
 
 // 폼 데이터
 const formData = ref({
@@ -44,6 +46,13 @@ const formData = ref({
   content: "",
   isPrivate: false,
 });
+
+// ref: 포커스 이동용
+const titleInputRef = ref<InstanceType<typeof Input> | null>(null);
+const contentTextareaRef = ref<InstanceType<typeof Textarea> | null>(null);
+
+// 한글 입력 중 여부 추적
+const isComposingTitle = ref(false);
 
 // 문의 유형 옵션
 const typeOptions: { value: InquiryType; label: string }[] = [
@@ -71,18 +80,42 @@ const loadProduct = async () => {
   }
 };
 
+// 안전한 이미지 URL인지 검증 (XSS 방지)
+const safeProductImageUrl = computed(() => {
+  if (!product.value?.imageUrl) return null;
+
+  try {
+    const url = new URL(product.value.imageUrl, window.location.origin);
+    // HTTP(S) 프로토콜만 허용 (javascript:, data: 등 차단)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return product.value.imageUrl;
+    }
+  } catch {
+    // 유효하지 않은 URL
+    console.warn('Invalid product image URL:', product.value.imageUrl);
+  }
+
+  return null; // 안전하지 않은 URL은 null 반환
+});
+
 // 폼 유효성 검사
 const isFormValid = computed(() => {
   return formData.value.title.trim() !== "" && formData.value.content.trim() !== "";
 });
 
-// 문의 등록
-const handleSubmit = async () => {
+// 등록하기 버튼 클릭 (확인 다이얼로그 표시)
+const handleSubmitClick = () => {
   if (!isFormValid.value) {
     showAlert("제목과 내용을 입력해주세요.", { type: "error" });
     return;
   }
 
+  showSubmitConfirm.value = true;
+};
+
+// 문의 등록 실행
+const handleSubmit = async () => {
+  showSubmitConfirm.value = false;
   loading.value = true;
   try {
     await createInquiry({
@@ -100,6 +133,37 @@ const handleSubmit = async () => {
     showAlert(error.message || "문의 등록에 실패했습니다.", { type: "error" });
   } finally {
     loading.value = false;
+  }
+};
+
+// Select 변경 시 포커스 이동
+const handleTypeChange = async (value: string) => {
+  formData.value.type = value as InquiryType;
+
+  // Select 선택 후 제목 입력란으로 포커스 이동
+  await nextTick();
+  if (titleInputRef.value) {
+    const inputEl = titleInputRef.value.$el as HTMLInputElement;
+    if (inputEl) {
+      inputEl.focus();
+    }
+  }
+};
+
+// 제목 입력란에서 엔터 키 처리
+const handleTitleEnter = (event: KeyboardEvent) => {
+  // 한글 입력 중에는 엔터 처리 안 함
+  if (isComposingTitle.value) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  // 내용 입력란으로 포커스 이동
+  if (contentTextareaRef.value) {
+    const textareaEl = contentTextareaRef.value.$el as HTMLTextAreaElement;
+    if (textareaEl) {
+      textareaEl.focus();
+    }
   }
 };
 
@@ -127,8 +191,8 @@ onMounted(() => {
     <Card v-if="product" class="mb-6">
       <CardContent class="p-4 flex items-center gap-4">
         <img
-          v-if="product.imageUrl"
-          :src="product.imageUrl"
+          v-if="safeProductImageUrl"
+          :src="safeProductImageUrl"
           :alt="product.name"
           class="w-16 h-16 object-cover rounded"
         />
@@ -148,7 +212,11 @@ onMounted(() => {
         <!-- 문의 유형 -->
         <div class="space-y-2">
           <Label>문의 유형</Label>
-          <Select v-model="formData.type" :disabled="!!productId">
+          <Select
+            :model-value="formData.type"
+            :disabled="!!productId"
+            @update:model-value="handleTypeChange"
+          >
             <SelectTrigger>
               <SelectValue placeholder="문의 유형 선택" />
             </SelectTrigger>
@@ -168,11 +236,15 @@ onMounted(() => {
         <div class="space-y-2">
           <Label for="title">제목</Label>
           <Input
+            ref="titleInputRef"
             id="title"
             v-model="formData.title"
             placeholder="문의 제목을 입력해주세요"
             :disabled="loading"
             class="placeholder:text-muted-foreground/50"
+            @keydown.enter="handleTitleEnter"
+            @compositionstart="isComposingTitle = true"
+            @compositionend="isComposingTitle = false"
           />
         </div>
 
@@ -180,6 +252,7 @@ onMounted(() => {
         <div class="space-y-2">
           <Label for="content">내용</Label>
           <Textarea
+            ref="contentTextareaRef"
             id="content"
             v-model="formData.content"
             placeholder="문의 내용을 상세히 입력해주세요"
@@ -220,7 +293,7 @@ onMounted(() => {
           <Button
             class="flex-1"
             :disabled="loading || !isFormValid"
-            @click="handleSubmit"
+            @click="handleSubmitClick"
           >
             <LoadingSpinner
               v-if="loading"
@@ -235,5 +308,17 @@ onMounted(() => {
         </div>
       </CardContent>
     </Card>
+
+    <!-- 등록 확인 다이얼로그 -->
+    <Alert
+      v-if="showSubmitConfirm"
+      :confirm-mode="true"
+      message="문의를 등록하시겠습니까?"
+      confirm-text="등록"
+      cancel-text="취소"
+      @confirm="handleSubmit"
+      @cancel="showSubmitConfirm = false"
+      @close="showSubmitConfirm = false"
+    />
   </div>
 </template>

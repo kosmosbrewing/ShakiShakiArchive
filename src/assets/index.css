@@ -38,9 +38,9 @@ html {
     --muted: 60 4.8% 95.9%;
     --accent: 60 4.8% 95.9%;
     --accent-foreground: 31 34% 28%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 350 70% 55%; /* 추천드린 로즈 레드 */
     --destructive-foreground: 60 9.1% 97.8%;
-    --border: 20 5.9% 90%;
+    --border: 335 10% 90%; /* 연한 보더 색상 */
     --input: 20 5.9% 90%;
     --ring: 336 60% 68%;
     --radius: 0.5rem;

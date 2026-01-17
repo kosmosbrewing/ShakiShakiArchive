@@ -38,8 +38,13 @@ const cursorImages = [
 const authStore = useAuthStore();
 
 // 전역 Alert 시스템
-const { alertState, closeAlert, handleConfirm, handleCancel, updatePromptValue } =
-  useAlert();
+const {
+  alertState,
+  closeAlert,
+  handleConfirm,
+  handleCancel,
+  updatePromptValue,
+} = useAlert();
 
 // 환영 메시지 Alert 상태
 const showWelcomeAlert = ref(false);
@@ -174,32 +179,34 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 떨어지는 입자들 -->
-  <div
-    v-for="particle in particles"
-    :key="particle.id"
-    class="falling-particle"
-    :style="{
-      left: `${particle.x}px`,
-      top: `${particle.y}px`,
-      '--fall-distance': `${particle.fallDistance}px`,
-      '--horizontal-drift': `${particle.horizontalDrift}px`,
-      '--rotation': `${particle.rotation}deg`,
-      '--end-rotation': `${particle.rotation + 180}deg`,
-      '--scale': particle.scale,
-      '--duration': `${particle.duration}ms`,
-    }"
-  >
-    <img
-      :src="particle.image"
-      alt="cursor"
-      class="w-12 md:w-14\ object-contain"
-    />
-  </div>
+  <div class="min-h-screen bg-[#FFFEFC]">
+    <!-- 떨어지는 입자들 -->
+    <div
+      v-for="particle in particles"
+      :key="particle.id"
+      class="falling-particle"
+      :style="{
+        left: `${particle.x}px`,
+        top: `${particle.y}px`,
+        '--fall-distance': `${particle.fallDistance}px`,
+        '--horizontal-drift': `${particle.horizontalDrift}px`,
+        '--rotation': `${particle.rotation}deg`,
+        '--end-rotation': `${particle.rotation + 180}deg`,
+        '--scale': particle.scale,
+        '--duration': `${particle.duration}ms`,
+      }"
+    >
+      <img
+        :src="particle.image"
+        alt="cursor"
+        class="w-12 md:w-14\ object-contain"
+      />
+    </div>
 
-  <Navbar />
-  <router-view :key="$route.fullPath" />
-  <Footer />
+    <Navbar />
+    <router-view :key="$route.fullPath" />
+    <Footer />
+  </div>
 
   <!-- 전역 환영 메시지 Alert -->
   <Alert

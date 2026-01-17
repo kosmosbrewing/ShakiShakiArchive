@@ -29,10 +29,14 @@ const emit = defineEmits<{
 // Input refs
 const recipientInputRef = ref<InstanceType<typeof Input> | null>(null);
 const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
-const addressButtonRef = ref<HTMLButtonElement | null>(null);
+const addressButtonRef = ref<InstanceType<typeof Button> | null>(null);
 const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
 const deliveryMessageSelectRef = ref<HTMLSelectElement | null>(null);
 const customMessageInputRef = ref<InstanceType<typeof Input> | null>(null);
+
+// 한글 입력 중 여부 추적 (IME composing)
+const isComposingRecipient = ref(false);
+const isComposingDetailAddress = ref(false);
 
 // 외부에서 특정 필드에 focus할 수 있도록 expose
 const focusField = (field: "recipient" | "phone" | "address" | "detailAddress") => {
@@ -44,7 +48,7 @@ const focusField = (field: "recipient" | "phone" | "address" | "detailAddress") 
       phoneInputRef.value?.focusFirst?.();
       break;
     case "address":
-      addressButtonRef.value?.focus();
+      (addressButtonRef.value?.$el as HTMLButtonElement)?.focus();
       break;
     case "detailAddress":
       detailAddressInputRef.value?.$el?.focus();
@@ -62,18 +66,24 @@ const updateField = <K extends keyof ShippingFormData>(
   emit("update:form", { ...props.form, [key]: value });
 };
 
-// 받는사람 필드 Enter 키 처리 (1자 이상일 때만 이동)
-const handleRecipientEnter = () => {
-  if (props.form.recipient.trim().length >= 1) {
-    nextTick(() => {
-      // 우편번호가 있으면 상세주소로, 없으면 주소검색 버튼으로 이동
-      if (props.form.zipCode) {
-        detailAddressInputRef.value?.$el?.focus();
-      } else {
-        addressButtonRef.value?.focus();
-      }
-    });
+// 받는사람 필드 Enter 키 처리
+const handleRecipientEnter = (event: KeyboardEvent) => {
+  // 한글 입력 중이면 무시
+  if (isComposingRecipient.value) {
+    return;
   }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  nextTick(() => {
+    // 우편번호가 있으면 상세주소로, 없으면 주소검색 버튼으로 이동
+    if (props.form.zipCode) {
+      detailAddressInputRef.value?.$el?.focus();
+    } else {
+      (addressButtonRef.value?.$el as HTMLButtonElement)?.focus();
+    }
+  });
 };
 
 // 휴대전화 마지막 입력 후 처리
@@ -87,7 +97,10 @@ const handlePhoneEnter = () => {
 };
 
 // 배송 메시지 Select에서 Enter 키 처리
-const handleDeliveryMessageEnter = () => {
+const handleDeliveryMessageEnter = (event: KeyboardEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+
   // "직접 입력" 선택 시 직접입력 Input으로 focus
   if (props.form.message === 'self') {
     nextTick(() => {
@@ -97,7 +110,15 @@ const handleDeliveryMessageEnter = () => {
 };
 
 // 상세주소 필드 Enter 키 처리
-const handleDetailAddressEnter = () => {
+const handleDetailAddressEnter = (event: KeyboardEvent) => {
+  // 한글 입력 중이면 무시
+  if (isComposingDetailAddress.value) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
   nextTick(() => {
     phoneInputRef.value?.focusFirst();
   });
@@ -136,7 +157,9 @@ const deliveryMessageOptions = [
           ref="recipientInputRef"
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
-          @keydown.enter.prevent="handleRecipientEnter"
+          @compositionstart="isComposingRecipient = true"
+          @compositionend="isComposingRecipient = false"
+          @keydown.enter="handleRecipientEnter"
           type="text"
           class="flex-1 min-w-0"
         />
@@ -165,6 +188,7 @@ const deliveryMessageOptions = [
             size="sm"
             class="h-10 px-3 text-caption sm:text-body shrink-0 font-medium"
             @click="emit('searchAddress')"
+            @keydown.enter="(e) => { e.preventDefault(); e.stopPropagation(); emit('searchAddress'); }"
           >
             주소검색
           </Button>
@@ -180,7 +204,9 @@ const deliveryMessageOptions = [
           ref="detailAddressInputRef"
           :model-value="form.detailAddress"
           @update:model-value="updateField('detailAddress', String($event))"
-          @keydown.enter.prevent="handleDetailAddressEnter"
+          @compositionstart="isComposingDetailAddress = true"
+          @compositionend="isComposingDetailAddress = false"
+          @keydown.enter="handleDetailAddressEnter"
           type="text"
           placeholder="상세 주소를 입력하세요"
         />
@@ -212,7 +238,7 @@ const deliveryMessageOptions = [
         @change="
           handleDeliveryMessageChange(($event.target as HTMLSelectElement).value)
         "
-        @keydown.enter.prevent="handleDeliveryMessageEnter"
+        @keydown.enter="handleDeliveryMessageEnter"
         class="w-full border border-border rounded p-2.5 sm:p-3 text-caption sm:text-body bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
       >
         <option

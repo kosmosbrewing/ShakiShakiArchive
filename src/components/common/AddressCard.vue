@@ -59,7 +59,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="sm"
             @click.stop="emit('edit', address)"
-            class="text-caption text-muted-foreground hover:text-primary h-auto p-1"
+            class="text-caption text-muted-foreground hover:underline h-auto p-1"
           >
             수정
           </Button>
@@ -68,7 +68,7 @@ const emit = defineEmits<{
             variant="ghost"
             size="sm"
             @click.stop="emit('delete', address.id)"
-            class="text-caption text-muted-foreground hover:text-destructive h-auto p-1"
+            class="text-caption text-muted-foreground hover:underline h-auto p-1"
           >
             삭제
           </Button>
@@ -95,7 +95,7 @@ const emit = defineEmits<{
       <!-- 배송 메모 -->
       <div v-if="address.requestNote" class="mt-auto">
         <p class="text-caption text-primary bg-primary/5 p-2 rounded truncate">
-          "{{ address.requestNote }}"
+          {{ address.requestNote }}
         </p>
       </div>
     </CardContent>
