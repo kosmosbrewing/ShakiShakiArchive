@@ -395,6 +395,8 @@ onMounted(async () => {
             <Label for="email">이메일</Label>
             <Input
               id="email"
+              name="email"
+              autocomplete="email"
               v-model="form.email"
               type="email"
               disabled
@@ -407,6 +409,8 @@ onMounted(async () => {
             <Input
               ref="userNameInputRef"
               id="userName"
+              name="name"
+              autocomplete="name"
               v-model="form.userName"
               type="text"
               @keydown.enter.prevent="handleUserNameEnter"
@@ -474,6 +478,8 @@ onMounted(async () => {
             <Input
               ref="currentPasswordInputRef"
               id="currentPassword"
+              name="current-password"
+              autocomplete="current-password"
               v-model="form.currentPassword"
               type="password"
               placeholder="현재 비밀번호 입력"
@@ -525,6 +531,8 @@ onMounted(async () => {
             <Input
               ref="pwCurrentPasswordInputRef"
               id="pwCurrentPassword"
+              name="current-password"
+              autocomplete="current-password"
               v-model="passwordForm.currentPassword"
               type="password"
               placeholder="현재 비밀번호 입력"
@@ -537,6 +545,8 @@ onMounted(async () => {
             <Input
               ref="newPasswordInputRef"
               id="newPassword"
+              name="new-password"
+              autocomplete="new-password"
               v-model="passwordForm.newPassword"
               type="password"
               placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
@@ -581,6 +591,8 @@ onMounted(async () => {
             <Input
               ref="confirmNewPasswordInputRef"
               id="confirmNewPassword"
+              name="confirm-password"
+              autocomplete="new-password"
               v-model="passwordForm.confirmNewPassword"
               type="password"
               placeholder="새 비밀번호 재입력"

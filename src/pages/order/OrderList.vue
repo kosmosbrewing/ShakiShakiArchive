@@ -26,6 +26,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { X, Search } from "lucide-vue-next";
 
 const router = useRouter();
@@ -370,12 +371,10 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
-    <div class="mb-6 border-b pb-3">
-      <div>
-        <h3 class="text-heading text-primary tracking-wider">주문 내역</h3>
-      </div>
+    <div class="mb-6">
+      <h3 class="text-heading text-primary tracking-wider mb-3">주문 상세</h3>
+      <Separator></Separator>
     </div>
-
     <!-- 검색 및 필터 -->
     <div class="mb-6 space-y-4">
       <!-- 검색 입력 -->

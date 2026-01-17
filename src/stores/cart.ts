@@ -30,6 +30,9 @@ export const useCartStore = defineStore("cart", () => {
 
   // 계산된 속성
   const itemCount = computed(() => items.value.length);
+  const totalQuantity = computed(() => {
+    return items.value.reduce((sum, item) => sum + item.quantity, 0);
+  });
   const isEmpty = computed(() => items.value.length === 0);
 
   const totalProductPrice = computed(() => {
@@ -215,6 +218,7 @@ export const useCartStore = defineStore("cart", () => {
 
     // 계산된 속성
     itemCount,
+    totalQuantity,
     isEmpty,
     totalProductPrice,
     shippingFee,

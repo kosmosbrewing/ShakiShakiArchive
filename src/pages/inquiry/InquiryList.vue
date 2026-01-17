@@ -16,6 +16,7 @@ import { LoadingSpinner, EmptyState } from "@/components/common";
 // Shadcn UI 컴포넌트
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -122,9 +123,7 @@ onMounted(() => {
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div
-      class="mb-8 pb-4 border-b border-border flex items-center justify-between"
-    >
+    <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <h3 class="text-heading text-primary tracking-wider font-semibold">
           문의 내역
@@ -141,9 +140,10 @@ onMounted(() => {
         <span class="sm:hidden">작성</span>
       </Button>
     </div>
+    <Separator />
 
     <!-- 필터 -->
-    <div class="mb-6 flex items-center justify-between gap-4">
+    <div class="mt-6 mb-6 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <Select v-model="selectedType">
           <SelectTrigger class="w-[160px] sm:w-[180px] border-border/60">

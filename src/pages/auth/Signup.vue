@@ -1,27 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, reactive, nextTick } from "vue";
+import { ref, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
-import { sendVerification, verifyEmail } from "@/lib/api";
+import {
+  sendVerification,
+  verifyEmail,
+  getNaverLoginUrl,
+  getKakaoLoginUrl,
+} from "@/lib/api";
 import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
-
-// 환경 체크: Production 환경에서는 준비중 표시
-const isProduction = computed(() => import.meta.env.MODE === "production");
-import { CheckCircle2, AlertCircle, Mail, KeyRound } from "lucide-vue-next";
-import {
-  PhoneInput,
-  AddressSearchModal,
-  PasswordStrengthIndicator,
-  LoadingSpinner,
-} from "@/components/common";
+import { CheckCircle2, Mail } from "lucide-vue-next";
+import { PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import Separator from "@/components/ui/separator/Separator.vue";
 
 // Input refs
 const emailInputRef = ref<InstanceType<typeof Input> | null>(null);
@@ -30,9 +28,6 @@ const verificationCodeInputRef = ref<InstanceType<typeof Input> | null>(null);
 const passwordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const confirmPasswordInputRef = ref<InstanceType<typeof Input> | null>(null);
 const userNameInputRef = ref<InstanceType<typeof Input> | null>(null);
-const phoneInputRef = ref<InstanceType<typeof PhoneInput> | null>(null);
-const addressSearchButtonRef = ref<InstanceType<typeof Button> | null>(null);
-const detailAddressInputRef = ref<InstanceType<typeof Input> | null>(null);
 const emailOptInCheckboxRef = ref<HTMLInputElement | null>(null);
 const signupButtonRef = ref<InstanceType<typeof Button> | null>(null);
 
@@ -80,28 +75,6 @@ const handleUserNameEnter = () => {
   if (formData.userName.trim().length >= 1) {
     // nextTick을 사용하여 현재 키 이벤트가 완전히 끝난 후 포커스 이동
     nextTick(() => {
-      phoneInputRef.value?.focusFirst();
-    });
-  }
-};
-
-// 휴대전화 마지막 입력 후 처리 (우편번호 유무에 따라 분기)
-const handlePhoneEnter = () => {
-  nextTick(() => {
-    if (formData.zipCode) {
-      // 우편번호가 있으면 상세주소로 이동
-      detailAddressInputRef.value?.$el?.focus();
-    } else {
-      // 우편번호가 없으면 주소검색 버튼으로 이동
-      addressSearchButtonRef.value?.$el?.focus();
-    }
-  });
-};
-
-// 상세주소 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
-const handleDetailAddressEnter = () => {
-  if (formData.detailAddress.trim().length >= 1) {
-    nextTick(() => {
       emailOptInCheckboxRef.value?.focus();
     });
   }
@@ -114,19 +87,12 @@ const handleEmailOptInEnter = () => {
   });
 };
 
-// ... (스크립트 로직은 기존과 동일하므로 생략하거나 그대로 유지) ...
 // 1. 회원가입 폼 데이터
 const formData = reactive({
   email: "",
   password: "",
   confirmPassword: "",
   userName: "",
-  phone1: "010",
-  phone2: "",
-  phone3: "",
-  zipCode: "",
-  address: "",
-  detailAddress: "",
   emailOptIn: false,
 });
 
@@ -143,7 +109,8 @@ const verificationState = reactive({
 // 3. UI 상태
 const isSubmitting = ref(false);
 const errorMessage = ref("");
-const isAddressSearchOpen = ref(false);
+const isNaverLoading = ref(false); // 네이버 로그인 버튼 로딩 상태
+const isKakaoLoading = ref(false); // 카카오 로그인 버튼 로딩 상태
 
 // 이메일 형식 검증 (blur 이벤트용)
 // 실시간 피드백을 제공하되, API 호출은 하지 않음 (중복 호출 방지)
@@ -238,40 +205,14 @@ const verifyCode = async () => {
   }
 };
 
-// 주소 검색 모달 열기
-const openAddressSearch = () => {
-  isAddressSearchOpen.value = true;
-};
-
-// 주소 선택 핸들러
-const handleAddressSelect = (address: {
-  zonecode: string;
-  address: string;
-}) => {
-  formData.zipCode = address.zonecode;
-  formData.address = address.address;
-  formData.detailAddress = ""; // 상세 주소 초기화
-
-  // 주소 선택 후 상세주소 입력 필드로 focus
-  nextTick(() => {
-    detailAddressInputRef.value?.$el?.focus();
-  });
-};
-
 // 유효성 검사 및 Alert 표시 헬퍼
-const showValidationError = (
-  message: string,
-  focusRef?: any,
-  isPhoneInput = false
-) => {
+const showValidationError = (message: string, focusRef?: any) => {
   showAlertMessage(message, { type: "error" });
 
   if (focusRef) {
     // Alert가 표시된 후 해당 필드에 focus
     setTimeout(() => {
-      if (isPhoneInput) {
-        focusRef.value?.focusFirst?.();
-      } else if (focusRef.value?.$el) {
+      if (focusRef.value?.$el) {
         focusRef.value.$el.focus();
       } else if (focusRef.value?.focus) {
         focusRef.value.focus();
@@ -320,25 +261,18 @@ const handleSignup = async () => {
     return;
   }
 
-  // 전화번호 검증
-  if (!formData.phone2 || !formData.phone3) {
-    showValidationError("휴대전화 번호를 입력해주세요.", phoneInputRef, true);
-    return;
-  }
-
   try {
     isSubmitting.value = true;
     await authStore.register({
       email: formData.email,
       password: formData.password,
       userName: formData.userName,
-      phone1: formData.phone1,
-      phone2: formData.phone2,
-      phone3: formData.phone3,
-
-      zipCode: formData.zipCode,
-      address: formData.address,
-      detailAddress: formData.detailAddress,
+      phone1: "",
+      phone2: "",
+      phone3: "",
+      zipCode: "",
+      address: "",
+      detailAddress: "",
       emailOptIn: formData.emailOptIn,
     });
 
@@ -356,6 +290,34 @@ const handleSignup = async () => {
     isSubmitting.value = false;
   }
 };
+
+// 네이버 소셜 로그인 처리
+const handleNaverLogin = () => {
+  isNaverLoading.value = true;
+
+  try {
+    const naverLoginUrl = getNaverLoginUrl();
+    window.location.href = naverLoginUrl;
+  } catch (error) {
+    console.error("네이버 로그인 URL 생성 실패:", error);
+    showAlertMessage("네이버 로그인 연결에 실패했습니다.", { type: "error" });
+    isNaverLoading.value = false;
+  }
+};
+
+// 카카오 소셜 로그인 처리
+const handleKakaoLogin = () => {
+  isKakaoLoading.value = true;
+
+  try {
+    const kakaoLoginUrl = getKakaoLoginUrl();
+    window.location.href = kakaoLoginUrl;
+  } catch (error) {
+    console.error("카카오 로그인 URL 생성 실패:", error);
+    showAlertMessage("카카오 로그인 연결에 실패했습니다.", { type: "error" });
+    isKakaoLoading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -364,291 +326,333 @@ const handleSignup = async () => {
     class="max-w-md mx-auto items-center justify-center py-12 sm:py-16 px-3 sm:px-4"
   >
     <div class="mb-4 sm:mb-6 text-center">
-      <h2 class="text-heading text-primary mb-2 tracking-wider">회원가입</h2>
+      <h3 class="text-heading text-primary tracking-wider mb-8">회원가입</h3>
+      <!-- 구분선 -->
+      <div class="relative my-1">
+        <div class="absolute inset-0 flex items-center">
+          <Separator></Separator>
+        </div>
+        <div class="relative flex justify-center text-xs uppercase">
+          <span class="bg-background px-2 text-caption text-muted-foreground"
+            >간편하게 시작하기</span
+          >
+        </div>
+      </div>
     </div>
 
-    <!-- Production 환경: 준비중 안내 -->
-    <Card v-if="isProduction" class="w-full mx-auto">
-      <CardContent class="py-16 text-center">
-        <div class="flex flex-col items-center gap-4">
-          <AlertCircle class="w-16 h-16 text-muted-foreground" />
-          <h3 class="text-xl font-semibold text-foreground">준비중입니다</h3>
-          <p class="text-muted-foreground">
-            회원가입 기능은 현재 준비중입니다.<br />
-            빠른 시일 내에 서비스를 오픈할 예정입니다.
-          </p>
-          <router-link to="/">
-            <Button variant="outline" class="mt-4 font-medium"
-              >홈으로 돌아가기</Button
-            >
-          </router-link>
+    <!-- 회원가입 폼 -->
+    <div class="w-full mx-auto flex flex-col gap-4">
+      <div class="px-4 sm:px-6 flex flex-col gap-4">
+        <!-- 소셜 로그인 버튼 -->
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          :class="['w-full', 'bg-[#03A94D] hover:bg-[#03A94D]/90 font-medium']"
+          :disabled="isSubmitting || isNaverLoading || isKakaoLoading"
+          @click="handleNaverLogin"
+        >
+          <LoadingSpinner
+            v-if="isNaverLoading"
+            variant="spinner"
+            size="sm"
+            color="white"
+            :center="false"
+          />
+
+          <template v-else>
+            <div class="inline-flex items-center leading-none text-white">
+              <svg
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="currentColor"
+                class="w-4 h-4 block"
+                preserveAspectRatio="xMinYMid meet"
+              >
+                <path
+                  d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
+                />
+              </svg>
+              <span class="text-base font-medium tracking-tight ml-2 text-white"
+                >네이버 로그인</span
+              >
+            </div>
+          </template>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          :class="[
+            'w-full',
+            'bg-[#FEE500] hover:bg-[#FEE500]/90 font-medium border-[#FEE500]',
+          ]"
+          :disabled="isSubmitting || isNaverLoading || isKakaoLoading"
+          @click="handleKakaoLogin"
+        >
+          <LoadingSpinner
+            v-if="isKakaoLoading"
+            variant="spinner"
+            size="sm"
+            color="foreground"
+            :center="false"
+          />
+
+          <template v-else>
+            <div class="inline-flex items-center leading-none text-[#191919]">
+              <svg
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="currentColor"
+                class="w-5 h-5 block"
+              >
+                <path
+                  d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
+                />
+              </svg>
+              <span
+                class="text-base font-medium tracking-tight ml-2 text-[#191919]"
+                >카카오 로그인</span
+              >
+            </div>
+          </template>
+        </Button>
+      </div>
+
+      <!-- 구분선 -->
+      <div class="relative my-1">
+        <div class="absolute inset-0 flex items-center">
+          <Separator></Separator>
         </div>
-      </CardContent>
-    </Card>
-
-    <!-- 개발 환경: 기존 회원가입 폼 -->
-    <Card v-else class="w-full mx-auto">
-      <CardContent class="px-4 sm:px-6 py-5 sm:py-6">
-        <form @submit.prevent="handleSignup" class="grid gap-4 sm:gap-5">
-          <div class="flex flex-col gap-1.5 mt-2">
-            <Label for="email" class="text-body"
-              >이메일 <span class="text-primary">*</span></Label
-            >
-            <div class="flex gap-1.5 sm:gap-2">
-              <Input
-                ref="emailInputRef"
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                v-model="formData.email"
-                :disabled="verificationState.isVerified"
-                @blur="checkEmailFormat"
-                @keydown.enter.prevent="handleEmailEnter"
-                class="text-caption sm:text-body"
-              />
-              <Button
-                ref="verificationButtonRef"
-                type="button"
-                variant="outline"
-                size="sm"
-                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem] font-medium"
-                @click="sendVerificationCode"
-                :disabled="
-                  verificationState.isVerified ||
-                  verificationState.isLoading ||
-                  !formData.email
-                "
-              >
-                <LoadingSpinner
-                  v-if="verificationState.isLoading"
-                  variant="spinner"
-                  size="sm"
-                  color="foreground"
-                  :center="false"
-                  class="mr-2"
-                />
-                <Mail
-                  v-else-if="!verificationState.isVerified"
-                  class="w-4 h-4 mr-2"
-                />
-                <CheckCircle2 v-else class="w-4 h-4 mr-2" />
-                <span v-if="verificationState.isLoading">전송중</span>
-                <span v-else-if="verificationState.isVerified">완료</span>
-                <span v-else-if="verificationState.isSent">재전송</span>
-                <span v-else>인증요청</span>
-              </Button>
-            </div>
-            <p
-              v-if="verificationState.errorMessage && !verificationState.isSent"
-              class="text-caption text-destructive"
-            >
-              {{ verificationState.errorMessage }}
-            </p>
-          </div>
-
-          <div
-            v-if="verificationState.isSent && !verificationState.isVerified"
-            class="flex flex-col gap-1.5 animate-in slide-in-from-top-2"
+        <div class="relative flex justify-center text-xs uppercase">
+          <span class="bg-background px-2 text-caption text-muted-foreground"
+            >또는 이메일로 가입하기</span
           >
-            <Label for="code" class="text-body">인증번호</Label>
-            <div class="flex gap-1.5 sm:gap-2">
-              <Input
-                ref="verificationCodeInputRef"
-                id="code"
-                type="text"
-                placeholder="인증번호 6자리"
-                maxlength="6"
-                v-model="verificationState.code"
-                :disabled="verificationState.isVerifying"
-                @keyup.enter="verifyCode"
-                class="text-caption sm:text-body"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                class="h-10 px-2.5 sm:px-3 text-caption sm:text-body shrink-0 min-w-[4.5rem] sm:min-w-[7rem] font-medium"
-                @click="verifyCode"
-                :disabled="
-                  verificationState.isVerifying ||
-                  verificationState.code.length !== 6
-                "
-              >
-                <LoadingSpinner
-                  v-if="verificationState.isVerifying"
-                  variant="spinner"
-                  size="sm"
-                  color="white"
-                  :center="false"
-                  class="mr-2"
-                />
-                <KeyRound v-else class="w-4 h-4 mr-2" />
-                {{ verificationState.isVerifying ? "확인중" : "확인" }}
-              </Button>
-            </div>
-            <p class="text-caption text-muted-foreground">
-              이메일로 발송된 6자리 인증번호를 입력해주세요.
-            </p>
-            <p
-              v-if="verificationState.errorMessage"
-              class="text-caption text-destructive"
-            >
-              {{ verificationState.errorMessage }}
-            </p>
-          </div>
+        </div>
+      </div>
 
-          <Alert
-            v-if="verificationState.isVerified"
-            class="bg-green-50 text-primary border-green-200 py-2"
+      <!-- 이메일 회원가입 카드 -->
+      <Card class="w-full">
+        <CardContent class="px-4 sm:px-6 py-5 sm:py-6">
+          <form
+            @submit.prevent="handleSignup"
+            autocomplete="off"
+            class="grid gap-4 sm:gap-5"
           >
-            <CheckCircle2 class="h-4 w-4" />
-            <AlertTitle class="ml-2 text-body font-medium"
-              >이메일 인증 완료</AlertTitle
-            >
-          </Alert>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="password" class="text-body"
-              >비밀번호 <span class="text-primary">*</span></Label
-            >
-            <Input
-              ref="passwordInputRef"
-              id="password"
-              type="password"
-              placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
-              v-model="formData.password"
-              @keydown.enter.prevent="handlePasswordEnter"
-              class="text-caption sm:text-body"
-            />
-
-            <!-- 비밀번호 강도 표시 -->
-            <PasswordStrengthIndicator :password="formData.password" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="confirmPassword" class="text-body"
-              >비밀번호 확인 <span class="text-primary">*</span></Label
-            >
-            <Input
-              ref="confirmPasswordInputRef"
-              id="confirmPassword"
-              type="password"
-              placeholder="비밀번호 재입력"
-              v-model="formData.confirmPassword"
-              @keydown.enter.prevent="handleConfirmPasswordEnter"
-              class="text-caption sm:text-body"
-            />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="userName" class="text-body"
-              >이름 <span class="text-primary">*</span></Label
-            >
-            <Input
-              ref="userNameInputRef"
-              id="userName"
-              type="text"
-              placeholder="실명 입력"
-              v-model="formData.userName"
-              @keydown.enter.prevent="handleUserNameEnter"
-              class="text-caption sm:text-body"
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="phone" class="text-body"
-              >휴대전화 <span class="text-primary">*</span></Label
-            >
-            <PhoneInput
-              ref="phoneInputRef"
-              v-model:phone1="formData.phone1"
-              v-model:phone2="formData.phone2"
-              v-model:phone3="formData.phone3"
-              @enter="handlePhoneEnter"
-            />
-          </div>
-          <div class="space-y-2">
-            <Label class="text-body">주소</Label>
-            <div class="space-y-2">
-              <div class="flex gap-2">
+            <div class="flex flex-col gap-1.5">
+              <Label for="email" class="text-body"
+                >이메일 <span class="text-primary">*</span></Label
+              >
+              <div class="flex gap-1.5 sm:gap-2">
                 <Input
-                  v-model="formData.zipCode"
-                  type="text"
-                  readonly
-                  placeholder="우편번호"
-                  class="w-20 sm:w-28 bg-muted text-caption sm:text-body"
+                  ref="emailInputRef"
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  v-model="formData.email"
+                  :disabled="verificationState.isVerified"
+                  @blur="checkEmailFormat"
+                  @keydown.enter.prevent="handleEmailEnter"
+                  class="text-caption sm:text-body"
                 />
                 <Button
-                  ref="addressSearchButtonRef"
+                  ref="verificationButtonRef"
                   type="button"
                   variant="outline"
                   size="sm"
-                  class="h-10 px-3 sm:px-4 text-caption sm:text-body shrink-0 font-medium"
-                  @click="openAddressSearch"
+                  class="w-28 shrink-0 h-10 font-medium"
+                  @click="sendVerificationCode"
+                  :disabled="
+                    verificationState.isVerified ||
+                    verificationState.isLoading ||
+                    !formData.email
+                  "
                 >
-                  주소검색
+                  <LoadingSpinner
+                    v-if="verificationState.isLoading"
+                    variant="spinner"
+                    size="sm"
+                    color="foreground"
+                    :center="false"
+                    class="mr-2"
+                  />
+                  <Mail
+                    v-else-if="!verificationState.isVerified"
+                    class="w-4 h-4 mr-2"
+                  />
+                  <CheckCircle2 v-else class="w-4 h-4 mr-2" />
+                  <span v-if="verificationState.isLoading">전송중</span>
+                  <span v-else-if="verificationState.isVerified">완료</span>
+                  <span v-else-if="verificationState.isSent">재전송</span>
+                  <span v-else>인증요청</span>
                 </Button>
               </div>
+              <p
+                v-if="
+                  verificationState.errorMessage && !verificationState.isSent
+                "
+                class="text-caption text-destructive"
+              >
+                {{ verificationState.errorMessage }}
+              </p>
+            </div>
+
+            <div
+              v-if="verificationState.isSent && !verificationState.isVerified"
+              class="flex flex-col gap-1.5 animate-in slide-in-from-top-2"
+            >
+              <Label for="code" class="text-body">인증번호</Label>
+              <div class="flex gap-1.5 sm:gap-2">
+                <Input
+                  ref="verificationCodeInputRef"
+                  id="code"
+                  type="text"
+                  placeholder="인증번호 6자리"
+                  maxlength="6"
+                  v-model="verificationState.code"
+                  :disabled="verificationState.isVerifying"
+                  @keyup.enter="verifyCode"
+                  class="text-caption sm:text-body"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  class="w-28 shrink-0 h-10 font-medium"
+                  @click="verifyCode"
+                  :disabled="
+                    verificationState.isVerifying ||
+                    verificationState.code.length !== 6
+                  "
+                >
+                  <LoadingSpinner
+                    v-if="verificationState.isVerifying"
+                    variant="spinner"
+                    size="sm"
+                    color="white"
+                    :center="false"
+                    class="mr-2"
+                  />
+                  {{ verificationState.isVerifying ? "확인중" : "확인" }}
+                </Button>
+              </div>
+              <p class="text-caption text-muted-foreground">
+                이메일로 발송된 6자리 인증번호를 입력해주세요.
+              </p>
+              <p
+                v-if="verificationState.errorMessage"
+                class="text-caption text-destructive"
+              >
+                {{ verificationState.errorMessage }}
+              </p>
+            </div>
+
+            <Alert
+              v-if="verificationState.isVerified"
+              class="bg-primary text-primary-foreground border-0 py-2"
+            >
+              <CheckCircle2 class="h-4 w-4" />
+              <AlertTitle class="ml-2 text-body font-medium"
+                >이메일 인증 완료</AlertTitle
+              >
+            </Alert>
+
+            <div class="flex flex-col gap-1.5">
+              <Label for="password" class="text-body"
+                >비밀번호 <span class="text-primary">*</span></Label
+              >
               <Input
-                v-model="formData.address"
-                type="text"
-                readonly
-                placeholder="기본 주소"
-                class="bg-muted text-caption sm:text-body"
+                ref="passwordInputRef"
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
+                v-model="formData.password"
+                @keydown.enter.prevent="handlePasswordEnter"
+                class="text-caption sm:text-body"
               />
+
+              <!-- 비밀번호 강도 표시 -->
+              <PasswordStrengthIndicator :password="formData.password" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="confirmPassword" class="text-body"
+                >비밀번호 확인 <span class="text-primary">*</span></Label
+              >
               <Input
-                ref="detailAddressInputRef"
-                v-model="formData.detailAddress"
-                type="text"
-                placeholder="상세 주소 입력"
-                @keydown.enter.prevent="handleDetailAddressEnter"
+                ref="confirmPasswordInputRef"
+                id="confirmPassword"
+                name="confirm-password"
+                type="password"
+                autocomplete="new-password"
+                placeholder="비밀번호 재입력"
+                v-model="formData.confirmPassword"
+                @keydown.enter.prevent="handleConfirmPasswordEnter"
                 class="text-caption sm:text-body"
               />
             </div>
-          </div>
 
-          <div class="flex items-center space-x-2 mt-2">
-            <input
-              ref="emailOptInCheckboxRef"
-              id="email-opt-in"
-              type="checkbox"
-              v-model="formData.emailOptIn"
-              class="h-4 w-4 rounded border-border accent-primary focus:ring-primary"
-              @keydown.enter.prevent="handleEmailOptInEnter"
-            />
-            <label
-              for="email-opt-in"
-              class="text-body font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            <div class="flex flex-col gap-1.5">
+              <Label for="userName" class="text-body"
+                >이름 <span class="text-primary">*</span></Label
+              >
+              <Input
+                ref="userNameInputRef"
+                id="userName"
+                name="name"
+                type="text"
+                placeholder="실명 입력"
+                v-model="formData.userName"
+                @keydown.enter.prevent="handleUserNameEnter"
+                class="text-caption sm:text-body"
+              />
+            </div>
+
+            <div class="flex items-center space-x-2 mt-2">
+              <input
+                ref="emailOptInCheckboxRef"
+                id="email-opt-in"
+                type="checkbox"
+                v-model="formData.emailOptIn"
+                class="h-4 w-4 rounded border-border accent-primary focus:ring-primary"
+                @keydown.enter.prevent="handleEmailOptInEnter"
+              />
+              <label
+                for="email-opt-in"
+                class="text-body font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                [선택] 이벤트 및 할인 소식 이메일 수신 동의
+              </label>
+            </div>
+
+            <AlertDescription v-if="errorMessage">
+              {{ errorMessage }}
+            </AlertDescription>
+
+            <Button
+              ref="signupButtonRef"
+              type="submit"
+              class="w-full mt-2 font-bold hover:bg-primary/80"
+              size="lg"
+              :disabled="isSubmitting || !verificationState.isVerified"
             >
-              [선택] 이벤트 및 할인 소식 이메일 수신 동의
-            </label>
-          </div>
-
-          <AlertDescription v-if="errorMessage">
-            {{ errorMessage }}
-          </AlertDescription>
-
-          <Button
-            ref="signupButtonRef"
-            type="submit"
-            class="w-full mt-2 font-bold hover:bg-primary/80"
-            size="lg"
-            :disabled="isSubmitting || !verificationState.isVerified"
-          >
-            <LoadingSpinner
-              v-if="isSubmitting"
-              variant="spinner"
-              size="sm"
-              color="white"
-              :center="false"
-              class="mr-2"
-            />
-            {{ isSubmitting ? "처리 중..." : "회원가입 완료" }}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+              <LoadingSpinner
+                v-if="isSubmitting"
+                variant="spinner"
+                size="sm"
+                color="white"
+                :center="false"
+                class="mr-2"
+              />
+              {{ isSubmitting ? "처리 중..." : "회원가입" }}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
 
     <p
-      v-if="!isProduction"
       class="text-center text-muted-foreground mt-4 text-caption sm:text-body px-2"
     >
       이미 계정이 있으신가요?
@@ -656,12 +660,5 @@ const handleSignup = async () => {
         >로그인하기</router-link
       >
     </p>
-
-    <!-- 주소 검색 모달 -->
-    <AddressSearchModal
-      :open="isAddressSearchOpen"
-      @close="isAddressSearchOpen = false"
-      @select="handleAddressSelect"
-    />
   </section>
 </template>

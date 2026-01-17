@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -87,12 +88,12 @@ const safeProductImageUrl = computed(() => {
   try {
     const url = new URL(product.value.imageUrl, window.location.origin);
     // HTTP(S) 프로토콜만 허용 (javascript:, data: 등 차단)
-    if (url.protocol === 'http:' || url.protocol === 'https:') {
+    if (url.protocol === "http:" || url.protocol === "https:") {
       return product.value.imageUrl;
     }
   } catch {
     // 유효하지 않은 URL
-    console.warn('Invalid product image URL:', product.value.imageUrl);
+    console.warn("Invalid product image URL:", product.value.imageUrl);
   }
 
   return null; // 안전하지 않은 URL은 null 반환
@@ -100,7 +101,9 @@ const safeProductImageUrl = computed(() => {
 
 // 폼 유효성 검사
 const isFormValid = computed(() => {
-  return formData.value.title.trim() !== "" && formData.value.content.trim() !== "";
+  return (
+    formData.value.title.trim() !== "" && formData.value.content.trim() !== ""
+  );
 });
 
 // 등록하기 버튼 클릭 (확인 다이얼로그 표시)
@@ -180,15 +183,16 @@ onMounted(() => {
 <template>
   <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div class="mb-6 border-b pb-3 flex items-center gap-4">
+    <div class="mb-2 flex items-center gap-4">
       <Button variant="ghost" size="icon" @click="goBack" class="shrink-0">
         <ArrowLeft class="w-5 h-5" />
       </Button>
       <h3 class="text-heading text-primary tracking-wider">문의하기</h3>
     </div>
+    <Separator class="mb-6" />
 
     <!-- 상품 정보 (상품 문의인 경우) -->
-    <Card v-if="product" class="mb-6">
+    <Card v-if="product">
       <CardContent class="p-4 flex items-center gap-4">
         <img
           v-if="safeProductImageUrl"
@@ -275,7 +279,10 @@ onMounted(() => {
             <Lock class="w-4 h-4" />
             비밀글로 작성
           </Button>
-          <span v-if="formData.isPrivate" class="ml-3 text-sm text-muted-foreground">
+          <span
+            v-if="formData.isPrivate"
+            class="ml-3 text-sm text-muted-foreground"
+          >
             비밀글은 본인과 관리자만 확인할 수 있습니다.
           </span>
         </div>

@@ -2,15 +2,12 @@
 // src/pages/auth/ForgotPassword.vue
 // 비밀번호 찾기 페이지
 
-import { ref, reactive, computed, watch, nextTick } from "vue";
+import { ref, reactive, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { sendVerification, verifyEmail, resetPassword } from "@/lib/api";
 import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
-import {
-  CheckCircle2,
-  Mail,
-} from "lucide-vue-next";
+import { CheckCircle2, Mail } from "lucide-vue-next";
 
 // Common Components
 import { PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
@@ -59,28 +56,13 @@ const showAlert = ref(false);
 const alertMessage = ref("");
 const alertType = ref<AlertType>("success");
 
-// 단계별 타이틀
-const stepTitle = computed(() => {
-  switch (currentStep.value) {
-    case 1:
-      return "이메일 인증";
-    case 2:
-      return "인증번호 확인";
-    case 3:
-      return "새 비밀번호 설정";
-    case 4:
-      return "비밀번호 재설정 완료";
-    default:
-      return "비밀번호 찾기";
-  }
-});
-
 // 인증코드 발송
 const sendVerificationCode = async () => {
   // 형식 검증
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
-    verificationState.errorMessage = emailValidation.error || "유효한 이메일을 입력해주세요.";
+    verificationState.errorMessage =
+      emailValidation.error || "유효한 이메일을 입력해주세요.";
     return;
   }
 
@@ -242,16 +224,15 @@ watch(
 <template>
   <section
     id="forgot-password"
-    class="max-w-md mx-auto items-center justify-center py-24 sm:py-16"
+    class="max-w-md mx-auto items-center justify-center py-12 sm:py-16 px-3 sm:px-4"
   >
     <div class="mb-6 text-center">
       <h2 class="text-heading text-primary mb-2 tracking-wider">
         비밀번호 찾기
       </h2>
-      <p class="text-body text-muted-foreground">{{ stepTitle }}</p>
     </div>
 
-    <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
+    <Card class="w-full mx-auto">
       <CardContent>
         <!-- Step 1 & 2: 이메일 인증 -->
         <form
@@ -259,6 +240,7 @@ watch(
           @submit.prevent="
             currentStep === 1 ? sendVerificationCode() : verifyCode()
           "
+          autocomplete="off"
           class="grid gap-6"
         >
           <!-- 이메일 입력 -->
@@ -279,9 +261,10 @@ watch(
                 id="send-verification-button"
                 type="button"
                 variant="outline"
+                size="sm"
                 @click="sendVerificationCode"
                 :disabled="verificationState.isLoading || !formData.email"
-                class="w-28 shrink-0 font-medium"
+                class="w-28 shrink-0 h-10 font-medium"
               >
                 <LoadingSpinner
                   v-if="verificationState.isLoading"
@@ -326,7 +309,8 @@ watch(
               <Button
                 id="verify-button"
                 type="button"
-                class="w-28 shrink-0"
+                size="sm"
+                class="w-28 shrink-0 h-10 font-medium"
                 @click="verifyCode"
                 :disabled="
                   verificationState.isVerifying ||
@@ -341,9 +325,7 @@ watch(
                   :center="false"
                   class="mr-2"
                 />
-                <span class="text-[16px] tracking-tight">
-                  {{ verificationState.isVerifying ? "확인중" : "확인" }}
-                </span>
+                {{ verificationState.isVerifying ? "확인중" : "확인" }}
               </Button>
             </div>
             <p class="text-caption text-muted-foreground">
@@ -363,10 +345,11 @@ watch(
         <form
           v-else-if="currentStep === 3"
           @submit.prevent="handleResetPassword"
+          autocomplete="off"
           class="grid gap-6"
         >
           <!-- 이메일 인증 완료 알림 -->
-          <Alert class="bg-green-50 text-primary border-green-200 py-2 mt-8">
+          <Alert class="bg-primary text-primary-foreground border-0 py-2 mt-8">
             <CheckCircle2 class="h-4 w-4" />
             <AlertTitle class="ml-2 text-body font-medium">
               이메일 인증 완료
@@ -379,7 +362,9 @@ watch(
             </Label>
             <Input
               id="newPassword"
+              name="new-password"
               type="password"
+              autocomplete="new-password"
               placeholder="8자 이상, 영문 대/소문자·숫자·특수문자 중 3가지 이상"
               v-model="formData.newPassword"
             />
@@ -394,7 +379,9 @@ watch(
             </Label>
             <Input
               id="confirmPassword"
+              name="confirm-password"
               type="password"
+              autocomplete="new-password"
               placeholder="비밀번호 재입력"
               v-model="formData.confirmPassword"
             />
@@ -420,7 +407,7 @@ watch(
         <!-- Step 4: 완료 -->
         <div v-else-if="currentStep === 4" class="text-center py-8">
           <div
-            class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"
           >
             <CheckCircle2 class="w-8 h-8 text-primary" />
           </div>
@@ -435,7 +422,7 @@ watch(
       </CardContent>
     </Card>
 
-    <p class="text-center text-muted-foreground mt-4">
+    <p v-if="currentStep !== 4" class="text-center text-muted-foreground mt-4">
       비밀번호가 기억나셨나요?
       <router-link to="/login" class="text-primary hover:underline font-medium">
         로그인하기

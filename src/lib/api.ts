@@ -47,7 +47,7 @@ import type {
   AdminUserDetailResponse,
   UpdateUserRequest,
 } from "@/types/api";
-import { apiCache, cachePolicies } from "./apiCache";
+import { apiCache, cachePolicies, NEVER_CACHE_PATTERNS } from "./apiCache";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -139,9 +139,24 @@ async function apiRequest<T>(
   const method = fetchOptions.method || 'GET';
   const cacheKey = `${method}:${url}`;
 
+  // 🔒 보안: 민감 데이터 캐싱 방지 검증 (강제 적용)
+  const shouldNeverCache = NEVER_CACHE_PATTERNS.some(pattern => pattern.test(endpoint));
+  let effectiveCachePolicy = cachePolicy;
+
+  if (shouldNeverCache) {
+    if (cachePolicy && cachePolicy !== 'noCache') {
+      console.error(
+        `[Security] ${endpoint}는 개인정보를 포함하므로 캐시할 수 없습니다.\n` +
+        `요청한 정책: ${cachePolicy} → 강제 적용: noCache`
+      );
+    }
+    // 민감 데이터는 무조건 noCache 강제 적용
+    effectiveCachePolicy = 'noCache';
+  }
+
   // GET 요청만 캐싱
   if (method === 'GET') {
-    const policy = cachePolicy ? cachePolicies[cachePolicy] : cachePolicies.none;
+    const policy = effectiveCachePolicy ? cachePolicies[effectiveCachePolicy] : cachePolicies.noCache;
 
     // 캐시 확인
     const cached = apiCache.get<T>(cacheKey, policy.maxAge);
@@ -240,7 +255,7 @@ export function getKakaoLoginUrl(): string {
 
 // 현재 사용자 정보 가져오기
 export async function fetchCurrentUser(): Promise<User> {
-  return apiRequest<User>("/api/auth/user");
+  return apiRequest<User>("/api/auth/user", { cachePolicy: 'noCache' });
 }
 
 // 내 정보 수정
@@ -435,7 +450,7 @@ export async function fetchAllProducts(
   if (category) params.append("category", category);
   if (search) params.append("search", search);
 
-  return apiRequest(`/api/products?${params.toString()}`);
+  return apiRequest(`/api/products?${params.toString()}`, { cachePolicy: 'productList' });
 }
 
 // 상품 상세 조회
@@ -461,7 +476,7 @@ export async function fetchCategories(): Promise<any[]> {
 
 // --- 장바구니 (Cart) ---
 export async function fetchCart(): Promise<any[]> {
-  return apiRequest("/api/cart");
+  return apiRequest("/api/cart", { cachePolicy: 'noCache' });
 }
 
 export async function addToCart(data: {
@@ -574,7 +589,8 @@ export async function fetchOrders(
   // 백엔드가 페이지네이션을 지원하는 경우
   try {
     const response = await apiRequest<PaginatedOrdersResponse | Order[]>(
-      `/api/orders?${params.toString()}`
+      `/api/orders?${params.toString()}`,
+      { cachePolicy: 'noCache' }
     );
 
     // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
@@ -605,11 +621,11 @@ export async function fetchOrders(
 
 // 전체 주문 목록 조회 (기존 호환용)
 export async function fetchAllOrders(): Promise<Order[]> {
-  return apiRequest<Order[]>("/api/orders");
+  return apiRequest<Order[]>("/api/orders", { cachePolicy: 'noCache' });
 }
 
 export async function fetchOrder(orderId: number | string): Promise<Order> {
-  return apiRequest(`/api/orders/${orderId}`);
+  return apiRequest(`/api/orders/${orderId}`, { cachePolicy: 'noCache' });
 }
 
 // 주문 취소 (결제 대기/결제 완료/상품 준비 중 상태에서만 가능)
@@ -678,7 +694,8 @@ export function cleanupOrder(orderId: number | string): boolean {
 // --- 배송지 (Address Book) ---
 export async function fetchDeliveryAddresses(): Promise<any[]> {
   const response = await apiRequest<{ addresses: any[] } | any[]>(
-    "/api/user/addresses"
+    "/api/user/addresses",
+    { cachePolicy: 'noCache' }
   );
   return Array.isArray(response) ? response : response.addresses || [];
 }
@@ -1233,12 +1250,12 @@ export async function fetchInquiries(
 
 // 내 문의 목록 조회
 export async function fetchMyInquiries(): Promise<Inquiry[]> {
-  return apiRequest<Inquiry[]>("/api/inquiries/my/list");
+  return apiRequest<Inquiry[]>("/api/inquiries/my/list", { cachePolicy: 'noCache' });
 }
 
 // 문의 상세 조회
 export async function fetchInquiry(id: string): Promise<Inquiry> {
-  return apiRequest<Inquiry>(`/api/inquiries/${id}`);
+  return apiRequest<Inquiry>(`/api/inquiries/${id}`, { cachePolicy: 'noCache' });
 }
 
 // 문의 등록

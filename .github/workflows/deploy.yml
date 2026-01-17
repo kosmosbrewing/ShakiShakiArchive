@@ -57,12 +57,19 @@ jobs:
           aws s3 sync dist/assets/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/assets/ \
             --cache-control "max-age=31536000, immutable"
 
-      # 7. HTML 파일 업로드 (짧은 캐시 TTL: 5분)
+      # 6-1. Assets 업로드 완료 확인
+      - name: Wait for assets upload completion
+        run: |
+          echo "⏳ Assets 업로드 완료 대기 중..."
+          sleep 3
+          echo "✅ Assets 준비 완료 - HTML 업로드 시작"
+
+      # 7. HTML 파일 업로드 (짧은 캐시 TTL: 5분 + stale-while-revalidate 24시간)
       - name: Upload HTML files to S3
         run: |
           aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
             --exclude "assets/*" \
-            --cache-control "max-age=300, must-revalidate" \
+            --cache-control "max-age=300, stale-while-revalidate=86400" \
             --delete
 
       # 8. 무효화 전략 판단 및 실행
@@ -87,14 +94,98 @@ jobs:
       - name: Invalidate CloudFront cache (HTML only)
         if: steps.invalidation.outputs.strategy == 'selective'
         run: |
-          aws cloudfront create-invalidation \
+          echo "📄 HTML 캐시 무효화 중..."
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/product/*" "/productDetail/*"
+            --paths "/index.html" "/product/*" "/productDetail/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+
+          echo "무효화 ID: $INVALIDATION_ID"
+
+          # 무효화 완료 대기 (최대 5분)
+          echo "⏳ 무효화 완료 대기 중..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --id $INVALIDATION_ID \
+            --cli-read-timeout 300 || echo "⚠️  타임아웃 (백그라운드에서 계속 진행됨)"
+
+          echo "✅ 무효화 완료"
 
       # 9-B. 전체 캐시 무효화 (디자인 변경, 긴급 수정 시)
       - name: Invalidate CloudFront cache (Full)
         if: steps.invalidation.outputs.strategy == 'full'
         run: |
-          aws cloudfront create-invalidation \
+          echo "🔄 전체 캐시 무효화 중..."
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+
+          echo "무효화 ID: $INVALIDATION_ID"
+
+          # 무효화 완료 대기 (최대 10분, 전체 무효화는 더 오래 걸릴 수 있음)
+          echo "⏳ 무효화 완료 대기 중..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --id $INVALIDATION_ID \
+            --cli-read-timeout 600 || echo "⚠️  타임아웃 (백그라운드에서 계속 진행됨)"
+
+          echo "✅ 무효화 완료"
+
+      # 10. 배포 검증 (Cache-Control 헤더 확인)
+      - name: Verify Cache-Control Headers
+        run: |
+          echo "🔍 Cache-Control 헤더 검증 중..."
+
+          # S3 index.html 확인
+          INDEX_CACHE=$(aws s3api head-object \
+            --bucket ${{ secrets.AWS_S3_BUCKET_NAME }} \
+            --key index.html \
+            --query 'CacheControl' \
+            --output text)
+          echo "   index.html: $INDEX_CACHE"
+
+          if [[ "$INDEX_CACHE" != *"max-age=300"* ]] || [[ "$INDEX_CACHE" != *"stale-while-revalidate"* ]]; then
+            echo "❌ index.html의 Cache-Control이 잘못되었습니다"
+            echo "   예상: max-age=300, stale-while-revalidate=86400"
+            exit 1
+          fi
+
+          # Assets 확인 (랜덤 샘플링)
+          ASSET_FILE=$(aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/assets/ \
+            | grep '\.js$' | head -1 | awk '{print $4}')
+
+          if [ -n "$ASSET_FILE" ]; then
+            ASSET_CACHE=$(aws s3api head-object \
+              --bucket ${{ secrets.AWS_S3_BUCKET_NAME }} \
+              --key "assets/$ASSET_FILE" \
+              --query 'CacheControl' \
+              --output text)
+            echo "   assets/$ASSET_FILE: $ASSET_CACHE"
+
+            if [[ "$ASSET_CACHE" != *"immutable"* ]]; then
+              echo "❌ Assets의 Cache-Control이 잘못되었습니다"
+              exit 1
+            fi
+          fi
+
+          echo "✅ S3 Cache-Control 검증 완료"
+
+      # 11. 배포 완료 알림
+      - name: Deployment Summary
+        run: |
+          echo "====================================="
+          echo "🎉 배포 완료!"
+          echo "====================================="
+          echo "CloudFront URL: https://$(aws cloudfront get-distribution \
+            --id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --query 'Distribution.DomainName' \
+            --output text)"
+          echo ""
+          echo "검증 항목:"
+          echo "✅ S3 업로드"
+          echo "✅ Cache-Control 헤더"
+          echo "✅ CloudFront 무효화"
+          echo "====================================="

@@ -76,6 +76,9 @@ defineExpose({ focusFirst });
   <div class="flex items-center gap-2 w-full">
     <!-- 010 Select -->
     <select
+      id="phone1"
+      name="tel-country-code"
+      autocomplete="off"
       :value="phone1"
       @change="
         emit('update:phone1', ($event.target as HTMLSelectElement).value)
@@ -92,6 +95,9 @@ defineExpose({ focusFirst });
     <!-- 중간 4자리 -->
     <Input
       ref="phone2InputRef"
+      id="phone2"
+      name="tel-local"
+      autocomplete="tel-local"
       :model-value="phone2"
       @update:model-value="handlePhone2Input(String($event))"
       @keydown.enter="handlePhone2Enter"
@@ -107,6 +113,9 @@ defineExpose({ focusFirst });
     <!-- 마지막 4자리 -->
     <Input
       ref="phone3InputRef"
+      id="phone3"
+      name="tel-local-suffix"
+      autocomplete="tel-local"
       :model-value="phone3"
       @update:model-value="handlePhone3Input(String($event))"
       @keydown.enter="handlePhone3Enter"

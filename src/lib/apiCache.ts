@@ -91,11 +91,8 @@ export const cachePolicies = {
   // 상품 목록: 30초 (목록 갱신 주기를 단축하여 '판매 종료' 상품 노출 시간 최소화)
   productList: { maxAge: 30 * 1000 },
 
-  // 상품 상세: 0초 (캐싱 안함 - [Security First] 비활성화/가격 변동의 즉시 반영)
+  // 상품 상세: 캐싱 안함 ([Security First] 비활성화/가격 변동의 즉시 반영)
   productDetail: { maxAge: 0 },
-
-  // 레거시 호환용 (기본 상품 정책)
-  products: { maxAge: import.meta.env.DEV ? 5 * 1000 : 60 * 1000 },
 
   // 사이트 이미지 (Hero, Marquee): 10분 (Cloudinary 메타데이터)
   siteImages: { maxAge: 10 * 60 * 1000 },
@@ -103,6 +100,26 @@ export const cachePolicies = {
   // 공통 상수: 1시간 (거의 변경 안됨)
   constants: { maxAge: 60 * 60 * 1000 },
 
-  // 캐싱 안함 (장바구니, 주문 등 사용자별 데이터)
-  none: { maxAge: 0 },
+  // 🔒 보안: 절대 캐시하지 않음 (사용자별 민감 데이터)
+  noCache: { maxAge: 0 },
 };
+
+/**
+ * 캐시하지 말아야 할 엔드포인트 패턴 (보안)
+ * 개인정보, 주문 내역, 장바구니 등 사용자별 데이터
+ *
+ * 패턴 설명:
+ * - ^: 문자열 시작
+ * - ($|\/): 문자열 끝 또는 / 문자 (하위 경로 포함)
+ * - 예: /^\/api\/cart($|\/)/ → /api/cart, /api/cart/, /api/cart/123 매칭
+ *                            → /api/cart123 매칭 안함 (정확한 경로만)
+ */
+export const NEVER_CACHE_PATTERNS = [
+  /^\/api\/cart($|\/)/,        // 장바구니 (GDPR)
+  /^\/api\/orders($|\/)/,      // 주문 내역 (민감)
+  /^\/api\/user($|\/)/,        // 개인정보 (GDPR)
+  /^\/api\/admin($|\/)/,       // 관리자 데이터 (보안)
+  /^\/api\/addresses($|\/)/,   // 배송지 정보 (개인정보) - 사용 안함
+  /^\/api\/inquiries($|\/)/,   // 문의 내역 (개인정보)
+  /^\/api\/auth\/user$/,       // 현재 사용자 정보 (정확히 이 경로만)
+];

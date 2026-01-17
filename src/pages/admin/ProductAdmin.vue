@@ -843,7 +843,7 @@ onMounted(async () => {
             </Button>
           </div>
           <Separator></Separator>
-          <form @submit.prevent="handleSaveProduct" class="space-y-6">
+          <form @submit.prevent="handleSaveProduct" autocomplete="off" class="space-y-6">
             <div class="grid grid-cols-2 gap-6 mt-6">
               <div class="space-y-2">
                 <Label class="text-admin">
@@ -1052,7 +1052,7 @@ onMounted(async () => {
                 {{ isEditMode ? "옵션 정보 수정" : "옵션 신규 등록" }}
               </h4>
 
-              <form @submit.prevent="handleSaveVariant" class="space-y-5">
+              <form @submit.prevent="handleSaveVariant" autocomplete="off" class="space-y-5">
                 <div class="space-y-2">
                   <Label class="text-muted-foreground"
                     >재고관리코드 (SKU)</Label
@@ -1344,7 +1344,7 @@ onMounted(async () => {
                 >
               </div>
 
-              <form @submit.prevent="handleSaveMeasurement" class="space-y-6">
+              <form @submit.prevent="handleSaveMeasurement" autocomplete="off" class="space-y-6">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div
                     v-for="field in measurementFields"

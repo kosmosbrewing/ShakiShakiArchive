@@ -155,6 +155,9 @@ const deliveryMessageOptions = [
       <div class="flex items-center gap-2 flex-wrap">
         <Input
           ref="recipientInputRef"
+          id="recipient"
+          name="name"
+          autocomplete="name"
           :model-value="form.recipient"
           @update:model-value="updateField('recipient', String($event))"
           @compositionstart="isComposingRecipient = true"
@@ -202,6 +205,9 @@ const deliveryMessageOptions = [
         />
         <Input
           ref="detailAddressInputRef"
+          id="detailAddress"
+          name="address-line2"
+          autocomplete="address-line2"
           :model-value="form.detailAddress"
           @update:model-value="updateField('detailAddress', String($event))"
           @compositionstart="isComposingDetailAddress = true"
@@ -253,6 +259,9 @@ const deliveryMessageOptions = [
       <Input
         v-if="form.message === 'self'"
         ref="customMessageInputRef"
+        id="customMessage"
+        name="delivery-message"
+        autocomplete="off"
         :model-value="form.customMessage"
         @update:model-value="updateField('customMessage', String($event))"
         type="text"

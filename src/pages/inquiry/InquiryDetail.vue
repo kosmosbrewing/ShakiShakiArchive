@@ -84,12 +84,12 @@ const safeProductImageUrl = computed(() => {
   try {
     const url = new URL(inquiry.value.product.imageUrl, window.location.origin);
     // HTTP(S) 프로토콜만 허용 (javascript:, data: 등 차단)
-    if (url.protocol === 'http:' || url.protocol === 'https:') {
+    if (url.protocol === "http:" || url.protocol === "https:") {
       return inquiry.value.product.imageUrl;
     }
   } catch {
     // 유효하지 않은 URL
-    console.warn('Invalid product image URL:', inquiry.value.product.imageUrl);
+    console.warn("Invalid product image URL:", inquiry.value.product.imageUrl);
   }
 
   return null; // 안전하지 않은 URL은 null 반환
@@ -247,9 +247,7 @@ onMounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
     <!-- 헤더 -->
-    <div
-      class="mb-8 pb-4 border-b border-border flex items-center justify-between"
-    >
+    <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -281,10 +279,10 @@ onMounted(() => {
           :center="false"
           class="w-4 h-4 mr-1"
         />
-        <Trash2 v-else class="w-4 h-4 mr-1" />
         <span class="hidden sm:inline">삭제</span>
       </Button>
     </div>
+    <Separator class="mb-6" />
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="inquiry">
@@ -339,7 +337,7 @@ onMounted(() => {
           >
             <span>{{ formatDateTimeWithSeconds(inquiry.createdAt) }}</span>
           </div>
-          <Separator class="mt-4"></Separator>
+          <Separator class="mt-1 mb-1"></Separator>
         </CardHeader>
 
         <CardContent class="px-5 sm:px-6 pb-5 sm:pb-6">

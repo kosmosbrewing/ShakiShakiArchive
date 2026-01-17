@@ -463,18 +463,20 @@ const handleKakaoLogin = () => {
 <template>
   <section
     id="contact"
-    class="max-w-md mx-auto items-center justify-center py-24 sm:py-16"
+    class="max-w-md mx-auto items-center justify-center py-12 sm:py-16 px-3 sm:px-4"
   >
     <div class="mb-6 text-center">
-      <h3 class="text-heading text-primary mb-2 tracking-wider">LOGIN</h3>
+      <h3 class="text-heading text-primary mb-2 tracking-wider">로그인</h3>
     </div>
-    <Card class="w-11/12 mx-auto">
+    <Card class="w-full mx-auto">
       <CardContent>
         <form @submit.prevent="handleSubmit" class="grid gap-4 mt-4 mb-2">
           <div class="flex flex-col w-full gap-1.5 pt-10">
             <Input
               id="user-id"
+              name="username"
               type="text"
+              autocomplete="username"
               placeholder="이메일"
               v-model="loginForm.id"
               :disabled="isLoading"
@@ -485,7 +487,9 @@ const handleKakaoLogin = () => {
           <div class="flex flex-col w-full gap-1.5">
             <Input
               id="user-password"
+              name="password"
               type="password"
+              autocomplete="current-password"
               placeholder="비밀번호"
               v-model="loginForm.password"
               :disabled="isLoading"
@@ -494,10 +498,7 @@ const handleKakaoLogin = () => {
           </div>
 
           <!-- 오류 상세 메시지 -->
-          <AlertDescription
-            v-if="invalidInputForm && loginError"
-            class="mt-1"
-          >
+          <AlertDescription v-if="invalidInputForm && loginError" class="mt-1">
             {{ loginError }}
           </AlertDescription>
 

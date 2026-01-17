@@ -40,7 +40,7 @@ const cartStore = useCartStore();
 
 const { isAuthenticated } = storeToRefs(authStore);
 const { categoryRoutes } = storeToRefs(categoryStore);
-const { itemCount: cartItemCount } = storeToRefs(cartStore);
+const { totalQuantity: cartItemCount } = storeToRefs(cartStore);
 
 const isOpen = ref<boolean>(false);
 const cartSheetOpen = ref<boolean>(false);

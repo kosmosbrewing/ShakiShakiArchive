@@ -722,7 +722,7 @@ onMounted(async () => {
         >
           <img
             :src="detail(detailImg)"
-            class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+            class="w-full object-cover"
             loading="lazy"
             decoding="async"
             draggable="false"

@@ -276,7 +276,7 @@ onMounted(async () => {
             </Button>
           </div>
 
-          <form @submit.prevent="handleSave" class="space-y-6">
+          <form @submit.prevent="handleSave" autocomplete="off" class="space-y-6">
             <div class="space-y-2">
               <Label class="text-admin">
                 카테고리명 <span class="text-primary">*</span>
