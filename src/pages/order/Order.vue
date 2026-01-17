@@ -1176,13 +1176,8 @@ onMounted(async () => {
     await authStore.loadUser();
   }
 
-  // 운영 환경에서는 관리자만 접속 가능
-  const isProduction = import.meta.env.MODE === "production";
-  if (isProduction && !authStore.user?.isAdmin) {
-    showAlert("준비중입니다.");
-    router.replace("/");
-    return;
-  }
+  // 접근 제어는 라우터 가드에서 처리 (router/index.ts:249-260)
+  // 중복 체크 제거로 코드 간소화
 
   loadData();
 

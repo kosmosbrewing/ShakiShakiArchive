@@ -221,7 +221,7 @@ onMounted(async () => {
           } else {
             router.replace("/orderlist");
           }
-        }, 500); // 0.5초 대기
+        }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
         return;
       } else {
         throw new Error("결제 승인에 실패했습니다.");
@@ -285,7 +285,7 @@ onMounted(async () => {
       } else {
         router.replace("/orderlist");
       }
-    }, 500); // 0.5초 대기 (사용자가 "결제 확인 중..." 메시지를 볼 수 있게)
+    }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
     return;
   } else if (result === "fail" || error) {
     // 결제 실패
@@ -430,7 +430,7 @@ const goToCart = () => {
         <!-- 성공 상태 -->
         <div v-if="status === 'success'" class="text-center w-full">
           <div
-            class="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6"
+            class="w-20 h-20 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mx-auto mb-6"
           >
             <CheckCircle class="w-12 h-12 text-primary" />
           </div>

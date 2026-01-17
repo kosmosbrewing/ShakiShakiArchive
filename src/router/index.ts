@@ -248,7 +248,15 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
 
   // 2. 관리자 권한 체크 (requiresAdmin)
   if (to.meta.requiresAdmin && !authStore.user?.isAdmin) {
-    showAlert("접근 권한이 없습니다. (관리자 전용)", { type: "error" });
+    // /order 라우트만 운영 환경에서 특별 처리 (일반 사용자에게 친절한 메시지)
+    const isProduction = import.meta.env.MODE === "production";
+
+    if (to.path === "/order" && isProduction) {
+      showAlert("서비스 준비중입니다. 곧 찾아뵙겠습니다!", { type: "info" });
+    } else {
+      showAlert("접근 권한이 없습니다. (관리자 전용)", { type: "error" });
+    }
+
     return next("/");
   }
 
