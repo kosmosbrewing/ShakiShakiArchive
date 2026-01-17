@@ -1426,24 +1426,26 @@ onUnmounted(() => {
 
           <!-- 🔒 재고 선점 UI 제거: 주문 생성 시 즉시 재고 차감 -->
 
-          <Button
-            @click="handlePayment"
-            class="w-full font-bold hover:bg-primary/80"
-            size="lg"
-            :disabled="isPaymentProcessing || isPaymentPopupOpen"
-          >
-            <template v-if="isPaymentProcessing || isPaymentPopupOpen">
-              결제 진행 중...
-            </template>
-            <template v-else>
-              {{ formatPrice(orderTotalAmount) }} 결제하기
-            </template>
-          </Button>
-          <p
-            class="text-caption text-center text-muted-foreground -translate-y-3"
-          >
-            위 주문 내용을 확인하였으며 결제에 동의합니다.
-          </p>
+          <div class="px-6">
+            <Button
+              @click="handlePayment"
+              class="w-full font-bold hover:bg-primary/80"
+              size="lg"
+              :disabled="isPaymentProcessing || isPaymentPopupOpen"
+            >
+              <template v-if="isPaymentProcessing || isPaymentPopupOpen">
+                결제 진행 중...
+              </template>
+              <template v-else>
+                {{ formatPrice(orderTotalAmount) }} 결제하기
+              </template>
+            </Button>
+            <p
+              class="text-caption text-center text-muted-foreground mt-3"
+            >
+              위 주문 내용을 확인하였으며 결제에 동의합니다.
+            </p>
+          </div>
         </div>
       </div>
     </div>

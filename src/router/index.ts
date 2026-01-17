@@ -252,7 +252,7 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
     const isProduction = import.meta.env.MODE === "production";
 
     if (to.path === "/order" && isProduction) {
-      showAlert("서비스 준비중입니다. 곧 찾아뵙겠습니다!", { type: "info" });
+      showAlert("서비스 준비중입니다. 곧 찾아뵙겠습니다!");
     } else {
       showAlert("접근 권한이 없습니다. (관리자 전용)", { type: "error" });
     }

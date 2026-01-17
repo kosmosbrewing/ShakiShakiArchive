@@ -160,7 +160,7 @@ onUnmounted(() => {
           <!-- confirm 모드 -->
           <template v-if="confirmMode">
             <!-- 상단 아이콘 영역 -->
-            <div class="pt-6 pb-4 px-6 flex flex-col items-center gap-3">
+            <div class="pt-8 pb-6 px-6 sm:pt-6 sm:pb-4 flex flex-col items-center gap-3">
               <!-- 성공 아이콘 -->
               <div
                 v-if="!isDestructive"
@@ -207,13 +207,13 @@ onUnmounted(() => {
             <div class="flex border-t border-border">
               <button
                 @click="handleCancel"
-                class="flex-1 py-3.5 text-body font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
+                class="flex-1 py-4 sm:py-3.5 text-body font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
               >
                 {{ cancelText }}
               </button>
               <button
                 @click="handleConfirm"
-                class="flex-1 py-3.5 text-body font-semibold transition-colors text-primary hover:bg-primary/5"
+                class="flex-1 py-4 sm:py-3.5 text-body font-semibold transition-colors text-primary hover:bg-primary/5"
               >
                 {{ confirmText }}
               </button>
