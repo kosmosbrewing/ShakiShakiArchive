@@ -106,7 +106,7 @@ const routes = [
     path: "/order",
     name: "Order",
     component: Order,
-    meta: { requiresAuth: true, title: "주문하기" },
+    meta: { requiresAuth: true, requiresAdmin: true, title: "주문하기" },
   },
   {
     path: "/orderlist",

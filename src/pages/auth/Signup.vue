@@ -70,7 +70,7 @@ const handleConfirmPasswordEnter = () => {
   // 8자 미만이면 아무 동작도 하지 않음
 };
 
-// 이름 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
+// 닉네임 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
 const handleUserNameEnter = () => {
   if (formData.userName.trim().length >= 1) {
     // nextTick을 사용하여 현재 키 이벤트가 완전히 끝난 후 포커스 이동
@@ -256,9 +256,9 @@ const handleSignup = async () => {
     return;
   }
 
-  // 이름 검증
+  // 닉네임 검증
   if (!formData.userName.trim()) {
-    showValidationError("이름을 입력해주세요.", userNameInputRef);
+    showValidationError("닉네임을 입력해주세요.", userNameInputRef);
     return;
   }
 
@@ -620,14 +620,14 @@ const handleKakaoLogin = () => {
 
             <div class="flex flex-col gap-1.5">
               <Label for="userName" class="text-body"
-                >이름 <span class="text-primary">*</span></Label
+                >닉네임 <span class="text-primary">*</span></Label
               >
               <Input
                 ref="userNameInputRef"
                 id="userName"
                 name="name"
                 type="text"
-                placeholder="실명 입력"
+                placeholder="닉네임을 입력하세요"
                 v-model="formData.userName"
                 @keydown.enter.prevent="handleUserNameEnter"
                 class="text-caption sm:text-body"

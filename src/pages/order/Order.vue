@@ -4,9 +4,6 @@
 
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
-
-// Production 환경 체크
-const isProduction = computed(() => import.meta.env.MODE === "production");
 import { useAuthStore } from "@/stores/auth";
 import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
@@ -104,6 +101,9 @@ const isProcessingPaymentResult = ref(false); // 결제 결과 처리 중 플래
 
 // 네이버페이 팝업 체크 인터벌
 let popupCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+// 토스페이 결제창 체크 인터벌 (Phase 2: 폴링 감지)
+let tossCleanupCheckInterval: ReturnType<typeof setInterval> | null = null;
 
 // 모바일 환경 감지 (모바일에서는 리다이렉트 방식 사용)
 const isMobile = computed(() => {
@@ -464,6 +464,9 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       // 모바일: 현재 창에서 리다이렉트, PC: iframe 모달
       windowTarget: isMobile.value ? "self" : "iframe",
     });
+
+    // 7-1. 결제창 오픈 후 폴링 시작 (Phase 2: 네이버페이 수준의 능동적 감지)
+    startTossPaymentMonitoring();
   } catch (err: unknown) {
     console.error("[토스페이] 결제 오류 (상세):", err);
     console.error("[토스페이] 에러 타입:", (err as any)?.constructor?.name);
@@ -483,9 +486,18 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
 
     // 사용자가 명시적으로 결제 취소한 경우: 백엔드 취소 API 호출
     if (errorWithCode.code === "USER_CANCEL") {
+      // 🔒 중복 호출 방지: 폴링을 먼저 중단
+      if (tossCleanupCheckInterval) {
+        clearInterval(tossCleanupCheckInterval);
+        tossCleanupCheckInterval = null;
+      }
+
       console.log("[토스페이] 사용자 취소 - 주문 취소 API 호출");
 
       if (currentOrderId.value) {
+        // 처리 중 플래그 설정 (폴링과 중복 방지)
+        isProcessingPaymentResult.value = true;
+
         try {
           await cancelOrder(currentOrderId.value, {
             cancelReason: "사용자가 결제를 취소했습니다.",
@@ -498,6 +510,11 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
         } catch (cancelErr) {
           console.error("[토스페이] 주문 취소 실패:", cancelErr);
           // 취소 실패해도 Cron이 30분 후 자동 정리
+        } finally {
+          // 처리 완료 후 플래그 리셋
+          setTimeout(() => {
+            isProcessingPaymentResult.value = false;
+          }, 1000);
         }
       }
 
@@ -513,6 +530,86 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
   }
+};
+
+// [토스페이] 결제창 폴링 감지 (Phase 2: 네이버페이 수준의 능동적 감지)
+const startTossPaymentMonitoring = () => {
+  if (!currentOrderId.value) return;
+
+  let checkCount = 0;
+  const maxChecks = 180; // 3분 (1초 * 180)
+
+  tossCleanupCheckInterval = setInterval(async () => {
+    checkCount++;
+
+    // 타임아웃 (3분 초과)
+    if (checkCount >= maxChecks) {
+      if (tossCleanupCheckInterval) {
+        clearInterval(tossCleanupCheckInterval);
+        tossCleanupCheckInterval = null;
+      }
+      return;
+    }
+
+    // 결제 완료 플래그 확인 (PaymentCallback에서 설정)
+    if (localStorage.getItem("payment_confirming") === "true") {
+      // 결제 승인 진행 중 - 폴링 중단
+      if (tossCleanupCheckInterval) {
+        clearInterval(tossCleanupCheckInterval);
+        tossCleanupCheckInterval = null;
+      }
+      return;
+    }
+
+    // currentOrderId가 없으면 이미 처리됨
+    if (!currentOrderId.value) {
+      if (tossCleanupCheckInterval) {
+        clearInterval(tossCleanupCheckInterval);
+        tossCleanupCheckInterval = null;
+      }
+      return;
+    }
+
+    // 결제 팝업이 닫혔는지 확인
+    if (!isPaymentPopupOpen.value) {
+      // 🔒 중복 호출 방지: 이미 처리 중이면 스킵
+      if (isProcessingPaymentResult.value) {
+        if (tossCleanupCheckInterval) {
+          clearInterval(tossCleanupCheckInterval);
+          tossCleanupCheckInterval = null;
+        }
+        console.log("[토스페이 폴링] 이미 처리 중 - 스킵");
+        return;
+      }
+
+      // 폴링 중단 후 즉시 취소 처리
+      if (tossCleanupCheckInterval) {
+        clearInterval(tossCleanupCheckInterval);
+        tossCleanupCheckInterval = null;
+      }
+
+      // 처리 중 플래그 설정 (중복 방지)
+      isProcessingPaymentResult.value = true;
+
+      // 즉시 취소 API 호출
+      try {
+        console.log("[토스페이 폴링] 결제창 닫힘 감지 - 즉시 취소 처리");
+        await cancelOrder(currentOrderId.value, {
+          cancelReason: "토스페이 결제창 닫힘",
+        });
+        currentOrderId.value = null;
+        resetReservation();
+        showAlert("결제가 취소되었습니다.");
+      } catch (err) {
+        console.error("[토스페이 폴링] 취소 처리 실패:", err);
+      } finally {
+        // 처리 완료 후 플래그 리셋
+        setTimeout(() => {
+          isProcessingPaymentResult.value = false;
+        }, 1000);
+      }
+    }
+  }, 1000); // 1초마다 체크
 };
 
 // [네이버페이] 결제 로직 (PC: 팝업 방식, 모바일: 리다이렉트 방식)
@@ -932,8 +1029,33 @@ const saveDefaultAddressIfNeeded = async () => {
   }
 };
 
+// [Phase 2] visibilitychange 이벤트 핸들러 (모바일/백그라운드 전환 감지)
+const handleVisibilityChange = () => {
+  console.log("[visibilitychange] 이벤트 발생 - visibilityState:", document.visibilityState);
+
+  // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
+  if (localStorage.getItem("payment_confirming") === "true") {
+    console.log("[visibilitychange] 결제 승인 진행 중 - cleanup 취소");
+    return;
+  }
+
+  // 페이지가 숨겨지고(hidden) 주문이 생성되었으면 cleanup API 호출
+  if (document.visibilityState === "hidden" && currentOrderId.value) {
+    console.log(
+      "[visibilitychange] 페이지 숨김 감지 - cleanup 시도:",
+      currentOrderId.value
+    );
+    const result = cleanupOrder(currentOrderId.value);
+    console.log("[visibilitychange] cleanup 호출 결과:", result);
+  } else {
+    console.log("[visibilitychange] cleanup 조건 미충족 - currentOrderId:", currentOrderId.value);
+  }
+};
+
 // 페이지 이탈 시 정리 (브라우저 종료, 탭 닫기 등)
 const handleBeforeUnload = () => {
+  console.log("[beforeunload] 이벤트 발생 - currentOrderId:", currentOrderId.value);
+
   // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
   if (localStorage.getItem("payment_confirming") === "true") {
     console.log("[페이지 이탈] 결제 승인 진행 중 - cleanup 취소");
@@ -955,6 +1077,24 @@ const handleBeforeUnload = () => {
   }
   // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
   // 주문 생성 전에는 재고가 차감되지 않으므로 정리할 필요 없음
+};
+
+// [긴급 추가] Page Lifecycle API - freeze 이벤트 (가장 신뢰성 있음)
+const handlePageFreeze = () => {
+  console.log("[freeze] 이벤트 발생 - 브라우저가 페이지 동결 준비");
+
+  // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음
+  if (localStorage.getItem("payment_confirming") === "true") {
+    console.log("[freeze] 결제 승인 진행 중 - cleanup 취소");
+    return;
+  }
+
+  // 주문이 생성되었으면 cleanup API 호출
+  if (currentOrderId.value) {
+    console.log("[freeze] 주문 정리 시도:", currentOrderId.value);
+    const result = cleanupOrder(currentOrderId.value);
+    console.log("[freeze] cleanup 호출 결과:", result);
+  }
 };
 
 // 뒤로가기/앞으로가기 감지
@@ -1031,12 +1171,14 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
 });
 
 onMounted(async () => {
-  // 관리자 권한 체크
+  // 사용자 정보 로드
   if (!authStore.user) {
     await authStore.loadUser();
   }
 
-  if (!authStore.user?.isAdmin) {
+  // 운영 환경에서는 관리자만 접속 가능
+  const isProduction = import.meta.env.MODE === "production";
+  if (isProduction && !authStore.user?.isAdmin) {
     showAlert("준비중입니다.");
     router.replace("/");
     return;
@@ -1045,27 +1187,41 @@ onMounted(async () => {
   loadData();
 
   // 페이지 이탈 감지 이벤트 등록 (비정상 종료 대응)
+  document.addEventListener("visibilitychange", handleVisibilityChange); // Phase 2: 백그라운드 전환 감지
+  document.addEventListener("freeze", handlePageFreeze); // [긴급] Page Lifecycle API
   window.addEventListener("beforeunload", handleBeforeUnload);
   window.addEventListener("pagehide", handleBeforeUnload); // 모바일/탭 닫기
   window.addEventListener("popstate", handlePopState);
+
+  console.log("[Order.vue] 이벤트 리스너 등록 완료 - visibilitychange, freeze, beforeunload, pagehide, popstate");
 });
 
 // 페이지 이탈 시 바로 구매 세션 정리
 onUnmounted(() => {
   // 이벤트 리스너 제거
+  document.removeEventListener("visibilitychange", handleVisibilityChange); // Phase 2
+  document.removeEventListener("freeze", handlePageFreeze); // [긴급] Page Lifecycle API
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("pagehide", handleBeforeUnload);
   window.removeEventListener("popstate", handlePopState);
+
+  console.log("[Order.vue] 이벤트 리스너 제거 완료");
 
   // 타이머 정리
   if (paymentTimeoutId) {
     clearTimeout(paymentTimeoutId);
   }
 
-  // 팝업 체크 인터벌 정리
+  // 팝업 체크 인터벌 정리 (네이버페이)
   if (popupCheckInterval) {
     clearInterval(popupCheckInterval);
     popupCheckInterval = null;
+  }
+
+  // 토스페이 폴링 인터벌 정리 (Phase 2)
+  if (tossCleanupCheckInterval) {
+    clearInterval(tossCleanupCheckInterval);
+    tossCleanupCheckInterval = null;
   }
 
   // 비정상 종료 시 정리
@@ -1093,17 +1249,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Production 환경: 준비중 화면 -->
-  <div
-    v-if="isProduction"
-    class="max-w-5xl mx-auto px-4 py-24 sm:py-32 text-center"
-  >
-    <h3 class="text-heading text-primary tracking-wider mb-4">주문 하기</h3>
-    <p class="text-xl text-muted-foreground">준비중입니다.</p>
-  </div>
-
-  <!-- 개발 환경: 실제 주문 화면 -->
-  <div v-else class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">주문 하기</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">

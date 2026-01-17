@@ -41,7 +41,7 @@ const { showAlert, showDestructiveConfirm, showPromptConfirm } = useAlert();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
 
-// 이름 필드 Enter 키 처리 (1자 이상일 때만 이동)
+// 닉네임 필드 Enter 키 처리 (1자 이상일 때만 이동)
 const handleUserNameEnter = () => {
   if (form.userName.trim().length >= 1) {
     nextTick(() => {
@@ -203,7 +203,7 @@ const showValidationError = (message: string, focusRef?: any) => {
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
   if (!form.userName.trim()) {
-    showValidationError("이름을 입력해주세요.", userNameInputRef);
+    showValidationError("닉네임을 입력해주세요.", userNameInputRef);
     return;
   }
   if (!form.currentPassword) {
@@ -405,7 +405,7 @@ onMounted(async () => {
           </div>
 
           <div class="space-y-2">
-            <Label for="userName">이름</Label>
+            <Label for="userName">닉네임</Label>
             <Input
               ref="userNameInputRef"
               id="userName"
@@ -413,6 +413,7 @@ onMounted(async () => {
               autocomplete="name"
               v-model="form.userName"
               type="text"
+              placeholder="닉네임을 입력하세요"
               @keydown.enter.prevent="handleUserNameEnter"
             />
           </div>

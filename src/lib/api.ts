@@ -675,20 +675,53 @@ export async function deleteOrder(
 
 /**
  * 🔒 브라우저 강제 종료 시 주문 정리 (Best Effort)
- * sendBeacon을 사용하여 페이지 종료 시에도 요청 전송 보장
+ * 3중 안전장치로 전송 보장률 향상 (Phase 1 & 2)
  * paying 상태 주문의 재고를 즉시 복구합니다.
+ *
+ * ⚠️ 주의: 백엔드에 /api/orders/:orderId/cleanup 엔드포인트가 없으므로
+ *         기존 /api/orders/:orderId/cancel API를 사용합니다.
  */
 export function cleanupOrder(orderId: number | string): boolean {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-  const url = `${API_BASE_URL}/api/orders/${orderId}/cleanup`;
+  const url = `${API_BASE_URL}/api/orders/${orderId}/cancel`;
 
-  // sendBeacon은 POST만 지원하므로 JSON Blob 사용
-  const blob = new Blob([JSON.stringify({ reason: "browser_close" })], {
-    type: "application/json",
-  });
+  // 1차 시도: JSON Blob (cancelReason 포함)
+  const blob = new Blob(
+    [JSON.stringify({ cancelReason: "브라우저 강제 종료" })],
+    { type: "application/json" }
+  );
+  const sent1 = navigator.sendBeacon(url, blob);
 
-  // sendBeacon 성공 여부 반환 (true: 큐에 성공적으로 추가됨)
-  return navigator.sendBeacon(url, blob);
+  if (sent1) {
+    console.log("[cleanup] Blob 전송 성공 (cancel API 사용)");
+    return true;
+  }
+
+  // 2차 시도: FormData (일부 브라우저에서 더 안정적)
+  const formData = new FormData();
+  formData.append("cancelReason", "브라우저 강제 종료");
+  const sent2 = navigator.sendBeacon(url, formData);
+
+  if (sent2) {
+    console.log("[cleanup] FormData 백업 전송 성공 (cancel API 사용)");
+    return true;
+  }
+
+  // 3차 시도: fetch keepalive (최후의 수단)
+  try {
+    fetch(url, {
+      method: "POST",
+      keepalive: true,
+      credentials: "include", // 쿠키 전송 필수
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cancelReason: "브라우저 강제 종료" }),
+    }).catch((err) => console.error("[cleanup] fetch keepalive 실패:", err));
+    console.log("[cleanup] fetch keepalive 전송 시도 (cancel API 사용)");
+  } catch (err) {
+    console.error("[cleanup] 모든 전송 방식 실패:", err);
+  }
+
+  return false;
 }
 
 // --- 배송지 (Address Book) ---
