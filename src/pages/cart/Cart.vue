@@ -196,7 +196,7 @@ watch(
                     variant="ghost"
                     size="sm"
                     @click="removeItem(item.id)"
-                    class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto p-1 flex-shrink-0"
+                    class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto flex-shrink-0"
                   >
                     삭제
                   </Button>
@@ -251,7 +251,7 @@ watch(
             </div>
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">배송비</span>
-              <span :class="shippingFee === 0 ? 'text-primary font-medium' : 'text-foreground'">
+              <span class="text-foreground">
                 {{ shippingFee === 0 ? "무료배송" : formatPrice(shippingFee) }}
               </span>
             </div>

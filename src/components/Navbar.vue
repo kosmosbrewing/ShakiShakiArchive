@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCategoryStore } from "@/stores/category";
 import { useCartStore } from "@/stores/cart";
+import { useAlert } from "@/composables/useAlert";
 import { useColorMode } from "@vueuse/core";
 import { storeToRefs } from "pinia";
 
@@ -37,6 +38,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const categoryStore = useCategoryStore();
 const cartStore = useCartStore();
+const { showAlert } = useAlert();
 
 const { isAuthenticated } = storeToRefs(authStore);
 const { categoryRoutes } = storeToRefs(categoryStore);
@@ -93,8 +95,9 @@ watch(cartSheetOpen, (isOpen) => {
 
 const handleLogout = async () => {
   isOpen.value = false;
-  // auth store에서 새로고침까지 처리함
-  await authStore.handleLogout();
+  showAlert("로그아웃되었습니다.");
+  await authStore.handleLogout({ reload: false });
+  router.push("/");
 };
 
 const handleInstagram = () => {

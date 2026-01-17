@@ -1030,7 +1030,18 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
+  // 관리자 권한 체크
+  if (!authStore.user) {
+    await authStore.loadUser();
+  }
+
+  if (!authStore.user?.isAdmin) {
+    showAlert("준비중입니다.");
+    router.replace("/");
+    return;
+  }
+
   loadData();
 
   // 페이지 이탈 감지 이벤트 등록 (비정상 종료 대응)

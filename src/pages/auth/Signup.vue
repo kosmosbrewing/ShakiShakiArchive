@@ -111,6 +111,7 @@ const isSubmitting = ref(false);
 const errorMessage = ref("");
 const isNaverLoading = ref(false); // 네이버 로그인 버튼 로딩 상태
 const isKakaoLoading = ref(false); // 카카오 로그인 버튼 로딩 상태
+const isProcessingAuth = ref(false); // 회원가입 후 자동 로그인 처리 중 (전체 화면 로딩)
 
 // 이메일 형식 검증 (blur 이벤트용)
 // 실시간 피드백을 제공하되, API 호출은 하지 않음 (중복 호출 방지)
@@ -263,6 +264,8 @@ const handleSignup = async () => {
 
   try {
     isSubmitting.value = true;
+
+    // 1. 회원가입
     await authStore.register({
       email: formData.email,
       password: formData.password,
@@ -276,17 +279,39 @@ const handleSignup = async () => {
       emailOptIn: formData.emailOptIn,
     });
 
-    // 성공 Alert 표시
-    showAlertMessage("회원가입이 완료되었습니다!");
+    // 2. 회원가입 성공 후 자동 로그인
+    isSubmitting.value = false;
+    isProcessingAuth.value = true; // 전체 화면 로딩 표시
 
-    // 잠시 후 로그인 페이지로 이동
-    setTimeout(() => {
-      router.push("/login");
-    }, 1500);
+    try {
+      // 3. 자동 로그인
+      await authStore.handleLogin({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // 4. 사용자 정보 로드
+      await authStore.loadUser();
+
+      // 5. 환영 메시지 설정
+      const userName = authStore.user?.userName || "회원";
+      authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
+
+      // 6. 홈으로 이동
+      router.replace("/");
+    } catch (loginError) {
+      // 자동 로그인 실패 시 로그인 페이지로 이동
+      console.error("자동 로그인 실패:", loginError);
+      isProcessingAuth.value = false;
+      showAlertMessage("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.");
+
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+    }
   } catch (error: any) {
     console.error(error);
     errorMessage.value = error.message || "회원가입 중 오류가 발생했습니다.";
-  } finally {
     isSubmitting.value = false;
   }
 };
@@ -660,5 +685,14 @@ const handleKakaoLogin = () => {
         >로그인하기</router-link
       >
     </p>
+
+    <!-- 회원가입 후 자동 로그인 처리 중 전체 화면 로딩 -->
+    <LoadingSpinner
+      v-if="isProcessingAuth"
+      fullscreen
+      variant="dots"
+      size="lg"
+      message="회원가입 처리 중..."
+    />
   </section>
 </template>
