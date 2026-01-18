@@ -215,7 +215,13 @@ const getPaymentProviderLabel = (provider: string): string => {
         <Card>
           <CardHeader class="pb-3">
             <CardTitle class="flex items-center gap-2 text-heading">
-              주문 상품 {{ order?.orderItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0 }}개
+              주문 상품
+              {{
+                order?.orderItems?.reduce(
+                  (sum, item) => sum + item.quantity,
+                  0,
+                ) ?? 0
+              }}개
             </CardTitle>
           </CardHeader>
           <CardContent class="p-0 divide-y divide-border">
@@ -334,7 +340,10 @@ const getPaymentProviderLabel = (provider: string): string => {
             </div>
             <div class="flex justify-between text-body pb-2">
               <span class="text-muted-foreground">배송비</span>
-              <span :class="shippingFee === 0 ? 'text-primary font-medium' : ''">{{ shippingFeeText }}</span>
+              <span
+                :class="shippingFee === 0 ? 'text-primary font-medium' : ''"
+                >{{ shippingFeeText }}</span
+              >
             </div>
             <Separator />
             <div class="flex justify-between items-center pt-2">
@@ -356,8 +365,8 @@ const getPaymentProviderLabel = (provider: string): string => {
             </div>
 
             <div
-              v-if="order.canceledAt"
-              class="pt-3 border-t mt-1 bg-destructive/5 -mx-6 px-6 pb-2"
+              v-if="order.status === 'refunded'"
+              class="pt-3 border-t !mt-4 bg-destructive/5 -mx-6 px-6 pb-2"
             >
               <div
                 class="flex items-center gap-2 text-destructive font-bold text-body mb-2"
@@ -366,13 +375,18 @@ const getPaymentProviderLabel = (provider: string): string => {
                 주문 취소됨
               </div>
               <div class="space-y-1 text-body">
-                <div class="flex justify-between">
+                <div v-if="order.canceledAt" class="flex justify-between">
                   <span class="text-muted-foreground">취소 일시</span>
                   <span>{{ formatDate(order.canceledAt) }}</span>
                 </div>
-                <div v-if="order.cancelReason" class="flex justify-between">
+                <div
+                  v-if="order.cancelReason"
+                  class="flex justify-between items-start gap-4"
+                >
                   <span class="text-muted-foreground">사유</span>
-                  <span>{{ order.cancelReason }}</span>
+                  <span class="text-right break-words flex-1">{{
+                    order.cancelReason
+                  }}</span>
                 </div>
                 <div
                   v-if="order.refundedAmount"

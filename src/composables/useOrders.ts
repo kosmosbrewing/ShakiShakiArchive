@@ -88,21 +88,11 @@ export function useOrders() {
 
     try {
       const response = await fetchOrders(1, pageSize);
-      const simpleOrders = response.orders;
       totalOrders.value = response.pagination.total;
       hasMore.value = response.pagination.hasMore;
 
-      // 각 주문의 상세 정보 병렬 로드
-      const detailedOrdersPromises = simpleOrders.map(async (order) => {
-        try {
-          return await fetchOrder(order.id);
-        } catch (e) {
-          console.error(`Order ${order.id} fetch failed`, e);
-          return order;
-        }
-      });
-
-      orders.value = await Promise.all(detailedOrdersPromises);
+      // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
+      orders.value = response.orders;
     } catch (e) {
       error.value = "주문 목록 로드 실패";
       console.error("주문 목록 로드 실패:", e);
@@ -122,22 +112,11 @@ export function useOrders() {
 
     try {
       const response = await fetchOrders(nextPage, pageSize);
-      const simpleOrders = response.orders;
       hasMore.value = response.pagination.hasMore;
       currentPage.value = nextPage;
 
-      // 각 주문의 상세 정보 병렬 로드
-      const detailedOrdersPromises = simpleOrders.map(async (order) => {
-        try {
-          return await fetchOrder(order.id);
-        } catch (e) {
-          console.error(`Order ${order.id} fetch failed`, e);
-          return order;
-        }
-      });
-
-      const newOrders = await Promise.all(detailedOrdersPromises);
-      orders.value = [...orders.value, ...newOrders];
+      // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
+      orders.value = [...orders.value, ...response.orders];
     } catch (e) {
       console.error("추가 주문 로드 실패:", e);
     } finally {
@@ -193,11 +172,8 @@ export function useOrderStats() {
   const loadOrderStats = async () => {
     loading.value = true;
     try {
-      const orders = await fetchAllOrders();
-
-      // 각 주문의 상세 정보 로드
-      const detailsPromises = orders.map((order) => fetchOrder(order.id));
-      const ordersWithItems = await Promise.all(detailsPromises);
+      // 백엔드에서 이미 orderItems 정보를 포함하여 반환
+      const ordersWithItems = await fetchAllOrders();
 
       // 카운트 초기화
       orderCounts.pending = 0;

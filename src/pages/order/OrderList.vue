@@ -10,7 +10,7 @@ import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
-import { fetchAllOrders, fetchOrder } from "@/lib/api";
+import { fetchAllOrders } from "@/lib/api";
 import { useDebounceFn } from "@vueuse/core";
 
 // 공통 컴포넌트
@@ -198,11 +198,8 @@ const debouncedSearch = useDebounceFn(async () => {
   if (searchQuery.value) {
     loadingAllOrders.value = true;
     try {
-      const allOrdersData = await fetchAllOrders();
-      const detailsPromises = allOrdersData.map((order) =>
-        fetchOrder(order.id)
-      );
-      allOrders.value = await Promise.all(detailsPromises);
+      // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
+      allOrders.value = await fetchAllOrders();
     } catch (e) {
       console.error("전체 주문 로드 실패:", e);
       allOrders.value = [];
@@ -229,12 +226,8 @@ watch(
       // 필터가 적용되면 전체 주문 데이터 로드
       loadingAllOrders.value = true;
       try {
-        const allOrdersData = await fetchAllOrders();
-        // 각 주문의 상세 정보 로드
-        const detailsPromises = allOrdersData.map((order) =>
-          fetchOrder(order.id)
-        );
-        allOrders.value = await Promise.all(detailsPromises);
+        // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
+        allOrders.value = await fetchAllOrders();
       } catch (e) {
         console.error("전체 주문 로드 실패:", e);
         allOrders.value = [];
@@ -316,11 +309,8 @@ const handleConfirmCancel = async (reason: string) => {
     if (currentFilter.value || searchQuery.value) {
       loadingAllOrders.value = true;
       try {
-        const allOrdersData = await fetchAllOrders();
-        const detailsPromises = allOrdersData.map((order) =>
-          fetchOrder(order.id)
-        );
-        allOrders.value = await Promise.all(detailsPromises);
+        // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
+        allOrders.value = await fetchAllOrders();
       } catch (e) {
         console.error("전체 주문 로드 실패:", e);
       } finally {

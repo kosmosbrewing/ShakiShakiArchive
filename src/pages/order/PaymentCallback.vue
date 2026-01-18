@@ -4,7 +4,7 @@
 
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { CheckCircle, XCircle, Package, AlertTriangle } from "lucide-vue-next";
+import { CheckCircle, XCircle, Package, AlertTriangle, Ban } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/formatters";
@@ -20,8 +20,8 @@ const route = useRoute();
 localStorage.setItem("payment_confirming", "true");
 console.log("[PaymentCallback] 결제 승인 플래그 설정 (즉시)");
 
-// 상태: stock_shortage 추가 (재고 부족 에러)
-const status = ref<"loading" | "success" | "error" | "stock_shortage">(
+// 상태: stock_shortage 추가 (재고 부족 에러), cancelled 추가 (결제 취소)
+const status = ref<"loading" | "success" | "error" | "cancelled" | "stock_shortage">(
   "loading"
 );
 const errorMessage = ref<string>("");
@@ -242,10 +242,11 @@ onMounted(async () => {
         console.log("[PaymentCallback] 재고 부족 에러 처리 완료");
       } else {
         status.value = "error";
-        // 백엔드에서 정제된 메시지 사용 (ApiError.message)
-        errorMessage.value =
-          err.message || "결제 승인 처리 중 오류가 발생했습니다.";
-        console.log("[PaymentCallback] 에러 메시지 설정:", errorMessage.value);
+        // 백엔드 메시지를 정제하여 사용자 친화적으로 표시
+        const rawMessage = err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+        errorMessage.value = cleanErrorMessage(rawMessage);
+        console.log("[PaymentCallback] 원본 에러 메시지:", rawMessage);
+        console.log("[PaymentCallback] 정제된 에러 메시지:", errorMessage.value);
       }
     }
   } else if (result === "success") {
@@ -313,7 +314,7 @@ onMounted(async () => {
   } else if (error === "user_cancel" || result === "cancel") {
     // 결제 취소
     console.log("[PaymentCallback] 결제 취소, orderId:", orderId);
-    status.value = "error";
+    status.value = "cancelled";
     errorMessage.value = "결제가 취소되었습니다.";
 
     // 팝업 창인 경우: localStorage로 부모 창에 취소 전달 후 닫기
@@ -391,6 +392,51 @@ function getErrorMessage(errorCode: string): string {
     default:
       return "결제 중 오류가 발생했습니다.";
   }
+}
+
+// 에러 메시지 정제 함수 (토스페이먼츠 및 기타 PG사용)
+function cleanErrorMessage(message: string): string {
+  if (!message) return "결제 처리 중 오류가 발생했습니다.";
+
+  let cleanMessage = message;
+
+  // 특정 패턴 감지 및 메시지 정제
+  if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
+    cleanMessage = "계좌 잔액이 부족합니다. 잔액을 확인해주세요.";
+  } else if (cleanMessage.includes("한도")) {
+    cleanMessage = "카드 한도가 부족합니다. 다른 결제 수단을 이용해주세요.";
+  } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
+    cleanMessage = "본인 인증에 실패했습니다. 카드 정보를 확인해주세요.";
+  } else if (
+    cleanMessage.includes("비밀번호") ||
+    cleanMessage.includes("인증")
+  ) {
+    cleanMessage = "인증에 실패했습니다. 다시 시도해주세요.";
+  } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
+    cleanMessage = "결제 시간이 만료되었습니다. 다시 시도해주세요.";
+  } else if (cleanMessage.includes("점검")) {
+    if (cleanMessage.includes("은행")) {
+      cleanMessage = "은행 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.";
+    } else if (
+      cleanMessage.includes("원천사") ||
+      cleanMessage.includes("시스템")
+    ) {
+      cleanMessage =
+        "결제 시스템 점검 중입니다. 다른 결제 수단을 이용해주세요.";
+    } else {
+      cleanMessage = "서비스 점검 중입니다. 잠시 후 다시 시도해주세요.";
+    }
+  } else if (
+    cleanMessage.includes("이미") &&
+    (cleanMessage.includes("진행") || cleanMessage.includes("완료"))
+  ) {
+    cleanMessage = "이미 처리된 결제입니다.";
+  } else if (cleanMessage.length > 50) {
+    // 50자 이상의 긴 메시지는 간단하게 정리
+    cleanMessage = "결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+  }
+
+  return cleanMessage;
 }
 
 // 주문 상세로 이동
@@ -487,12 +533,39 @@ const goToCart = () => {
           </div>
         </div>
 
+        <!-- 취소 상태 -->
+        <div v-else-if="status === 'cancelled'" class="text-center w-full">
+          <div
+            class="w-20 h-20 rounded-full bg-muted/50 dark:bg-muted/30 flex items-center justify-center mx-auto mb-6"
+          >
+            <Ban class="w-12 h-12 text-muted-foreground" />
+          </div>
+          <h2 class="text-xl font-semibold mb-2">결제가 취소되었습니다</h2>
+          <p class="text-muted-foreground mb-6">
+            결제를 진행하지 않으셨습니다.<br />
+            장바구니에서 다시 주문하실 수 있습니다.
+          </p>
+
+          <div class="flex flex-col gap-3 w-full">
+            <Button @click="goToCart" class="w-full">
+              장바구니로 돌아가기
+            </Button>
+            <Button
+              variant="outline"
+              class="w-full font-medium"
+              @click="goToHome"
+            >
+              홈으로
+            </Button>
+          </div>
+        </div>
+
         <!-- 에러 상태 -->
         <div v-else-if="status === 'error'" class="text-center w-full">
           <div
-            class="w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center mx-auto mb-6"
+            class="w-20 h-20 rounded-full bg-destructive/10 dark:bg-destructive/20 flex items-center justify-center mx-auto mb-6"
           >
-            <XCircle class="w-12 h-12 text-primary" />
+            <XCircle class="w-12 h-12 text-destructive" />
           </div>
           <h2 class="text-xl font-semibold mb-2">결제 실패</h2>
           <p class="text-muted-foreground mb-2 whitespace-pre-line">
