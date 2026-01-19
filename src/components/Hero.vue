@@ -10,13 +10,9 @@ import { storeToRefs } from "pinia";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useOptimizedImage } from "@/composables";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/common";
 
-// 폴백 이미지 (API 실패 시 사용) - WebP 최적화 (74.6% 용량 감소)
-import fallbackHero from "@/assets/optimized/hero.webp";
-import fallbackMarquee1 from "@/assets/optimized/marquee01.webp";
-import fallbackMarquee2 from "@/assets/optimized/marquee01.webp";
-import fallbackMarquee3 from "@/assets/optimized/marquee01.webp";
-import fallbackMarquee4 from "@/assets/optimized/marquee01.webp";
+// LCP 최적화: 폴백 이미지 제거 (46KB 절약, 텍스트 기준 LCP로 전환)
 
 // 스토어
 const siteImageStore = useSiteImageStore();
@@ -97,7 +93,7 @@ const handleTouchEnd = () => {
   touchEndX = 0;
 };
 
-// Hero 이미지 목록 (폴백 포함)
+// Hero 이미지 목록 (LCP 최적화: 폴백 제거, 빈 배열 반환)
 const heroImageList = computed(() => {
   if (heroImages.value.length > 0) {
     return heroImages.value.map((img) => ({
@@ -105,11 +101,11 @@ const heroImageList = computed(() => {
       linkUrl: img.linkUrl,
     }));
   }
-  // 폴백 이미지
-  return [{ url: fallbackHero, linkUrl: undefined }];
+  // LCP 최적화: 폴백 이미지 없이 빈 배열 반환 → EmptyState 표시
+  return [];
 });
 
-// Marquee 이미지 URL 배열 (폴백 포함)
+// Marquee 이미지 URL 배열 (LCP 최적화: 폴백 제거)
 const marqueeImageUrls = computed(() => {
   if (marqueeImages.value.length > 0) {
     return marqueeImages.value.map((img) => ({
@@ -117,13 +113,8 @@ const marqueeImageUrls = computed(() => {
       linkUrl: img.linkUrl,
     }));
   }
-  // 폴백 이미지
-  return [
-    { url: fallbackMarquee1, linkUrl: undefined },
-    { url: fallbackMarquee2, linkUrl: undefined },
-    { url: fallbackMarquee3, linkUrl: undefined },
-    { url: fallbackMarquee4, linkUrl: undefined },
-  ];
+  // LCP 최적화: 폴백 이미지 제거, 빈 배열 반환
+  return [];
 });
 
 // Marquee 효과를 위해 이미지 3배로 반복
@@ -234,7 +225,15 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 실제 콘텐츠: 로딩 완료 후 표시 -->
+        <!-- EmptyState: 이미지 없을 때 (LCP 최적화: 텍스트 기준 LCP) -->
+        <div v-else-if="heroImageList.length === 0" class="w-full">
+          <EmptyState
+            header="이미지 준비 중"
+            message="곧 멋진 컬렉션을 선보이겠습니다"
+          />
+        </div>
+
+        <!-- 실제 콘텐츠: 이미지 있을 때 -->
         <div
           v-else
           class="relative group w-full"
@@ -310,20 +309,10 @@ onUnmounted(() => {
     </div>
   </section>
 
-  <section id="marquee" class="max-w-[75%] mx-auto">
+  <!-- Marquee 섹션: 이미지가 있을 때만 표시 (LCP 최적화) -->
+  <section v-if="!isLoading && marqueeImageUrls.length > 0" id="marquee" class="max-w-[75%] mx-auto">
     <div class="mx-auto mt-10 lg:mt-5">
-      <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
-      <div v-if="isLoading" class="flex items-center justify-center gap-12">
-        <Skeleton
-          v-for="i in 6"
-          :key="i"
-          class="w-[60px] h-[60px] rounded-md flex-shrink-0"
-        />
-      </div>
-
-      <!-- 실제 콘텐츠: 로딩 완료 후 표시 -->
       <Marquee
-        v-else
         class="gap-[2rem]"
         :pauseOnHover="true"
         :fade="true"
