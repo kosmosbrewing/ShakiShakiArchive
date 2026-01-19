@@ -6,19 +6,19 @@ import { useAuthStore } from "@/stores/auth";
 import { Alert } from "@/components/ui/alert";
 import { useAlert } from "@/composables/useAlert";
 
-// 커서 이미지 import
-import cursor01 from "@/assets/cursor/cursor01.png";
-import cursor02 from "@/assets/cursor/cursor02.png";
-import cursor03 from "@/assets/cursor/cursor03.png";
-import cursor04 from "@/assets/cursor/cursor04.png";
-import cursor05 from "@/assets/cursor/cursor05.png";
-import cursor06 from "@/assets/cursor/cursor06.png";
-import cursor07 from "@/assets/cursor/cursor07.png";
-import cursor08 from "@/assets/cursor/cursor08.png";
-import cursor09 from "@/assets/cursor/cursor09.png";
-import cursor10 from "@/assets/cursor/cursor10.png";
-import cursor11 from "@/assets/cursor/cursor11.png";
-import cursor12 from "@/assets/cursor/cursor12.png";
+// 커서 이미지 import - WebP 최적화 (69.3% 용량 감소)
+import cursor01 from "@/assets/optimized/cursor/cursor01.webp";
+import cursor02 from "@/assets/optimized/cursor/cursor02.webp";
+import cursor03 from "@/assets/optimized/cursor/cursor03.webp";
+import cursor04 from "@/assets/optimized/cursor/cursor04.webp";
+import cursor05 from "@/assets/optimized/cursor/cursor05.webp";
+import cursor06 from "@/assets/optimized/cursor/cursor06.webp";
+import cursor07 from "@/assets/optimized/cursor/cursor07.webp";
+import cursor08 from "@/assets/optimized/cursor/cursor08.webp";
+import cursor09 from "@/assets/optimized/cursor/cursor09.webp";
+import cursor10 from "@/assets/optimized/cursor/cursor10.webp";
+import cursor11 from "@/assets/optimized/cursor/cursor11.webp";
+import cursor12 from "@/assets/optimized/cursor/cursor12.webp";
 
 const cursorImages = [
   cursor01,

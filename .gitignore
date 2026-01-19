@@ -34,3 +34,5 @@ Portfolio.vue
 CLOUDFRONT_SETUP.md
 .lighthouseci
 lighthouse*.json
+performance-final-report.md
+performance-comparison.md
