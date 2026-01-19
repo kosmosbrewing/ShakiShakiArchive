@@ -186,7 +186,7 @@ onUnmounted(() => {
                 @click="goHome"
               >
                 <img
-                  src="@/assets/logo03.png"
+                  src="@/assets/optimized/logo03.webp"
                   alt="Logo"
                   class="h-7 w-auto ml-1 mt-10 object-contain"
                   draggable="false"
@@ -264,7 +264,7 @@ onUnmounted(() => {
         @click="goHome"
       >
         <img
-          src="@/assets/logo01.png"
+          src="@/assets/optimized/logo01.webp"
           alt="Logo"
           class="w-auto max-h-[38px] min-h-[24px] max-w-[65vw]"
           style="height: clamp(24px, 7vw, 38px)"
@@ -337,7 +337,7 @@ onUnmounted(() => {
         @click="goHome"
       >
         <img
-          src="@/assets/logo01.png"
+          src="@/assets/optimized/logo01.webp"
           alt="Logo"
           class="h-10 w-auto min-w-[120px] object-contain hover:opacity-80 transition-opacity"
           draggable="false"

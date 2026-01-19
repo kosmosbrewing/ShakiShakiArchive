@@ -32,3 +32,5 @@ deploy-s3.sh
 CLAUDE copy.md
 Portfolio.vue
 CLOUDFRONT_SETUP.md
+.lighthouseci
+lighthouse*.json

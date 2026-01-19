@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
           <div class="md:col-span-1 flex flex-col items-left md:items-center">
             <a href="/" class="inline-block">
               <img
-                src="@/assets/logo02.png"
+                src="@/assets/optimized/logo02.webp"
                 alt="ShakiShaki Archive Logo"
                 class="w-32 md:w-40 object-contain"
                 draggable="false"

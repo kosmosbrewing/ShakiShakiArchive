@@ -24,7 +24,8 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "prerender": "node scripts/prerender.js",
-    "build:full": "npm run build && npm run prerender"
+    "build:full": "npm run build && npm run prerender",
+    "optimize-images": "node scripts/optimize-images.js"
   },
   "dependencies": {
     "@selemondev/vue3-marquee": "^0.0.8",
@@ -52,6 +53,7 @@
     "@types/node": "^20.19.25",
     "@vitejs/plugin-vue": "^5.0.5",
     "autoprefixer": "^10.4.19",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5",
     "vite": "^5.3.1",

@@ -10,11 +10,27 @@
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
     <link rel="dns-prefetch" href="https://js.tosspayments.com">
     <link rel="dns-prefetch" href="https://nsp.pay.naver.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
     <!-- Preconnect: TCP/TLS 핸드셰이크 미리 수행 (100-500ms 절약) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link rel="preconnect" href="https://js.tosspayments.com" crossorigin>
     <link rel="preconnect" href="https://nsp.pay.naver.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+    <!-- Preload: 중요 폰트 파일 우선 로드 (LCP 개선) -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2"
+      crossorigin>
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-SemiBold.subset.woff2"
+      crossorigin>
 
     <!-- 기본 제목 -->
     <!--

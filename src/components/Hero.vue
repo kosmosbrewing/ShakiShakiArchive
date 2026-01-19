@@ -11,12 +11,12 @@ import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useOptimizedImage } from "@/composables";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// 폴백 이미지 (API 실패 시 사용)
-import fallbackHero from "@/assets/hero.jpeg";
-import fallbackMarquee1 from "@/assets/marquee01.png";
-import fallbackMarquee2 from "@/assets/marquee02.png";
-import fallbackMarquee3 from "@/assets/marquee03.png";
-import fallbackMarquee4 from "@/assets/marquee04.png";
+// 폴백 이미지 (API 실패 시 사용) - WebP 최적화 (74.6% 용량 감소)
+import fallbackHero from "@/assets/optimized/hero.webp";
+import fallbackMarquee1 from "@/assets/optimized/marquee01.webp";
+import fallbackMarquee2 from "@/assets/optimized/marquee02.webp";
+import fallbackMarquee3 from "@/assets/optimized/marquee03.webp";
+import fallbackMarquee4 from "@/assets/optimized/marquee04.webp";
 
 // 스토어
 const siteImageStore = useSiteImageStore();
@@ -208,7 +208,7 @@ watch(
       stopAutoPlay();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 컴포넌트 언마운트 시 타이머 정리

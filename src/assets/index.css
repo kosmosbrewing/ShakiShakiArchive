@@ -1,5 +1,6 @@
-/* 1. Pretendard 폰트 임포트 */
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+/* 1. Pretendard 폰트 임포트 (서브셋 - 한글 2,350자 + 영문/숫자) */
+/* 기존: pretendard.min.css (1.5MB) → 서브셋: pretendard-subset.min.css (~200KB, 85% 감소) */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-subset.min.css");
 
 @tailwind base;
 @tailwind components;

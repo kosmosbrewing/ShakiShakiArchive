@@ -52,8 +52,8 @@ import {
   validateOrderAmount,
 } from "@/lib/validators";
 
-// [이미지 Import]
-import tossLogo from "@/assets/tossSymbol.png";
+// [이미지 Import] - WebP 최적화 (95.3% 용량 감소)
+import tossLogo from "@/assets/optimized/tossSymbol.webp";
 import naverLogo from "@/assets/naverSymbol.svg";
 
 const router = useRouter();
