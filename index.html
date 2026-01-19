@@ -26,13 +26,12 @@
       crossorigin>
     <!-- SemiBold는 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
 
-    <!-- Preload: Hero 이미지 우선 로드 (LCP 개선) -->
-    <!-- 극한 최적화: 600x840, Q22, 28.3KB (98.3% 감소) -->
+    <!-- Preload: 첫 번째 Hero 이미지 우선 로드 (LCP 최적화) -->
+    <!-- Cloudinary 최적화: f_auto,q_auto:good,w_960 (자동 포맷/품질/크기) -->
     <link
       rel="preload"
       as="image"
-      href="/assets/hero.BEm-f0yL.webp"
-      type="image/webp"
+      href="https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_960/v1766496491/shakishaki/products/qwlc02dlyi0gybjpmxow.jpg"
       fetchpriority="high">
 
     <!-- 기본 제목 -->
