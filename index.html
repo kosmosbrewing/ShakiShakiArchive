@@ -16,6 +16,65 @@
     <link rel="preconnect" href="https://js.tosspayments.com" crossorigin>
     <link rel="preconnect" href="https://nsp.pay.naver.com" crossorigin>
 
+    <!-- Critical CSS Inline: LCP 최적화 (폰트 + CSS 변수 + 기본 스타일) -->
+    <style>
+      /* 1. Pretendard 폰트 - 즉시 사용 가능 */
+      @font-face {
+        font-family: 'Pretendard';
+        font-weight: 400;
+        font-style: normal;
+        font-display: optional;
+        src: url('/fonts/Pretendard-Regular.subset.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+0020-007E;
+      }
+      @font-face {
+        font-family: 'Pretendard';
+        font-weight: 600;
+        font-style: normal;
+        font-display: optional;
+        src: url('/fonts/Pretendard-SemiBold.subset.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+0020-007E;
+      }
+
+      /* 2. CSS 변수 - Tailwind 색상 시스템 */
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 31 34% 28%;
+        --muted-foreground: 20 13% 44%;
+        --admin-foreground: 0 0% 9%;
+        --admin-muted-foreground: 0 0% 45%;
+        --card: 0 0% 100%;
+        --card-foreground: 31 34% 28%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 31 34% 28%;
+        --primary: 335 56% 63%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 60 4.8% 95.9%;
+        --secondary-foreground: 31 34% 28%;
+        --muted: 60 4.8% 95.9%;
+        --accent: 60 4.8% 95.9%;
+        --accent-foreground: 31 34% 28%;
+        --destructive: 350 70% 55%;
+        --destructive-foreground: 60 9.1% 97.8%;
+        --border: 335 10% 90%;
+        --input: 20 5.9% 90%;
+        --ring: 336 60% 68%;
+        --radius: 0.5rem;
+      }
+
+      /* 3. 기본 스타일 - 즉시 렌더링 */
+      html { scroll-behavior: auto; }
+      body {
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        margin: 0;
+      }
+    </style>
+
     <!-- Preload: 중요 폰트 파일 우선 로드 (LCP 개선) -->
     <!-- Self-hosting: 로컬에서 제공하여 DNS/TCP/TLS 오버헤드 제거 (250-550ms 절약) -->
     <link

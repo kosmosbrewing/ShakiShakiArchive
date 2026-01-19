@@ -87,24 +87,8 @@ export const useAuthStore = defineStore("auth", () => {
   async function loadUser() {
     isLoading.value = true;
 
-    // Lighthouse Best Practices: 세션 쿠키가 있을 때만 API 호출 (401 에러 방지)
-    // 쿠키가 없으면 로그인하지 않은 상태이므로 API 호출 생략
-    const hasSessionCookie = document.cookie.split(';').some(cookie => {
-      const trimmed = cookie.trim();
-      // Spring Session, Express Session, 일반적인 세션 쿠키 이름 확인
-      return trimmed.startsWith('JSESSIONID=') ||
-             trimmed.startsWith('connect.sid=') ||
-             trimmed.startsWith('SESSION=') ||
-             trimmed.startsWith('session=');
-    });
-
-    if (!hasSessionCookie) {
-      // 세션 쿠키 없음 → 로그인 안한 상태 → API 호출하지 않음
-      user.value = null;
-      isLoading.value = false;
-      return;
-    }
-
+    // Lighthouse Best Practices: ApiError를 사용하여 401 에러를 조용히 처리
+    // 쿠키 체크를 제거하고 항상 API 호출 (백엔드 쿠키 이름에 의존하지 않음)
     try {
       const currentUser = await fetchCurrentUser();
       user.value = currentUser;
@@ -114,6 +98,8 @@ export const useAuthStore = defineStore("auth", () => {
         await migrateGuestCart();
       }
     } catch (err) {
+      // 401 Unauthorized는 정상 동작 (로그인 안한 상태)
+      // ApiError로 처리되므로 Lighthouse 콘솔 에러 없음
       user.value = null;
     } finally {
       isLoading.value = false;
