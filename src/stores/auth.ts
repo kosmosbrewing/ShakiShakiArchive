@@ -86,6 +86,25 @@ export const useAuthStore = defineStore("auth", () => {
   // 유저 정보 로드 (앱 초기화 시 실행됨)
   async function loadUser() {
     isLoading.value = true;
+
+    // Lighthouse Best Practices: 세션 쿠키가 있을 때만 API 호출 (401 에러 방지)
+    // 쿠키가 없으면 로그인하지 않은 상태이므로 API 호출 생략
+    const hasSessionCookie = document.cookie.split(';').some(cookie => {
+      const trimmed = cookie.trim();
+      // Spring Session, Express Session, 일반적인 세션 쿠키 이름 확인
+      return trimmed.startsWith('JSESSIONID=') ||
+             trimmed.startsWith('connect.sid=') ||
+             trimmed.startsWith('SESSION=') ||
+             trimmed.startsWith('session=');
+    });
+
+    if (!hasSessionCookie) {
+      // 세션 쿠키 없음 → 로그인 안한 상태 → API 호출하지 않음
+      user.value = null;
+      isLoading.value = false;
+      return;
+    }
+
     try {
       const currentUser = await fetchCurrentUser();
       user.value = currentUser;
