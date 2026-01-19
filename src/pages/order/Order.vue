@@ -1177,7 +1177,63 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
   }
 });
 
+// Performance 최적화: 결제 SDK 동적 로딩
+const sdkLoaded = ref({
+  toss: false,
+  naver: false,
+});
+
+const loadPaymentSDKs = async () => {
+  try {
+    // 토스페이먼츠 SDK 로드
+    if (!window.TossPayments && !sdkLoaded.value.toss) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://js.tosspayments.com/v2/standard';
+        script.async = true;
+        script.onload = () => {
+          sdkLoaded.value.toss = true;
+          console.log('[SDK] 토스페이먼츠 로드 완료');
+          resolve(true);
+        };
+        script.onerror = () => {
+          console.error('[SDK] 토스페이먼츠 로드 실패');
+          reject(new Error('토스페이먼츠 SDK 로드 실패'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // 네이버페이 SDK 로드
+    if (!window.Naver && !sdkLoaded.value.naver) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://nsp.pay.naver.com/sdk/js/naverpay.min.js';
+        script.async = true;
+        script.onload = () => {
+          sdkLoaded.value.naver = true;
+          console.log('[SDK] 네이버페이 로드 완료');
+          resolve(true);
+        };
+        script.onerror = () => {
+          console.error('[SDK] 네이버페이 로드 실패');
+          reject(new Error('네이버페이 SDK 로드 실패'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    console.log('[SDK] 결제 SDK 로딩 완료');
+  } catch (error) {
+    console.error('[SDK] 결제 SDK 로딩 중 오류:', error);
+    // SDK 로드 실패해도 페이지는 정상 표시 (결제 시도 시 에러 처리)
+  }
+};
+
 onMounted(async () => {
+  // Performance 최적화: 결제 SDK 동적 로딩
+  await loadPaymentSDKs();
+
   // 사용자 정보 로드
   if (!authStore.user) {
     await authStore.loadUser();

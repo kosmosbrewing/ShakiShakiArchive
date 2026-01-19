@@ -224,7 +224,8 @@ onUnmounted(() => {
       <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
-          <Skeleton class="w-full aspect-square rounded-2xl" />
+          <!-- CLS 방지: Hero 이미지 비율(800x1120 = 5:7)에 맞춤 -->
+          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 5 / 7;" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
             <Skeleton class="w-2.5 h-2.5 rounded-full" />
@@ -252,6 +253,7 @@ onUnmounted(() => {
               v-bind="getHeroAttrs(image.url, index === 0)"
               alt="ShakiShaki Archive"
               class="object-contain w-full transition-all duration-700 ease-out"
+              style="aspect-ratio: 5 / 7;"
               :class="[
                 index === 0 ? 'relative' : 'absolute inset-0',
                 getSlideClass(index),

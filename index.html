@@ -19,18 +19,23 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
     <!-- Preload: 중요 폰트 파일 우선 로드 (LCP 개선) -->
+    <!-- Performance 최적화: Regular만 preload (가장 많이 사용, 270KB 절감) -->
     <link
       rel="preload"
       as="font"
       type="font/woff2"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2"
       crossorigin>
+    <!-- SemiBold, Medium은 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
+
+    <!-- Preload: Hero 이미지 우선 로드 (LCP 개선) -->
+    <!-- NOTE: 빌드 후 dist/assets/hero.[hash].webp 파일명 확인 후 업데이트 필요 -->
     <link
       rel="preload"
-      as="font"
-      type="font/woff2"
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-SemiBold.subset.woff2"
-      crossorigin>
+      as="image"
+      href="/assets/hero.BgyC0HH9.webp"
+      type="image/webp"
+      fetchpriority="high">
 
     <!-- 기본 제목 -->
     <!--
@@ -46,10 +51,12 @@
       실행 방법: npm run build:full
     -->
 
-    <!-- 토스페이먼츠 SDK -->
-    <script src="https://js.tosspayments.com/v2/standard"></script>
-    <!-- 네이버페이 SDK -->
-    <script src="https://nsp.pay.naver.com/sdk/js/naverpay.min.js"></script>
+    <!--
+      Performance 최적화: 결제 SDK는 결제 페이지에서 동적 로드
+      - 토스페이먼츠 SDK: Order.vue에서 로드
+      - 네이버페이 SDK: Order.vue에서 로드
+      - FCP/LCP 2-3초 개선 예상
+    -->
   </head>
 
   <body>
