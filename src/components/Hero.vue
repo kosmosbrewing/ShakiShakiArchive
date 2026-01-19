@@ -14,9 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 폴백 이미지 (API 실패 시 사용) - WebP 최적화 (74.6% 용량 감소)
 import fallbackHero from "@/assets/optimized/hero.webp";
 import fallbackMarquee1 from "@/assets/optimized/marquee01.webp";
-import fallbackMarquee2 from "@/assets/optimized/marquee02.webp";
-import fallbackMarquee3 from "@/assets/optimized/marquee03.webp";
-import fallbackMarquee4 from "@/assets/optimized/marquee04.webp";
+import fallbackMarquee2 from "@/assets/optimized/marquee01.webp";
+import fallbackMarquee3 from "@/assets/optimized/marquee01.webp";
+import fallbackMarquee4 from "@/assets/optimized/marquee01.webp";
 
 // 스토어
 const siteImageStore = useSiteImageStore();
