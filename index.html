@@ -10,23 +10,21 @@
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
     <link rel="dns-prefetch" href="https://js.tosspayments.com">
     <link rel="dns-prefetch" href="https://nsp.pay.naver.com">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
     <!-- Preconnect: TCP/TLS 핸드셰이크 미리 수행 (100-500ms 절약) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link rel="preconnect" href="https://js.tosspayments.com" crossorigin>
     <link rel="preconnect" href="https://nsp.pay.naver.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
     <!-- Preload: 중요 폰트 파일 우선 로드 (LCP 개선) -->
-    <!-- Performance 최적화: Regular만 preload (가장 많이 사용, 270KB 절감) -->
+    <!-- Self-hosting: 로컬에서 제공하여 DNS/TCP/TLS 오버헤드 제거 (250-550ms 절약) -->
     <link
       rel="preload"
       as="font"
       type="font/woff2"
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2"
+      href="/fonts/Pretendard-Regular.subset.woff2"
       crossorigin>
-    <!-- SemiBold, Medium은 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
+    <!-- SemiBold는 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
 
     <!-- Preload: Hero 이미지 우선 로드 (LCP 개선) -->
     <!-- 극한 최적화: 600x840, Q22, 28.3KB (98.3% 감소) -->

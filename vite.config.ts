@@ -8,6 +8,7 @@ import autoprefixer from "autoprefixer";
 export default defineConfig({
   // S3 정적 호스팅용: 루트 경로 기준 (CloudFront 또는 커스텀 도메인 사용 시)
   base: "/",
+  publicDir: "public", // public 폴더의 파일을 dist로 복사
   css: {
     postcss: {
       plugins: [tailwind(), autoprefixer()],

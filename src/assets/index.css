@@ -1,14 +1,15 @@
 /* 1. Pretendard 폰트 임포트 (Performance 최적화 - 개별 로드) */
-/* 전략: Regular만 우선 로드, SemiBold는 선택적 로드 */
+/* 전략: Regular만 우선 로드 (optional), SemiBold는 선택적 로드 */
 /* 효과: 786KB → 270KB (초기 로딩 516KB 절감, 66% 감소) */
+/* LCP 최적화: preload + optional 조합 (100ms 내 로드 실패 시 시스템 폰트 사용) */
 
-/* Regular (400) - 최우선 로드 (swap: 폰트 로드 전 fallback 표시) */
+/* Regular (400) - 최우선 로드 (optional: 100ms 내 로드 실패 시 시스템 폰트 사용) */
 @font-face {
   font-family: 'Pretendard';
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
-  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2') format('woff2');
+  font-display: optional;
+  src: url('/fonts/Pretendard-Regular.subset.woff2') format('woff2');
   unicode-range: U+AC00-D7A3, U+0020-007E; /* 한글 + 기본 라틴 문자 */
 }
 
@@ -18,7 +19,7 @@
   font-weight: 600;
   font-style: normal;
   font-display: optional;
-  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-SemiBold.subset.woff2') format('woff2');
+  src: url('/fonts/Pretendard-SemiBold.subset.woff2') format('woff2');
   unicode-range: U+AC00-D7A3, U+0020-007E;
 }
 
