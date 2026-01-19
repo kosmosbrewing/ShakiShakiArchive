@@ -179,6 +179,13 @@ async function apiRequest<T>(
     const error = await response.json().catch(() => ({}));
     // 백엔드 에러 응답 형식 지원: error.error (Rate-limit 등) 또는 error.message (일반)
     const errorMessage = error.error || error.message || `HTTP ${response.status}`;
+
+    // 401 Unauthorized는 로그인 안한 상태에서 정상 동작
+    // Lighthouse Best Practices: 콘솔 에러 방지를 위해 ApiError 사용
+    if (response.status === 401) {
+      throw new ApiError(errorMessage, response.status, error);
+    }
+
     throw new Error(errorMessage);
   }
 
