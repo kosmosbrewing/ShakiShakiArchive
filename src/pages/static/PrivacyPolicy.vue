@@ -2,7 +2,12 @@
 // src/pages/static/PrivacyPolicy.vue
 // 개인정보 처리방침 페이지
 
-// 라우터가 자동으로 스크롤 처리하므로 별도의 scrollTo 불필요
+import { onMounted } from "vue";
+
+onMounted(() => {
+  // 페이지 최상단으로 스크롤
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 </script>
 
 <template>
@@ -10,9 +15,7 @@
     <!-- 헤더 -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold mb-2">개인정보 처리방침</h1>
-      <p class="text-body text-muted-foreground">
-        시행일자: 2026년 1월 27일
-      </p>
+      <p class="text-body text-muted-foreground">시행일자: 2026년 1월 27일</p>
     </div>
 
     <!-- 목차 -->
@@ -62,8 +65,11 @@
             <div>
               <h3 class="font-semibold mb-2">회원가입 및 관리</h3>
               <ul class="list-disc pl-6 space-y-1 text-caption">
-                <li>수집 항목: 이메일, 비밀번호, 닉네임, 연락처</li>
-                <li>소셜 로그인 시: 소셜 계정 ID, 이메일, 프로필 정보</li>
+                <li>수집 항목: 이메일, 비밀번호, 닉네임</li>
+                <li>
+                  소셜 로그인 시: 소셜 계정 ID, 이메일, 프로필 정보(닉네임 또는
+                  이름)
+                </li>
                 <li>목적: 회원 식별, 서비스 제공, 본인 인증</li>
               </ul>
             </div>
@@ -98,9 +104,7 @@
             <li>
               <strong>주문/결제 기록:</strong> 전자상거래법에 따라 5년 보관
             </li>
-            <li>
-              <strong>소비자 불만/분쟁 기록:</strong> 3년 보관
-            </li>
+            <li><strong>소비자 불만/분쟁 기록:</strong> 3년 보관</li>
             <li>
               <strong>접속 기록:</strong> 통신비밀보호법에 따라 3개월 보관
             </li>
@@ -116,13 +120,13 @@
       <section id="section3">
         <h2 class="text-2xl font-bold mb-4">3. 개인정보 제3자 제공</h2>
         <div class="space-y-4 text-body leading-relaxed">
-          <p>
-            상품 배송을 위해 배송업체에 최소한의 정보만 제공합니다.
-          </p>
+          <p>상품 배송을 위해 배송업체에 최소한의 정보만 제공합니다.</p>
 
           <div class="bg-muted/20 rounded-lg p-5">
             <ul class="space-y-1 text-caption">
-              <li><strong>제공받는 자:</strong> 배송업체 (CJ대한통운, 한진택배 등)</li>
+              <li>
+                <strong>제공받는 자:</strong> 배송업체 (CJ대한통운, 한진택배 등)
+              </li>
               <li><strong>제공 목적:</strong> 상품 배송</li>
               <li><strong>제공 항목:</strong> 수령인명, 주소, 연락처</li>
               <li><strong>보유 기간:</strong> 배송 완료 후 즉시 파기</li>
@@ -180,8 +184,8 @@
     <!-- 하단 정보 -->
     <div class="mt-12 pt-8 border-t border-border">
       <p class="text-caption text-muted-foreground">
-        본 개인정보 처리방침은 2026년 1월 27일부터 적용되며, 내용이 변경될
-        경우 웹사이트를 통해 공지합니다.
+        본 개인정보 처리방침은 2026년 1월 27일부터 적용되며, 내용이 변경될 경우
+        웹사이트를 통해 공지합니다.
       </p>
     </div>
   </div>
