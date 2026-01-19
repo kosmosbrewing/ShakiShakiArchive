@@ -133,7 +133,7 @@ const removeImage = (index: number) => {
     <!-- 업로드 버튼 -->
     <div class="flex items-center gap-3">
       <label
-        class="inline-flex items-center gap-2 px-4 py-2 bg-admin text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-body font-medium"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-body font-medium"
         :class="{ 'opacity-50 cursor-not-allowed': isUploading }"
       >
         <LoadingSpinner
@@ -174,7 +174,11 @@ const removeImage = (index: number) => {
     <div
       v-if="currentImages.length > 0"
       class="grid gap-3"
-      :class="type === 'single' ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'"
+      :class="
+        type === 'single'
+          ? 'grid-cols-1'
+          : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
+      "
     >
       <div
         v-for="(url, index) in currentImages"

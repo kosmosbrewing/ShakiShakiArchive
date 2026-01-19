@@ -49,7 +49,7 @@ export function openAddressSearch(
     console.error(
       "다음 우편번호 서비스가 로드되지 않았습니다. index.html에 스크립트를 추가해주세요."
     );
-    showAlert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    showAlert("주소 검색 서비스를 불러오는 중입니다.\n잠시 후 다시 시도해주세요.");
     loadDaumPostcodeScript().then(() => {
       openAddressSearch(onComplete, onClose);
     });

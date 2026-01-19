@@ -183,7 +183,7 @@ const sortedProducts = computed(() => {
 });
 
 const totalPages = computed(() =>
-  Math.ceil(sortedProducts.value.length / itemsPerPage)
+  Math.ceil(sortedProducts.value.length / itemsPerPage),
 );
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -210,7 +210,7 @@ const loadData = async () => {
             const productVariants = await fetchAdminProductVariants(product.id);
             const totalStock = productVariants.reduce(
               (sum: number, variant: any) => sum + (variant.stockQuantity || 0),
-              0
+              0,
             );
             return { ...product, totalStock };
           } catch (error) {
@@ -219,7 +219,7 @@ const loadData = async () => {
           }
         }
         return product;
-      })
+      }),
     );
 
     products.value = productsWithStock;
@@ -347,7 +347,7 @@ const handleSaveProduct = async () => {
 const openDeleteConfirm = (
   type: "product" | "variant" | "measurement",
   id: string,
-  message: string
+  message: string,
 ) => {
   deleteType.value = type;
   deleteTargetId.value = id;
@@ -412,7 +412,7 @@ const handleSaveVariant = async () => {
       await updateProductVariant(
         currentProduct.value.id,
         variantForm.id,
-        payload
+        payload,
       );
       showAlert("옵션이 수정되었습니다.");
     } else {
@@ -476,7 +476,13 @@ const handleEditMeasurement = (measurement: any) => {
   // 0을 빈 문자열로 변환하는 헬퍼 함수
   const convertValue = (value: any): string => {
     // 0, "0", null, undefined, 빈 문자열을 모두 빈 문자열로 변환
-    if (value === null || value === undefined || value === "" || value === 0 || value === "0") {
+    if (
+      value === null ||
+      value === undefined ||
+      value === "" ||
+      value === 0 ||
+      value === "0"
+    ) {
       return "";
     }
     return String(value);
@@ -509,14 +515,14 @@ const handleSaveMeasurement = async () => {
     ];
 
     const invalidFields = measurementValues.filter(
-      ({ value }) => value.trim() !== "" && !isValidSizeMeasurement(value)
+      ({ value }) => value.trim() !== "" && !isValidSizeMeasurement(value),
     );
 
     if (invalidFields.length > 0) {
       const fieldNames = invalidFields.map(({ field }) => field).join(", ");
       showAlert(
-        `잘못된 측정값입니다 (${fieldNames}). 1~999 범위의 숫자, 소수점, 범위(95-100) 형식만 허용됩니다.`,
-        { type: "error" }
+        `잘못된 측정값입니다 (${fieldNames}).\n1~999 범위의 숫자, 소수점, 범위(95-100) 형식만 허용됩니다.`,
+        { type: "error" },
       );
       return;
     }
@@ -535,7 +541,7 @@ const handleSaveMeasurement = async () => {
 
     // undefined 필드 제거 (백엔드에 전송하지 않음)
     const cleanedPayload = Object.fromEntries(
-      Object.entries(payload).filter(([_, v]) => v !== undefined)
+      Object.entries(payload).filter(([_, v]) => v !== undefined),
     ) as Record<string, string | number>;
 
     if (isMeasurementEditMode.value) {
@@ -591,7 +597,7 @@ watch(
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
     }
-  }
+  },
 );
 
 watch(
@@ -619,7 +625,7 @@ watch(
 
       variantForm.sku = autoSku;
     }
-  }
+  },
 );
 
 // --- 초기화 ---
@@ -648,7 +654,7 @@ onMounted(async () => {
       </div>
       <Button
         @click="openCreateProductModal"
-        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+        class="mb-2 gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
       >
         <Plus class="w-4 h-4" />
         새 상품 등록
@@ -843,7 +849,11 @@ onMounted(async () => {
             </Button>
           </div>
           <Separator></Separator>
-          <form @submit.prevent="handleSaveProduct" autocomplete="off" class="space-y-6">
+          <form
+            @submit.prevent="handleSaveProduct"
+            autocomplete="off"
+            class="space-y-6"
+          >
             <div class="grid grid-cols-2 gap-6 mt-6">
               <div class="space-y-2">
                 <Label class="text-admin">
@@ -1001,7 +1011,7 @@ onMounted(async () => {
               </Button>
               <Button
                 type="submit"
-                class="bg-admin hover:bg-admin/80 text-white font-semibold"
+                class="bg-primary hover:bg-primary/80 text-white font-semibold"
               >
                 {{ isEditMode ? "수정 내용 저장" : "상품 등록하기" }}
               </Button>
@@ -1052,7 +1062,11 @@ onMounted(async () => {
                 {{ isEditMode ? "옵션 정보 수정" : "옵션 신규 등록" }}
               </h4>
 
-              <form @submit.prevent="handleSaveVariant" autocomplete="off" class="space-y-5">
+              <form
+                @submit.prevent="handleSaveVariant"
+                autocomplete="off"
+                class="space-y-5"
+              >
                 <div class="space-y-2">
                   <Label class="text-muted-foreground"
                     >재고관리코드 (SKU)</Label
@@ -1097,7 +1111,7 @@ onMounted(async () => {
                 <div class="pt-2 space-y-2">
                   <Button
                     type="submit"
-                    class="w-full bg-admin hover:bg-admin/80 text-white font-semibold"
+                    class="w-full bg-primary hover:bg-primary/80 text-white font-semibold"
                   >
                     {{ isEditMode ? "수정 내용 저장" : "옵션 추가하기" }}
                   </Button>
@@ -1344,7 +1358,11 @@ onMounted(async () => {
                 >
               </div>
 
-              <form @submit.prevent="handleSaveMeasurement" autocomplete="off" class="space-y-6">
+              <form
+                @submit.prevent="handleSaveMeasurement"
+                autocomplete="off"
+                class="space-y-6"
+              >
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div
                     v-for="field in measurementFields"
@@ -1378,7 +1396,7 @@ onMounted(async () => {
                   </Button>
                   <Button
                     type="submit"
-                    class="gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+                    class="gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
                   >
                     <Check class="w-4 h-4" />
                     {{ isMeasurementEditMode ? "수정 완료" : "수치 등록하기" }}
@@ -1623,7 +1641,7 @@ onMounted(async () => {
                                       formatSizeValue(
                                         data[
                                           col.key as keyof typeof data
-                                        ] as number
+                                        ] as number,
                                       )
                                     }}
                                   </TableCell>

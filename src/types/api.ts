@@ -17,6 +17,9 @@ export type PaymentProvider = "toss" | "naverpay" | "kakaopay" | string;
 // 결제 방법 타입
 export type PaymentMethod = "card" | "transfer" | "naverpay" | "kakaopay" | string;
 
+// 로그인 제공자 타입
+export type LoginProvider = "local" | "kakao" | "naver" | "google" | string;
+
 // 사용자 정보
 export interface User {
   id: string;
@@ -29,6 +32,9 @@ export interface User {
   emailOptIn: boolean;
   profileImageUrl: string | null;
   isAdmin: boolean;
+  socialProvider?: LoginProvider; // 소셜 로그인 제공자 (없으면 일반 회원가입)
+  kakaoId?: string | null; // 카카오 ID
+  naverId?: string | null; // 네이버 ID
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +102,7 @@ export interface OrderItem {
   quantity: number;
   status: OrderStatus;
   trackingNumber?: string;
+  courierCompany?: string; // 택배사 정보 (한글 또는 코드)
   paymentMethod?: "toss" | "naverpay"; // 결제 수단
   product?: Product;
   createdAt?: string;
@@ -733,4 +740,31 @@ export interface UpdateUserRequest {
   detailAddress?: string;
   emailOptIn?: boolean;
 }
+
+// ------------------------------------------------------------------
+// 택배사 관련 타입 (Courier Company)
+// ------------------------------------------------------------------
+
+// 택배사 타입 (코드 형식, 레거시 호환용)
+export type CourierCompany =
+  | "cj"          // CJ대한통운
+  | "hanjin"      // 한진택배
+  | "lotte"       // 롯데택배
+  | "logen"       // 로젠택배
+  | "epost"       // 우체국택배
+  | "gs25"        // GS25 편의점택배
+  | "cvsnet"      // CU 편의점택배
+  | string;       // 확장성을 위한 fallback
+
+// 택배사 코드 → 한글 이름 매핑
+// 주의: DB에는 한글 이름으로 저장됩니다 (예: "롯데택배")
+export const COURIER_COMPANIES: Record<string, string> = {
+  cj: "CJ대한통운",
+  hanjin: "한진택배",
+  lotte: "롯데택배",
+  logen: "로젠택배",
+  epost: "우체국택배",
+  gs25: "GS25",
+  cvsnet: "CU",
+};
 

@@ -3,13 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOrders, useCancelOrder } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
-import {
-  formatDate,
-  formatPrice,
-  maskUserName,
-  maskPhone,
-  maskDetailAddress,
-} from "@/lib/formatters";
+import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
 
@@ -98,10 +92,12 @@ const handleConfirmCancel = async (reason: string) => {
   if (result) {
     // 취소 성공 시 주문 정보 갱신
     order.value = result.order;
-    closeCancelDialog();
 
-    // 취소 완료 알림
+    // 취소 완료 알림 (먼저 표시)
     showAlert("주문이 취소되었습니다.");
+
+    // 다이얼로그 닫기 (Alert와 자연스럽게 전환)
+    closeCancelDialog();
   } else {
     showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", {
       type: "error",
@@ -184,18 +180,18 @@ const getPaymentProviderLabel = (provider: string): string => {
             <div class="text-body">
               <div class="flex flex-col gap-1">
                 <span class="text-heading text-foreground font-semibold">
-                  {{ maskUserName(order.shippingName) }}
+                  {{ order.shippingName }}
                 </span>
               </div>
               <p class="text-foreground pt-2">
                 {{ order.shippingAddress }}
                 <span v-if="order.shippingDetailAddress">
-                  {{ maskDetailAddress(order.shippingDetailAddress) }}
+                  {{ order.shippingDetailAddress }}
                 </span>
               </p>
               <p class="pt-1">
                 <span class="text-body text-muted-foreground">
-                  {{ maskPhone(order.shippingPhone) }}
+                  {{ order.shippingPhone }}
                 </span>
               </p>
               <!-- 배송 요청사항 -->
@@ -374,7 +370,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                 <AlertCircle class="w-4 h-4" />
                 주문 취소됨
               </div>
-              <div class="space-y-1 text-body">
+              <div class="space-y-2 text-body">
                 <div v-if="order.canceledAt" class="flex justify-between">
                   <span class="text-muted-foreground">취소 일시</span>
                   <span>{{ formatDate(order.canceledAt) }}</span>
@@ -384,13 +380,13 @@ const getPaymentProviderLabel = (provider: string): string => {
                   class="flex justify-between items-start gap-4"
                 >
                   <span class="text-muted-foreground">사유</span>
-                  <span class="text-right break-words flex-1">{{
+                  <span class="text-right break-words flex-1 ml-3">{{
                     order.cancelReason
                   }}</span>
                 </div>
                 <div
                   v-if="order.refundedAmount"
-                  class="flex justify-between font-medium text-destructive mt-2"
+                  class="flex justify-between font-medium text-destructive"
                 >
                   <span>환불 금액</span>
                   <span>{{ formatPrice(order.refundedAmount) }}</span>

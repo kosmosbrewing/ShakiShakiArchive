@@ -53,6 +53,14 @@ const userRole = computed(() => {
   return authStore.user?.isAdmin ? "관리자" : "일반회원";
 });
 
+// 모바일 환경 감지
+const isMobile = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+});
+
 // 관리자 통계 로드
 const loadAdminStats = async () => {
   if (!authStore.user?.isAdmin) return;
@@ -172,7 +180,12 @@ onMounted(async () => {
             <User class="w-7 h-7 text-primary" />
           </div>
           <div>
-            <p class="text-heading font-bold text-foreground">
+            <!-- 모바일: 줄바꿈 -->
+            <p v-if="isMobile" class="text-heading font-bold text-foreground">
+              {{ userName }}님<br />안녕하세요!
+            </p>
+            <!-- PC: 한 줄 -->
+            <p v-else class="text-heading font-bold text-foreground">
               {{ userName }}님, 안녕하세요!
             </p>
             <p class="text-body text-muted-foreground">{{ userRole }}</p>

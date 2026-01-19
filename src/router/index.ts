@@ -51,6 +51,9 @@ import {
   UserAdmin,
 } from "@/pages/admin";
 
+// Static (정적 페이지)
+import PrivacyPolicy from "@/pages/static/PrivacyPolicy.vue";
+
 // 404 페이지
 import NotFound from "@/pages/NotFound.vue";
 
@@ -203,6 +206,14 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true, title: "[ADMIN] 회원 관리" },
   },
 
+  // 정적 페이지
+  {
+    path: "/privacy",
+    name: "PrivacyPolicy",
+    component: PrivacyPolicy,
+    meta: { title: "개인정보 처리방침" },
+  },
+
   // 404 페이지
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound, meta: { title: "페이지를 찾을 수 없습니다" } },
 ];
@@ -215,7 +226,7 @@ const router = createRouter({
     if (savedPosition) {
       return savedPosition;
     }
-    return { top: 0 };
+    return { top: 0, behavior: 'auto' };
   },
 });
 

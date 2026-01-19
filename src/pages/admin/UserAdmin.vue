@@ -32,13 +32,11 @@ import {
   X,
   Mail,
   Phone,
-  MapPin,
   Calendar,
   Shield,
   ChevronLeft,
   ChevronRight,
-  ShoppingBag,
-  MessageCircle,
+  MapPin,
 } from "lucide-vue-next";
 
 // --- 상태 관리 ---
@@ -144,7 +142,8 @@ const clearSearch = () => {
 const changePage = (page: number) => {
   pagination.value.page = page;
   loadData();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  // 스크롤은 라우터가 아닌 페이지 내 페이지네이션이므로 제거하여 즉시 전환
+  window.scrollTo({ top: 0 });
 };
 
 const goToPrevPage = () => {
@@ -199,6 +198,22 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 // --- 금액 포맷팅 ---
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("ko-KR").format(amount) + "원";
+};
+
+// --- 로그인 제공자 포맷팅 ---
+const formatProvider = (socialProvider: string | undefined | null) => {
+  if (!socialProvider || socialProvider === "local") return "일반";
+  const providerMap: Record<string, string> = {
+    kakao: "카카오",
+    naver: "네이버",
+    google: "구글",
+  };
+  return providerMap[socialProvider] || socialProvider;
+};
+
+const getProviderColor = (_socialProvider: string | undefined | null): "outline" => {
+  // 모든 로그인 타입을 동일한 스타일로 표시
+  return "outline";
 };
 
 onMounted(async () => {
@@ -274,7 +289,7 @@ onMounted(async () => {
               <th class="px-6 py-4 w-16">No.</th>
               <th class="px-6 py-4">회원정보</th>
               <th class="px-6 py-4">연락처</th>
-              <th class="px-6 py-4">주소</th>
+              <th class="px-6 py-4 text-center">로그인</th>
               <th class="px-6 py-4 text-center">권한</th>
               <th class="px-6 py-4 text-center">가입일</th>
               <th class="px-6 py-4 text-right">작업</th>
@@ -323,14 +338,11 @@ onMounted(async () => {
                 </div>
               </td>
 
-              <!-- 주소 -->
-              <td class="px-6 py-4 max-w-xs">
-                <div
-                  class="text-caption text-admin-muted truncate flex items-center gap-1"
-                >
-                  <MapPin class="w-3.5 h-3.5 shrink-0" />
-                  <span>{{ user.address || "-" }}</span>
-                </div>
+              <!-- 로그인 제공자 -->
+              <td class="px-6 py-4 text-center">
+                <Badge :variant="getProviderColor(user.socialProvider)">
+                  {{ formatProvider(user.socialProvider) }}
+                </Badge>
               </td>
 
               <!-- 권한 -->
@@ -428,245 +440,140 @@ onMounted(async () => {
       >
         <div class="p-8">
           <!-- 헤더 -->
-          <div class="flex justify-between items-center mb-8 border-b pb-4">
-            <h2 class="text-heading font-bold text-admin tracking-tight">
-              회원 상세 정보
-            </h2>
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <div
+                  class="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center"
+                >
+                  <span class="text-xl font-bold text-primary">
+                    {{ selectedUser?.userName.charAt(0) }}
+                  </span>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-admin">
+                    {{ selectedUser?.userName }}
+                  </h2>
+                  <div class="flex items-center gap-2 text-caption text-admin-muted">
+                    <Mail class="w-3.5 h-3.5" />
+                    {{ selectedUser?.email }}
+                  </div>
+                </div>
+              </div>
+              <!-- 권한 뱃지 -->
+              <div class="flex items-center gap-2 ml-15">
+                <Badge
+                  :variant="getProviderColor(selectedUser?.socialProvider)"
+                >
+                  {{ formatProvider(selectedUser?.socialProvider) }} 로그인
+                </Badge>
+                <Badge
+                  :variant="selectedUser?.isAdmin ? 'default' : 'outline'"
+                  class="gap-1"
+                >
+                  <Shield v-if="selectedUser?.isAdmin" class="w-3 h-3" />
+                  {{ selectedUser?.isAdmin ? "관리자" : "일반회원" }}
+                </Badge>
+                <Badge
+                  :variant="selectedUser?.emailOptIn ? 'default' : 'outline'"
+                >
+                  이메일 수신 {{ selectedUser?.emailOptIn ? "동의" : "미동의" }}
+                </Badge>
+              </div>
+            </div>
             <Button variant="ghost" size="icon" @click="closeDetailModal">
               <X class="w-5 h-5" />
             </Button>
           </div>
 
-          <div class="space-y-6">
-            <!-- 로딩 상태 -->
-            <LoadingSpinner
-              v-if="loadingDetail"
-              :center="false"
-              class="py-12"
-            />
+          <Separator class="mb-6" />
 
-            <div v-else>
-              <!-- 회원 통계 -->
-              <div v-if="userStats" class="mb-6">
-                <h3 class="text-body font-bold text-admin mb-4">활동 통계</h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <div
-                    class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"
-                    >
-                      <ShoppingBag class="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p class="text-caption text-blue-700">총 주문</p>
-                      <p class="text-heading font-bold text-blue-900">
-                        {{ userStats.totalOrders }}건
-                      </p>
-                    </div>
+          <!-- 로딩 상태 -->
+          <LoadingSpinner
+            v-if="loadingDetail"
+            :center="false"
+            class="py-12"
+          />
+
+          <div v-else class="space-y-6">
+            <!-- 활동 통계 -->
+            <div v-if="userStats" class="bg-muted/20 rounded-lg p-4">
+              <div class="flex items-center justify-between flex-wrap gap-4">
+                <span class="text-caption font-semibold text-admin-muted">활동 통계</span>
+                <div class="flex items-center gap-4 flex-wrap">
+                  <span class="text-caption text-muted-foreground">
+                    총 주문:
+                    <span class="font-bold text-foreground">
+                      {{ userStats.totalOrders }}
+                    </span>건
+                  </span>
+                  <span class="text-caption text-muted-foreground">
+                    총 구매액 <span class="text-xs">(취소 제외)</span>:
+                    <span class="font-bold text-foreground">
+                      {{ formatCurrency(userStats.totalSpent) }}
+                    </span>
+                  </span>
+                  <span class="text-caption text-muted-foreground">
+                    최근 주문일:
+                    <span class="font-bold text-foreground">
+                      {{
+                        userStats.lastOrderDate
+                          ? formatDate(userStats.lastOrderDate)
+                          : "없음"
+                      }}
+                    </span>
+                  </span>
+                  <span class="text-caption text-muted-foreground">
+                    총 문의:
+                    <span class="font-bold text-foreground">
+                      {{ userStats.totalInquiries }}
+                    </span>건
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 연락처 및 주소 정보 -->
+            <div class="grid grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
+                    <Phone class="w-3.5 h-3.5" />
+                    연락처
+                  </label>
+                  <div class="text-body text-admin">
+                    {{ selectedUser.phone }}
                   </div>
-
-                  <div
-                    class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"
-                    >
-                      <ShoppingBag class="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p class="text-caption text-green-700">총 구매액</p>
-                      <p class="text-heading font-bold text-green-900">
-                        {{ formatCurrency(userStats.totalSpent) }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    class="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"
-                    >
-                      <Calendar class="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p class="text-caption text-purple-700">최근 주문일</p>
-                      <p class="text-body font-semibold text-purple-900">
-                        {{
-                          userStats.lastOrderDate
-                            ? formatDate(userStats.lastOrderDate)
-                            : "없음"
-                        }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    class="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center"
-                    >
-                      <MessageCircle class="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p class="text-caption text-orange-700">총 문의</p>
-                      <p class="text-heading font-bold text-orange-900">
-                        {{ userStats.totalInquiries }}건
-                      </p>
-                    </div>
+                </div>
+                <div>
+                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
+                    <Calendar class="w-3.5 h-3.5" />
+                    가입일시
+                  </label>
+                  <div class="text-caption text-admin">
+                    {{ formatDateTime(selectedUser.createdAt) }}
                   </div>
                 </div>
               </div>
 
-              <Separator class="my-6" />
-
-              <!-- 기본 정보 -->
-              <div>
-                <h3 class="text-body font-bold text-admin mb-4">기본 정보</h3>
-                <div class="grid grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      회원명
-                    </label>
-                    <div
-                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ selectedUser.userName }}
-                    </div>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      이메일
-                    </label>
-                    <div
-                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ selectedUser.email }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator class="my-6" />
-
-              <!-- 연락처 정보 -->
-              <div>
-                <h3 class="text-body font-bold text-admin mb-4">연락처 정보</h3>
-                <div class="grid grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      연락처
-                    </label>
-                    <div
-                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ selectedUser.phone }}
-                    </div>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      우편번호
-                    </label>
-                    <div
-                      class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ selectedUser.zipCode }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator class="my-6" />
-
-              <!-- 주소 정보 -->
-              <div>
-                <h3 class="text-body font-bold text-admin mb-4">주소 정보</h3>
-                <div class="space-y-2">
-                  <label class="text-admin text-caption font-semibold">
+              <div class="space-y-4">
+                <div>
+                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
+                    <MapPin class="w-3.5 h-3.5" />
                     주소
                   </label>
-                  <div
-                    class="text-body text-admin bg-muted/30 px-3 py-2 rounded"
-                  >
-                    {{ selectedUser.address }}
+                  <div class="text-caption text-admin">
+                    ({{ selectedUser.zipCode }}) {{ selectedUser.address }}
                   </div>
-                  <div
-                    class="text-caption text-admin-muted bg-muted/20 px-3 py-2 rounded"
-                  >
-                    {{ selectedUser.detailAddress || "상세 주소 없음" }}
-                  </div>
-                </div>
-              </div>
-
-              <Separator class="my-6" />
-
-              <!-- 기타 정보 -->
-              <div>
-                <h3 class="text-body font-bold text-admin mb-4">기타 정보</h3>
-                <div class="grid grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      권한
-                    </label>
-                    <div>
-                      <Badge
-                        :variant="selectedUser.isAdmin ? 'default' : 'outline'"
-                      >
-                        {{ selectedUser.isAdmin ? "관리자" : "일반회원" }}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      이메일 수신 동의
-                    </label>
-                    <div>
-                      <Badge
-                        :variant="
-                          selectedUser.emailOptIn ? 'default' : 'outline'
-                        "
-                      >
-                        {{ selectedUser.emailOptIn ? "동의" : "미동의" }}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator class="my-6" />
-
-              <!-- 가입/수정 일시 -->
-              <div>
-                <h3 class="text-body font-bold text-admin mb-4">활동 이력</h3>
-                <div class="grid grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      가입일시
-                    </label>
-                    <div
-                      class="text-caption text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ formatDateTime(selectedUser.createdAt) }}
-                    </div>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-admin text-caption font-semibold">
-                      최종 수정일시
-                    </label>
-                    <div
-                      class="text-caption text-admin bg-muted/30 px-3 py-2 rounded"
-                    >
-                      {{ formatDateTime(selectedUser.updatedAt) }}
-                    </div>
+                  <div class="text-caption text-admin-muted mt-1">
+                    {{ selectedUser.detailAddress || "-" }}
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- 하단 버튼 -->
-            <div class="flex justify-end gap-2 mt-8 pt-6 border-t">
+            <div class="flex justify-end gap-2 pt-4 border-t">
               <Button
                 variant="outline"
                 class="font-medium"

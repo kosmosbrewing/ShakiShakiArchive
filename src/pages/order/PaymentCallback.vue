@@ -2,7 +2,7 @@
 // src/pages/order/PaymentCallback.vue
 // 결제 완료/실패 콜백 페이지
 
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { CheckCircle, XCircle, Package, AlertTriangle, Ban } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +36,14 @@ const orderInfo = ref<{
 
 // 팝업 창인지 확인 (네이버페이 PC 결제용)
 const isPopup = ref<boolean>(false);
+
+// 모바일 환경 감지
+const isMobile = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+});
 
 onMounted(async () => {
   // 팝업 창 여부 확인 (네이버페이 PC 결제)
@@ -116,29 +124,29 @@ onMounted(async () => {
 
     // 특정 패턴 감지 및 메시지 정제 (네이버페이 공식 에러 코드 패턴)
     if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
-      cleanMessage = "계좌 잔액이 부족합니다. 잔액을 확인해주세요.";
+      cleanMessage = "계좌 잔액이 부족합니다.\n잔액을 확인해주세요.";
     } else if (cleanMessage.includes("한도")) {
-      cleanMessage = "카드 한도가 부족합니다. 다른 결제 수단을 이용해주세요.";
+      cleanMessage = "카드 한도가 부족합니다.\n다른 결제 수단을 이용해주세요.";
     } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
-      cleanMessage = "본인 인증에 실패했습니다. 카드 정보를 확인해주세요.";
+      cleanMessage = "본인 인증에 실패했습니다.\n카드 정보를 확인해주세요.";
     } else if (
       cleanMessage.includes("비밀번호") ||
       cleanMessage.includes("인증")
     ) {
-      cleanMessage = "인증에 실패했습니다. 다시 시도해주세요.";
+      cleanMessage = "인증에 실패했습니다.\n다시 시도해주세요.";
     } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
-      cleanMessage = "결제 시간이 만료되었습니다. 다시 시도해주세요.";
+      cleanMessage = "결제 시간이 만료되었습니다.\n다시 시도해주세요.";
     } else if (cleanMessage.includes("점검")) {
       if (cleanMessage.includes("은행")) {
-        cleanMessage = "은행 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.";
+        cleanMessage = "은행 시스템 점검 중입니다.\n잠시 후 다시 시도해주세요.";
       } else if (
         cleanMessage.includes("원천사") ||
         cleanMessage.includes("시스템")
       ) {
         cleanMessage =
-          "결제 시스템 점검 중입니다. 다른 결제 수단을 이용해주세요.";
+          "결제 시스템 점검 중입니다.\n다른 결제 수단을 이용해주세요.";
       } else {
-        cleanMessage = "서비스 점검 중입니다. 잠시 후 다시 시도해주세요.";
+        cleanMessage = "서비스 점검 중입니다.\n잠시 후 다시 시도해주세요.";
       }
     } else if (
       cleanMessage.includes("이미") &&
@@ -147,7 +155,7 @@ onMounted(async () => {
       cleanMessage = "이미 처리된 결제입니다.";
     } else if (cleanMessage.length > 50) {
       // 50자 이상의 긴 메시지는 간단하게 정리
-      cleanMessage = "결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+      cleanMessage = "결제 처리 중 오류가 발생했습니다.\n다시 시도해주세요.";
     }
 
     errorMessage.value = cleanMessage;
@@ -216,10 +224,16 @@ onMounted(async () => {
 
         // 로딩 상태 유지하며 자동으로 주문 상세로 이동 (Login.vue 패턴)
         setTimeout(() => {
-          if (confirmResult.order?.id) {
-            router.replace(`/orderdetail/${confirmResult.order.id}`);
+          const targetUrl = confirmResult.order?.id
+            ? `/orderdetail/${confirmResult.order.id}`
+            : "/orderlist";
+
+          // 모바일 리다이렉트: 히스토리 완전 대체
+          if (isMobile.value && !isPopup.value) {
+            window.location.replace(targetUrl);
           } else {
-            router.replace("/orderlist");
+            // PC 또는 팝업: Vue Router 사용 (부드러운 전환)
+            router.replace(targetUrl);
           }
         }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
         return;
@@ -281,10 +295,13 @@ onMounted(async () => {
     // 팝업이 아닌 경우 (모바일 리다이렉트): 로딩 상태 유지하며 자동으로 주문 상세로 이동
     // Login.vue의 OAuth 처리와 동일한 패턴
     setTimeout(() => {
-      if (orderId) {
-        router.replace(`/orderdetail/${orderId}`);
+      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+
+      // 모바일 리다이렉트: 히스토리 완전 대체
+      if (isMobile.value && !isPopup.value) {
+        window.location.replace(targetUrl);
       } else {
-        router.replace("/orderlist");
+        router.replace(targetUrl);
       }
     }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
     return;
@@ -402,29 +419,29 @@ function cleanErrorMessage(message: string): string {
 
   // 특정 패턴 감지 및 메시지 정제
   if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
-    cleanMessage = "계좌 잔액이 부족합니다. 잔액을 확인해주세요.";
+    cleanMessage = "계좌 잔액이 부족합니다.\n잔액을 확인해주세요.";
   } else if (cleanMessage.includes("한도")) {
-    cleanMessage = "카드 한도가 부족합니다. 다른 결제 수단을 이용해주세요.";
+    cleanMessage = "카드 한도가 부족합니다.\n다른 결제 수단을 이용해주세요.";
   } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
-    cleanMessage = "본인 인증에 실패했습니다. 카드 정보를 확인해주세요.";
+    cleanMessage = "본인 인증에 실패했습니다.\n카드 정보를 확인해주세요.";
   } else if (
     cleanMessage.includes("비밀번호") ||
     cleanMessage.includes("인증")
   ) {
-    cleanMessage = "인증에 실패했습니다. 다시 시도해주세요.";
+    cleanMessage = "인증에 실패했습니다.\n다시 시도해주세요.";
   } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
-    cleanMessage = "결제 시간이 만료되었습니다. 다시 시도해주세요.";
+    cleanMessage = "결제 시간이 만료되었습니다.\n다시 시도해주세요.";
   } else if (cleanMessage.includes("점검")) {
     if (cleanMessage.includes("은행")) {
-      cleanMessage = "은행 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.";
+      cleanMessage = "은행 시스템 점검 중입니다.\n잠시 후 다시 시도해주세요.";
     } else if (
       cleanMessage.includes("원천사") ||
       cleanMessage.includes("시스템")
     ) {
       cleanMessage =
-        "결제 시스템 점검 중입니다. 다른 결제 수단을 이용해주세요.";
+        "결제 시스템 점검 중입니다.\n다른 결제 수단을 이용해주세요.";
     } else {
-      cleanMessage = "서비스 점검 중입니다. 잠시 후 다시 시도해주세요.";
+      cleanMessage = "서비스 점검 중입니다.\n잠시 후 다시 시도해주세요.";
     }
   } else if (
     cleanMessage.includes("이미") &&
@@ -433,7 +450,7 @@ function cleanErrorMessage(message: string): string {
     cleanMessage = "이미 처리된 결제입니다.";
   } else if (cleanMessage.length > 50) {
     // 50자 이상의 긴 메시지는 간단하게 정리
-    cleanMessage = "결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+    cleanMessage = "결제 처리 중 오류가 발생했습니다.\n다시 시도해주세요.";
   }
 
   return cleanMessage;
@@ -441,21 +458,38 @@ function cleanErrorMessage(message: string): string {
 
 // 주문 상세로 이동
 const goToOrderDetail = () => {
-  if (orderInfo.value.orderId) {
-    router.push(`/orderdetail/${orderInfo.value.orderId}`);
+  const targetUrl = orderInfo.value.orderId
+    ? `/orderdetail/${orderInfo.value.orderId}`
+    : "/orderlist";
+
+  // 모바일: 히스토리 완전 대체
+  if (isMobile.value && !isPopup.value) {
+    window.location.replace(targetUrl);
   } else {
-    router.push("/orderlist");
+    router.push(targetUrl); // PC는 push 유지 (뒤로 가기 허용)
   }
 };
 
 // 홈으로 이동
 const goToHome = () => {
-  router.push("/");
+  const targetUrl = "/";
+
+  if (isMobile.value && !isPopup.value) {
+    window.location.replace(targetUrl);
+  } else {
+    router.push(targetUrl);
+  }
 };
 
 // 다시 주문하기
 const goToCart = () => {
-  router.push("/cart");
+  const targetUrl = "/cart";
+
+  if (isMobile.value && !isPopup.value) {
+    window.location.replace(targetUrl);
+  } else {
+    router.push(targetUrl);
+  }
 };
 </script>
 
@@ -575,9 +609,10 @@ const goToCart = () => {
           <!-- 계좌 잔액 부족 에러 시 추가 안내 -->
           <p
             v-if="errorMessage.includes('잔액')"
-            class="text-sm text-amber-600 dark:text-amber-400 mb-6"
+            class="text-sm text-amber-600 dark:text-amber-400 mb-6 whitespace-pre-line"
           >
-            💡 다른 결제 수단을 이용하시거나 잔액 충전 후 다시 시도해주세요.
+            💡 다른 결제 수단을 이용하시거나
+잔액 충전 후 다시 시도해주세요.
           </p>
           <div v-else class="mb-6"></div>
 
@@ -603,9 +638,9 @@ const goToCart = () => {
             <AlertTriangle class="w-12 h-12 text-amber-500" />
           </div>
           <h2 class="text-xl font-semibold mb-2">재고 부족으로 결제 취소</h2>
-          <p class="text-muted-foreground mb-4">
-            결제 처리 중 일부 상품의 재고가 부족하여 결제가 자동으로
-            취소되었습니다.
+          <p class="text-muted-foreground mb-4 whitespace-pre-line">
+            결제 처리 중 일부 상품의 재고가 부족하여
+결제가 자동으로 취소되었습니다.
           </p>
           <p class="text-sm text-primary mb-6">
             결제하신 금액은 자동으로 환불됩니다.
@@ -646,9 +681,9 @@ const goToCart = () => {
 
           <!-- 재고 정보가 없을 때 (백엔드 응답 형식 차이) -->
           <div v-else class="bg-muted/50 rounded-lg p-4 mb-6 text-left">
-            <p class="text-sm text-muted-foreground">
-              주문하신 상품의 재고가 부족하여 결제가 취소되었습니다.<br />
-              장바구니에서 수량을 조정하거나 상품 페이지에서 다시 확인해주세요.
+            <p class="text-sm text-muted-foreground whitespace-pre-line">
+              주문하신 상품의 재고가 부족하여 결제가 취소되었습니다.
+장바구니에서 수량을 조정하거나 상품 페이지에서 다시 확인해주세요.
             </p>
           </div>
 

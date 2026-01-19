@@ -177,7 +177,9 @@ async function apiRequest<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    // 백엔드 에러 응답 형식 지원: error.error (Rate-limit 등) 또는 error.message (일반)
+    const errorMessage = error.error || error.message || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
   }
 
   // 204 No Content 처리 (삭제 요청 등)
@@ -292,6 +294,14 @@ export async function resetPassword(data: {
   return apiRequest("/api/auth/reset-password", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// 비밀번호 확인 (관리자 인증용)
+export async function verifyPassword(password: string): Promise<{ verified: boolean }> {
+  return apiRequest("/api/auth/verify-password", {
+    method: "POST",
+    body: JSON.stringify({ password }),
   });
 }
 
@@ -922,11 +932,22 @@ export async function updateAdminOrderStatus(
 export async function updateAdminOrderItem(
   itemId: number | string,
   status: string,
-  trackingNumber?: string
+  trackingNumber?: string,
+  courierCompany?: string
 ): Promise<any> {
+  const body: any = { status };
+
+  if (trackingNumber !== undefined) {
+    body.trackingNumber = trackingNumber;
+  }
+
+  if (courierCompany !== undefined) {
+    body.courierCompany = courierCompany;
+  }
+
   return apiRequest(`/api/admin/order-items/${itemId}`, {
     method: "PATCH",
-    body: JSON.stringify({ status, trackingNumber }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -1092,7 +1113,9 @@ async function uploadFile<T>(endpoint: string, formData: FormData): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    // 백엔드 에러 응답 형식 지원: error.error (Rate-limit 등) 또는 error.message (일반)
+    const errorMessage = error.error || error.message || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
   }
 
   return response.json();

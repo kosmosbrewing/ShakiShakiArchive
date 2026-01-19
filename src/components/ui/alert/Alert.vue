@@ -67,7 +67,7 @@ const alertStyles = computed(() => {
 // confirm 모드일 때의 컨테이너 스타일
 const containerStyles = computed(() => {
   if (props.confirmMode) {
-    return "bg-background border border-border rounded-2xl shadow-2xl pointer-events-auto w-[320px] overflow-hidden";
+    return "bg-background border border-border rounded-2xl shadow-2xl pointer-events-auto w-[280px] sm:w-[320px] overflow-hidden";
   }
   return "rounded-2xl shadow-lg px-5 py-3 flex items-center gap-2 pointer-events-auto";
 });
@@ -160,23 +160,23 @@ onUnmounted(() => {
           <!-- confirm 모드 -->
           <template v-if="confirmMode">
             <!-- 상단 아이콘 영역 -->
-            <div class="pt-8 pb-6 px-6 sm:pt-6 sm:pb-4 flex flex-col items-center gap-3">
+            <div class="pt-6 pb-4 px-5 sm:pt-6 sm:pb-4 sm:px-6 flex flex-col items-center gap-2.5">
               <!-- 성공 아이콘 -->
               <div
                 v-if="!isDestructive"
-                class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
+                class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/5 flex items-center justify-center"
               >
-                <CheckCircle2 class="w-8 h-8 text-primary" />
+                <CheckCircle2 class="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <!-- 삭제/경고 아이콘 -->
               <div
                 v-else
-                class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
+                class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/5 flex items-center justify-center"
               >
-                <AlertTriangle class="w-8 h-8 text-primary" />
+                <AlertTriangle class="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <p
-                class="text-body font-semibold text-foreground text-center whitespace-pre-line"
+                class="text-caption sm:text-body font-semibold text-foreground text-center whitespace-pre-line"
               >
                 {{ message }}
               </p>
@@ -192,12 +192,12 @@ onUnmounted(() => {
                   )
                 "
                 :placeholder="promptPlaceholder"
-                class="w-full px-3 py-2 mt-2 border border-border rounded-md text-body focus:outline-none focus:ring-2 focus:ring-primary"
+                class="w-full px-3 py-2 mt-2 border border-border rounded-md text-caption sm:text-body focus:outline-none focus:ring-2 focus:ring-primary"
                 autocomplete="off"
               />
               <p
                 v-if="promptMode && promptRequired"
-                class="text-body text-muted-foreground text-center"
+                class="text-caption text-muted-foreground text-center"
               >
                 {{ promptPlaceholder || `'${promptRequired}'를 입력하세요` }}
               </p>
@@ -207,13 +207,13 @@ onUnmounted(() => {
             <div class="flex border-t border-border">
               <button
                 @click="handleCancel"
-                class="flex-1 py-4 sm:py-3.5 text-body font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
+                class="flex-1 py-3 sm:py-3.5 text-caption sm:text-body font-medium text-muted-foreground hover:bg-muted/50 transition-colors border-r border-border"
               >
                 {{ cancelText }}
               </button>
               <button
                 @click="handleConfirm"
-                class="flex-1 py-4 sm:py-3.5 text-body font-semibold transition-colors text-primary hover:bg-primary/5"
+                class="flex-1 py-3 sm:py-3.5 text-caption sm:text-body font-semibold transition-colors text-primary hover:bg-primary/5"
               >
                 {{ confirmText }}
               </button>

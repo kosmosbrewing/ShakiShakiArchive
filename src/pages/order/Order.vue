@@ -357,7 +357,7 @@ const handlePayment = async () => {
       error instanceof Error
         ? error.message
         : "알 수 없는 오류가 발생했습니다.";
-    showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, {
+    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMessage}`, {
       type: "error",
     });
 
@@ -676,6 +676,11 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     }
 
     // 10. 네이버페이 결제창 호출
+    // 모바일 리다이렉트 방식을 위해 절대 URL로 변환
+    const absoluteReturnUrl = sdkConfig.returnUrl.startsWith('http')
+      ? sdkConfig.returnUrl
+      : `${window.location.origin}${sdkConfig.returnUrl}`;
+
     const naverPayParams = {
       merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
       merchantUserKey: merchantUserKey, // 사용자 식별키
@@ -684,7 +689,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       totalPayAmount: orderTotalAmount.value,
       taxScopeAmount: orderTotalAmount.value, // 전체 금액을 과세 대상으로
       taxExScopeAmount: 0, // 면세 대상 금액 없음
-      returnUrl: `${sdkConfig.returnUrl}?orderId=${orderData.orderId}`,
+      returnUrl: `${absoluteReturnUrl}?orderId=${orderData.orderId}`,
       productItems: productItems,
     };
 
@@ -695,6 +700,8 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       chainId: sdkConfig.chainId,
       mode: sdkConfig.mode,
       payType: sdkConfig.payType,
+      returnUrl: sdkConfig.returnUrl,
+      absoluteReturnUrl: absoluteReturnUrl,
     });
     console.log("2. Pay Reserve Params:", naverPayParams);
     console.log("3. Product Items:", productItems);
@@ -999,7 +1006,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       err instanceof Error
         ? err.message
         : "네이버페이 결제 호출에 실패했습니다.";
-    showAlert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`, {
+    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMessage}`, {
       type: "error",
     });
 
@@ -1157,7 +1164,7 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
         // 상태 초기화 (버튼 재활성화)
         isPaymentProcessing.value = false;
         showAlert(
-          "결제창이 닫혔습니다. 결제가 완료되지 않은 경우 주문이 자동으로 취소됩니다."
+          "결제창이 닫혔습니다.\n결제가 완료되지 않은 경우 주문이 자동으로 취소됩니다."
         );
       }
     }, 20000); // 20초 대기 (결제 승인 완료 대기 - 토스페이먼츠 충돌 방지)

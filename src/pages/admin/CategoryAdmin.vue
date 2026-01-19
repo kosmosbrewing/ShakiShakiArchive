@@ -161,7 +161,7 @@ onMounted(async () => {
       </div>
       <Button
         @click="openCreateModal"
-        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+        class="mb-2 gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
       >
         <Plus class="w-4 h-4" />
         추가
@@ -276,7 +276,11 @@ onMounted(async () => {
             </Button>
           </div>
 
-          <form @submit.prevent="handleSave" autocomplete="off" class="space-y-6">
+          <form
+            @submit.prevent="handleSave"
+            autocomplete="off"
+            class="space-y-6"
+          >
             <div class="space-y-2">
               <Label class="text-admin">
                 카테고리명 <span class="text-primary">*</span>
@@ -359,7 +363,7 @@ onMounted(async () => {
               </Button>
               <Button
                 type="submit"
-                class="bg-admin hover:bg-admin/80 text-white font-semibold"
+                class="bg-primary hover:bg-primary/80 text-white font-semibold"
               >
                 {{ isEditMode ? "저장하기" : "등록하기" }}
               </Button>

@@ -67,18 +67,18 @@ const form = ref({ ...initialForm });
 const heroImages = computed(() =>
   siteImages.value
     .filter((img) => img.type === "hero")
-    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .sort((a, b) => a.displayOrder - b.displayOrder),
 );
 
 const marqueeImages = computed(() =>
   siteImages.value
     .filter((img) => img.type === "marquee")
-    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .sort((a, b) => a.displayOrder - b.displayOrder),
 );
 
 // 현재 탭의 이미지
 const currentImages = computed(() =>
-  activeTab.value === "hero" ? heroImages.value : marqueeImages.value
+  activeTab.value === "hero" ? heroImages.value : marqueeImages.value,
 );
 
 // 추가 가능 여부
@@ -106,11 +106,10 @@ const openCreateModal = () => {
   if (!canAddMore.value) {
     const max =
       activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
+    const imageType = activeTab.value === "hero" ? "Hero" : "Marquee";
     showAlert(
-      `${
-        activeTab.value === "hero" ? "Hero" : "Marquee"
-      } 이미지는 최대 ${max}개까지 등록 가능합니다.`,
-      { type: "error" }
+      `${imageType} 이미지는 최대 ${max}개까지\n등록 가능합니다.`,
+      { type: "error" },
     );
     return;
   }
@@ -329,7 +328,7 @@ onMounted(async () => {
       </div>
       <Button
         @click="openCreateModal"
-        class="mb-2 gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+        class="mb-2 gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
         :disabled="!canAddMore"
       >
         <Plus class="w-4 h-4" />
@@ -345,7 +344,7 @@ onMounted(async () => {
         :variant="activeTab === 'hero' ? undefined : 'outline'"
         :class="
           activeTab === 'hero'
-            ? 'gap-2 bg-admin hover:bg-admin/80 text-white font-semibold'
+            ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
             : 'gap-2'
         "
       >
@@ -357,7 +356,7 @@ onMounted(async () => {
         :variant="activeTab === 'marquee' ? undefined : 'outline'"
         :class="
           activeTab === 'marquee'
-            ? 'gap-2 bg-admin hover:bg-admin/80 text-white font-semibold'
+            ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
             : 'gap-2'
         "
       >
@@ -539,7 +538,7 @@ onMounted(async () => {
 
               <div class="flex items-center gap-3">
                 <label
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-admin text-white rounded-lg transition-colors text-body font-medium"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg transition-colors text-body font-medium"
                   :class="
                     isUploading
                       ? 'opacity-50 cursor-not-allowed pointer-events-none'
@@ -644,7 +643,7 @@ onMounted(async () => {
               <Button
                 type="submit"
                 :disabled="isSaving || isUploading || !form.imageUrl"
-                class="gap-2 bg-admin hover:bg-admin/80 text-white font-semibold"
+                class="gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
               >
                 <LoadingSpinner
                   v-if="isSaving"
@@ -658,8 +657,8 @@ onMounted(async () => {
                   isSaving
                     ? "저장 중..."
                     : isEditMode
-                    ? "수정 완료"
-                    : "추가하기"
+                      ? "수정 완료"
+                      : "추가하기"
                 }}
               </Button>
             </div>

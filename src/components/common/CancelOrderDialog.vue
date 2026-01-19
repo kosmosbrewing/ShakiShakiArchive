@@ -29,13 +29,7 @@ const emit = defineEmits<{
 const { showConfirm } = useAlert();
 
 // 취소 사유 목록
-const cancelReasons = [
-  "단순 변심",
-  "상품 옵션 변경",
-  "다른 상품으로 재주문",
-  "배송 지연",
-  "기타",
-];
+const cancelReasons = ["단순 변심", "상품 옵션 변경", "배송 지연", "기타"];
 
 const selectedReason = ref<string>("");
 const customReason = ref<string>("");
@@ -64,7 +58,7 @@ const handleConfirm = async () => {
   // 최종 확인
   const confirmed = await showConfirm(
     "주문을 취소하시겠습니까?\n취소된 주문은 되돌릴 수 없습니다.",
-    { confirmText: "취소하기", cancelText: "돌아가기" }
+    { confirmText: "취소하기", cancelText: "돌아가기" },
   );
 
   if (!confirmed) return;

@@ -5,10 +5,11 @@ import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
+import { maskUserName, maskPhone, maskDetailAddress } from "@/lib/formatters";
+import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 // UI 컴포넌트 및 아이콘
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   Calendar,
   MapPin,
   Image as ImageIcon,
+  Truck,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -31,8 +33,18 @@ const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
 
 const orders = ref<any[]>([]);
+const originalOrders = ref<any[]>([]); // 원본 데이터 저장 (변경 감지용)
 const loading = ref(false);
 const selectedStatus = ref<string>("all");
+
+// 배송 정보 모달 상태
+const shippingModalOpen = ref(false);
+const selectedOrderItem = ref<any>(null);
+const selectedOrder = ref<any>(null);
+const savingShipping = ref(false);
+
+// 상태 저장 중 표시
+const savingStatus = ref<Record<number, boolean>>({}); // key: orderItemId, value: saving 여부
 
 // 무한 스크롤 관련 상태
 const PAGE_SIZE = 10;
@@ -58,7 +70,7 @@ const filteredOrders = computed(() => {
     return orders.value;
   }
   return orders.value.filter((order) =>
-    order.orderItems.some((item: any) => item.status === selectedStatus.value)
+    order.orderItems.some((item: any) => item.status === selectedStatus.value),
   );
 });
 
@@ -114,22 +126,46 @@ const getStatusClass = (status: string) => {
     case "delivered":
       return "bg-green-50 text-green-700 border-green-200";
     // 취소/환불 상태 - 파스텔 빨간색
-    case "cancelled":
     case "refunded":
       return "bg-red-50 text-red-700 border-red-200";
     // 기타 상태 - 회색
     case "pending_payment":
     case "paying":
+    case "cancelled":
     default:
       return "bg-muted text-admin-muted border-border";
   }
+};
+
+// 주문 아이템의 상태가 변경되었는지 확인
+const isItemStatusChanged = (item: any) => {
+  const originalOrder = originalOrders.value.find((o) =>
+    o.orderItems.some((oi: any) => oi.id === item.id),
+  );
+  if (!originalOrder) return false;
+
+  const originalItem = originalOrder.orderItems.find(
+    (oi: any) => oi.id === item.id,
+  );
+  if (!originalItem) return false;
+
+  return originalItem.status !== item.status;
+};
+
+// 저장 버튼 비활성화 여부 확인 (입금대기, 결제진행중, 주문중단, 주문취소 상태)
+const isSaveDisabled = (item: any) => {
+  const disabledStatuses = ["pending_payment", "paying", "cancelled", "refunded"];
+  return disabledStatuses.includes(item.status) || !isItemStatusChanged(item);
 };
 
 const loadData = async () => {
   loading.value = true;
   currentPage.value = 1; // 데이터 로드 시 페이지 초기화
   try {
-    orders.value = await fetchAdminOrders();
+    const fetchedOrders = await fetchAdminOrders();
+    orders.value = fetchedOrders;
+    // 원본 데이터를 깊은 복사로 저장 (변경 감지용)
+    originalOrders.value = JSON.parse(JSON.stringify(fetchedOrders));
   } catch (error) {
     console.error(error);
   } finally {
@@ -161,7 +197,7 @@ const setupIntersectionObserver = () => {
     {
       rootMargin: "200px",
       threshold: 0.1,
-    }
+    },
   );
 
   if (loadMoreTrigger.value) {
@@ -188,37 +224,104 @@ watch(loadMoreTrigger, (newEl) => {
 // 필터 변경 시 페이지 초기화 및 스크롤 최상단 이동
 watch(selectedStatus, async () => {
   currentPage.value = 1;
-  // DOM 업데이트 후 스크롤을 맨 위로 이동
+  // DOM 업데이트 후 스크롤을 맨 위로 즉시 이동
   await nextTick();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0 });
 });
 
-const handleSaveItem = async (item: any) => {
-  const confirmed = await showConfirm(
-    `'${item.productName}' 상품의 상태를\n수정하시겠습니까?`,
-    {
-      confirmText: "수정",
-      cancelText: "취소",
-    }
-  );
+// 배송 정보 모달 열기
+const openShippingModal = (item: any, order: any) => {
+  selectedOrderItem.value = item;
+  selectedOrder.value = order;
+  shippingModalOpen.value = true;
+};
+
+// 배송 정보 모달 닫기
+const closeShippingModal = () => {
+  shippingModalOpen.value = false;
+  selectedOrderItem.value = null;
+  selectedOrder.value = null;
+};
+
+// 주문 아이템 상태 저장
+const handleSaveItemStatus = async (item: any) => {
+  const confirmed = await showConfirm(`상태를 저장하시겠습니까?`, {
+    confirmText: "저장",
+    cancelText: "취소",
+  });
   if (!confirmed) return;
 
+  savingStatus.value[item.id] = true;
   try {
-    // 배송준비중 상태에서 운송장 번호가 입력되면 자동으로 배송중으로 변경
-    let finalStatus = item.status;
+    // API 호출 (상태만 업데이트)
+    await updateAdminOrderItem(
+      item.id,
+      item.status,
+      item.trackingNumber,
+      item.courierCompany,
+    );
+
+    showAlert("상태가 저장되었습니다.");
+
+    // 원본 데이터 업데이트
+    const originalOrder = originalOrders.value.find((o) =>
+      o.orderItems.some((oi: any) => oi.id === item.id),
+    );
+    if (originalOrder) {
+      const originalItem = originalOrder.orderItems.find(
+        (oi: any) => oi.id === item.id,
+      );
+      if (originalItem) {
+        originalItem.status = item.status;
+      }
+    }
+  } catch (error: any) {
+    showAlert("저장 실패: " + error.message, { type: "error" });
+  } finally {
+    savingStatus.value[item.id] = false;
+  }
+};
+
+// 배송 정보 저장
+const handleSaveShipping = async (data: {
+  courierCompany: string;
+  trackingNumber: string;
+}) => {
+  if (!selectedOrderItem.value) return;
+
+  const confirmed = await showConfirm(`배송 정보를 저장하시겠습니까?`, {
+    confirmText: "저장",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
+
+  savingShipping.value = true;
+  try {
+    // 배송준비중 상태에서 운송장 입력 시 자동으로 배송중으로 변경
+    let finalStatus = selectedOrderItem.value.status;
     if (
-      item.status === "preparing" &&
-      item.trackingNumber &&
-      item.trackingNumber.trim()
+      selectedOrderItem.value.status === "preparing" &&
+      data.trackingNumber &&
+      data.trackingNumber.trim()
     ) {
       finalStatus = "shipped";
     }
 
-    await updateAdminOrderItem(item.id, finalStatus, item.trackingNumber);
-    showAlert("수정되었습니다.");
+    // API 호출
+    await updateAdminOrderItem(
+      selectedOrderItem.value.id,
+      finalStatus,
+      data.trackingNumber,
+      data.courierCompany,
+    );
+
+    showAlert("배송 정보가 저장되었습니다.");
+    closeShippingModal();
     await loadData();
   } catch (error: any) {
-    showAlert("수정 실패: " + error.message, { type: "error" });
+    showAlert("저장 실패: " + error.message, { type: "error" });
+  } finally {
+    savingShipping.value = false;
   }
 };
 
@@ -226,7 +329,7 @@ const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
@@ -356,12 +459,36 @@ onUnmounted(() => {
                 >
                   <User class="w-3.5 h-3.5 opacity-50" />
                   <span class="text-caption text-admin-muted font-semibold">{{
-                    order.shippingName
+                    maskUserName(order.shippingName)
                   }}</span>
 
                   <span class="text-caption text-admin-muted ml-1"
-                    >({{ order.shippingPhone }})</span
+                    >({{ maskPhone(order.shippingPhone) }})</span
                   >
+                </div>
+              </div>
+              <div class="h-8 w-px bg-border hidden sm:block"></div>
+              <div class="flex flex-col max-w-xs">
+                <span
+                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  >배송지</span
+                >
+                <div class="flex items-start gap-1.5">
+                  <MapPin
+                    class="w-3.5 h-3.5 opacity-50 text-admin-muted mt-0.5 flex-shrink-0"
+                  />
+                  <span class="text-caption text-admin-muted font-semibold">
+                    {{ order.shippingAddress }}
+                    <span class="text-admin-muted opacity-70"
+                      >({{ order.shippingPostalCode }})</span
+                    >
+                    <span
+                      v-if="order.shippingDetailAddress"
+                      class="text-admin-muted opacity-70 ml-1"
+                    >
+                      {{ maskDetailAddress(order.shippingDetailAddress) }}
+                    </span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -378,7 +505,7 @@ onUnmounted(() => {
         </CardHeader>
 
         <CardContent class="p-0 overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[900px]">
+          <table class="w-full text-left border-collapse min-w-[1000px]">
             <thead
               class="bg-white border-l border-r text-caption font-bold text-admin-muted uppercase tracking-tight shadow-sm shadow-light"
             >
@@ -386,9 +513,9 @@ onUnmounted(() => {
                 <th class="px-8 py-4 w-24">이미지</th>
                 <th class="px-8 py-4 w-1/3">상품명 / 옵션</th>
                 <th class="px-8 py-4 text-center">수량/금액</th>
+                <th class="px-8 py-4 text-center">상태 정보</th>
+                <th class="px-8 py-4 text-center">배송 정보</th>
                 <th class="px-8 py-4 text-center">상태 관리</th>
-                <th class="px-8 py-4 text-center">운송장 번호</th>
-                <th class="px-8 py-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -455,44 +582,40 @@ onUnmounted(() => {
                 </td>
 
                 <td class="px-8 py-5 text-center">
-                  <Input
-                    v-model="item.trackingNumber"
-                    type="text"
-                    placeholder="운송장 입력"
-                    class="w-full max-w-[160px]"
-                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    @click="openShippingModal(item, order)"
+                    class="gap-2"
+                  >
+                    <Truck class="w-4 h-4" />
+                    <span
+                      v-if="item.trackingNumber"
+                      class="font-mono text-caption"
+                    >
+                      배송정보
+                    </span>
+                    <span v-else class="text-muted-foreground text-caption">
+                      미등록
+                    </span>
+                  </Button>
                 </td>
 
-                <td class="px-8 py-5 text-right">
+                <td class="px-8 py-5 text-center">
                   <Button
                     size="sm"
-                    @click="handleSaveItem(item)"
-                    class="bg-admin hover:bg-admin/80 text-white font-semibold"
+                    @click="handleSaveItemStatus(item)"
+                    :disabled="isSaveDisabled(item) || savingStatus[item.id]"
+                    class="bg-primary hover:bg-primary/80 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    저장
+                    <span v-if="savingStatus[item.id]">저장중...</span>
+                    <span v-else>저장</span>
                   </Button>
                 </td>
               </tr>
             </tbody>
           </table>
         </CardContent>
-
-        <div
-          class="px-8 py-4 bg-muted/5 border-t border-border flex items-center gap-3"
-        >
-          <div class="p-1.5 bg-white border border-border rounded-lg shadow-xs">
-            <MapPin class="w-3.5 h-3.5 text-admin-muted" />
-          </div>
-          <span class="text-caption font-bold text-admin-muted"
-            >배송지 정보:</span
-          >
-          <span class="text-caption text-admin">
-            {{ order.shippingAddress }}
-            <span class="text-admin-muted"
-              >({{ order.shippingPostalCode }})</span
-            >
-          </span>
-        </div>
       </Card>
 
       <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
@@ -527,6 +650,16 @@ onUnmounted(() => {
         필터 조건에 해당하는 주문이 없습니다.
       </p>
     </div>
+
+    <!-- 배송 정보 관리 모달 -->
+    <ShippingInfoModal
+      :open="shippingModalOpen"
+      :order-item="selectedOrderItem"
+      :order="selectedOrder"
+      :loading="savingShipping"
+      @close="closeShippingModal"
+      @save="handleSaveShipping"
+    />
   </div>
 </template>
 

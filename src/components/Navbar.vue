@@ -38,7 +38,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const categoryStore = useCategoryStore();
 const cartStore = useCartStore();
-const { showAlert } = useAlert();
+const { showAlert, showConfirm } = useAlert();
 
 const { isAuthenticated } = storeToRefs(authStore);
 const { categoryRoutes } = storeToRefs(categoryStore);
@@ -94,6 +94,13 @@ watch(cartSheetOpen, (isOpen) => {
 });
 
 const handleLogout = async () => {
+  const confirmed = await showConfirm("로그아웃 하시겠습니까?", {
+    confirmText: "로그아웃",
+    cancelText: "취소",
+  });
+
+  if (!confirmed) return;
+
   isOpen.value = false;
   showAlert("로그아웃되었습니다.");
   await authStore.handleLogout({ reload: false });
