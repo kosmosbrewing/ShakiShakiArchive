@@ -9,6 +9,7 @@ import { useRoute, useRouter } from "vue-router";
 import { Heart, Search, X } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
+import { useProductStore } from "@/stores/product";
 import { useAlert } from "@/composables/useAlert";
 import { useProductList } from "@/composables/useProduct";
 import {
@@ -26,8 +27,12 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
+const productStore = useProductStore();
 const { showAlert, showConfirm } = useAlert();
 const { getResponsiveAttrs } = useOptimizedImage();
+
+// 스토어에서 홈페이지용 데이터 가져오기
+const { remainingProducts, loading: storeLoading } = storeToRefs(productStore);
 
 // 상품 카드 반응형 이미지 속성 (srcset 포함)
 const getProductImageAttrs = (url: string) => {
@@ -40,13 +45,23 @@ const getProductImageAttrs = (url: string) => {
 // 카테고리 파라미터가 있는지 확인 (라우트에서 사용될 때)
 const hasCategory = computed(() => !!route.params.category);
 
-// 화면에 표시할 상품 목록 (Home에서는 5번째부터, 라우트에서는 전체)
+// 화면에 표시할 상품 목록
+// - 홈페이지: 스토어의 remainingProducts (5번 이후, ProductHome과 데이터 공유)
+// - 카테고리 페이지: useProductList의 전체 목록 (무한 스크롤)
 const displayProducts = computed(() => {
   if (hasCategory.value) {
     return productList.value;
   }
-  // Home에서 사용될 때: ProductHome이 0~3을 보여주므로 4번 인덱스부터 출력
-  return productList.value.slice(4);
+  // 홈페이지: 스토어의 remainingProducts 사용 (ProductHome과 동일 데이터 소스)
+  return remainingProducts.value;
+});
+
+// 로딩 상태 (홈페이지: 스토어, 카테고리 페이지: composable)
+const isLoading = computed(() => {
+  if (hasCategory.value) {
+    return loading.value;
+  }
+  return storeLoading.value;
 });
 
 // 상품 목록 composable (무한 스크롤 지원)
@@ -181,13 +196,20 @@ watch(loadingMore, (newValue) => {
 });
 
 onMounted(async () => {
-  await loadProducts();
+  if (hasCategory.value) {
+    // 카테고리 페이지: 기존 composable 사용 (무한 스크롤)
+    await loadProducts();
+    // DOM이 준비된 후 옵저버 설정
+    if (loadMoreTrigger.value) {
+      setupIntersectionObserver();
+    }
+  } else {
+    // 홈페이지: 스토어 사용 (ProductHome과 데이터 공유)
+    await productStore.loadHomeProducts();
+  }
+
   if (authStore.isAuthenticated) {
     await wishlistStore.loadWishlist();
-  }
-  // DOM이 준비된 후 옵저버 설정
-  if (loadMoreTrigger.value) {
-    setupIntersectionObserver();
   }
 });
 
@@ -226,7 +248,7 @@ onUnmounted(() => {
         </button>
       </div>
       <p
-        v-if="searchQuery && !loading"
+        v-if="searchQuery && !isLoading"
         class="mt-2 text-sm text-muted-foreground"
       >
         "{{ searchQuery }}" 검색 결과: {{ totalProducts }}개
@@ -237,7 +259,7 @@ onUnmounted(() => {
       class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6"
     >
       <!-- 로딩 상태: 스켈레톤 카드 표시 (4열 그리드에 맞게 8개) -->
-      <ProductCardSkeleton v-if="loading" :count="8" />
+      <ProductCardSkeleton v-if="isLoading" :count="8" />
 
       <!-- 빈 상태 (검색 결과 없음 또는 상품 없음) -->
       <EmptyState
@@ -339,9 +361,9 @@ onUnmounted(() => {
       </Card>
     </div>
 
-    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
+    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 (카테고리 페이지에서만) -->
     <div
-      v-if="displayProducts.length > 0 || hasMore"
+      v-if="hasCategory && (displayProducts.length > 0 || hasMore)"
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >

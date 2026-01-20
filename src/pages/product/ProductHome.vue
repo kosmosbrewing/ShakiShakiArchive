@@ -1,38 +1,30 @@
 <script setup lang="ts">
 // src/pages/product/ProductHome.vue
-// 홈 히어로 섹션용 상품 목록 컴포넌트
+// 홈 히어로 섹션용 상품 목록 컴포넌트 (1~4번 상품)
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { storeToRefs } from "pinia";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { Heart } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
+import { useProductStore } from "@/stores/product";
 import { useAlert } from "@/composables/useAlert";
 import { ProductCardSkeleton, EmptyState } from "@/components/common";
 import { formatPrice } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { useOptimizedImage } from "@/composables";
-import { fetchProducts } from "@/lib/api";
 
-// 1. 데이터 인터페이스
-interface ProductItem {
-  id: string; // UUID
-  imageUrl: string;
-  images?: string[]; // 추가 이미지 목록 (호버용)
-  name: string;
-  price: number;
-  totalStock?: number; // 총 재고 수량 (품절 정렬용)
-  isAvailable?: boolean; // 판매 가능 여부
-}
-
-const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
+const productStore = useProductStore();
 const { showAlert, showConfirm } = useAlert();
 const { getResponsiveAttrs } = useOptimizedImage();
+
+// 스토어에서 상태 가져오기
+const { featuredProducts: productList, loading } = storeToRefs(productStore);
 
 // 상품 카드 반응형 이미지 속성 (srcset 포함)
 const getProductImageAttrs = (url: string) => {
@@ -42,83 +34,11 @@ const getProductImageAttrs = (url: string) => {
   });
 };
 
-const productList = ref<ProductItem[]>([]);
-const loading = ref(false);
-
 // 호버 상태 관리 (이미지 전환용)
 const hoveredProductId = ref<string | null>(null);
 
 // 위시리스트 Set (스토어에서 반응성 유지)
 const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
-
-// 상품 정렬 (재고 있음 → SOLD OUT 순서, isAvailable=false는 제외)
-const sortByStock = (items: ProductItem[]): ProductItem[] => {
-  // 1. 판매 가능 상품만 필터링 (isAvailable=false는 화면에서 제외)
-  const available = items.filter((item) => item.isAvailable === true);
-
-  // 2. 판매 가능 상품 중 재고 있는 것과 품절 분리
-  const inStock = available.filter((item) => (item.totalStock ?? 1) > 0);
-  const soldOut = available.filter((item) => item.totalStock !== undefined && item.totalStock === 0);
-
-  // 3. 순서: 재고 있음 → SOLD OUT
-  return [...inStock, ...soldOut];
-};
-
-// [핵심] 상품 데이터 불러오기 (api.ts 캐싱 레이어 활용)
-const fetchProductData = async () => {
-  loading.value = true;
-
-  try {
-    // 1. URL에서 카테고리 슬러그 추출 (예: 'outerwear')
-    const categoryParam = Array.isArray(route.params.category)
-      ? route.params.category[0]
-      : route.params.category;
-
-    // 'all'이거나 없으면 undefined 처리 (백엔드가 전체 목록 반환)
-    const currentSlug =
-      !categoryParam || categoryParam === "all"
-        ? undefined
-        : categoryParam.trim().toLowerCase();
-
-    // 2. api.ts의 fetchProducts 사용 (HTTP 캐싱 레이어 적용)
-    // cachePolicy: 'products' (1분 캐싱)
-    const response = await fetchProducts({
-      category: currentSlug,
-    });
-
-    // 3. 받아온 데이터를 화면용으로 변환 후 품절 상품을 맨 뒤로 정렬
-    const mappedProducts = response.products.map((item: any) => {
-      const stock = item.totalStock ?? item.stockQuantity;
-
-      // isAvailable을 포괄적으로 boolean 변환
-      // 명시적으로 false인 경우만 제외 (undefined/null은 기본 true로 간주)
-      const available = !(
-        item.isAvailable === false ||
-        item.isAvailable === "false" ||
-        item.isAvailable === "False" ||
-        item.isAvailable === 0 ||
-        item.isAvailable === "0"
-      );
-
-      return {
-        id: item.id,
-        imageUrl: item.imageUrl,
-        images: item.images ?? [],
-        name: item.name,
-        price: Number(item.price),
-        totalStock: stock !== undefined && stock !== null ? Number(stock) : undefined,
-        isAvailable: available,
-      };
-    });
-
-    productList.value = sortByStock(mappedProducts);
-  } catch (error) {
-    console.error("API Error:", error);
-    productList.value = []; // 에러 시 빈 목록
-  } finally {
-    loading.value = false;
-  }
-};
 
 // 위시리스트 추가/삭제 토글 (스토어 활용)
 const toggleWishlist = async (event: Event, productId: string) => {
@@ -148,19 +68,12 @@ const goToDetail = (id: string) => {
 };
 
 onMounted(async () => {
-  await fetchProductData();
+  // 스토어에서 홈페이지용 상품 로드 (Product.vue와 데이터 공유)
+  await productStore.loadHomeProducts();
   if (authStore.isAuthenticated) {
     await wishlistStore.loadWishlist();
   }
 });
-
-// [중요] 카테고리가 바뀌면(URL 변경) 데이터를 다시 불러옴
-watch(
-  () => route.params.category,
-  () => {
-    fetchProductData();
-  }
-);
 </script>
 
 <template>
@@ -176,12 +89,12 @@ watch(
       class="col-span-full"
     />
 
-    <!-- 상품 카드 목록 -->
+    <!-- 상품 카드 목록 (스토어의 featuredProducts: 1~4번) -->
     <Card
       v-else
       v-for="(
         { id, imageUrl, images, name, price, totalStock }, idx
-      ) in productList.slice(0, 4)"
+      ) in productList"
       :key="id"
       class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
       :style="{ animationDelay: `${idx * 0.05}s` }"
