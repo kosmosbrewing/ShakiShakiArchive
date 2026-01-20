@@ -2,7 +2,7 @@
 // src/pages/ProductDetail.vue
 // 상품 상세 페이지
 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -24,6 +24,7 @@ import { Heart, Share2, Check } from "lucide-vue-next";
 // 공통 컴포넌트
 import {
   ProductDetailSkeleton,
+  LoadingSpinner,
   //QuantitySelector
 } from "@/components/common";
 
@@ -97,6 +98,19 @@ const displayAlert = (message: string, type: AlertType = "error") => {
 
 // 링크 복사 상태
 const isCopied = ref(false);
+
+// 이미지 로딩 상태
+const mainImageLoaded = ref(false);
+const detailImagesLoaded = ref<Record<number, boolean>>({});
+
+// 이미지 로드 핸들러
+const handleMainImageLoad = () => {
+  mainImageLoaded.value = true;
+};
+
+const handleDetailImageLoad = (index: number) => {
+  detailImagesLoaded.value[index] = true;
+};
 
 // 링크 복사 핸들러
 const handleCopyLink = async () => {
@@ -382,6 +396,11 @@ const handleContinueShopping = () => {
   showCartConfirm.value = false;
 };
 
+// 갤러리 이미지 변경 시 로딩 상태 리셋
+watch(() => gallery.currentImage.value, () => {
+  mainImageLoaded.value = false;
+});
+
 // 데이터 로드
 onMounted(async () => {
   await productData.loadProduct(String(productId.value));
@@ -418,13 +437,24 @@ onMounted(async () => {
       <div class="order-1 lg:hidden">
         <Card class="overflow-hidden">
           <div class="aspect-[3/4] bg-muted relative">
+            <!-- 로딩 스피너 -->
+            <div
+              v-if="!mainImageLoaded"
+              class="absolute inset-0 flex items-center justify-center bg-muted"
+            >
+              <LoadingSpinner variant="spinner" size="lg" />
+            </div>
+
+            <!-- 메인 이미지 -->
             <img
               :src="detail(gallery.currentImage.value)"
               class="w-full h-full object-cover"
-              loading="lazy"
+              :class="{ 'opacity-0': !mainImageLoaded }"
+              loading="eager"
               decoding="async"
               draggable="false"
               alt="Product Main Image"
+              @load="handleMainImageLoad"
             />
 
             <!-- 모바일 액션 버튼들 -->
@@ -717,16 +747,27 @@ onMounted(async () => {
         <div
           v-for="(detailImg, idx) in productData.product.value.detailImages"
           :key="`detail-${idx}`"
-          class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
+          class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm relative"
           :style="{ animationDelay: `${idx * 0.1}s` }"
         >
+          <!-- 로딩 스피너 -->
+          <div
+            v-if="!detailImagesLoaded[idx]"
+            class="absolute inset-0 flex items-center justify-center bg-muted min-h-[400px]"
+          >
+            <LoadingSpinner variant="spinner" size="lg" />
+          </div>
+
+          <!-- 상세 이미지 -->
           <img
             :src="detail(detailImg)"
             class="w-full object-cover"
+            :class="{ 'opacity-0': !detailImagesLoaded[idx] }"
             loading="lazy"
             decoding="async"
             draggable="false"
             :alt="`상품 상세 이미지 ${idx + 1}`"
+            @load="handleDetailImageLoad(idx)"
           />
         </div>
       </div>

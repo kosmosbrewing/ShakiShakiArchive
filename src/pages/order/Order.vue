@@ -448,6 +448,14 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     // 7. 결제 요청 (모바일: 리다이렉트, PC: iframe 모달)
     const payment = tossPayments.payment({ customerKey });
 
+    // 🔒 모바일 리다이렉트 전에 플래그 설정 (beforeunload에서 cleanup 방지)
+    // 모바일은 windowTarget: "self"로 페이지가 완전히 리다이렉트되므로
+    // beforeunload 이벤트가 발생하기 전에 플래그를 설정해야 함
+    if (isMobile.value) {
+      localStorage.setItem("payment_confirming", "true");
+      console.log("[토스페이] 모바일 리다이렉트 전 payment_confirming 플래그 설정");
+    }
+
     await payment.requestPayment({
       method: "CARD", // 카드 결제 (토스페이 선택 시 다양한 결제수단 제공)
       amount: {
@@ -473,6 +481,13 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     console.error("[토스페이] 에러 코드:", (err as any)?.code);
     console.error("[토스페이] 에러 메시지:", (err as any)?.message);
     isPaymentPopupOpen.value = false;
+
+    // 🔒 모바일에서 에러 발생 시 플래그 정리 (리다이렉트 전 에러 시)
+    // requestPayment 이전에 에러가 발생하면 리다이렉트가 안 되므로 플래그 제거 필요
+    if (isMobile.value) {
+      localStorage.removeItem("payment_confirming");
+      console.log("[토스페이] 에러 발생 - payment_confirming 플래그 제거");
+    }
 
     // 중요: 토스페이먼츠 iframe 결제창에서 결제 완료 시 콜백 URL로 리다이렉트되면서
     // iframe이 닫히는데, 이것이 에러로 감지됩니다.
@@ -706,6 +721,14 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     console.log("2. Pay Reserve Params:", naverPayParams);
     console.log("3. Product Items:", productItems);
     console.log("============================");
+
+    // 🔒 모바일 리다이렉트 전에 플래그 설정 (beforeunload에서 cleanup 방지)
+    // 모바일은 openType: "page"로 페이지가 완전히 리다이렉트되므로
+    // beforeunload 이벤트가 발생하기 전에 플래그를 설정해야 함
+    if (isMobile.value) {
+      localStorage.setItem("payment_confirming", "true");
+      console.log("[네이버페이] 모바일 리다이렉트 전 payment_confirming 플래그 설정");
+    }
 
     naverPay.open(naverPayParams);
 
@@ -967,6 +990,13 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
   } catch (err: unknown) {
     console.error("네이버페이 결제 오류", err);
     isPaymentPopupOpen.value = false;
+
+    // 🔒 모바일에서 에러 발생 시 플래그 정리 (리다이렉트 전 에러 시)
+    // naverPay.open() 이전에 에러가 발생하면 리다이렉트가 안 되므로 플래그 제거 필요
+    if (isMobile.value) {
+      localStorage.removeItem("payment_confirming");
+      console.log("[네이버페이] 에러 발생 - payment_confirming 플래그 제거");
+    }
 
     // 팝업 체크 인터벌 정리
     if (popupCheckInterval) {

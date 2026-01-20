@@ -45,7 +45,7 @@ import { Card, CardContent } from "@/components/ui/card";
               </p>
             </div>
 
-            <!-- 정책 및 약관 링크 -->
+            <!-- 정책 링크 -->
             <div class="pt-4 border-t border-border/50">
               <div class="flex flex-wrap gap-3 text-caption">
                 <router-link
@@ -54,14 +54,6 @@ import { Card, CardContent } from "@/components/ui/card";
                 >
                   개인정보 처리방침
                 </router-link>
-                <span class="text-muted-foreground/30">|</span>
-                <span class="text-muted-foreground/50 cursor-not-allowed">
-                  이용약관 (예정)
-                </span>
-                <span class="text-muted-foreground/30">|</span>
-                <span class="text-muted-foreground/50 cursor-not-allowed">
-                  환불정책 (예정)
-                </span>
               </div>
             </div>
 

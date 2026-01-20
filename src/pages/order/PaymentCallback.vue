@@ -8,7 +8,7 @@ import { CheckCircle, XCircle, Package, AlertTriangle, Ban } from "lucide-vue-ne
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/formatters";
-import { confirmPayment, StockShortageError } from "@/lib/api";
+import { confirmPayment, cancelOrder, StockShortageError } from "@/lib/api";
 import { LoadingSpinner } from "@/components/common";
 import type { StockShortageItem } from "@/types/api";
 
@@ -19,6 +19,18 @@ const route = useRoute();
 // onMounted보다 먼저 실행되도록 컴포넌트 최상단에 배치
 localStorage.setItem("payment_confirming", "true");
 console.log("[PaymentCallback] 결제 승인 플래그 설정 (즉시)");
+
+// 🔒 bfcache 복원 감지 및 새로고침 (모바일 브라우저 캐시 문제 방지)
+// 뒤로 가기/앞으로 가기로 이 페이지가 복원되면 이전 결제 정보가 남아있을 수 있음
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (event) => {
+    // bfcache에서 복원된 경우 (persisted === true)
+    if (event.persisted) {
+      console.log("[PaymentCallback] bfcache에서 복원됨 - 페이지 새로고침");
+      window.location.reload();
+    }
+  });
+}
 
 // 상태: stock_shortage 추가 (재고 부족 에러), cancelled 추가 (결제 취소)
 const status = ref<"loading" | "success" | "error" | "cancelled" | "stock_shortage">(
@@ -111,6 +123,23 @@ onMounted(async () => {
     message,
   });
 
+  // 🔒 중복 결제 처리 방지: 이미 처리된 orderId인지 확인
+  // 모바일 bfcache 또는 새로고침으로 인한 중복 confirmPayment 호출 방지
+  if (orderId && paymentKey) {
+    const processedKey = `payment_processed_${orderId}`;
+    if (localStorage.getItem(processedKey)) {
+      console.log("[PaymentCallback] 이미 처리된 결제 - 주문 목록으로 이동:", orderId);
+      localStorage.removeItem("payment_confirming");
+      // 이미 처리된 결제는 주문 목록으로 이동
+      if (isMobile.value) {
+        window.location.replace("/orderlist");
+      } else {
+        router.replace("/orderlist");
+      }
+      return;
+    }
+  }
+
   // 네이버페이 실패/취소 경로 (/checkout/fail)
   if (route.path === "/checkout/fail") {
     console.log("[PaymentCallback] 네이버페이 결제 실패/취소");
@@ -119,46 +148,8 @@ onMounted(async () => {
 
     status.value = "error";
 
-    // 에러 메시지 정제 (네이버페이의 긴 메시지를 간결하게)
-    let cleanMessage = message || "결제가 취소되었습니다.";
-
-    // 특정 패턴 감지 및 메시지 정제 (네이버페이 공식 에러 코드 패턴)
-    if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
-      cleanMessage = "계좌 잔액이 부족합니다.\n잔액을 확인해주세요.";
-    } else if (cleanMessage.includes("한도")) {
-      cleanMessage = "카드 한도가 부족합니다.\n다른 결제 수단을 이용해주세요.";
-    } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
-      cleanMessage = "본인 인증에 실패했습니다.\n카드 정보를 확인해주세요.";
-    } else if (
-      cleanMessage.includes("비밀번호") ||
-      cleanMessage.includes("인증")
-    ) {
-      cleanMessage = "인증에 실패했습니다.\n다시 시도해주세요.";
-    } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
-      cleanMessage = "결제 시간이 만료되었습니다.\n다시 시도해주세요.";
-    } else if (cleanMessage.includes("점검")) {
-      if (cleanMessage.includes("은행")) {
-        cleanMessage = "은행 시스템 점검 중입니다.\n잠시 후 다시 시도해주세요.";
-      } else if (
-        cleanMessage.includes("원천사") ||
-        cleanMessage.includes("시스템")
-      ) {
-        cleanMessage =
-          "결제 시스템 점검 중입니다.\n다른 결제 수단을 이용해주세요.";
-      } else {
-        cleanMessage = "서비스 점검 중입니다.\n잠시 후 다시 시도해주세요.";
-      }
-    } else if (
-      cleanMessage.includes("이미") &&
-      (cleanMessage.includes("진행") || cleanMessage.includes("완료"))
-    ) {
-      cleanMessage = "이미 처리된 결제입니다.";
-    } else if (cleanMessage.length > 50) {
-      // 50자 이상의 긴 메시지는 간단하게 정리
-      cleanMessage = "결제 처리 중 오류가 발생했습니다.\n다시 시도해주세요.";
-    }
-
-    errorMessage.value = cleanMessage;
+    // 에러 메시지 정제 (cleanErrorMessage 함수 재사용)
+    errorMessage.value = cleanErrorMessage(message || "결제가 취소되었습니다.");
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
     if (isPopup.value) {
@@ -166,13 +157,13 @@ onMounted(async () => {
         "[PaymentCallback] /checkout/fail - 팝업 닫기, orderId:",
         orderId
       );
-      console.log("[PaymentCallback] 에러 메시지:", cleanMessage);
+      console.log("[PaymentCallback] 에러 메시지:", errorMessage.value);
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_ERROR", // 실제 에러이므로 ERROR 타입 사용
           orderId: orderId, // orderId 전달 (주문 삭제용)
-          message: cleanMessage, // 에러 메시지 전달
+          message: errorMessage.value, // 에러 메시지 전달
           timestamp: Date.now(),
         })
       );
@@ -181,15 +172,49 @@ onMounted(async () => {
       window.close();
       return;
     }
-    // 팝업이 아닌 경우 에러 화면 표시
+
+    // 팝업이 아닌 경우 (모바일 리다이렉트): 주문 취소 후 에러 화면 표시
+    if (orderId) {
+      try {
+        console.log("[PaymentCallback] 모바일 결제 실패 - 주문 취소 시도:", orderId);
+        await cancelOrder(orderId, { cancelReason: "네이버페이 결제 실패/취소" });
+        console.log("[PaymentCallback] 모바일 결제 실패 - 주문 취소 완료");
+      } catch (cancelErr) {
+        console.error("[PaymentCallback] 주문 취소 실패:", cancelErr);
+        // 취소 실패해도 에러 화면은 표시 (Cron이 30분 후 자동 정리)
+      }
+    }
+    // 결제 승인 플래그 제거 (실패 시)
+    localStorage.removeItem("payment_confirming");
     return;
   }
 
-  // 네이버페이 성공 경로 (/checkout/success)
+  // 네이버페이 성공 경로 (/checkout/success) - 모바일 리다이렉트 방식 처리
   if (route.path === "/checkout/success") {
-    console.log("[PaymentCallback] 네이버페이 결제 성공");
-    // result=success 로직으로 이동
-    // 아래에서 처리됨
+    console.log("[PaymentCallback] 네이버페이 결제 성공 경로 진입");
+
+    // 팝업이 아닌 경우 (모바일 리다이렉트): 직접 성공 처리
+    if (!isPopup.value) {
+      console.log("[PaymentCallback] 모바일 네이버페이 결제 성공 처리");
+
+      // 결제 승인 플래그 제거
+      localStorage.removeItem("payment_confirming");
+
+      status.value = "success";
+      orderInfo.value = {
+        orderId: orderId,
+        paymentMethod: "naverpay",
+      };
+
+      // 주문 상세로 자동 이동
+      setTimeout(() => {
+        const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+        console.log("[PaymentCallback] 모바일 리다이렉트:", targetUrl);
+        window.location.replace(targetUrl);
+      }, 2000);
+      return;
+    }
+    // 팝업인 경우: 아래 result === "success" 로직에서 처리
   }
 
   // 토스페이먼츠 결제 성공 시 (paymentKey가 있으면 결제 승인 필요)
@@ -207,8 +232,13 @@ onMounted(async () => {
         amount: Number(amount),
       });
 
-      // 결제 승인 완료 - 플래그 제거
+      // 결제 승인 완료 - 플래그 제거 및 처리 완료 표시
       localStorage.removeItem("payment_confirming");
+      // 🔒 중복 처리 방지: 이 orderId는 이미 처리됨을 표시 (5분간 유지)
+      const processedKey = `payment_processed_${orderId}`;
+      localStorage.setItem(processedKey, Date.now().toString());
+      // 5분 후 자동 삭제 (메모리 정리)
+      setTimeout(() => localStorage.removeItem(processedKey), 5 * 60 * 1000);
       console.log("[PaymentCallback] 결제 승인 성공:", confirmResult);
 
       // success 필드 또는 order가 있으면 성공으로 처리
@@ -447,7 +477,13 @@ function cleanErrorMessage(message: string): string {
     cleanMessage.includes("이미") &&
     (cleanMessage.includes("진행") || cleanMessage.includes("완료"))
   ) {
-    cleanMessage = "이미 처리된 결제입니다.";
+    cleanMessage = "이미 처리된 결제입니다.\n주문 내역을 확인해주세요.";
+  } else if (cleanMessage.includes("취소된 주문")) {
+    cleanMessage = "취소된 주문입니다.\n새로운 주문을 생성해주세요.";
+  } else if (cleanMessage.includes("네트워크") || cleanMessage.includes("연결")) {
+    cleanMessage = "네트워크 연결이 불안정합니다.\n인터넷 연결 확인 후 다시 시도해주세요.";
+  } else if (cleanMessage.includes("카드") && cleanMessage.includes("사용")) {
+    cleanMessage = "사용할 수 없는 카드입니다.\n다른 카드로 결제해주세요.";
   } else if (cleanMessage.length > 50) {
     // 50자 이상의 긴 메시지는 간단하게 정리
     cleanMessage = "결제 처리 중 오류가 발생했습니다.\n다시 시도해주세요.";

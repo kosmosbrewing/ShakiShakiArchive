@@ -53,7 +53,7 @@ onMounted(() => {
     <!-- 본문 -->
     <div class="space-y-10">
       <!-- 1. 개인정보 수집 및 이용 -->
-      <section id="section1">
+      <section id="section1" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">1. 개인정보 수집 및 이용</h2>
         <div class="space-y-4 text-body leading-relaxed">
           <p>
@@ -94,7 +94,7 @@ onMounted(() => {
       </section>
 
       <!-- 2. 개인정보 보유 기간 -->
-      <section id="section2">
+      <section id="section2" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">2. 개인정보 보유 기간</h2>
         <div class="space-y-4 text-body leading-relaxed">
           <ul class="list-disc pl-6 space-y-2">
@@ -117,7 +117,7 @@ onMounted(() => {
       </section>
 
       <!-- 3. 개인정보 제3자 제공 -->
-      <section id="section3">
+      <section id="section3" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">3. 개인정보 제3자 제공</h2>
         <div class="space-y-4 text-body leading-relaxed">
           <p>상품 배송을 위해 배송업체에 최소한의 정보만 제공합니다.</p>
@@ -141,7 +141,7 @@ onMounted(() => {
       </section>
 
       <!-- 4. 이용자의 권리 -->
-      <section id="section4">
+      <section id="section4" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">4. 이용자의 권리</h2>
         <div class="space-y-4 text-body leading-relaxed">
           <p>언제든지 다음의 권리를 행사할 수 있습니다.</p>
@@ -164,7 +164,7 @@ onMounted(() => {
       </section>
 
       <!-- 5. 개인정보 보호책임자 -->
-      <section id="section5">
+      <section id="section5" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">5. 개인정보 보호책임자</h2>
         <div class="space-y-4 text-body leading-relaxed">
           <p>
