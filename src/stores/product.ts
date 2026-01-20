@@ -15,11 +15,18 @@ interface ProductItem {
   isAvailable: boolean;
 }
 
+const PAGE_SIZE = 12;
+
 export const useProductStore = defineStore("product", () => {
   // 상태
   const products = ref<ProductItem[]>([]);
   const loading = ref(false);
   const loaded = ref(false);
+
+  // 무한스크롤 상태
+  const loadingMore = ref(false);
+  const hasMore = ref(true);
+  const currentPage = ref(1);
 
   // 상품 매핑 (API 응답 → ProductItem)
   const mapProduct = (item: any): ProductItem => {
@@ -60,29 +67,59 @@ export const useProductStore = defineStore("product", () => {
     return [...inStock, ...soldOut];
   };
 
-  // 홈페이지용 상품 로드 (전체 목록)
+  // 홈페이지용 상품 로드 (첫 페이지)
   const loadHomeProducts = async () => {
     // 이미 로드된 경우 스킵
     if (loaded.value && products.value.length > 0) return;
 
     loading.value = true;
+    currentPage.value = 1;
+    hasMore.value = true;
+
     try {
       // 홈페이지용 상품 (백엔드에서 isAvailable=true 우선 정렬)
-      const response = await fetchProducts({ limit: 12 });
+      const response = await fetchProducts({ page: 1, limit: PAGE_SIZE });
       const mappedProducts = response.products.map(mapProduct);
       products.value = sortByStock(mappedProducts);
+      hasMore.value = response.pagination?.hasMore ?? false;
       loaded.value = true;
     } catch (error) {
       console.error("상품 목록 로드 실패:", error);
       products.value = [];
+      hasMore.value = false;
     } finally {
       loading.value = false;
+    }
+  };
+
+  // 추가 상품 로드 (무한스크롤)
+  const loadMoreProducts = async () => {
+    // 이미 로딩 중이거나 더 이상 데이터가 없으면 스킵
+    if (loadingMore.value || loading.value || !hasMore.value) return;
+
+    loadingMore.value = true;
+    const nextPage = currentPage.value + 1;
+
+    try {
+      const response = await fetchProducts({ page: nextPage, limit: PAGE_SIZE });
+      const newProducts = response.products.map(mapProduct);
+
+      // 기존 상품과 새 상품을 합친 후 정렬
+      products.value = sortByStock([...products.value, ...newProducts]);
+      hasMore.value = response.pagination?.hasMore ?? false;
+      currentPage.value = nextPage;
+    } catch (error) {
+      console.error("추가 상품 로드 실패:", error);
+    } finally {
+      loadingMore.value = false;
     }
   };
 
   // 강제 새로고침
   const refreshProducts = async () => {
     loaded.value = false;
+    currentPage.value = 1;
+    hasMore.value = true;
     await loadHomeProducts();
   };
 
@@ -97,8 +134,12 @@ export const useProductStore = defineStore("product", () => {
     products,
     loading,
     loaded,
+    // 무한스크롤 상태
+    loadingMore,
+    hasMore,
     // 액션
     loadHomeProducts,
+    loadMoreProducts,
     refreshProducts,
     // Computed
     featuredProducts,

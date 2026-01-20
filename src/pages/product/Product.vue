@@ -32,7 +32,12 @@ const { showAlert, showConfirm } = useAlert();
 const { getResponsiveAttrs } = useOptimizedImage();
 
 // 스토어에서 홈페이지용 데이터 가져오기
-const { remainingProducts, loading: storeLoading } = storeToRefs(productStore);
+const {
+  remainingProducts,
+  loading: storeLoading,
+  loadingMore: storeLoadingMore,
+  hasMore: storeHasMore,
+} = storeToRefs(productStore);
 
 // 상품 카드 반응형 이미지 속성 (srcset 포함)
 const getProductImageAttrs = (url: string) => {
@@ -64,6 +69,22 @@ const isLoading = computed(() => {
   return storeLoading.value;
 });
 
+// 추가 로딩 상태 (무한스크롤)
+const isLoadingMore = computed(() => {
+  if (hasCategory.value) {
+    return loadingMore.value;
+  }
+  return storeLoadingMore.value;
+});
+
+// 더 불러올 데이터 여부
+const hasMoreData = computed(() => {
+  if (hasCategory.value) {
+    return hasMore.value;
+  }
+  return storeHasMore.value;
+});
+
 // 상품 목록 composable (무한 스크롤 지원)
 const {
   products: productList,
@@ -91,6 +112,15 @@ const hoveredProductId = ref<string | null>(null);
 const showLoadingSpinner = ref(false);
 let loadingDelayTimer: NodeJS.Timeout | null = null;
 
+// 추가 상품 로드 (페이지 타입에 따라 다른 함수 호출)
+const handleLoadMore = () => {
+  if (hasCategory.value) {
+    loadMoreProducts();
+  } else {
+    productStore.loadMoreProducts();
+  }
+};
+
 // Intersection Observer 설정
 const setupIntersectionObserver = () => {
   observer = new IntersectionObserver(
@@ -99,11 +129,11 @@ const setupIntersectionObserver = () => {
       // 타겟이 화면에 보이고, 로딩 중이 아니며, 더 불러올 데이터가 있을 때
       if (
         entry.isIntersecting &&
-        !loadingMore.value &&
-        hasMore.value &&
-        !loading.value
+        !isLoadingMore.value &&
+        hasMoreData.value &&
+        !isLoading.value
       ) {
-        loadMoreProducts();
+        handleLoadMore();
       }
     },
     {
@@ -177,7 +207,7 @@ watch(searchQuery, () => {
 });
 
 // 로딩 스피너 지연 표시 (150ms)
-watch(loadingMore, (newValue) => {
+watch(isLoadingMore, (newValue) => {
   // 타이머가 있으면 먼저 정리
   if (loadingDelayTimer) {
     clearTimeout(loadingDelayTimer);
@@ -199,13 +229,14 @@ onMounted(async () => {
   if (hasCategory.value) {
     // 카테고리 페이지: 기존 composable 사용 (무한 스크롤)
     await loadProducts();
-    // DOM이 준비된 후 옵저버 설정
-    if (loadMoreTrigger.value) {
-      setupIntersectionObserver();
-    }
   } else {
     // 홈페이지: 스토어 사용 (ProductHome과 데이터 공유)
     await productStore.loadHomeProducts();
+  }
+
+  // DOM이 준비된 후 옵저버 설정 (홈/카테고리 모두)
+  if (loadMoreTrigger.value) {
+    setupIntersectionObserver();
   }
 
   if (authStore.isAuthenticated) {
@@ -361,9 +392,9 @@ onUnmounted(() => {
       </Card>
     </div>
 
-    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 (카테고리 페이지에서만) -->
+    <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
     <div
-      v-if="hasCategory && (displayProducts.length > 0 || hasMore)"
+      v-if="displayProducts.length > 0 || hasMoreData"
       ref="loadMoreTrigger"
       class="py-8 flex justify-center"
     >
@@ -374,7 +405,7 @@ onUnmounted(() => {
         >
       </div>
       <div
-        v-else-if="!hasMore && displayProducts.length > 0"
+        v-else-if="!hasMoreData && displayProducts.length > 0"
         class="text-body text-muted-foreground"
       >
         모든 상품을 불러왔습니다
