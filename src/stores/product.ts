@@ -67,7 +67,8 @@ export const useProductStore = defineStore("product", () => {
 
     loading.value = true;
     try {
-      const response = await fetchProducts({});
+      // 홈페이지용 상품 (백엔드에서 isAvailable=true 우선 정렬)
+      const response = await fetchProducts({ limit: 12 });
       const mappedProducts = response.products.map(mapProduct);
       products.value = sortByStock(mappedProducts);
       loaded.value = true;
