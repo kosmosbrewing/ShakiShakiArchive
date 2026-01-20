@@ -4,11 +4,11 @@
 
 import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { CheckCircle, XCircle, Package, AlertTriangle, Ban } from "lucide-vue-next";
+import { CheckCircle, XCircle, AlertTriangle, Ban } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/formatters";
-import { confirmPayment, cancelOrder, StockShortageError } from "@/lib/api";
+import { confirmPayment, StockShortageError } from "@/lib/api";
 import { LoadingSpinner } from "@/components/common";
 import type { StockShortageItem } from "@/types/api";
 
@@ -22,8 +22,8 @@ console.log("[PaymentCallback] 결제 승인 플래그 설정 (즉시)");
 
 // 🔒 bfcache 복원 감지 및 새로고침 (모바일 브라우저 캐시 문제 방지)
 // 뒤로 가기/앞으로 가기로 이 페이지가 복원되면 이전 결제 정보가 남아있을 수 있음
-if (typeof window !== 'undefined') {
-  window.addEventListener('pageshow', (event) => {
+if (typeof window !== "undefined") {
+  window.addEventListener("pageshow", (event) => {
     // bfcache에서 복원된 경우 (persisted === true)
     if (event.persisted) {
       console.log("[PaymentCallback] bfcache에서 복원됨 - 페이지 새로고침");
@@ -33,9 +33,9 @@ if (typeof window !== 'undefined') {
 }
 
 // 상태: stock_shortage 추가 (재고 부족 에러), cancelled 추가 (결제 취소)
-const status = ref<"loading" | "success" | "error" | "cancelled" | "stock_shortage">(
-  "loading"
-);
+const status = ref<
+  "loading" | "success" | "error" | "cancelled" | "stock_shortage"
+>("loading");
 const errorMessage = ref<string>("");
 const shortageItems = ref<StockShortageItem[]>([]); // 재고 부족 상품 목록
 const orderInfo = ref<{
@@ -51,9 +51,9 @@ const isPopup = ref<boolean>(false);
 
 // 모바일 환경 감지
 const isMobile = computed(() => {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
+    navigator.userAgent,
   );
 });
 
@@ -80,7 +80,7 @@ onMounted(async () => {
             type: "PAYMENT_CANCEL",
             orderId: orderId,
             timestamp: Date.now(),
-          })
+          }),
         );
       }
     };
@@ -110,7 +110,7 @@ onMounted(async () => {
       orderId = savedOrderId;
       console.log(
         "[PaymentCallback] URL에 orderId 없음, localStorage에서 복원:",
-        orderId
+        orderId,
       );
     }
   }
@@ -134,7 +134,10 @@ onMounted(async () => {
   if (orderId && paymentKey) {
     const processedKey = `payment_processed_${orderId}`;
     if (localStorage.getItem(processedKey)) {
-      console.log("[PaymentCallback] 이미 처리된 결제 - 주문 목록으로 이동:", orderId);
+      console.log(
+        "[PaymentCallback] 이미 처리된 결제 - 주문 목록으로 이동:",
+        orderId,
+      );
       localStorage.removeItem("payment_confirming");
       // 이미 처리된 결제는 주문 목록으로 이동
       if (isMobile.value) {
@@ -160,24 +163,29 @@ onMounted(async () => {
     } else {
       status.value = "error";
       // 에러 메시지 정제 (cleanErrorMessage 함수 재사용)
-      errorMessage.value = cleanErrorMessage(message || "결제가 취소되었습니다.");
+      errorMessage.value = cleanErrorMessage(
+        message || "결제가 취소되었습니다.",
+      );
     }
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
     if (isPopup.value) {
       console.log(
         "[PaymentCallback] /checkout/fail - 팝업 닫기, orderId:",
-        orderId
+        orderId,
       );
       console.log("[PaymentCallback] 에러 메시지:", errorMessage.value);
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
-          type: errorCode === "INSUFFICIENT_STOCK" ? "STOCK_SHORTAGE" : "PAYMENT_ERROR",
+          type:
+            errorCode === "INSUFFICIENT_STOCK"
+              ? "STOCK_SHORTAGE"
+              : "PAYMENT_ERROR",
           orderId: orderId,
           message: errorMessage.value,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -194,7 +202,12 @@ onMounted(async () => {
   // 백엔드에서 결제 승인 완료 후 프론트엔드로 리다이렉트하는 경우
   if (route.path === "/checkout/success" && provider === "naverpay") {
     console.log("[PaymentCallback] 네이버페이 백엔드 리다이렉트 감지");
-    console.log("[PaymentCallback] 파라미터:", { orderId, externalOrderId, amount, alreadyPaid });
+    console.log("[PaymentCallback] 파라미터:", {
+      orderId,
+      externalOrderId,
+      amount,
+      alreadyPaid,
+    });
 
     // 🔒 중복 결제 처리 방지 (alreadyPaid=true)
     if (alreadyPaid === "true") {
@@ -215,7 +228,9 @@ onMounted(async () => {
     orderInfo.value = {
       orderId: orderId,
       externalOrderId: externalOrderId,
-      orderName: orderNameParam ? decodeURIComponent(orderNameParam) : undefined,
+      orderName: orderNameParam
+        ? decodeURIComponent(orderNameParam)
+        : undefined,
       amount: amount ? Number(amount) : undefined,
       paymentMethod: "naverpay",
     };
@@ -229,7 +244,7 @@ onMounted(async () => {
           type: "PAYMENT_SUCCESS",
           orderId: orderId,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -239,7 +254,10 @@ onMounted(async () => {
     // 모바일/일반: 주문 상세로 자동 이동
     setTimeout(() => {
       const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-      console.log("[PaymentCallback] 네이버페이 성공 - 주문 상세로 이동:", targetUrl);
+      console.log(
+        "[PaymentCallback] 네이버페이 성공 - 주문 상세로 이동:",
+        targetUrl,
+      );
       if (isMobile.value) {
         window.location.replace(targetUrl);
       } else {
@@ -319,10 +337,14 @@ onMounted(async () => {
       } else {
         status.value = "error";
         // 백엔드 메시지를 정제하여 사용자 친화적으로 표시
-        const rawMessage = err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+        const rawMessage =
+          err.message || "결제 승인 처리 중 오류가 발생했습니다.";
         errorMessage.value = cleanErrorMessage(rawMessage);
         console.log("[PaymentCallback] 원본 에러 메시지:", rawMessage);
-        console.log("[PaymentCallback] 정제된 에러 메시지:", errorMessage.value);
+        console.log(
+          "[PaymentCallback] 정제된 에러 메시지:",
+          errorMessage.value,
+        );
       }
     }
   } else if (result === "success") {
@@ -333,7 +355,9 @@ onMounted(async () => {
     orderInfo.value = {
       orderId: orderId,
       externalOrderId: externalOrderId,
-      orderName: orderNameParam ? decodeURIComponent(orderNameParam) : undefined,
+      orderName: orderNameParam
+        ? decodeURIComponent(orderNameParam)
+        : undefined,
       amount: amount ? Number(amount) : undefined,
       paymentMethod: provider || (route.query.paymentMethod as string),
     };
@@ -347,7 +371,7 @@ onMounted(async () => {
           type: "PAYMENT_SUCCESS",
           orderId: orderId,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -383,7 +407,7 @@ onMounted(async () => {
           orderId: orderId,
           message: errorMessage.value,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -407,7 +431,7 @@ onMounted(async () => {
           type: "PAYMENT_CANCEL",
           orderId: orderId,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -427,7 +451,7 @@ onMounted(async () => {
     if (isPopup.value) {
       console.log(
         "[PaymentCallback] 잘못된 접근 - 팝업 닫기, orderId:",
-        orderId
+        orderId,
       );
       localStorage.setItem(
         "naverpay_result",
@@ -436,7 +460,7 @@ onMounted(async () => {
           orderId: orderId,
           message: errorMessage.value,
           timestamp: Date.now(),
-        })
+        }),
       );
       localStorage.removeItem("naverpay_popup");
       window.close();
@@ -518,8 +542,12 @@ function cleanErrorMessage(message: string): string {
     cleanMessage = "이미 처리된 결제입니다.\n주문 내역을 확인해주세요.";
   } else if (cleanMessage.includes("취소된 주문")) {
     cleanMessage = "취소된 주문입니다.\n새로운 주문을 생성해주세요.";
-  } else if (cleanMessage.includes("네트워크") || cleanMessage.includes("연결")) {
-    cleanMessage = "네트워크 연결이 불안정합니다.\n인터넷 연결 확인 후 다시 시도해주세요.";
+  } else if (
+    cleanMessage.includes("네트워크") ||
+    cleanMessage.includes("연결")
+  ) {
+    cleanMessage =
+      "네트워크 연결이 불안정합니다.\n인터넷 연결 확인 후 다시 시도해주세요.";
   } else if (cleanMessage.includes("카드") && cleanMessage.includes("사용")) {
     cleanMessage = "사용할 수 없는 카드입니다.\n다른 카드로 결제해주세요.";
   } else if (cleanMessage.length > 50) {
@@ -628,7 +656,6 @@ const goToCart = () => {
 
           <div class="flex flex-col gap-3 w-full">
             <Button @click="goToOrderDetail" class="w-full">
-              <Package class="w-4 h-4 mr-2" />
               주문 상세 보기
             </Button>
             <Button
@@ -685,8 +712,7 @@ const goToCart = () => {
             v-if="errorMessage.includes('잔액')"
             class="text-sm text-amber-600 dark:text-amber-400 mb-6 whitespace-pre-line"
           >
-            💡 다른 결제 수단을 이용하시거나
-잔액 충전 후 다시 시도해주세요.
+            💡 다른 결제 수단을 이용하시거나 잔액 충전 후 다시 시도해주세요.
           </p>
           <div v-else class="mb-6"></div>
 
@@ -713,8 +739,8 @@ const goToCart = () => {
           </div>
           <h2 class="text-xl font-semibold mb-2">재고 부족으로 결제 취소</h2>
           <p class="text-muted-foreground mb-4 whitespace-pre-line">
-            결제 처리 중 일부 상품의 재고가 부족하여
-결제가 자동으로 취소되었습니다.
+            결제 처리 중 일부 상품의 재고가 부족하여 결제가 자동으로
+            취소되었습니다.
           </p>
           <p class="text-sm text-primary mb-6">
             결제하신 금액은 자동으로 환불됩니다.
@@ -757,7 +783,7 @@ const goToCart = () => {
           <div v-else class="bg-muted/50 rounded-lg p-4 mb-6 text-left">
             <p class="text-sm text-muted-foreground whitespace-pre-line">
               주문하신 상품의 재고가 부족하여 결제가 취소되었습니다.
-장바구니에서 수량을 조정하거나 상품 페이지에서 다시 확인해주세요.
+              장바구니에서 수량을 조정하거나 상품 페이지에서 다시 확인해주세요.
             </p>
           </div>
 
