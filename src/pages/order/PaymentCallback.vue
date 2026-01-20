@@ -96,6 +96,12 @@ onMounted(async () => {
   const amount = route.query.amount as string;
   const error = route.query.error as string;
   const message = route.query.message as string;
+  // 네이버페이 백엔드 리다이렉트 파라미터
+  const provider = route.query.provider as string;
+  const externalOrderId = route.query.externalOrderId as string;
+  const orderNameParam = route.query.orderName as string;
+  const alreadyPaid = route.query.alreadyPaid as string;
+  const errorCode = route.query.code as string; // INSUFFICIENT_STOCK 등
 
   // orderId가 URL에 없으면 localStorage에서 가져오기 (네이버페이 취소 시 백업)
   if (!orderId && isPopup.value) {
@@ -143,13 +149,19 @@ onMounted(async () => {
   // 네이버페이 실패/취소 경로 (/checkout/fail)
   if (route.path === "/checkout/fail") {
     console.log("[PaymentCallback] 네이버페이 결제 실패/취소");
-    console.log("[PaymentCallback] orderId:", orderId); // orderId 확인
-    console.log("[PaymentCallback] message:", message); // 원본 메시지 확인
+    console.log("[PaymentCallback] orderId:", orderId);
+    console.log("[PaymentCallback] message:", message);
+    console.log("[PaymentCallback] errorCode:", errorCode);
 
-    status.value = "error";
-
-    // 에러 메시지 정제 (cleanErrorMessage 함수 재사용)
-    errorMessage.value = cleanErrorMessage(message || "결제가 취소되었습니다.");
+    // 재고 부족 에러 처리 (code=INSUFFICIENT_STOCK)
+    if (errorCode === "INSUFFICIENT_STOCK") {
+      status.value = "stock_shortage";
+      errorMessage.value = message || "재고가 부족합니다.";
+    } else {
+      status.value = "error";
+      // 에러 메시지 정제 (cleanErrorMessage 함수 재사용)
+      errorMessage.value = cleanErrorMessage(message || "결제가 취소되었습니다.");
+    }
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
     if (isPopup.value) {
@@ -161,60 +173,80 @@ onMounted(async () => {
       localStorage.setItem(
         "naverpay_result",
         JSON.stringify({
-          type: "PAYMENT_ERROR", // 실제 에러이므로 ERROR 타입 사용
-          orderId: orderId, // orderId 전달 (주문 삭제용)
-          message: errorMessage.value, // 에러 메시지 전달
+          type: errorCode === "INSUFFICIENT_STOCK" ? "STOCK_SHORTAGE" : "PAYMENT_ERROR",
+          orderId: orderId,
+          message: errorMessage.value,
           timestamp: Date.now(),
         })
       );
       localStorage.removeItem("naverpay_popup");
-      // 즉시 팝업 닫기
       window.close();
       return;
     }
 
-    // 팝업이 아닌 경우 (모바일 리다이렉트): 주문 취소 후 에러 화면 표시
-    if (orderId) {
-      try {
-        console.log("[PaymentCallback] 모바일 결제 실패 - 주문 취소 시도:", orderId);
-        await cancelOrder(orderId, { cancelReason: "네이버페이 결제 실패/취소" });
-        console.log("[PaymentCallback] 모바일 결제 실패 - 주문 취소 완료");
-      } catch (cancelErr) {
-        console.error("[PaymentCallback] 주문 취소 실패:", cancelErr);
-        // 취소 실패해도 에러 화면은 표시 (Cron이 30분 후 자동 정리)
-      }
-    }
-    // 결제 승인 플래그 제거 (실패 시)
+    // 팝업이 아닌 경우 (모바일 리다이렉트): 에러 화면 표시
+    // 백엔드에서 이미 주문 취소 처리됨 (별도 취소 API 호출 불필요)
     localStorage.removeItem("payment_confirming");
     return;
   }
 
-  // 네이버페이 성공 경로 (/checkout/success) - 모바일 리다이렉트 방식 처리
-  if (route.path === "/checkout/success") {
-    console.log("[PaymentCallback] 네이버페이 결제 성공 경로 진입");
+  // 네이버페이 백엔드 리다이렉트 처리 (/checkout/success with provider=naverpay)
+  // 백엔드에서 결제 승인 완료 후 프론트엔드로 리다이렉트하는 경우
+  if (route.path === "/checkout/success" && provider === "naverpay") {
+    console.log("[PaymentCallback] 네이버페이 백엔드 리다이렉트 감지");
+    console.log("[PaymentCallback] 파라미터:", { orderId, externalOrderId, amount, alreadyPaid });
 
-    // 팝업이 아닌 경우 (모바일 리다이렉트): 직접 성공 처리
-    if (!isPopup.value) {
-      console.log("[PaymentCallback] 모바일 네이버페이 결제 성공 처리");
-
-      // 결제 승인 플래그 제거
+    // 🔒 중복 결제 처리 방지 (alreadyPaid=true)
+    if (alreadyPaid === "true") {
+      console.log("[PaymentCallback] 이미 결제된 주문 - 주문 목록으로 이동");
       localStorage.removeItem("payment_confirming");
-
-      status.value = "success";
-      orderInfo.value = {
-        orderId: orderId,
-        paymentMethod: "naverpay",
-      };
-
-      // 주문 상세로 자동 이동
-      setTimeout(() => {
-        const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-        console.log("[PaymentCallback] 모바일 리다이렉트:", targetUrl);
-        window.location.replace(targetUrl);
-      }, 2000);
+      if (isMobile.value) {
+        window.location.replace("/orderlist");
+      } else {
+        router.replace("/orderlist");
+      }
       return;
     }
-    // 팝업인 경우: 아래 result === "success" 로직에서 처리
+
+    // 결제 승인 플래그 제거
+    localStorage.removeItem("payment_confirming");
+
+    status.value = "success";
+    orderInfo.value = {
+      orderId: orderId,
+      externalOrderId: externalOrderId,
+      orderName: orderNameParam ? decodeURIComponent(orderNameParam) : undefined,
+      amount: amount ? Number(amount) : undefined,
+      paymentMethod: "naverpay",
+    };
+
+    // 팝업인 경우: localStorage로 부모 창에 결과 전달 후 닫기
+    if (isPopup.value) {
+      console.log("[PaymentCallback] 네이버페이 성공 - 팝업 닫기");
+      localStorage.setItem(
+        "naverpay_result",
+        JSON.stringify({
+          type: "PAYMENT_SUCCESS",
+          orderId: orderId,
+          timestamp: Date.now(),
+        })
+      );
+      localStorage.removeItem("naverpay_popup");
+      window.close();
+      return;
+    }
+
+    // 모바일/일반: 주문 상세로 자동 이동
+    setTimeout(() => {
+      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+      console.log("[PaymentCallback] 네이버페이 성공 - 주문 상세로 이동:", targetUrl);
+      if (isMobile.value) {
+        window.location.replace(targetUrl);
+      } else {
+        router.replace(targetUrl);
+      }
+    }, 2000);
+    return;
   }
 
   // 토스페이먼츠 결제 성공 시 (paymentKey가 있으면 결제 승인 필요)
@@ -294,13 +326,14 @@ onMounted(async () => {
       }
     }
   } else if (result === "success") {
-    // 네이버페이 등 다른 결제 성공
-    const provider = route.query.provider as string;
+    // 기타 결제 성공 (네이버페이는 위에서 처리됨, 향후 다른 PG 추가 시 사용)
+    console.log("[PaymentCallback] 기타 결제 성공 처리");
+
     status.value = "success";
     orderInfo.value = {
-      orderId: orderId, // 네이버페이는 orderId가 UUID
-      externalOrderId: route.query.externalOrderId as string,
-      orderName: route.query.orderName as string,
+      orderId: orderId,
+      externalOrderId: externalOrderId,
+      orderName: orderNameParam ? decodeURIComponent(orderNameParam) : undefined,
       amount: amount ? Number(amount) : undefined,
       paymentMethod: provider || (route.query.paymentMethod as string),
     };
@@ -317,26 +350,25 @@ onMounted(async () => {
         })
       );
       localStorage.removeItem("naverpay_popup");
-      // 즉시 팝업 닫기
       window.close();
       return;
     }
 
-    // 팝업이 아닌 경우 (모바일 리다이렉트): 로딩 상태 유지하며 자동으로 주문 상세로 이동
-    // Login.vue의 OAuth 처리와 동일한 패턴
+    // 결제 승인 플래그 제거
+    localStorage.removeItem("payment_confirming");
+
+    // 주문 상세로 자동 이동
     setTimeout(() => {
       const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-
-      // 모바일 리다이렉트: 히스토리 완전 대체
-      if (isMobile.value && !isPopup.value) {
+      if (isMobile.value) {
         window.location.replace(targetUrl);
       } else {
         router.replace(targetUrl);
       }
-    }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
+    }, 2000);
     return;
   } else if (result === "fail" || error) {
-    // 결제 실패
+    // 결제 실패 (토스페이먼츠 등)
     console.log("[PaymentCallback] 결제 실패, orderId:", orderId);
     status.value = "error";
     errorMessage.value = message || getErrorMessage(error);
@@ -348,16 +380,18 @@ onMounted(async () => {
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_ERROR",
-          orderId: orderId, // orderId 전달 (주문 삭제용)
+          orderId: orderId,
           message: errorMessage.value,
           timestamp: Date.now(),
         })
       );
       localStorage.removeItem("naverpay_popup");
-      // 즉시 팝업 닫기
       window.close();
       return;
     }
+
+    // 플래그 제거 (팝업이 아닌 경우)
+    localStorage.removeItem("payment_confirming");
   } else if (error === "user_cancel" || result === "cancel") {
     // 결제 취소
     console.log("[PaymentCallback] 결제 취소, orderId:", orderId);
@@ -371,15 +405,17 @@ onMounted(async () => {
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_CANCEL",
-          orderId: orderId, // orderId 전달 (주문 삭제용)
+          orderId: orderId,
           timestamp: Date.now(),
         })
       );
       localStorage.removeItem("naverpay_popup");
-      // 즉시 팝업 닫기
       window.close();
       return;
     }
+
+    // 플래그 제거 (팝업이 아닌 경우)
+    localStorage.removeItem("payment_confirming");
   } else {
     // 잘못된 접근 또는 예상하지 못한 파라미터
     console.warn("[PaymentCallback] 예상하지 못한 접근:", route.query);
@@ -397,16 +433,18 @@ onMounted(async () => {
         "naverpay_result",
         JSON.stringify({
           type: "PAYMENT_ERROR",
-          orderId: orderId, // orderId 전달 (주문 삭제용)
+          orderId: orderId,
           message: errorMessage.value,
           timestamp: Date.now(),
         })
       );
       localStorage.removeItem("naverpay_popup");
-      // 즉시 팝업 닫기
       window.close();
       return;
     }
+
+    // 플래그 제거 (팝업이 아닌 경우)
+    localStorage.removeItem("payment_confirming");
   }
 });
 

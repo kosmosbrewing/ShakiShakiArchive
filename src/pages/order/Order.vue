@@ -691,10 +691,9 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     }
 
     // 10. 네이버페이 결제창 호출
-    // 모바일 리다이렉트 방식을 위해 절대 URL로 변환
-    const absoluteReturnUrl = sdkConfig.returnUrl.startsWith('http')
-      ? sdkConfig.returnUrl
-      : `${window.location.origin}${sdkConfig.returnUrl}`;
+    // 🔒 모바일 리다이렉트: 프론트엔드에서 returnUrl 직접 설정 (백엔드 설정 무시)
+    // /checkout/success 경로로 리다이렉트하여 PaymentCallback.vue에서 처리
+    const naverPayReturnUrl = `${window.location.origin}/checkout/success`;
 
     const naverPayParams = {
       merchantPayKey: orderData.externalOrderId, // 가맹점 주문번호
@@ -704,7 +703,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       totalPayAmount: orderTotalAmount.value,
       taxScopeAmount: orderTotalAmount.value, // 전체 금액을 과세 대상으로
       taxExScopeAmount: 0, // 면세 대상 금액 없음
-      returnUrl: `${absoluteReturnUrl}?orderId=${orderData.orderId}`,
+      returnUrl: `${naverPayReturnUrl}?orderId=${orderData.orderId}`,
       productItems: productItems,
     };
 
@@ -715,8 +714,8 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       chainId: sdkConfig.chainId,
       mode: sdkConfig.mode,
       payType: sdkConfig.payType,
-      returnUrl: sdkConfig.returnUrl,
-      absoluteReturnUrl: absoluteReturnUrl,
+      backendReturnUrl: sdkConfig.returnUrl,
+      actualReturnUrl: naverPayReturnUrl,
     });
     console.log("2. Pay Reserve Params:", naverPayParams);
     console.log("3. Product Items:", productItems);
@@ -902,6 +901,15 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             }
 
             showAlert("결제가 취소되었습니다.");
+          } else if (type === "STOCK_SHORTAGE") {
+            // 재고 부족: 백엔드에서 이미 처리됨 (환불 완료)
+            isPaymentPopupOpen.value = false;
+            currentOrderId.value = null;
+            resetReservation();
+
+            showAlert(message || "재고가 부족하여 결제가 취소되었습니다.\n결제 금액은 자동으로 환불됩니다.", {
+              type: "error",
+            });
           }
 
           // 처리 완료 후 플래그 리셋
