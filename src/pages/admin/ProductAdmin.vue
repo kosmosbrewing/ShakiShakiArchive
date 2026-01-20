@@ -1582,11 +1582,11 @@ onMounted(async () => {
                       </button>
                     </div>
 
-                    <div class="py-6 min-h-[180px]">
+                    <div class="py-6">
                       <!-- Description 탭 -->
                       <div
                         v-show="previewActiveTab === 'description'"
-                        class="animate-fade-in max-h-[175px] overflow-y-auto pr-2 scrollbar-thin"
+                        class="animate-fade-in max-h-[180px] overflow-y-auto pr-2 scrollbar-thin"
                       >
                         <p
                           class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption tracking-wide"

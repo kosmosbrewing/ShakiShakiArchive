@@ -184,7 +184,7 @@ const handleAddToCart = async () => {
   // 4. 장바구니 로드 후 기존 상품 체크 및 총 수량 확인
   await cart.loadCart();
   const existing = cart.cartItems.value.find(
-    (item) => item.productId === product.id && item.variantId === vid
+    (item) => item.productId === product.id && item.variantId === vid,
   );
 
   // 기존 장바구니 수량 + 새로 담으려는 수량이 재고를 초과하는지 확인
@@ -193,7 +193,7 @@ const handleAddToCart = async () => {
 
   if (totalQty > availableStock) {
     displayAlert(
-      `아쉽게도 남은 재고가 부족하여 더 이상 담을 수 없어요. (재고: ${availableStock}개)`
+      `아쉽게도 남은 재고가 부족하여 더 이상 담을 수 없어요. (재고: ${availableStock}개)`,
     );
     return;
   }
@@ -256,14 +256,14 @@ const proceedAddToCart = async () => {
   // 장바구니에 이미 있는 수량 확인
   await cart.loadCart();
   const existing = cart.cartItems.value.find(
-    (item) => item.productId === product.id && item.variantId === vid
+    (item) => item.productId === product.id && item.variantId === vid,
   );
   const existingQty = existing ? existing.quantity : 0;
   const totalQty = existingQty + qty;
 
   if (totalQty > availableStock) {
     displayAlert(
-      `재고가 부족합니다. (재고: ${availableStock}개, 장바구니: ${existingQty}개)`
+      `재고가 부족합니다. (재고: ${availableStock}개, 장바구니: ${existingQty}개)`,
     );
     return;
   }
@@ -384,7 +384,7 @@ const handleBuyNow = async () => {
 
     sessionStorage.setItem(
       "directPurchase",
-      JSON.stringify(directPurchaseItem)
+      JSON.stringify(directPurchaseItem),
     );
 
     router.push("/order?direct=true");
@@ -397,9 +397,12 @@ const handleContinueShopping = () => {
 };
 
 // 갤러리 이미지 변경 시 로딩 상태 리셋
-watch(() => gallery.currentImage.value, () => {
-  mainImageLoaded.value = false;
-});
+watch(
+  () => gallery.currentImage.value,
+  () => {
+    mainImageLoaded.value = false;
+  },
+);
 
 // 데이터 로드
 onMounted(async () => {
@@ -615,8 +618,8 @@ onMounted(async () => {
                   isOutOfStock
                     ? "SOLD OUT"
                     : variantSelection.needsVariantSelection.value
-                    ? "옵션을 선택해주세요"
-                    : "바로 구매"
+                      ? "옵션을 선택해주세요"
+                      : "바로 구매"
                 }}
               </Button>
             </div>
@@ -657,10 +660,10 @@ onMounted(async () => {
                 </button>
               </div>
 
-              <div class="py-6 min-h-[180px]">
+              <div class="py-6">
                 <div
                   v-show="activeTab === 'description'"
-                  class="animate-fade-in max-h-[175px] overflow-y-auto pr-2 scrollbar-thin"
+                  class="animate-fade-in max-h-[180px] overflow-y-auto pr-2 scrollbar-thin"
                 >
                   <p
                     class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption tracking-wide"
@@ -709,7 +712,7 @@ onMounted(async () => {
                             >
                               {{
                                 formatSizeValue(
-                                  data[col.key as keyof typeof data] as number
+                                  data[col.key as keyof typeof data] as number,
                                 )
                               }}
                             </TableCell>
