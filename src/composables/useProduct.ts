@@ -455,15 +455,13 @@ export function useProductList() {
     const stock = item.totalStock ?? item.stockQuantity;
 
     // isAvailable을 포괄적으로 boolean 변환
-    // false로 간주되는 값: false, "false", "False", 0, "0", null, undefined
+    // 명시적으로 false인 경우만 제외 (undefined/null은 기본 true로 간주)
     const available = !(
       item.isAvailable === false ||
       item.isAvailable === "false" ||
       item.isAvailable === "False" ||
       item.isAvailable === 0 ||
-      item.isAvailable === "0" ||
-      item.isAvailable === null ||
-      item.isAvailable === undefined
+      item.isAvailable === "0"
     );
 
     return {

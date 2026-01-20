@@ -13,8 +13,8 @@ import {
   Alert,
   AlertDescription,
   type AlertType,
-  ERROR_MESSAGES,
 } from "@/components/ui/alert";
+import { AUTH_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { LoadingSpinner } from "@/components/common";
 
@@ -66,7 +66,7 @@ const validateForm = (): {
   if (!loginForm.id || !loginForm.password) {
     return {
       isValid: false,
-      errorMessage: "이메일과 비밀번호를 모두 입력해주세요.",
+      errorMessage: AUTH_MESSAGES.emailAndPasswordRequired,
     };
   }
 
@@ -75,7 +75,7 @@ const validateForm = (): {
   if (!emailValidation.valid) {
     return {
       isValid: false,
-      errorMessage: "올바른 이메일 형식을 입력하세요.",
+      errorMessage: AUTH_MESSAGES.invalidEmailFormat,
     };
   }
 
@@ -83,7 +83,7 @@ const validateForm = (): {
   if (!isValidPassword(loginForm.password)) {
     return {
       isValid: false,
-      errorMessage: "이메일 또는 비밀번호를 확인해주세요.",
+      errorMessage: AUTH_MESSAGES.loginFailed,
     };
   }
 
@@ -208,8 +208,7 @@ const handleSubmit = async () => {
       isProcessingAuth.value = false;
 
       // 로그인은 성공했으나 정보 로드 실패
-      loginError.value =
-        "로그인은 성공했으나 사용자 정보를 불러오는데 실패했습니다.";
+      loginError.value = AUTH_MESSAGES.loginInfoLoadFailed;
       alertMessage.value = loginError.value;
       alertType.value = "error";
       showAlert.value = true;
@@ -227,32 +226,28 @@ const handleSubmit = async () => {
 
       // 인증 관련 에러 (401, 403, 404 등)는 모두 통합 메시지
       if (status === 401 || status === 403 || status === 404) {
-        loginError.value = "이메일 또는 비밀번호를 확인해주세요.";
+        loginError.value = AUTH_MESSAGES.loginFailed;
       } else if (status === 429) {
         // 너무 많은 시도 (Rate Limiting)
-        loginError.value =
-          "로그인 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해주세요.";
+        loginError.value = AUTH_MESSAGES.tooManyAttempts;
       } else if (status >= 500) {
         // 서버 오류
-        loginError.value =
-          "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        loginError.value = ERROR_MESSAGES.serverError;
       } else {
         // 기타 오류
-        loginError.value = "로그인 정보가 일치하지 않습니다.";
+        loginError.value = AUTH_MESSAGES.loginFailed;
       }
 
       console.error("로그인 실패 (HTTP " + status + "):", error.response.data);
     } else if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
       // 타임아웃 오류
-      loginError.value =
-        "요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.";
+      loginError.value = ERROR_MESSAGES.timeout;
     } else if (axios.isAxiosError(error) && !error.response) {
       // 네트워크 오류 (서버 미응답)
-      loginError.value =
-        "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
+      loginError.value = ERROR_MESSAGES.connectionFailed;
     } else {
       // 알 수 없는 오류
-      loginError.value = "로그인 중 오류가 발생했습니다. 다시 시도해주세요.";
+      loginError.value = ERROR_MESSAGES.unknown;
     }
 
     // 에러 Alert 표시

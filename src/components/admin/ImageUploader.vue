@@ -133,7 +133,7 @@ const removeImage = (index: number) => {
     <!-- 업로드 버튼 -->
     <div class="flex items-center gap-3">
       <label
-        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-body font-medium"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg cursor-pointer hover:bg-primary/80 transition-colors text-body font-medium"
         :class="{ 'opacity-50 cursor-not-allowed': isUploading }"
       >
         <LoadingSpinner

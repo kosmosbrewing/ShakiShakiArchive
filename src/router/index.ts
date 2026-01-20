@@ -4,6 +4,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { AUTH_MESSAGES, ADMIN_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
@@ -253,7 +254,7 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
 
   // 1. 로그인 체크 (requiresAuth)
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    showAlert("로그인이 필요한 서비스입니다.", { type: "error" });
+    showAlert(AUTH_MESSAGES.loginRequired, { type: "error" });
     return next("/login");
   }
 
@@ -263,9 +264,9 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
     const isProduction = import.meta.env.MODE === "production";
 
     if (to.path === "/order" && isProduction) {
-      showAlert("서비스 준비중입니다. 곧 찾아뵙겠습니다!");
+      showAlert(ORDER_MESSAGES.servicePreparation);
     } else {
-      showAlert("접근 권한이 없습니다. (관리자 전용)", { type: "error" });
+      showAlert(ADMIN_MESSAGES.accessDenied, { type: "error" });
     }
 
     return next("/");

@@ -1,67 +1,36 @@
-// Alert 메시지 타입 정의
-export type AlertType = "success" | "error";
+// src/components/ui/alert/alertMessages.ts
+// 하위 호환성을 위한 래퍼 파일
+// @deprecated 새 코드에서는 @/lib/messages 직접 사용 권장
 
-// 성공 메시지 키
-export type SuccessMessageKey =
-  | "general"
-  | "save"
-  | "login"
-  | "upload"
-  | "deploy";
+import {
+  SUCCESS_MESSAGES as _SUCCESS_MESSAGES,
+  ERROR_MESSAGES as _ERROR_MESSAGES,
+  getErrorByStatus,
+} from "@/lib/messages";
 
-// 오류 메시지 키
-export type ErrorMessageKey =
-  | "inputError"
-  | "forbidden"
-  | "unauthorized"
-  | "serverError"
-  | "network";
+// 새 메시지 시스템에서 re-export
+export type { AlertType } from "@/lib/messages";
+export const SUCCESS_MESSAGES = _SUCCESS_MESSAGES;
+export const ERROR_MESSAGES = _ERROR_MESSAGES;
+export { getErrorByStatus as getErrorMessageByStatus };
 
-// 전체 메시지 키
+// 기존 타입 호환성 유지
+export type SuccessMessageKey = "general" | "save" | "login" | "upload" | "deploy";
+export type ErrorMessageKey = "inputError" | "forbidden" | "unauthorized" | "serverError" | "network";
 export type AlertMessageKey = SuccessMessageKey | ErrorMessageKey;
 
-// 성공 메시지
-export const SUCCESS_MESSAGES: Record<SuccessMessageKey, string> = {
-  general: "성공적으로 처리되었습니다.",
-  save: "변경사항이 안전하게 저장되었습니다.",
-  login: "반갑습니다! 성공적으로 로그인되었습니다.",
-  upload: "파일 업로드가 완료되었습니다.",
-  deploy: "새로운 설정이 즉시 반영되었습니다.",
-};
-
-// 오류 메시지
-export const ERROR_MESSAGES: Record<ErrorMessageKey, string> = {
-  inputError: "입력하신 정보가 올바르지 않습니다.",
-  forbidden: "이 작업을 수행할 권한이 없습니다.",
-  unauthorized: "다시 로그인해주세요.",
-  serverError: "잠시 후 다시 시도해주세요.",
-  network: "인터넷 연결을 확인해주세요.",
-};
-
-// 메시지 가져오기 헬퍼 함수
-export function getAlertMessage(type: AlertType, key: AlertMessageKey): string {
+/**
+ * @deprecated 새 코드에서는 직접 메시지 객체 사용 권장
+ * @example
+ * // Before
+ * getAlertMessage("error", "serverError")
+ * // After
+ * import { ERROR_MESSAGES } from "@/lib/messages";
+ * ERROR_MESSAGES.serverError
+ */
+export function getAlertMessage(type: "success" | "error", key: AlertMessageKey): string {
   if (type === "success") {
-    return (
-      SUCCESS_MESSAGES[key as SuccessMessageKey] || SUCCESS_MESSAGES.general
-    );
+    return SUCCESS_MESSAGES[key as keyof typeof SUCCESS_MESSAGES] || SUCCESS_MESSAGES.general;
   }
-  return ERROR_MESSAGES[key as ErrorMessageKey] || ERROR_MESSAGES.serverError;
-}
-
-// HTTP 상태 코드에 따른 오류 메시지 매핑
-export function getErrorMessageByStatus(status: number): string {
-  switch (status) {
-    case 400:
-      return ERROR_MESSAGES.inputError;
-    case 401:
-      return ERROR_MESSAGES.unauthorized;
-    case 403:
-      return ERROR_MESSAGES.forbidden;
-    case 500:
-    case 502:
-    case 503:
-      return ERROR_MESSAGES.serverError;
-    default:
-      return ERROR_MESSAGES.serverError;
-  }
+  return ERROR_MESSAGES[key as keyof typeof ERROR_MESSAGES] || ERROR_MESSAGES.serverError;
 }

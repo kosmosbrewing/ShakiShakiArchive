@@ -107,10 +107,9 @@ const openCreateModal = () => {
     const max =
       activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
     const imageType = activeTab.value === "hero" ? "Hero" : "Marquee";
-    showAlert(
-      `${imageType} 이미지는 최대 ${max}개까지\n등록 가능합니다.`,
-      { type: "error" },
-    );
+    showAlert(`${imageType} 이미지는 최대 ${max}개까지\n등록 가능합니다.`, {
+      type: "error",
+    });
     return;
   }
   isEditMode.value = false;
@@ -542,7 +541,7 @@ onMounted(async () => {
                   :class="
                     isUploading
                       ? 'opacity-50 cursor-not-allowed pointer-events-none'
-                      : 'cursor-pointer hover:bg-blue-700'
+                      : 'cursor-pointer hover:bg-primary/80'
                   "
                 >
                   <LoadingSpinner

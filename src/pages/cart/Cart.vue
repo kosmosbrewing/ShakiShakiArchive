@@ -8,6 +8,7 @@ import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { CART_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
 import { formatPrice } from "@/lib/formatters";
 
 // 공통 컴포넌트
@@ -64,22 +65,20 @@ const isOutOfStock = (item: any) => {
 // 주문 페이지로 이동
 const goToOrder = async () => {
   if (cartItems.value.length === 0) {
-    showAlert("장바구니가 비어있습니다.", { type: "error" });
+    showAlert(CART_MESSAGES.empty, { type: "error" });
     return;
   }
 
   // 재고 부족 상품 확인
   if (hasOutOfStockItems.value) {
-    showAlert("재고가 부족한 상품이 있습니다.\n해당 상품을 삭제해주세요.", {
-      type: "error",
-    });
+    showAlert(CART_MESSAGES.outOfStockItems, { type: "error" });
     return;
   }
 
   // 비회원일 경우 로그인 페이지로 유도 (결제는 회원만 가능)
   if (!authStore.isAuthenticated) {
     const confirmed = await showConfirm(
-      "주문을 위해 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?",
+      ORDER_MESSAGES.requireLoginForOrder,
       { confirmText: "로그인", cancelText: "취소" }
     );
     if (confirmed) {

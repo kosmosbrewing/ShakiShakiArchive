@@ -6,6 +6,7 @@ import { ref, onMounted } from "vue";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useAlert } from "@/composables/useAlert";
+import { ACCOUNT_MESSAGES } from "@/lib/messages";
 
 // 공통 컴포넌트
 import {
@@ -72,7 +73,7 @@ const handleSaveEdit = async () => {
   if (!editingAddress.value) return;
 
   if (!shippingForm.isValid.value) {
-    showAlert("필수 항목을 모두 입력해주세요.", { type: "error" });
+    showAlert(ACCOUNT_MESSAGES.addressRequired, { type: "error" });
     return;
   }
 
@@ -94,10 +95,10 @@ const handleSaveEdit = async () => {
   isSaving.value = false;
 
   if (success) {
-    showAlert("배송지가 수정되었습니다.");
+    showAlert(ACCOUNT_MESSAGES.addressUpdateSuccess);
     closeEditModal();
   } else {
-    showAlert("배송지 수정에 실패했습니다.", { type: "error" });
+    showAlert(ACCOUNT_MESSAGES.addressUpdateFailed, { type: "error" });
   }
 };
 
