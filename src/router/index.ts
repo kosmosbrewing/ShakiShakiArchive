@@ -4,7 +4,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
-import { AUTH_MESSAGES, ADMIN_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
+import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
@@ -110,7 +110,7 @@ const routes = [
     path: "/order",
     name: "Order",
     component: Order,
-    meta: { requiresAuth: true, requiresAdmin: true, title: "주문하기" },
+    meta: { requiresAuth: true, title: "주문하기" },
   },
   {
     path: "/orderlist",
@@ -260,15 +260,7 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
 
   // 2. 관리자 권한 체크 (requiresAdmin)
   if (to.meta.requiresAdmin && !authStore.user?.isAdmin) {
-    // /order 라우트만 운영 환경에서 특별 처리 (일반 사용자에게 친절한 메시지)
-    const isProduction = import.meta.env.MODE === "production";
-
-    if (to.path === "/order" && isProduction) {
-      showAlert(ORDER_MESSAGES.servicePreparation);
-    } else {
-      showAlert(ADMIN_MESSAGES.accessDenied, { type: "error" });
-    }
-
+    showAlert(ADMIN_MESSAGES.accessDenied, { type: "error" });
     return next("/");
   }
 

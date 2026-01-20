@@ -299,13 +299,16 @@ const handlePayment = async () => {
     return;
   }
 
-  const confirmed = await showConfirm(
-    `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`,
-    {
-      confirmText: "결제하기",
-      cancelText: "취소",
-    }
-  );
+  // 테스트 모드 여부 (일반 사용자)
+  const isTestMode = !authStore.user?.isAdmin;
+  const confirmMessage = isTestMode
+    ? `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?\n\n⚠️ 실제 결제는 이루어지지 않습니다.`
+    : `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`;
+
+  const confirmed = await showConfirm(confirmMessage, {
+    confirmText: "결제하기",
+    cancelText: "취소",
+  });
   if (!confirmed) return;
 
   let orderData: CreateOrderResponse | null = null;
@@ -1346,6 +1349,16 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+    <!-- 테스트 모드 배너 (일반 사용자) -->
+    <div
+      v-if="!authStore.user?.isAdmin"
+      class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center"
+    >
+      <p class="text-amber-800 font-medium">
+        ⚠️ 테스트 페이지입니다. 실제 결제는 이루어지지 않습니다.
+      </p>
+    </div>
+
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">주문 하기</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">
