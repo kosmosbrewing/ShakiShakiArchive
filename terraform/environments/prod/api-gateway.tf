@@ -36,6 +36,14 @@ resource "aws_apigatewayv2_integration" "backend" {
 
   # 타임아웃 설정 (밀리초)
   timeout_milliseconds = 30000
+
+  # 요청 헤더 오버라이드 (프록시 환경에서 쿠키/세션 정상 동작을 위함)
+  # CloudFront → API Gateway → VPC Link 경유 시 원본 호스트 정보 전달
+  # 참고: X-Forwarded-* 헤더는 API Gateway가 자동 설정하므로 오버라이드 불가
+  # 커스텀 헤더 X-Original-Host 사용 (백엔드에서 이 헤더를 읽어 처리)
+  request_parameters = {
+    "overwrite:header.X-Original-Host" = var.frontend_domain
+  }
 }
 
 # 루트 경로 라우트 (/)

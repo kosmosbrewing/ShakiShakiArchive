@@ -71,7 +71,10 @@ const handleConfirmPasswordEnter = () => {
 };
 
 // 닉네임 필드에서 Enter 키 처리 (1자 이상일 때만 이동)
-const handleUserNameEnter = () => {
+const handleUserNameEnter = (e: KeyboardEvent) => {
+  // IME 조합 중이면 무시 (한글 입력 시 마지막 글자 중복 방지)
+  if (e.isComposing) return;
+
   if (formData.userName.trim().length >= 1) {
     // nextTick을 사용하여 현재 키 이벤트가 완전히 끝난 후 포커스 이동
     nextTick(() => {
@@ -629,7 +632,7 @@ const handleKakaoLogin = () => {
                 type="text"
                 placeholder="닉네임을 입력하세요"
                 v-model="formData.userName"
-                @keydown.enter.prevent="handleUserNameEnter"
+                @keydown.enter.prevent="handleUserNameEnter($event)"
                 class="text-caption sm:text-body"
               />
             </div>

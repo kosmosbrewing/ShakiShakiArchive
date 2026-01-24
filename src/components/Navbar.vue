@@ -200,7 +200,7 @@ onUnmounted(() => {
                 :key="route.label"
                 :to="route.path"
                 class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 pl-3"
-                @click="isOpen = false"
+                @click="closingByPopState = true; isOpen = false"
               >
                 {{ route.label }}
               </RouterLink>
@@ -245,7 +245,7 @@ onUnmounted(() => {
                 class="h-10 w-10 hover:bg-transparent"
                 title="LOGIN"
               >
-                <RouterLink to="/login" @click="isOpen = false">
+                <RouterLink to="/login" @click="closingByPopState = true; isOpen = false">
                   <img
                     :src="loginIcon"
                     alt="Login"

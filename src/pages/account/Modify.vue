@@ -42,7 +42,10 @@ const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
 
 // 닉네임 필드 Enter 키 처리 (1자 이상일 때만 이동)
-const handleUserNameEnter = () => {
+const handleUserNameEnter = (e: KeyboardEvent) => {
+  // IME 조합 중이면 무시 (한글 입력 시 마지막 글자 중복 방지)
+  if (e.isComposing) return;
+
   if (form.userName.trim().length >= 1) {
     nextTick(() => {
       phoneInputRef.value?.focusFirst();
@@ -64,7 +67,10 @@ const handlePhoneEnter = () => {
 };
 
 // 상세주소 필드 Enter 키 처리 (1자 이상일 때만 이동)
-const handleDetailAddressEnter = () => {
+const handleDetailAddressEnter = (e: KeyboardEvent) => {
+  // IME 조합 중이면 무시 (한글 입력 시 마지막 글자 중복 방지)
+  if (e.isComposing) return;
+
   if (form.detailAddress.trim().length >= 1) {
     nextTick(() => {
       currentPasswordInputRef.value?.$el?.focus();
@@ -414,7 +420,7 @@ onMounted(async () => {
               v-model="form.userName"
               type="text"
               placeholder="닉네임을 입력하세요"
-              @keydown.enter.prevent="handleUserNameEnter"
+              @keydown.enter.prevent="handleUserNameEnter($event)"
             />
           </div>
 
@@ -463,7 +469,7 @@ onMounted(async () => {
                 v-model="form.detailAddress"
                 type="text"
                 placeholder="상세 주소 입력"
-                @keydown.enter.prevent="handleDetailAddressEnter"
+                @keydown.enter.prevent="handleDetailAddressEnter($event)"
                 class="text-caption sm:text-body"
               />
             </div>

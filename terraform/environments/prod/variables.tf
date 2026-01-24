@@ -94,13 +94,23 @@ variable "service_discovery_namespace" {
 variable "cors_allowed_origins" {
   description = "CORS 허용 Origin 목록"
   type        = list(string)
-  default     = ["https://shakishaki.com", "https://www.shakishaki.com"]
+  default     = ["https://shakishakiarchive.com", "https://www.shakishakiarchive.com"]
 }
 
 variable "log_retention_days" {
   description = "CloudWatch 로그 보존 기간 (일)"
   type        = number
   default     = 30
+}
+
+# ============================================================================
+# 도메인 설정
+# ============================================================================
+
+variable "frontend_domain" {
+  description = "프론트엔드 도메인 (쿠키 및 프록시 헤더용)"
+  type        = string
+  default     = "shakishakiarchive.com"
 }
 
 # ============================================================================
