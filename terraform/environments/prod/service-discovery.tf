@@ -21,19 +21,15 @@ resource "aws_service_discovery_service" "backend" {
   name = "backend"
 
   dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.main.id
+    namespace_id   = aws_service_discovery_private_dns_namespace.main.id
+    routing_policy = "MULTIVALUE"
 
-    # SRV 레코드: 포트 정보 포함 (HTTP API v2 + VPC Link + Cloud Map ARN 연동에 필수)
     dns_records {
       ttl  = 10
       type = "SRV"
     }
-
-    # MULTIVALUE: 여러 인스턴스가 있을 때 모두 반환 (로드밸런싱)
-    routing_policy = "MULTIVALUE"
   }
 
-  # ECS가 헬스체크를 관리하므로 custom config 사용
   health_check_custom_config {
     failure_threshold = 1
   }

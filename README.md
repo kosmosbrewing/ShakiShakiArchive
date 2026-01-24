@@ -3,15 +3,20 @@
 > **빈티지 의류 쇼핑몰 MVP - 보안과 성능을 타협하지 않은 1인 개발 프로젝트**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript%25-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Private-red)](LICENSE)
 
-<p align="center">
+<p align="left">
   <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-3.x-06B6D4?logo=tailwind-css&logoColor=white" />
-  <img src="https://img.shields.io/badge/AWS-S3_+_CloudFront-FF9900?logo=amazon-aws&logoColor=white" />
+  <img src="https://img.shields.io/badge/AWS-API_Gateway_+_CloudFront-FF9900?logo=amazon-aws&logoColor=white" />
+  <img src="https://img.shields.io/badge/Terraform-IaC-7B42BC?logo=terraform&logoColor=white" />
   <img src="https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white" />
+</p>
+
+<p align="center">
+  <img src="https://res.cloudinary.com/diyuvt3qg/image/upload/v1769258073/shakishaki/products/jfqepwrgv5zyimdx3wis.jpg" />
 </p>
 
 ---
@@ -98,10 +103,86 @@ ShakiShaki Archive는 Vue 3 + TypeScript로 구축된 빈티지 의류 쇼핑몰
 | Validation    | VeeValidate + Zod        | -    | 타입 안전 폼 검증                          |
 | Build Tool    | Vite                     | 5.x  | Webpack 대비 10배 빠른 빌드                |
 | Payment       | 토스페이먼츠, 네이버페이 | SDK  | PG 연동                                    |
-| Deployment    | AWS S3 + CloudFront      | -    | 서버리스, 낮은 비용 ($12/월)               |
+| Deployment    | AWS S3 + CloudFront      | -    | 서버리스, 낮은 비용                        |
+| API Layer     | API Gateway + VPC Link   | v2   | ALB 대비 70% 비용 절감                     |
+| IaC           | Terraform                | -    | 인프라 코드화                              |
 | CI/CD         | GitHub Actions           | -    | 자동 배포 (45초)                           |
 
 **상세 기술 스택 선택 근거**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                          ShakiShaki Archive - System Architecture                   │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│    ┌──────────┐                                                                     │
+│    │  Client  │                                                                     │
+│    │ (Browser)│                                                                     │
+│    └────┬─────┘                                                                     │
+│         │ HTTPS                                                                     │
+│         ▼                                                                           │
+│    ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│    │                        CloudFront (CDN + SSL/TLS)                           │  │
+│    │    • HTTPS 종료          • 캐시 (Assets: 1년, HTML: 5분)                    │  │
+│    │    • 글로벌 엣지 로케이션  • DDoS 보호                                      │  │
+│    └────────────────────────────────┬────────────────────────────────────────────┘  │
+│                                     │                                               │
+│              ┌──────────────────────┴──────────────────────┐                        │
+│              │                                             │                        │
+│              ▼ /*                                          ▼ /api/*                 │
+│    ┌─────────────────────┐                    ┌─────────────────────────────────┐   │
+│    │      S3 Bucket      │                    │    API Gateway (HTTP API v2)    │   │
+│    │  ┌───────────────┐  │                    │  ┌───────────────────────────┐  │   │
+│    │  │ index.html    │  │                    │  │ • CORS 설정               │  │   │
+│    │  │ assets/       │  │                    │  │ • Route: ANY /{proxy+}    │  │   │
+│    │  │  ├─ *.js      │  │                    │  │ • CloudWatch 로깅         │  │   │
+│    │  │  ├─ *.css     │  │                    │  └───────────────────────────┘  │   │
+│    │  │  └─ images/   │  │                    └──────────────┬──────────────────┘   │
+│    │  └───────────────┘  │                                   │                      │
+│    └─────────────────────┘                                   ▼                      │
+│                                                 ┌─────────────────────────────────┐ │
+│    ┌─────────────────────────────────────────┐  │         VPC Link                ││
+│    │            Terraform (IaC)              │  │  • Private Subnet 연결          ││
+│    │  ┌───────────────────────────────────┐  │  │  • Security Group 적용          ││
+│    │  │ • API Gateway                     │  │  └──────────────┬──────────────────┘│
+│    │  │ • VPC Link                        │  │                 │                   │
+│    │  │ • Cloud Map                       │  │                 ▼                   │
+│    │  │ • Security Groups                 │  │  ┌─────────────────────────────────┐│
+│    │  └───────────────────────────────────┘  │  │     Cloud Map (DNS: SRV)        ││
+│    └─────────────────────────────────────────┘  │  • 동적 IP 등록/해제            ││
+│                                                 │  • MULTIVALUE 로드밸런싱        ││
+│    ┌─────────────────────────────────────────┐  └──────────────┬──────────────────┘│
+│    │         GitHub Actions (CI/CD)          │                 │                   │
+│    │  ┌───────────────────────────────────┐  │                 ▼                   │
+│    │  │ 1. npm run build:full             │  │  ┌─────────────────────────────────┐│
+│    │  │ 2. S3 Sync (Assets/HTML 분리)     │  │  │    ECS Fargate (Private)        ││
+│    │  │ 3. CloudFront 캐시 무효화         │  │  │  ┌───────────────────────────┐  ││
+│    │  │ 4. 배포 검증                      │  │  │  │ Node.js + Express         │  ││
+│    │  └───────────────────────────────────┘  │  │  │ • Helmet (CSP, HSTS)      │  ││
+│    └─────────────────────────────────────────┘  │  │ • Rate Limiting (5-tier)  │  ││
+│                                                 │  │ • Session Auth            │  ││
+│                                                 │  │ • Zod Validation          │  ││
+│                                                 │  │ • bcrypt Hashing          │  ││
+│                                                 │  └───────────────────────────┘  ││
+│                                                 └──────────────┬──────────────────┘│
+│                                                                │                   │
+│                                                                ▼                   │
+│                                                 ┌─────────────────────────────────┐│
+│                                                 │      PostgreSQL (RDS)           ││
+│                                                 │  • SSL 연결                     ││
+│                                                 │  • Drizzle ORM                  ││
+│                                                 │  • Session 저장소               ││
+│                                                 └─────────────────────────────────┘│
+│                                                                                     │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  Security: SSL/ACM, OAuth 2.0, Rate Limiting, Helmet, CORS, bcrypt, Validation      │
+│  DevOps: Terraform IaC, GitHub Actions CI/CD                                        │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -168,6 +249,13 @@ ShakiShakiArchive/
 ├── .github/workflows/      # CI/CD
 │   └── deploy.yml          # S3 + CloudFront 자동 배포
 │
+├── terraform/              # Infrastructure as Code
+│   └── environments/prod/
+│       ├── api-gateway.tf       # API Gateway + Routes
+│       ├── vpc-link.tf          # VPC Link + Security Group
+│       ├── service-discovery.tf # Cloud Map (SRV 레코드)
+│       └── variables.tf         # 변수 정의
+│
 ├── CLAUDE.md               # 프로젝트 가이드라인
 ├── .claudeignore           # AI 컨텍스트 격리
 ├── vite.config.ts
@@ -226,7 +314,7 @@ ShakiShakiArchive/
 - ✅ GitHub Actions 자동 배포 (main 브랜치 push → 45초 후 라이브)
 - ✅ TypeScript 타입 체크 (빌드 전 검증)
 - ✅ CloudFront 캐시 자동 무효화
-- ✅ Terraform IaC (향후 적용 예정)
+- ✅ Terraform IaC (API Gateway, VPC Link, Cloud Map 관리)
 
 **상세**: [docs/DEVOPS.md](docs/DEVOPS.md#cicd--배포)
 
@@ -259,53 +347,6 @@ ShakiShakiArchive/
 **성과**: 쿼리 횟수 91% 감소 (11번 → 1번), 응답 시간 87% 개선 (1.2초 → 0.15초)
 
 **전체 5가지 기술 과제**: [docs/TECHNICAL_CHALLENGES.md](docs/TECHNICAL_CHALLENGES.md)
-
----
-
-## 🗺️ 기술 로드맵
-
-### Phase 1: MVP 출시 (완료) ✅
-
-**기간**: 2025년 11월 - 2026년 1월
-
-- [x] 사용자 인증 (이메일, 소셜 로그인)
-- [x] 상품 브라우징, 장바구니, 결제
-- [x] 주문 관리 (생성, 조회, 취소)
-- [x] 관리자 페이지
-- [x] CI/CD 파이프라인 (GitHub Actions)
-- [x] AWS 배포 (S3 + CloudFront)
-
-**성과**: TypeScript 100%, OWASP Top 10 검증, Lighthouse 96점
-
-### Phase 2: 관찰성 & 모니터링 (진행 중) 🔄
-
-**기간**: 2026년 2월 - 2026년 3월 (6주)
-
-**목표**: 프로덕션 환경 안정성 확보
-
-- [ ] Sentry 도입 (프론트엔드 에러 추적)
-- [ ] Lighthouse CI 통합 (PR별 성능 검사)
-- [ ] AWS CloudWatch 알림
-
-**예상 비용 증가**: +$15/월
-
-### Phase 3: 사용자 경험 개선 (계획) 📅
-
-**기간**: 2026년 4월 - 2026년 5월 (8주)
-
-- [ ] 개인화 추천 (최근 본 상품, 연관 상품)
-- [ ] 검색 기능 강화 (Elasticsearch)
-- [ ] PWA 변환 (오프라인 지원, 푸시 알림)
-
-### Phase 4: 스케일업 & 최적화 (미래) 🚀
-
-**기간**: 2026년 6월 - 2026년 9월 (16주)
-
-- [ ] Redis 캐싱, DB Read Replica
-- [ ] Server-Side Rendering (Nuxt.js)
-- [ ] 마이크로서비스 전환
-
-**상세 로드맵 (Gantt 차트)**: [docs/DEVOPS.md](docs/DEVOPS.md#기술-로드맵)
 
 ---
 
