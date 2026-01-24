@@ -11,7 +11,8 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_origins     = var.cors_allowed_origins
     allow_methods     = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allow_headers     = ["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"]
+    allow_headers     = ["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token", "Cookie"]
+    expose_headers    = ["Set-Cookie"]
     allow_credentials = true
     max_age           = 300
   }
@@ -37,12 +38,16 @@ resource "aws_apigatewayv2_integration" "backend" {
   # 타임아웃 설정 (밀리초)
   timeout_milliseconds = 30000
 
-  # 요청 헤더 오버라이드 (프록시 환경에서 쿠키/세션 정상 동작을 위함)
-  # CloudFront → API Gateway → VPC Link 경유 시 원본 호스트 정보 전달
-  # 참고: X-Forwarded-* 헤더는 API Gateway가 자동 설정하므로 오버라이드 불가
-  # 커스텀 헤더 X-Original-Host 사용 (백엔드에서 이 헤더를 읽어 처리)
+  # 요청 헤더 전달 설정 (프록시 환경에서 쿠키/세션 정상 동작을 위함)
+  # CloudFront → API Gateway → VPC Link 경유 시 필요한 헤더 전달
+  # 참고: X-Forwarded-* 헤더와 Cookie는 AWS에서 직접 전달이 제한됨 - 커스텀 헤더 사용
   request_parameters = {
+    # 원본 호스트 정보 (쿠키 도메인 검증용)
     "overwrite:header.X-Original-Host" = var.frontend_domain
+    # HTTPS 프로토콜 정보 (req.secure 판단용, X-Forwarded-Proto 대체)
+    "overwrite:header.X-Original-Proto" = "https"
+    # Cookie 헤더를 커스텀 헤더로 전달 (백엔드에서 X-Original-Cookie를 Cookie로 복원)
+    "overwrite:header.X-Original-Cookie" = "$request.header.Cookie"
   }
 }
 

@@ -3,7 +3,7 @@
 > **빈티지 의류 쇼핑몰 MVP - 보안과 성능을 타협하지 않은 1인 개발 프로젝트**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript%25-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript25-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Private-red)](LICENSE)
 
 <p align="left">

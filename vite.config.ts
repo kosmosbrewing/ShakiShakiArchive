@@ -20,6 +20,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // 프로덕션 빌드에서 console, debugger 제거 (Best Practices 점수 향상)
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     // 프로덕션 빌드 최적화
     outDir: "dist",

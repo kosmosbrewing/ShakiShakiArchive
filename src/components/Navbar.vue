@@ -172,7 +172,9 @@ onUnmounted(() => {
       <div class="flex justify-start z-10">
         <Sheet v-model:open="isOpen">
           <SheetTrigger as-child>
-            <Menu class="cursor-pointer h-6 w-6" />
+            <button type="button" aria-label="메뉴 열기" class="p-0 bg-transparent border-0">
+              <Menu class="cursor-pointer h-6 w-6" />
+            </button>
           </SheetTrigger>
 
           <SheetContent
@@ -182,12 +184,15 @@ onUnmounted(() => {
           >
             <SheetHeader class="mb-4 text-left pl-1">
               <SheetTitle
-                class="flex items-center cursor-pointer"
+                as="button"
+                type="button"
+                class="flex items-center cursor-pointer bg-transparent border-0 p-0"
+                aria-label="홈으로 이동"
                 @click="goHome"
               >
                 <img
                   src="@/assets/optimized/logo03.webp"
-                  alt="Logo"
+                  alt="샤키샤키 아카이브"
                   class="h-7 w-auto ml-1 mt-10 object-contain"
                   draggable="false"
                 />
@@ -205,14 +210,18 @@ onUnmounted(() => {
                 {{ route.label }}
               </RouterLink>
               <button
+                type="button"
                 class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
+                aria-label="Instagram 공식 계정 (새 창에서 열림)"
                 @click="handleInstagram"
               >
                 INSTAGRAM
               </button>
 
               <button
+                type="button"
                 class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
+                aria-label="자주 묻는 질문"
                 @click="handleFAQClick"
               >
                 FAQ
@@ -226,12 +235,13 @@ onUnmounted(() => {
                 variant="ghost"
                 size="icon"
                 class="h-10 w-10 hover:bg-transparent"
+                aria-label="로그아웃"
                 @click="handleLogout"
-                title="LOGOUT"
               >
                 <img
                   :src="logoutIcon"
-                  alt="Logout"
+                  alt=""
+                  aria-hidden="true"
                   class="w-6 h-6 object-contain"
                   draggable="false"
                 />
@@ -243,12 +253,13 @@ onUnmounted(() => {
                 size="icon"
                 as-child
                 class="h-10 w-10 hover:bg-transparent"
-                title="LOGIN"
+                aria-label="로그인"
               >
                 <RouterLink to="/login" @click="closingByPopState = true; isOpen = false">
                   <img
                     :src="loginIcon"
-                    alt="Login"
+                    alt=""
+                    aria-hidden="true"
                     class="w-6 h-6 object-contain"
                     draggable="false"
                   />
@@ -259,29 +270,33 @@ onUnmounted(() => {
         </Sheet>
       </div>
 
-      <div
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer overflow-visible"
+      <button
+        type="button"
+        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer overflow-visible bg-transparent border-0 p-0"
+        aria-label="홈으로 이동"
         @click="goHome"
       >
         <img
           src="@/assets/optimized/logo01.webp"
-          alt="Logo"
+          alt="샤키샤키 아카이브"
           class="w-auto max-h-[38px] min-h-[24px] max-w-[65vw]"
           style="height: clamp(24px, 7vw, 38px)"
           draggable="false"
         />
-      </div>
+      </button>
 
       <div class="flex items-center justify-end gap-1.5 z-10">
         <Button
           variant="ghost"
           size="icon"
           class="h-5 w-5 hover:bg-transparent p-0"
+          :aria-label="isAuthenticated ? '내 계정' : '로그인'"
           @click="handleAccountClick"
         >
           <img
             :src="accountIcon"
-            alt="Account"
+            alt=""
+            aria-hidden="true"
             class="w-full h-full object-contain"
             draggable="false"
           />
@@ -291,18 +306,21 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="h-5 w-5 relative hover:bg-transparent overflow-visible p-0"
+          :aria-label="`장바구니${cartItemCount > 0 ? ` (${cartItemCount}개 상품)` : ''}`"
           @click="handleCartClick"
         >
           <div class="relative w-full h-full">
             <img
               :src="cartIcon"
-              alt="Cart"
+              alt=""
+              aria-hidden="true"
               class="w-full h-full object-contain"
               draggable="false"
             />
             <span
               v-if="cartItemCount > 0"
               class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white"
+              aria-hidden="true"
             >
               {{ cartItemCount }}
             </span>
@@ -332,28 +350,32 @@ onUnmounted(() => {
         </Button>
       </div>
 
-      <div
-        class="flex justify-center flex-shrink-0 cursor-pointer px-4"
+      <button
+        type="button"
+        class="flex justify-center flex-shrink-0 cursor-pointer px-4 bg-transparent border-0"
+        aria-label="홈으로 이동"
         @click="goHome"
       >
         <img
           src="@/assets/optimized/logo01.webp"
-          alt="Logo"
+          alt="샤키샤키 아카이브"
           class="h-10 w-auto min-w-[120px] object-contain hover:opacity-80 transition-opacity"
           draggable="false"
         />
-      </div>
+      </button>
 
       <div class="flex justify-end items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
           class="hover:bg-transparent hover:scale-110 transition-transform"
+          aria-label="Instagram 공식 계정 (새 창에서 열림)"
           @click="handleInstagram"
         >
           <img
             :src="instagramIcon"
-            alt="Instagram"
+            alt=""
+            aria-hidden="true"
             class="w-5 h-5 object-contain"
             draggable="false"
           />
@@ -363,11 +385,13 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="hover:bg-transparent hover:scale-110 transition-transform"
+          :aria-label="isAuthenticated ? '내 계정' : '로그인'"
           @click="handleAccountClick"
         >
           <img
             :src="accountIcon"
-            alt="Account"
+            alt=""
+            aria-hidden="true"
             class="w-5 h-5 object-contain"
             draggable="false"
           />
@@ -377,11 +401,13 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="hover:bg-transparent hover:scale-110 transition-transform"
+          aria-label="자주 묻는 질문"
           @click="handleFAQClick"
         >
           <img
             :src="faqIcon"
-            alt="FAQ"
+            alt=""
+            aria-hidden="true"
             class="w-5 h-5 object-contain"
             draggable="false"
           />
@@ -391,18 +417,21 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="relative hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
+          :aria-label="`장바구니${cartItemCount > 0 ? ` (${cartItemCount}개 상품)` : ''}`"
           @click="handleCartClick"
         >
           <div class="relative inline-block">
             <img
               :src="cartIcon"
-              alt="Cart"
+              alt=""
+              aria-hidden="true"
               class="w-5 h-5 object-contain"
               draggable="false"
             />
             <span
               v-if="cartItemCount > 0"
               class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+              aria-hidden="true"
             >
               {{ cartItemCount }}
             </span>
@@ -413,12 +442,14 @@ onUnmounted(() => {
           <Button
             variant="ghost"
             size="icon"
-            @click="handleLogout"
             class="hover:bg-transparent hover:scale-110 transition-transform"
+            aria-label="로그아웃"
+            @click="handleLogout"
           >
             <img
               :src="logoutIcon"
-              alt="Logout"
+              alt=""
+              aria-hidden="true"
               class="w-5 h-5 object-contain"
               draggable="false"
             />
@@ -431,11 +462,13 @@ onUnmounted(() => {
             size="icon"
             as-child
             class="hover:bg-transparent hover:scale-110 transition-transform"
+            aria-label="로그인"
           >
             <RouterLink to="/login">
               <img
                 :src="loginIcon"
-                alt="Login"
+                alt=""
+                aria-hidden="true"
                 class="w-5 h-5 object-contain"
                 draggable="false"
               />
