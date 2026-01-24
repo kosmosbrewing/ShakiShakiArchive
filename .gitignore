@@ -1,3 +1,14 @@
+# ============================================================================
+# Node.js / Frontend
+# ============================================================================
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
 # Logs
 logs
 *.log
@@ -7,32 +18,90 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Local env files
 *.local
+.env
+.env.local
+.env.production
+.env.production.example
 
-# Editor directories and files
+# ============================================================================
+# Terraform
+# ============================================================================
+
+# State files (민감 정보 포함)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Terraform 디렉토리
+**/.terraform/
+.terraform.lock.hcl
+
+# 민감한 변수 파일
+terraform.tfvars*
+terraform/*.tfvars*
+terraform/**/*.tfvars*
+!*.tfvars.example
+!*.tfvars*.example
+
+# Plan 파일
+*.tfplan
+*.plan
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# ALB 백업 (민감 정보 포함 가능)
+alb-backup-*/
+
+# ============================================================================
+# IDE / Editor
+# ============================================================================
+
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.env
-.env.production
-.env.production.example
-.env.local
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# OS
+# ============================================================================
+
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+# Project specific
+# ============================================================================
+
+# Scripts
 dev.sh
 deploy-s3.sh
+
+# Claude
 .claudeignore
 CLAUDE copy.md
-Portfolio.vue
+
+# Docs (임시)
 CLOUDFRONT_SETUP.md
+TERRA_SETUP_GUIDE.md
+
+# Performance reports
 .lighthouseci
 lighthouse*.json
 performance-*.md
 performance-comparison.md
+
+# Temp files
+*.tmp
+*.bak
+Portfolio.vue
