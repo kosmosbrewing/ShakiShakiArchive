@@ -6,6 +6,7 @@ import { ref, onMounted, computed, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useAlert } from "@/composables/useAlert";
+import { INQUIRY_MESSAGES } from "@/lib/messages";
 import { createInquiry, fetchProduct } from "@/lib/api";
 import type { InquiryType, Product } from "@/types/api";
 
@@ -109,7 +110,7 @@ const isFormValid = computed(() => {
 // 등록하기 버튼 클릭 (확인 다이얼로그 표시)
 const handleSubmitClick = () => {
   if (!isFormValid.value) {
-    showAlert("제목과 내용을 입력해주세요.", { type: "error" });
+    showAlert(INQUIRY_MESSAGES.titleAndContentRequired, { type: "error" });
     return;
   }
 
@@ -129,11 +130,11 @@ const handleSubmit = async () => {
       isPrivate: formData.value.isPrivate,
     });
 
-    showAlert("문의가 등록되었습니다.");
+    showAlert(INQUIRY_MESSAGES.createSuccess);
     router.push("/inquiry");
   } catch (error: any) {
     console.error("문의 등록 실패:", error);
-    showAlert(error.message || "문의 등록에 실패했습니다.", { type: "error" });
+    showAlert(error.message || INQUIRY_MESSAGES.createFailed, { type: "error" });
   } finally {
     loading.value = false;
   }

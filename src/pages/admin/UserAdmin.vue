@@ -6,6 +6,7 @@ import { useRouter } from "vue-router";
 // 스토어 및 유틸리티
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 
 // API
 import { fetchAdminUsers, fetchAdminUserDetail } from "@/lib/api";
@@ -93,7 +94,7 @@ const loadData = async () => {
     pagination.value = response.pagination;
   } catch (error: any) {
     console.error("회원 목록 로드 실패:", error);
-    showAlert(error.message || "회원 목록을 불러오는데 실패했습니다.", {
+    showAlert(error.message || ADMIN_MESSAGES.userListLoadFailed, {
       type: "error",
     });
   } finally {
@@ -116,7 +117,7 @@ const openDetailModal = async (user: User) => {
     userStats.value = response.stats;
   } catch (error: any) {
     console.error("회원 상세 정보 로드 실패:", error);
-    showAlert(error.message || "회원 상세 정보를 불러오는데 실패했습니다.", {
+    showAlert(error.message || ADMIN_MESSAGES.userDetailLoadFailed, {
       type: "error",
     });
   } finally {

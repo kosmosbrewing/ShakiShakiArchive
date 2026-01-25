@@ -50,6 +50,21 @@ export const ERROR_MESSAGES = {
 
   // 일반
   unknown: "알 수 없는 오류가 발생했습니다.",
+  processingError: "처리 중 오류가 발생했습니다.",
+
+  // 접근 권한
+  accessDenied: "접근 권한이 없습니다.",
+  loginRequired: "로그인이 필요합니다.",
+  invalidAccess: "잘못된 접근입니다.",
+} as const;
+
+/**
+ * 유효성 검사 메시지 (공통)
+ */
+export const VALIDATION_MESSAGES = {
+  // 필수 입력
+  requiredField: "필수 항목을 모두 입력해주세요.",
+  requiredFieldWithAsterisk: "필수 항목(*)을 모두 입력해주세요.",
 } as const;
 
 /**
@@ -64,4 +79,5 @@ export const CONFIRM_MESSAGES = {
 // 타입 추출
 export type SuccessMessageKey = keyof typeof SUCCESS_MESSAGES;
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;
+export type ValidationMessageKey = keyof typeof VALIDATION_MESSAGES;
 export type ConfirmMessageKey = keyof typeof CONFIRM_MESSAGES;

@@ -10,6 +10,7 @@ import {
   uploadProductImages,
   uploadProductDetailImages,
 } from "@/lib/api";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 import type { UploadedImage } from "@/types/api";
 
 interface Props {
@@ -53,12 +54,12 @@ const handleFileSelect = async (event: Event) => {
 
   // 파일 수 검증
   if (props.type === "single" && files.length > 1) {
-    errorMessage.value = "하나의 이미지만 선택해주세요.";
+    errorMessage.value = ADMIN_MESSAGES.singleFileOnly;
     return;
   }
 
   if (files.length > props.maxFiles) {
-    errorMessage.value = `최대 ${props.maxFiles}개까지만 업로드 가능합니다.`;
+    errorMessage.value = ADMIN_MESSAGES.maxFilesExceeded.replace("{max}", String(props.maxFiles));
     return;
   }
 
@@ -66,7 +67,7 @@ const handleFileSelect = async (event: Event) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   const invalidFile = files.find((f) => !allowedTypes.includes(f.type));
   if (invalidFile) {
-    errorMessage.value = "JPEG, PNG, GIF, WebP 형식만 지원됩니다.";
+    errorMessage.value = ADMIN_MESSAGES.supportedImageFormats;
     return;
   }
 
@@ -74,7 +75,7 @@ const handleFileSelect = async (event: Event) => {
   const maxSize = 10 * 1024 * 1024;
   const oversizedFile = files.find((f) => f.size > maxSize);
   if (oversizedFile) {
-    errorMessage.value = "파일 크기는 10MB 이하여야 합니다.";
+    errorMessage.value = ADMIN_MESSAGES.fileSizeLimit;
     return;
   }
 
@@ -103,7 +104,7 @@ const handleFileSelect = async (event: Event) => {
       emit("update:modelValue", newUrls);
     }
   } catch (error: any) {
-    errorMessage.value = error.message || "업로드에 실패했습니다.";
+    errorMessage.value = error.message || ADMIN_MESSAGES.imageUploadFailed;
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;

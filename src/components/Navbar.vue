@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCategoryStore } from "@/stores/category";
 import { useCartStore } from "@/stores/cart";
 import { useAlert } from "@/composables/useAlert";
+import { AUTH_MESSAGES } from "@/lib/messages";
 import { useColorMode } from "@vueuse/core";
 import { storeToRefs } from "pinia";
 
@@ -94,7 +95,7 @@ watch(cartSheetOpen, (isOpen) => {
 });
 
 const handleLogout = async () => {
-  const confirmed = await showConfirm("로그아웃 하시겠습니까?", {
+  const confirmed = await showConfirm(AUTH_MESSAGES.logoutConfirm, {
     confirmText: "로그아웃",
     cancelText: "취소",
   });
@@ -102,7 +103,7 @@ const handleLogout = async () => {
   if (!confirmed) return;
 
   isOpen.value = false;
-  showAlert("로그아웃되었습니다.");
+  showAlert(AUTH_MESSAGES.logoutSuccess);
   await authStore.handleLogout({ reload: false });
   router.push("/");
 };

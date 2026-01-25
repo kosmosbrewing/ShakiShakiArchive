@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/formatters";
 import { confirmPayment, StockShortageError } from "@/lib/api";
 import { LoadingSpinner } from "@/components/common";
 import type { StockShortageItem } from "@/types/api";
+import { ORDER_MESSAGES, CART_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
 const router = useRouter();
 const route = useRoute();
@@ -159,12 +160,12 @@ onMounted(async () => {
     // 재고 부족 에러 처리 (code=INSUFFICIENT_STOCK)
     if (errorCode === "INSUFFICIENT_STOCK") {
       status.value = "stock_shortage";
-      errorMessage.value = message || "재고가 부족합니다.";
+      errorMessage.value = message || CART_MESSAGES.insufficientStock;
     } else {
       status.value = "error";
       // 에러 메시지 정제 (cleanErrorMessage 함수 재사용)
       errorMessage.value = cleanErrorMessage(
-        message || "결제가 취소되었습니다.",
+        message || ORDER_MESSAGES.paymentCancelled,
       );
     }
 
@@ -318,7 +319,7 @@ onMounted(async () => {
         }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
         return;
       } else {
-        throw new Error("결제 승인에 실패했습니다.");
+        throw new Error(ORDER_MESSAGES.paymentApprovalFailed);
       }
     } catch (err: any) {
       // 결제 승인 실패 시 플래그 제거
@@ -338,7 +339,7 @@ onMounted(async () => {
         status.value = "error";
         // 백엔드 메시지를 정제하여 사용자 친화적으로 표시
         const rawMessage =
-          err.message || "결제 승인 처리 중 오류가 발생했습니다.";
+          err.message || ORDER_MESSAGES.paymentError;
         errorMessage.value = cleanErrorMessage(rawMessage);
         console.log("[PaymentCallback] 원본 에러 메시지:", rawMessage);
         console.log(
@@ -420,7 +421,7 @@ onMounted(async () => {
     // 결제 취소
     console.log("[PaymentCallback] 결제 취소, orderId:", orderId);
     status.value = "cancelled";
-    errorMessage.value = "결제가 취소되었습니다.";
+    errorMessage.value = ORDER_MESSAGES.paymentCancelled;
 
     // 팝업 창인 경우: localStorage로 부모 창에 취소 전달 후 닫기
     if (isPopup.value) {
@@ -445,7 +446,7 @@ onMounted(async () => {
     console.warn("[PaymentCallback] 예상하지 못한 접근:", route.query);
     console.log("[PaymentCallback] orderId:", orderId);
     status.value = "error";
-    errorMessage.value = "잘못된 접근입니다.";
+    errorMessage.value = ERROR_MESSAGES.invalidAccess;
 
     // 팝업 창인 경우: 에러 전달 후 닫기
     if (isPopup.value) {
@@ -491,68 +492,66 @@ function getPaymentProviderLabel(provider: string): string {
 function getErrorMessage(errorCode: string): string {
   switch (errorCode) {
     case "user_cancel":
-      return "결제가 취소되었습니다.";
+      return ORDER_MESSAGES.paymentCancelled;
     case "payment_failed":
-      return "결제 처리에 실패했습니다.";
+      return ORDER_MESSAGES.paymentFailed;
     case "invalid_amount":
-      return "결제 금액이 일치하지 않습니다.";
+      return ORDER_MESSAGES.invalidPaymentInfo;
     case "timeout":
-      return "결제 시간이 초과되었습니다.";
+      return ORDER_MESSAGES.paymentTimeout;
     default:
-      return "결제 중 오류가 발생했습니다.";
+      return ORDER_MESSAGES.paymentError;
   }
 }
 
 // 에러 메시지 정제 함수 (토스페이먼츠 및 기타 PG사용)
 function cleanErrorMessage(message: string): string {
-  if (!message) return "결제 처리 중 오류가 발생했습니다.";
+  if (!message) return ORDER_MESSAGES.paymentError;
 
   let cleanMessage = message;
 
   // 특정 패턴 감지 및 메시지 정제
   if (cleanMessage.includes("잔고") || cleanMessage.includes("잔액")) {
-    cleanMessage = "계좌 잔액이 부족합니다.\n잔액을 확인해주세요.";
+    cleanMessage = ORDER_MESSAGES.insufficientBalance;
   } else if (cleanMessage.includes("한도")) {
-    cleanMessage = "카드 한도가 부족합니다.\n다른 결제 수단을 이용해주세요.";
+    cleanMessage = ORDER_MESSAGES.cardLimitExceeded;
   } else if (cleanMessage.includes("본인") && cleanMessage.includes("인증")) {
-    cleanMessage = "본인 인증에 실패했습니다.\n카드 정보를 확인해주세요.";
+    cleanMessage = ORDER_MESSAGES.authenticationFailed;
   } else if (
     cleanMessage.includes("비밀번호") ||
     cleanMessage.includes("인증")
   ) {
-    cleanMessage = "인증에 실패했습니다.\n다시 시도해주세요.";
+    cleanMessage = ORDER_MESSAGES.verificationFailed;
   } else if (cleanMessage.includes("시간") || cleanMessage.includes("만료")) {
-    cleanMessage = "결제 시간이 만료되었습니다.\n다시 시도해주세요.";
+    cleanMessage = ORDER_MESSAGES.paymentExpired;
   } else if (cleanMessage.includes("점검")) {
     if (cleanMessage.includes("은행")) {
-      cleanMessage = "은행 시스템 점검 중입니다.\n잠시 후 다시 시도해주세요.";
+      cleanMessage = ORDER_MESSAGES.bankMaintenance;
     } else if (
       cleanMessage.includes("원천사") ||
       cleanMessage.includes("시스템")
     ) {
-      cleanMessage =
-        "결제 시스템 점검 중입니다.\n다른 결제 수단을 이용해주세요.";
+      cleanMessage = ORDER_MESSAGES.systemMaintenance;
     } else {
-      cleanMessage = "서비스 점검 중입니다.\n잠시 후 다시 시도해주세요.";
+      cleanMessage = ORDER_MESSAGES.serviceMaintenance;
     }
   } else if (
     cleanMessage.includes("이미") &&
     (cleanMessage.includes("진행") || cleanMessage.includes("완료"))
   ) {
-    cleanMessage = "이미 처리된 결제입니다.\n주문 내역을 확인해주세요.";
+    cleanMessage = ORDER_MESSAGES.alreadyProcessed;
   } else if (cleanMessage.includes("취소된 주문")) {
-    cleanMessage = "취소된 주문입니다.\n새로운 주문을 생성해주세요.";
+    cleanMessage = ORDER_MESSAGES.cancelledOrder;
   } else if (
     cleanMessage.includes("네트워크") ||
     cleanMessage.includes("연결")
   ) {
-    cleanMessage =
-      "네트워크 연결이 불안정합니다.\n인터넷 연결 확인 후 다시 시도해주세요.";
+    cleanMessage = ORDER_MESSAGES.networkUnstable;
   } else if (cleanMessage.includes("카드") && cleanMessage.includes("사용")) {
-    cleanMessage = "사용할 수 없는 카드입니다.\n다른 카드로 결제해주세요.";
+    cleanMessage = ORDER_MESSAGES.cardUnavailable;
   } else if (cleanMessage.length > 50) {
     // 50자 이상의 긴 메시지는 간단하게 정리
-    cleanMessage = "결제 처리 중 오류가 발생했습니다.\n다시 시도해주세요.";
+    cleanMessage = ORDER_MESSAGES.paymentErrorRetry;
   }
 
   return cleanMessage;

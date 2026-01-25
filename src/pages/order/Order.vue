@@ -51,6 +51,7 @@ import {
   isValidQuantity,
   validateOrderAmount,
 } from "@/lib/validators";
+import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
 // [이미지 Import] - WebP 최적화 (95.3% 용량 감소)
 import tossLogo from "@/assets/optimized/tossSymbol.webp";
@@ -225,19 +226,19 @@ const showValidationError = (
 const handlePayment = async () => {
   // 1. 주문 상품 유효성 검사
   if (orderItems.value.length === 0) {
-    showValidationError("주문할 상품이 없습니다.");
+    showValidationError(ORDER_MESSAGES.noOrderItems);
     return;
   }
 
   // 2. 주문 상품 데이터 무결성 검사 (가격, 수량)
   for (const item of orderItems.value) {
     if (!isValidPrice(item.product.price)) {
-      showValidationError("상품 가격 정보가 올바르지 않습니다.");
+      showValidationError(ORDER_MESSAGES.invalidPrice);
       console.error("Invalid price:", item.product.price);
       return;
     }
     if (!isValidQuantity(item.quantity)) {
-      showValidationError("상품 수량이 올바르지 않습니다.");
+      showValidationError(ORDER_MESSAGES.invalidQuantity);
       console.error("Invalid quantity:", item.quantity);
       return;
     }
@@ -255,47 +256,45 @@ const handlePayment = async () => {
       orderShippingFee.value
     )
   ) {
-    showValidationError(
-      "주문 금액 계산에 오류가 있습니다. 새로고침 후 다시 시도해주세요."
-    );
+    showValidationError(ORDER_MESSAGES.amountMismatch);
     console.error("Order amount mismatch");
     return;
   }
 
   // 4. 배송지 필수 항목 유효성 검사
   if (!isNonEmptyString(shippingForm.form.recipient)) {
-    showValidationError("수령인을 입력해주세요.", "recipient");
+    showValidationError(ORDER_MESSAGES.recipientRequired, "recipient");
     return;
   }
 
   // 5. 연락처 유효성 검사
   const fullPhone = shippingForm.fullPhone.value;
   if (!isValidPhone(fullPhone)) {
-    showValidationError("올바른 연락처를 입력해주세요.", "phone");
+    showValidationError(ORDER_MESSAGES.phoneInvalid, "phone");
     return;
   }
 
   // 6. 우편번호 유효성 검사
   if (!isValidZipCode(shippingForm.form.zipCode)) {
-    showValidationError("주소를 검색해주세요.", "address");
+    showValidationError(ORDER_MESSAGES.addressRequired, "address");
     return;
   }
 
   // 7. 주소 유효성 검사
   if (!isNonEmptyString(shippingForm.form.address)) {
-    showValidationError("주소를 검색해주세요.", "address");
+    showValidationError(ORDER_MESSAGES.addressRequired, "address");
     return;
   }
 
   // 8. 상세 주소 유효성 검사
   if (!isNonEmptyString(shippingForm.form.detailAddress)) {
-    showValidationError("상세 주소를 입력해주세요.", "detailAddress");
+    showValidationError(ORDER_MESSAGES.detailAddressRequired, "detailAddress");
     return;
   }
 
   // 9. 결제 수단 선택 유효성 검사
   if (!paymentProvider.value) {
-    showValidationError("결제 수단을 선택해주세요.");
+    showValidationError(ORDER_MESSAGES.paymentMethodRequired);
     return;
   }
 
@@ -335,7 +334,7 @@ const handlePayment = async () => {
 
     if (!orderData) {
       console.error("[결제 프로세스] 주문 생성 실패");
-      throw new Error("주문 생성에 실패했습니다. 재고 부족일 수 있습니다.");
+      throw new Error(ORDER_MESSAGES.orderCreateFailed);
     }
 
     console.log(
@@ -356,11 +355,11 @@ const handlePayment = async () => {
       await processNaverPayment(orderData);
     }
   } catch (error: unknown) {
-    const errorMessage =
+    const errorMsg =
       error instanceof Error
         ? error.message
-        : "알 수 없는 오류가 발생했습니다.";
-    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMessage}`, {
+        : ERROR_MESSAGES.unknown;
+    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMsg}`, {
       type: "error",
     });
 
@@ -424,7 +423,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       window as unknown as { TossPayments?: TossPaymentsSDK }
     ).TossPayments;
     if (!TossPayments) {
-      throw new Error("토스페이먼츠 SDK가 로드되지 않았습니다.");
+      throw new Error(ORDER_MESSAGES.tossSdkNotLoaded);
     }
 
     const tossPayments = TossPayments(clientKey);
@@ -445,7 +444,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       console.log("[토스페이] 주문 상태 변경: paying");
     } catch (statusErr) {
       console.error("[토스페이] 상태 업데이트 실패:", statusErr);
-      throw new Error("결제 준비 중 오류가 발생했습니다.");
+      throw new Error(ORDER_MESSAGES.paymentPrepareError);
     }
 
     // 7. 결제 요청 (모바일: 리다이렉트, PC: iframe 모달)
@@ -536,7 +535,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
         }
       }
 
-      showAlert("결제가 취소되었습니다.");
+      showAlert(ORDER_MESSAGES.paymentCancelled);
     } else {
       // iframe이 닫힌 경우는 정상 결제 진행일 수 있으므로 에러 메시지 표시하지 않음
       console.log(
@@ -617,7 +616,7 @@ const startTossPaymentMonitoring = () => {
         });
         currentOrderId.value = null;
         resetReservation();
-        showAlert("결제가 취소되었습니다.");
+        showAlert(ORDER_MESSAGES.paymentCancelled);
       } catch (err) {
         console.error("[토스페이 폴링] 취소 처리 실패:", err);
       } finally {
@@ -649,7 +648,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     );
 
     if (!naverPay) {
-      throw new Error("네이버페이 SDK가 로드되지 않았습니다.");
+      throw new Error(ORDER_MESSAGES.naverpaySdkNotLoaded);
     }
 
     // 4. 주문명 (useOrderItems에서 제공, 128자 이내)
@@ -683,7 +682,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       console.log("[네이버페이] 주문 상태 변경: paying");
     } catch (statusErr) {
       console.error("[네이버페이] 상태 업데이트 실패:", statusErr);
-      throw new Error("결제 준비 중 오류가 발생했습니다.");
+      throw new Error(ORDER_MESSAGES.paymentPrepareError);
     }
 
     // 10. PC 팝업 방식: localStorage로 팝업 여부 표시 (PaymentCallback에서 확인)
@@ -765,7 +764,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
         // 팝업 상태 종료 및 Alert
         isPaymentPopupOpen.value = false;
         isPaymentProcessing.value = false;
-        showAlert("결제가 취소되었습니다.");
+        showAlert(ORDER_MESSAGES.paymentCancelled);
 
         // localStorage 정리
         localStorage.removeItem("naverpay_popup");
@@ -875,7 +874,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
               );
             }
 
-            showAlert(message || "결제 처리 중 오류가 발생했습니다.", {
+            showAlert(message || ORDER_MESSAGES.paymentError, {
               type: "error",
             });
           } else if (type === "PAYMENT_CANCEL") {
@@ -903,14 +902,14 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
               );
             }
 
-            showAlert("결제가 취소되었습니다.");
+            showAlert(ORDER_MESSAGES.paymentCancelled);
           } else if (type === "STOCK_SHORTAGE") {
             // 재고 부족: 백엔드에서 이미 처리됨 (환불 완료)
             isPaymentPopupOpen.value = false;
             currentOrderId.value = null;
             resetReservation();
 
-            showAlert(message || "재고가 부족하여 결제가 취소되었습니다.\n결제 금액은 자동으로 환불됩니다.", {
+            showAlert(message || ORDER_MESSAGES.stockShortageRefund, {
               type: "error",
             });
           }
@@ -1043,11 +1042,11 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // resetReservation()은 취소 성공 시에만 호출 (위에서 처리)
     // 백엔드 /cancel API 또는 Cron이 재고 복구 처리
 
-    const errorMessage =
+    const errorMsg =
       err instanceof Error
         ? err.message
-        : "네이버페이 결제 호출에 실패했습니다.";
-    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMessage}`, {
+        : ORDER_MESSAGES.paymentError;
+    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMsg}`, {
       type: "error",
     });
 
@@ -1204,9 +1203,7 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
 
         // 상태 초기화 (버튼 재활성화)
         isPaymentProcessing.value = false;
-        showAlert(
-          "결제창이 닫혔습니다.\n결제가 완료되지 않은 경우 주문이 자동으로 취소됩니다."
-        );
+        showAlert(ORDER_MESSAGES.paymentWindowClosed);
       }
     }, 20000); // 20초 대기 (결제 승인 완료 대기 - 토스페이먼츠 충돌 방지)
   }

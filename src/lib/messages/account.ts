@@ -24,6 +24,24 @@ export const ACCOUNT_MESSAGES = {
   withdrawSuccess: "회원 탈퇴가 완료되었습니다.",
   withdrawFailed: "회원 탈퇴에 실패했습니다.",
   withdrawConfirm: "정말 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.",
+
+  // 비밀번호 변경
+  passwordChangeSuccess: "비밀번호가 변경되었습니다.",
+  passwordChangeFailed: "비밀번호 변경에 실패했습니다.",
+  currentPasswordRequired: "현재 비밀번호를 입력해주세요.",
+  newPasswordRequired: "새 비밀번호를 입력해주세요.",
+
+  // 유효성 검사
+  userNameRequired: "닉네임을 입력해주세요.",
+  currentPasswordRequiredForUpdate: "정보를 수정하려면 현재 비밀번호를 입력해주세요.",
+  newPasswordConfirmRequired: "새 비밀번호 확인을 입력해주세요.",
+  newPasswordMismatch: "새 비밀번호가 일치하지 않습니다.",
+  sameAsCurrentPassword: "현재 비밀번호와 다른 비밀번호를 입력해주세요.",
+  incorrectPassword: "비밀번호가 올바르지 않습니다.",
+  incorrectCurrentPassword: "현재 비밀번호가 올바르지 않습니다.",
+
+  // 기타 에러
+  updateError: "오류 발생: {message}",
 } as const;
 
 // 타입 추출

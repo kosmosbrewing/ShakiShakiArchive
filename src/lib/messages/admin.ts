@@ -47,9 +47,40 @@ export const ADMIN_MESSAGES = {
   accessDenied: "접근 권한이 없습니다. (관리자 전용)",
   adminOnly: "관리자만 접근할 수 있습니다.",
 
+  // 회원 관리
+  userListLoadFailed: "회원 목록을 불러오는데 실패했습니다.",
+  userDetailLoadFailed: "회원 상세 정보를 불러오는데 실패했습니다.",
+
   // 확인
   deleteConfirm: "정말 삭제하시겠습니까?",
   cannotUndo: "이 작업은 되돌릴 수 없습니다.",
+
+  // 주문 관리 상세
+  orderStatusSaveSuccess: "상태가 저장되었습니다.",
+  shippingInfoSaveSuccess: "배송 정보가 저장되었습니다.",
+  saveFailed: "저장 실패: {message}",
+
+  // 사이트 이미지 관리
+  siteImageUpdateSuccess: "이미지가 수정되었습니다.",
+  siteImageCreateSuccess: "이미지가 추가되었습니다.",
+
+  // 비밀번호 확인
+  passwordVerifyFailed: "비밀번호 확인에 실패했습니다.",
+
+  // 파일 업로드 관련
+  singleFileOnly: "하나의 이미지만 선택해주세요.",
+  supportedImageFormats: "JPEG, PNG, GIF, WebP 형식만 지원됩니다.",
+  fileSizeLimit: "파일 크기는 10MB 이하여야 합니다.",
+  imageRequired: "이미지를 업로드해주세요.",
+  maxFilesExceeded: "최대 {max}개까지만 업로드 가능합니다.",
+  imageTypeLimitExceeded: "{type} 이미지는 최대 {max}개까지 등록 가능합니다.",
+
+  // 카테고리 관련
+  categoryIdAndNameRequired: "이름과 Category ID는 필수 입력 항목입니다.",
+
+  // 상품 관련
+  requiredFieldsMissing: "필수 항목(*)을 모두 입력해주세요.",
+  sizeAndSkuRequired: "사이즈와 SKU는 필수입니다.",
 } as const;
 
 // 타입 추출

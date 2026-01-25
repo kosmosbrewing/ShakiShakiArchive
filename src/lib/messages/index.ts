@@ -21,9 +21,11 @@ export {
 export {
   SUCCESS_MESSAGES,
   ERROR_MESSAGES,
+  VALIDATION_MESSAGES,
   CONFIRM_MESSAGES,
   type SuccessMessageKey,
   type ErrorMessageKey,
+  type ValidationMessageKey,
   type ConfirmMessageKey,
 } from "./common";
 

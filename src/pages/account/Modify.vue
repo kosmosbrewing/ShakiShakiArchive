@@ -9,6 +9,7 @@ import { useAlert } from "@/composables/useAlert";
 import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 import { getPasswordErrorMessage, getPasswordStrength } from "@/utils/password-validation";
+import { ACCOUNT_MESSAGES } from "@/lib/messages";
 
 // 공통 컴포넌트
 import { PhoneInput, AddressSearchModal } from "@/components/common";
@@ -209,12 +210,12 @@ const showValidationError = (message: string, focusRef?: any) => {
 // 프로필 업데이트
 const handleUpdateProfile = async () => {
   if (!form.userName.trim()) {
-    showValidationError("닉네임을 입력해주세요.", userNameInputRef);
+    showValidationError(ACCOUNT_MESSAGES.userNameRequired, userNameInputRef);
     return;
   }
   if (!form.currentPassword) {
     showValidationError(
-      "정보를 수정하려면 현재 비밀번호를 입력해주세요.",
+      ACCOUNT_MESSAGES.currentPasswordRequiredForUpdate,
       currentPasswordInputRef
     );
     return;
@@ -244,13 +245,13 @@ const handleUpdateProfile = async () => {
 
     // Account 페이지로 이동 후 성공 Alert 표시
     await router.push("/account");
-    showAlert("회원 정보가 수정되었습니다.", { type: "success" });
+    showAlert(ACCOUNT_MESSAGES.profileUpdateSuccess, { type: "success" });
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : "정보 수정 실패";
+    const errMsg = error instanceof Error ? error.message : ACCOUNT_MESSAGES.profileUpdateFailed;
     if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
-      showAlert("비밀번호가 올바르지 않습니다.", { type: "error" });
+      showAlert(ACCOUNT_MESSAGES.incorrectPassword, { type: "error" });
     } else {
-      showAlert("오류 발생: " + errMsg, { type: "error" });
+      showAlert(ACCOUNT_MESSAGES.updateError.replace("{message}", errMsg), { type: "error" });
     }
   } finally {
     isLoading.value = false;
@@ -261,13 +262,13 @@ const handleUpdateProfile = async () => {
 const handleChangePassword = async () => {
   if (!passwordForm.currentPassword) {
     showValidationError(
-      "현재 비밀번호를 입력해주세요.",
+      ACCOUNT_MESSAGES.currentPasswordRequired,
       pwCurrentPasswordInputRef
     );
     return;
   }
   if (!passwordForm.newPassword) {
-    showValidationError("새 비밀번호를 입력해주세요.", newPasswordInputRef);
+    showValidationError(ACCOUNT_MESSAGES.newPasswordRequired, newPasswordInputRef);
     return;
   }
   const passwordError = getPasswordErrorMessage(passwordForm.newPassword);
@@ -277,21 +278,21 @@ const handleChangePassword = async () => {
   }
   if (!passwordForm.confirmNewPassword) {
     showValidationError(
-      "새 비밀번호 확인을 입력해주세요.",
+      ACCOUNT_MESSAGES.newPasswordConfirmRequired,
       confirmNewPasswordInputRef
     );
     return;
   }
   if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
     showValidationError(
-      "새 비밀번호가 일치하지 않습니다.",
+      ACCOUNT_MESSAGES.newPasswordMismatch,
       confirmNewPasswordInputRef
     );
     return;
   }
   if (passwordForm.currentPassword === passwordForm.newPassword) {
     showValidationError(
-      "현재 비밀번호와 다른 비밀번호를 입력해주세요.",
+      ACCOUNT_MESSAGES.sameAsCurrentPassword,
       newPasswordInputRef
     );
     return;
@@ -307,14 +308,14 @@ const handleChangePassword = async () => {
 
     // Account 페이지로 이동 후 성공 Alert 표시
     await router.push("/account");
-    showAlert("비밀번호가 변경되었습니다.", { type: "success" });
+    showAlert(ACCOUNT_MESSAGES.passwordChangeSuccess, { type: "success" });
   } catch (error: unknown) {
     const errMsg =
-      error instanceof Error ? error.message : "비밀번호 변경 실패";
+      error instanceof Error ? error.message : ACCOUNT_MESSAGES.passwordChangeFailed;
     if (errMsg.includes("401") || errMsg.includes("비밀번호")) {
-      showAlert("현재 비밀번호가 올바르지 않습니다.", { type: "error" });
+      showAlert(ACCOUNT_MESSAGES.incorrectCurrentPassword, { type: "error" });
     } else {
-      showAlert("오류 발생: " + errMsg, { type: "error" });
+      showAlert(ACCOUNT_MESSAGES.updateError.replace("{message}", errMsg), { type: "error" });
     }
   } finally {
     isPasswordLoading.value = false;
@@ -362,7 +363,7 @@ const handleWithdraw = async () => {
 
     // 로그아웃 처리 후 성공 Alert 표시
     await authStore.handleLogout();
-    showAlert("탈퇴되었습니다.", { type: "success" });
+    showAlert(ACCOUNT_MESSAGES.withdrawSuccess, { type: "success" });
   } catch (e: unknown) {
     const errMsg = e instanceof Error ? e.message : "탈퇴 실패";
     showAlert(errMsg, { type: "error" });

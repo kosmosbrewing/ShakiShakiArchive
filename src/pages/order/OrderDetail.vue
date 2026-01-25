@@ -6,6 +6,7 @@ import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
+import { ORDER_MESSAGES } from "@/lib/messages";
 
 // 공통 컴포넌트
 import {
@@ -94,12 +95,12 @@ const handleConfirmCancel = async (reason: string) => {
     order.value = result.order;
 
     // 취소 완료 알림 (먼저 표시)
-    showAlert("주문이 취소되었습니다.");
+    showAlert(ORDER_MESSAGES.cancelSuccess);
 
     // 다이얼로그 닫기 (Alert와 자연스럽게 전환)
     closeCancelDialog();
   } else {
-    showAlert("주문 취소에 실패했습니다. 다시 시도해주세요.", {
+    showAlert(ORDER_MESSAGES.cancelFailedRetry, {
       type: "error",
     });
   }
@@ -108,7 +109,7 @@ const handleConfirmCancel = async (reason: string) => {
 // 배송 조회 핸들러
 const handleTrackShipment = (item: OrderItem) => {
   if (!item.trackingNumber) {
-    showAlert("아직 운송장 번호가 등록되지 않았습니다.", { type: "error" });
+    showAlert(ORDER_MESSAGES.trackingNumberNotReady, { type: "error" });
     return;
   }
   // 스마트택배 등 통합 조회 링크 권장

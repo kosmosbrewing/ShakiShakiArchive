@@ -246,6 +246,73 @@ ShakiShakiArchive/
 
 ---
 
+## 💬 메시지 관리 시스템
+
+사용자에게 표시되는 모든 알림, 에러 메시지는 `src/lib/messages/`에서 중앙 집중 관리됩니다.
+
+### 파일 구조
+
+```
+src/lib/messages/
+├── index.ts        # 모든 메시지 re-export
+├── auth.ts         # 인증 관련 (로그인, 회원가입, 비밀번호 등)
+├── account.ts      # 계정 관리 (프로필 수정, 회원 탈퇴 등)
+├── order.ts        # 주문 관련 (주문 취소, 배송 추적 등)
+├── cart.ts         # 장바구니 관련
+├── inquiry.ts      # 문의 관련
+├── product.ts      # 상품 관련
+├── admin.ts        # 관리자 기능 관련
+└── common.ts       # 공통 메시지
+```
+
+### 사용 방법
+
+```typescript
+// 1. 필요한 메시지 상수 import
+import { AUTH_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
+
+// 2. 컴포넌트에서 사용
+showAlert(AUTH_MESSAGES.loginSuccess);
+showAlert(ORDER_MESSAGES.cancelSuccess);
+
+// 3. 플레이스홀더가 있는 메시지
+// admin.ts: saveFailed: "저장 실패: {message}"
+showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message));
+```
+
+### 새 메시지 추가하기
+
+```typescript
+// src/lib/messages/auth.ts
+export const AUTH_MESSAGES = {
+  // 기존 메시지들...
+
+  // 새 메시지 추가
+  newFeatureMessage: "새로운 기능 메시지입니다.",
+} as const;
+```
+
+### 메시지 도메인별 분류
+
+| 파일 | 용도 | 예시 |
+|------|------|------|
+| `auth.ts` | 인증/인가 | 로그인 성공, 이메일 인증, 비밀번호 변경 |
+| `account.ts` | 계정 관리 | 프로필 수정, 배송지 관리, 회원 탈퇴 |
+| `order.ts` | 주문 처리 | 주문 완료, 취소, 배송 상태 |
+| `cart.ts` | 장바구니 | 담기, 삭제, 수량 변경 |
+| `inquiry.ts` | 문의/답변 | 문의 등록, 답변 완료 |
+| `product.ts` | 상품 | 재고 부족, 품절 |
+| `admin.ts` | 관리자 | CRUD 성공/실패, 권한 |
+| `common.ts` | 공통 | 네트워크 에러, 데이터 로드 실패 |
+
+### 컨벤션
+
+- **네이밍**: `동작 + 결과` 형태 (예: `loginSuccess`, `createFailed`)
+- **플레이스홀더**: `{변수명}` 형식 사용 (예: `"최대 {max}개까지 가능합니다."`)
+- **타입 안전성**: `as const` 사용으로 리터럴 타입 보장
+
+---
+
 ## 🏗️ 핵심 엔지니어링 원칙
 
 ### 1. Security First (보안 무결점)

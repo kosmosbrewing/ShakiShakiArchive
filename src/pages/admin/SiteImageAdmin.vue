@@ -6,6 +6,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
   fetchAdminSiteImages,
   createSiteImage,
@@ -107,9 +108,12 @@ const openCreateModal = () => {
     const max =
       activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
     const imageType = activeTab.value === "hero" ? "Hero" : "Marquee";
-    showAlert(`${imageType} 이미지는 최대 ${max}개까지\n등록 가능합니다.`, {
-      type: "error",
-    });
+    showAlert(
+      ADMIN_MESSAGES.imageTypeLimitExceeded
+        .replace("{type}", imageType)
+        .replace("{max}", String(max)),
+      { type: "error" }
+    );
     return;
   }
   isEditMode.value = false;
@@ -147,13 +151,13 @@ const handleFileSelect = async (event: Event) => {
   // 파일 타입 검증
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
-    errorMessage.value = "JPEG, PNG, GIF, WebP 형식만 지원됩니다.";
+    errorMessage.value = ADMIN_MESSAGES.supportedImageFormats;
     return;
   }
 
   // 파일 크기 검증 (10MB)
   if (file.size > 10 * 1024 * 1024) {
-    errorMessage.value = "파일 크기는 10MB 이하여야 합니다.";
+    errorMessage.value = ADMIN_MESSAGES.fileSizeLimit;
     return;
   }
 
@@ -164,7 +168,7 @@ const handleFileSelect = async (event: Event) => {
     const result = await uploadProductImage(file);
     form.value.imageUrl = result.image.url;
   } catch (error: any) {
-    errorMessage.value = error.message || "업로드에 실패했습니다.";
+    errorMessage.value = error.message || ADMIN_MESSAGES.imageUploadFailed;
   } finally {
     isUploading.value = false;
     input.value = "";
@@ -179,7 +183,7 @@ const handleSave = async () => {
     errorMessage.value = "";
 
     if (!form.value.imageUrl) {
-      errorMessage.value = "이미지를 업로드해주세요.";
+      errorMessage.value = ADMIN_MESSAGES.imageRequired;
       return;
     }
 
@@ -198,17 +202,17 @@ const handleSave = async () => {
       // 로컬 상태 업데이트
       const idx = siteImages.value.findIndex((img) => img.id === form.value.id);
       if (idx !== -1 && image) siteImages.value[idx] = image;
-      showAlert("이미지가 수정되었습니다.");
+      showAlert(ADMIN_MESSAGES.siteImageUpdateSuccess);
     } else {
       const { image } = await createSiteImage(payload);
       // 로컬 상태에 추가
       if (image) siteImages.value.push(image);
-      showAlert("이미지가 추가되었습니다.");
+      showAlert(ADMIN_MESSAGES.siteImageCreateSuccess);
     }
 
     isModalOpen.value = false;
   } catch (error: any) {
-    errorMessage.value = error.message || "저장에 실패했습니다.";
+    errorMessage.value = error.message || ADMIN_MESSAGES.createFailed;
   } finally {
     isSaving.value = false;
   }

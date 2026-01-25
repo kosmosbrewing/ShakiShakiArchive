@@ -15,6 +15,7 @@ import { formatDateTimeWithSeconds } from "@/lib/formatters";
 import type { Inquiry, InquiryType, InquiryStatus } from "@/types/api";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { INQUIRY_MESSAGES } from "@/lib/messages";
 
 // 공통 컴포넌트
 import { LoadingSpinner } from "@/components/common";
@@ -117,7 +118,7 @@ const loadInquiry = async () => {
   } catch (error: any) {
     console.error("문의 로드 실패:", error);
     if (error.message?.includes("403") || error.message?.includes("권한")) {
-      showAlert("접근 권한이 없습니다.", { type: "error" });
+      showAlert(INQUIRY_MESSAGES.accessDenied, { type: "error" });
       router.push("/inquiry");
     }
   } finally {
@@ -128,7 +129,7 @@ const loadInquiry = async () => {
 // 답변 등록
 const handleReply = async () => {
   if (!replyContent.value.trim()) {
-    showAlert("답변 내용을 입력해주세요.", { type: "error" });
+    showAlert(INQUIRY_MESSAGES.replyContentRequired, { type: "error" });
     return;
   }
 
@@ -147,10 +148,10 @@ const handleReply = async () => {
 
     replyContent.value = "";
     await loadInquiry(); // 새로고침
-    showAlert("답변이 등록되었습니다.");
+    showAlert(INQUIRY_MESSAGES.replySuccess);
   } catch (error: any) {
     console.error("답변 등록 실패:", error);
-    showAlert(error.message || "답변 등록에 실패했습니다.", { type: "error" });
+    showAlert(error.message || INQUIRY_MESSAGES.replyFailed, { type: "error" });
   } finally {
     replyLoading.value = false;
   }
@@ -166,7 +167,7 @@ const handleStatusChange = async (newStatus: string) => {
     await loadInquiry();
   } catch (error: any) {
     console.error("상태 변경 실패:", error);
-    showAlert(error.message || "상태 변경에 실패했습니다.", { type: "error" });
+    showAlert(error.message || INQUIRY_MESSAGES.statusChangeFailed, { type: "error" });
   } finally {
     statusLoading.value = false;
   }
@@ -183,11 +184,11 @@ const handleDelete = async () => {
   deleteLoading.value = true;
   try {
     await deleteInquiry(inquiryId.value);
-    showAlert("문의가 삭제되었습니다.");
+    showAlert(INQUIRY_MESSAGES.deleteSuccess);
     router.push("/inquiry");
   } catch (error: any) {
     console.error("문의 삭제 실패:", error);
-    showAlert(error.message || "문의 삭제에 실패했습니다.", { type: "error" });
+    showAlert(error.message || INQUIRY_MESSAGES.deleteFailed, { type: "error" });
   } finally {
     deleteLoading.value = false;
   }
@@ -220,10 +221,10 @@ const handleReplyDelete = async () => {
       await loadInquiry(); // 상태 변경 후 다시 새로고침
     }
 
-    showAlert("답변이 삭제되었습니다.");
+    showAlert(INQUIRY_MESSAGES.replyDeleteSuccess);
   } catch (error: any) {
     console.error("답변 삭제 실패:", error);
-    showAlert(error.message || "답변 삭제에 실패했습니다.", { type: "error" });
+    showAlert(error.message || INQUIRY_MESSAGES.replyDeleteFailed, { type: "error" });
   } finally {
     deletingReplyId.value = null;
   }

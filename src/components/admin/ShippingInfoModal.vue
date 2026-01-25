@@ -17,6 +17,7 @@ import { X, Truck, MapPin, Image as ImageIcon, AlertCircle, ShieldAlert } from "
 import { COURIER_COMPANIES } from "@/types/api";
 import { formatOrderStatus } from "@/lib/formatters";
 import { verifyPassword } from "@/lib/api";
+import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
 import type { OrderItem, Order } from "@/types/api";
 
 interface Props {
@@ -65,7 +66,7 @@ const finalCourierValue = computed(() => {
 // 비밀번호 인증 처리
 const handleVerifyPassword = async () => {
   if (!password.value.trim()) {
-    authError.value = "비밀번호를 입력해주세요.";
+    authError.value = AUTH_MESSAGES.passwordRequired;
     return;
   }
 
@@ -78,7 +79,7 @@ const handleVerifyPassword = async () => {
       isAuthenticated.value = true;
       authError.value = "";
     } else {
-      authError.value = "비밀번호가 일치하지 않습니다.";
+      authError.value = AUTH_MESSAGES.passwordMismatch;
       password.value = "";
     }
   } catch (error: any) {
@@ -86,7 +87,7 @@ const handleVerifyPassword = async () => {
     if (error.status === 404) {
       authError.value = "비밀번호 확인 API가 아직 구현되지 않았습니다. 백엔드 개발자에게 문의해주세요.";
     } else {
-      authError.value = error.message || "비밀번호 확인에 실패했습니다.";
+      authError.value = error.message || ADMIN_MESSAGES.passwordVerifyFailed;
     }
     password.value = "";
   } finally {

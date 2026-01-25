@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress } from "@/lib/formatters";
@@ -261,7 +262,7 @@ const handleSaveItemStatus = async (item: any) => {
       item.courierCompany,
     );
 
-    showAlert("상태가 저장되었습니다.");
+    showAlert(ADMIN_MESSAGES.orderStatusSaveSuccess);
 
     // 원본 데이터 업데이트
     const originalOrder = originalOrders.value.find((o) =>
@@ -276,7 +277,7 @@ const handleSaveItemStatus = async (item: any) => {
       }
     }
   } catch (error: any) {
-    showAlert("저장 실패: " + error.message, { type: "error" });
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), { type: "error" });
   } finally {
     savingStatus.value[item.id] = false;
   }
@@ -315,11 +316,11 @@ const handleSaveShipping = async (data: {
       data.courierCompany,
     );
 
-    showAlert("배송 정보가 저장되었습니다.");
+    showAlert(ADMIN_MESSAGES.shippingInfoSaveSuccess);
     closeShippingModal();
     await loadData();
   } catch (error: any) {
-    showAlert("저장 실패: " + error.message, { type: "error" });
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), { type: "error" });
   } finally {
     savingShipping.value = false;
   }

@@ -3,6 +3,7 @@ import { ref, onMounted, reactive, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
   fetchAdminProducts,
   createProduct,
@@ -302,7 +303,7 @@ const handleSaveProduct = async () => {
       !productForm.categoryId ||
       !productForm.slug
     ) {
-      errorMessage.value = "필수 항목(*)을 모두 입력해주세요.";
+      errorMessage.value = ADMIN_MESSAGES.requiredFieldsMissing;
       return;
     }
     const payload: Record<string, any> = {
@@ -331,15 +332,15 @@ const handleSaveProduct = async () => {
         }
       }
       await updateProduct(productForm.id, payload);
-      showAlert("상품이 수정되었습니다.");
+      showAlert(ADMIN_MESSAGES.productUpdateSuccess);
     } else {
       await createProduct(payload);
-      showAlert("상품이 등록되었습니다.");
+      showAlert(ADMIN_MESSAGES.productCreateSuccess);
     }
     isProductModalOpen.value = false;
     await loadData();
   } catch (error: any) {
-    errorMessage.value = error.message || "저장에 실패했습니다.";
+    errorMessage.value = error.message || ADMIN_MESSAGES.productCreateFailed;
   }
 };
 
@@ -396,7 +397,7 @@ const handleSaveVariant = async () => {
 
   try {
     if (!variantForm.size || !variantForm.sku) {
-      showAlert("사이즈와 SKU는 필수입니다.", { type: "error" });
+      showAlert(ADMIN_MESSAGES.sizeAndSkuRequired, { type: "error" });
       return;
     }
 
@@ -414,10 +415,10 @@ const handleSaveVariant = async () => {
         variantForm.id,
         payload,
       );
-      showAlert("옵션이 수정되었습니다.");
+      showAlert(ADMIN_MESSAGES.updateSuccess);
     } else {
       await createProductVariant(currentProduct.value.id, payload);
-      showAlert("옵션이 추가되었습니다.");
+      showAlert(ADMIN_MESSAGES.createSuccess);
     }
 
     // 목록 갱신
@@ -428,7 +429,7 @@ const handleSaveVariant = async () => {
     isEditMode.value = false;
   } catch (error: any) {
     console.error(error);
-    showAlert("저장 실패: " + (error.message || "알 수 없는 오류"), {
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message || "알 수 없는 오류"), {
       type: "error",
     });
   }
@@ -546,17 +547,17 @@ const handleSaveMeasurement = async () => {
 
     if (isMeasurementEditMode.value) {
       await updateSizeMeasurement(measurementForm.id, cleanedPayload);
-      showAlert("수정되었습니다.");
+      showAlert(ADMIN_MESSAGES.updateSuccess);
     } else {
       await createSizeMeasurement(currentVariant.value.id, cleanedPayload);
-      showAlert("등록되었습니다.");
+      showAlert(ADMIN_MESSAGES.createSuccess);
     }
 
     await loadMeasurements(currentVariant.value.id);
     Object.assign(measurementForm, initialMeasurementForm);
     isMeasurementEditMode.value = false;
   } catch (error: any) {
-    showAlert("저장 실패: " + error.message, { type: "error" });
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), { type: "error" });
   }
 };
 

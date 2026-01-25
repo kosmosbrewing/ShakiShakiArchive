@@ -4,6 +4,7 @@ import { ref, onMounted, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
+import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
   fetchCategories,
   createCategory,
@@ -98,7 +99,7 @@ const handleSave = async () => {
   try {
     errorMessage.value = "";
     if (!formData.name || !formData.categoryId) {
-      errorMessage.value = "이름과 Category ID는 필수 입력 항목입니다.";
+      errorMessage.value = ADMIN_MESSAGES.categoryIdAndNameRequired;
       return;
     }
     const payload = {
@@ -113,15 +114,15 @@ const handleSave = async () => {
 
     if (isEditMode.value) {
       await updateCategory(formData.id, payload);
-      showAlert("카테고리가 수정되었습니다.");
+      showAlert(ADMIN_MESSAGES.categoryUpdateSuccess);
     } else {
       await createCategory(payload);
-      showAlert("카테고리가 생성되었습니다.");
+      showAlert(ADMIN_MESSAGES.categoryCreateSuccess);
     }
     isModalOpen.value = false;
     await loadData();
   } catch (error: any) {
-    errorMessage.value = error.message || "저장에 실패했습니다.";
+    errorMessage.value = error.message || ADMIN_MESSAGES.categoryCreateFailed;
   }
 };
 
@@ -136,7 +137,7 @@ const handleConfirmDelete = async () => {
     await deleteCategory(deleteTargetId.value);
     await loadData();
   } catch (error: any) {
-    showAlert("삭제 실패: " + error.message, { type: "error" });
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), { type: "error" });
   }
 };
 

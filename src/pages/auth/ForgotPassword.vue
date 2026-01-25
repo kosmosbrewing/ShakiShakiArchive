@@ -7,6 +7,7 @@ import { useRouter } from "vue-router";
 import { sendVerification, verifyEmail, resetPassword } from "@/lib/api";
 import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
+import { AUTH_MESSAGES } from "@/lib/messages";
 import { CheckCircle2, Mail } from "lucide-vue-next";
 
 // Common Components
@@ -62,7 +63,7 @@ const sendVerificationCode = async () => {
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
     verificationState.errorMessage =
-      emailValidation.error || "유효한 이메일을 입력해주세요.";
+      emailValidation.error || AUTH_MESSAGES.invalidEmailMessage;
     return;
   }
 
@@ -115,7 +116,7 @@ const sendVerificationCode = async () => {
 // 인증코드 확인
 const verifyCode = async () => {
   if (!verificationState.code || verificationState.code.length !== 6) {
-    verificationState.errorMessage = "6자리 인증코드를 입력해주세요.";
+    verificationState.errorMessage = AUTH_MESSAGES.verificationCodeRequired;
     return;
   }
 
@@ -133,11 +134,11 @@ const verifyCode = async () => {
       verificationState.errorMessage = "";
       currentStep.value = 3;
     } else {
-      verificationState.errorMessage = "인증번호가 일치하지 않습니다.";
+      verificationState.errorMessage = AUTH_MESSAGES.invalidVerificationCode;
     }
   } catch (error: any) {
     verificationState.errorMessage =
-      error.message || "인증 확인에 실패했습니다.";
+      error.message || AUTH_MESSAGES.verificationCheckFailed;
   } finally {
     verificationState.isVerifying = false;
   }
@@ -148,7 +149,7 @@ const handleResetPassword = async () => {
   errorMessage.value = "";
 
   if (!verificationState.isVerified) {
-    errorMessage.value = "이메일 인증을 완료해주세요.";
+    errorMessage.value = AUTH_MESSAGES.emailVerificationRequired;
     return;
   }
 
@@ -159,7 +160,7 @@ const handleResetPassword = async () => {
   }
 
   if (formData.newPassword !== formData.confirmPassword) {
-    errorMessage.value = "비밀번호가 일치하지 않습니다.";
+    errorMessage.value = AUTH_MESSAGES.passwordMismatch;
     return;
   }
 
@@ -170,17 +171,17 @@ const handleResetPassword = async () => {
       newPassword: formData.newPassword,
     });
 
-    successMessage.value = "비밀번호가 성공적으로 변경되었습니다.";
+    successMessage.value = AUTH_MESSAGES.passwordResetSuccess;
     currentStep.value = 4;
 
     // 성공 Alert 표시
-    alertMessage.value = "비밀번호가 성공적으로 변경되었습니다.";
+    alertMessage.value = AUTH_MESSAGES.passwordResetSuccess;
     alertType.value = "success";
     showAlert.value = true;
   } catch (error: any) {
     console.error(error);
     errorMessage.value =
-      error.message || "비밀번호 재설정 중 오류가 발생했습니다.";
+      error.message || AUTH_MESSAGES.passwordResetFailed;
   } finally {
     isSubmitting.value = false;
   }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { getPasswordErrorMessage } from "@/utils/password-validation";
 import { validateEmail } from "@/utils/email-validation";
+import { AUTH_MESSAGES } from "@/lib/messages";
 import { CheckCircle2, Mail } from "lucide-vue-next";
 import { PasswordStrengthIndicator, LoadingSpinner } from "@/components/common";
 // UI Components
@@ -44,7 +45,7 @@ const handleEmailEnter = () => {
     });
   } else {
     showValidationError(
-      emailValidation.error || "올바른 이메일 형식을 입력해주세요.",
+      emailValidation.error || AUTH_MESSAGES.invalidEmailFormat,
       emailInputRef
     );
   }
@@ -134,7 +135,7 @@ const checkEmailFormat = () => {
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
     verificationState.errorMessage =
-      emailValidation.error || "유효한 이메일을 입력해주세요.";
+      emailValidation.error || AUTH_MESSAGES.invalidEmailMessage;
   } else {
     // 형식이 유효하면 에러 메시지 제거
     verificationState.errorMessage = "";
@@ -147,7 +148,7 @@ const sendVerificationCode = async () => {
   const emailValidation = validateEmail(formData.email);
   if (!emailValidation.valid) {
     verificationState.errorMessage =
-      emailValidation.error || "유효한 이메일을 입력해주세요.";
+      emailValidation.error || AUTH_MESSAGES.invalidEmailMessage;
     return;
   }
 
@@ -169,10 +170,10 @@ const sendVerificationCode = async () => {
       errorMsg.includes("already exists") ||
       errorMsg.includes("duplicate")
     ) {
-      verificationState.errorMessage = "이미 가입된 이메일입니다";
+      verificationState.errorMessage = AUTH_MESSAGES.emailAlreadyExists;
     } else {
       verificationState.errorMessage =
-        error.message || "인증코드 발송에 실패했습니다.";
+        error.message || AUTH_MESSAGES.emailVerificationFailed;
     }
   } finally {
     verificationState.isLoading = false;
@@ -182,7 +183,7 @@ const sendVerificationCode = async () => {
 // 인증코드 확인
 const verifyCode = async () => {
   if (!verificationState.code || verificationState.code.length !== 6) {
-    verificationState.errorMessage = "6자리 인증코드를 입력해주세요.";
+    verificationState.errorMessage = AUTH_MESSAGES.verificationCodeRequired;
     return;
   }
 
@@ -199,11 +200,11 @@ const verifyCode = async () => {
       verificationState.isVerified = true;
       verificationState.errorMessage = "";
     } else {
-      verificationState.errorMessage = "인증번호가 일치하지 않습니다.";
+      verificationState.errorMessage = AUTH_MESSAGES.invalidVerificationCode;
     }
   } catch (error: any) {
     verificationState.errorMessage =
-      error.message || "인증 확인에 실패했습니다.";
+      error.message || AUTH_MESSAGES.verificationCheckFailed;
   } finally {
     verificationState.isVerifying = false;
   }
@@ -230,13 +231,13 @@ const handleSignup = async () => {
 
   // 이메일 인증 확인
   if (!verificationState.isVerified) {
-    showValidationError("이메일 인증을 완료해주세요.", emailInputRef);
+    showValidationError(AUTH_MESSAGES.emailVerificationRequired, emailInputRef);
     return;
   }
 
   // 비밀번호 검증
   if (!formData.password) {
-    showValidationError("비밀번호를 입력해주세요.", passwordInputRef);
+    showValidationError(AUTH_MESSAGES.passwordRequired, passwordInputRef);
     return;
   }
   const passwordError = getPasswordErrorMessage(formData.password);
@@ -246,14 +247,14 @@ const handleSignup = async () => {
   }
   if (!formData.confirmPassword) {
     showValidationError(
-      "비밀번호 확인을 입력해주세요.",
+      AUTH_MESSAGES.confirmPasswordRequired,
       confirmPasswordInputRef
     );
     return;
   }
   if (formData.password !== formData.confirmPassword) {
     showValidationError(
-      "비밀번호가 일치하지 않습니다.",
+      AUTH_MESSAGES.passwordMismatch,
       confirmPasswordInputRef
     );
     return;
@@ -261,7 +262,7 @@ const handleSignup = async () => {
 
   // 닉네임 검증
   if (!formData.userName.trim()) {
-    showValidationError("닉네임을 입력해주세요.", userNameInputRef);
+    showValidationError(AUTH_MESSAGES.userNameRequired, userNameInputRef);
     return;
   }
 
@@ -306,7 +307,7 @@ const handleSignup = async () => {
       // 자동 로그인 실패 시 로그인 페이지로 이동
       console.error("자동 로그인 실패:", loginError);
       isProcessingAuth.value = false;
-      showAlertMessage("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.");
+      showAlertMessage(AUTH_MESSAGES.signupRedirect);
 
       setTimeout(() => {
         router.push("/login");
@@ -314,7 +315,7 @@ const handleSignup = async () => {
     }
   } catch (error: any) {
     console.error(error);
-    errorMessage.value = error.message || "회원가입 중 오류가 발생했습니다.";
+    errorMessage.value = error.message || AUTH_MESSAGES.signupFailed;
     isSubmitting.value = false;
   }
 };
@@ -328,7 +329,7 @@ const handleNaverLogin = () => {
     window.location.href = naverLoginUrl;
   } catch (error) {
     console.error("네이버 로그인 URL 생성 실패:", error);
-    showAlertMessage("네이버 로그인 연결에 실패했습니다.", { type: "error" });
+    showAlertMessage(AUTH_MESSAGES.naverLoginFailed, { type: "error" });
     isNaverLoading.value = false;
   }
 };
@@ -342,7 +343,7 @@ const handleKakaoLogin = () => {
     window.location.href = kakaoLoginUrl;
   } catch (error) {
     console.error("카카오 로그인 URL 생성 실패:", error);
-    showAlertMessage("카카오 로그인 연결에 실패했습니다.", { type: "error" });
+    showAlertMessage(AUTH_MESSAGES.kakaoLoginFailed, { type: "error" });
     isKakaoLoading.value = false;
   }
 };
