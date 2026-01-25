@@ -702,6 +702,7 @@ onMounted(async () => {
                       v-if="product.imageUrl"
                       :src="product.imageUrl"
                       class="h-full w-full object-cover"
+                      crossorigin="anonymous"
                     />
                     <div
                       v-else
@@ -1472,6 +1473,7 @@ onMounted(async () => {
                   class="w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   loading="lazy"
                   decoding="async"
+                  crossorigin="anonymous"
                   draggable="false"
                   :alt="`상품 상세 이미지 ${idx + 1}`"
                 />

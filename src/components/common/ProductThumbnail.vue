@@ -53,6 +53,7 @@ const sizeClasses = {
       alt="Product Image"
       loading="lazy"
       decoding="async"
+      crossorigin="anonymous"
       draggable="false"
     />
     <div

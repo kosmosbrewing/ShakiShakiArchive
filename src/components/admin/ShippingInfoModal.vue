@@ -342,6 +342,7 @@ const handleClose = () => {
                       :src="orderItem.product.imageUrl"
                       :alt="orderItem.productName"
                       class="h-full w-full object-cover"
+                      crossorigin="anonymous"
                     />
                     <div
                       v-else

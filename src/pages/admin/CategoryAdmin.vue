@@ -199,6 +199,7 @@ onMounted(async () => {
                       v-if="category.imageUrl"
                       :src="category.imageUrl"
                       class="h-full w-full object-cover"
+                      crossorigin="anonymous"
                     />
                     <div
                       v-else

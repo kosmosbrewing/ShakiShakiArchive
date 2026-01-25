@@ -352,6 +352,7 @@ onMounted(() => {
               :src="safeProductImageUrl"
               :alt="inquiry.product.name"
               class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-md border border-border/30"
+              crossorigin="anonymous"
             />
             <div class="flex-1 min-w-0">
               <p class="text-xs text-muted-foreground mb-0.5">문의 상품</p>

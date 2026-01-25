@@ -81,6 +81,7 @@ export function useOptimizedImage() {
         src: url,
         loading: "lazy" as const,
         decoding: "async" as const,
+        crossorigin: "anonymous" as const,
       };
     }
 
@@ -90,6 +91,7 @@ export function useOptimizedImage() {
       sizes,
       loading: "lazy" as const,
       decoding: "async" as const,
+      crossorigin: "anonymous" as const,
     };
   };
 
@@ -134,6 +136,7 @@ export function useOptimizedImage() {
         loading: isFirst ? ("eager" as const) : ("lazy" as const),
         decoding: "async" as const,
         fetchpriority: isFirst ? ("high" as const) : undefined,
+        crossorigin: "anonymous" as const,
       };
     }
 
@@ -144,6 +147,7 @@ export function useOptimizedImage() {
       loading: isFirst ? ("eager" as const) : ("lazy" as const),
       decoding: "async" as const,
       fetchpriority: isFirst ? ("high" as const) : undefined,
+      crossorigin: "anonymous" as const,
     };
   };
 

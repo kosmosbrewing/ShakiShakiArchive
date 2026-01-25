@@ -419,6 +419,7 @@ onMounted(async () => {
                       :src="image.imageUrl"
                       loading="lazy"
                       decoding="async"
+                      crossorigin="anonymous"
                       class="h-full w-full object-cover"
                     />
                     <div
@@ -576,6 +577,7 @@ onMounted(async () => {
                   :src="form.imageUrl"
                   alt="미리보기"
                   class="w-full h-full object-cover"
+                  crossorigin="anonymous"
                 />
                 <button
                   type="button"

@@ -199,6 +199,7 @@ onMounted(() => {
           :src="safeProductImageUrl"
           :alt="product.name"
           class="w-16 h-16 object-cover rounded"
+          crossorigin="anonymous"
         />
         <div>
           <p class="text-sm text-muted-foreground">문의 상품</p>

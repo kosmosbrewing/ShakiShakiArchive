@@ -384,7 +384,7 @@ onUnmounted(() => {
           </CardContent>
           <!-- 가격 -->
           <CardContent class="pb-0 px-4 text-center">
-            <span class="text-caption text-muted-foreground/80">
+            <span class="text-caption text-muted-foreground">
               {{ formatPrice(price) }}</span
             >
           </CardContent>

@@ -532,6 +532,7 @@ onUnmounted(() => {
                       v-if="item.product?.imageUrl"
                       :src="item.product.imageUrl"
                       class="h-full w-full object-cover"
+                      crossorigin="anonymous"
                     />
                     <div
                       v-else

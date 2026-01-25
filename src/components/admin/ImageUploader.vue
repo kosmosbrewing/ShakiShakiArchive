@@ -190,6 +190,7 @@ const removeImage = (index: number) => {
           :src="url"
           :alt="`이미지 ${index + 1}`"
           class="w-full h-full object-cover"
+          crossorigin="anonymous"
         />
         <div
           class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"

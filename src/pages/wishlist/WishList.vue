@@ -105,6 +105,7 @@ onMounted(() => {
               "
               loading="lazy"
               decoding="async"
+              crossorigin="anonymous"
               draggable="false"
             />
             <!-- 호버 이미지 -->
@@ -120,6 +121,7 @@ onMounted(() => {
               "
               loading="lazy"
               decoding="async"
+              crossorigin="anonymous"
               draggable="false"
             />
 

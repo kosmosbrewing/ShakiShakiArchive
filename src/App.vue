@@ -204,7 +204,9 @@ onUnmounted(() => {
     </div>
 
     <Navbar />
-    <router-view :key="$route.fullPath" />
+    <main>
+      <router-view :key="$route.fullPath" />
+    </main>
     <Footer />
   </div>
 

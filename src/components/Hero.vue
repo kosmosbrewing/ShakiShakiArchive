@@ -281,23 +281,31 @@ onUnmounted(() => {
             </template>
           </div>
 
-          <!-- 슬라이드 인디케이터 (세련된 pill 스타일) -->
+          <!-- 슬라이드 인디케이터 (세련된 pill 스타일, 터치 영역 확대) -->
           <div
             v-if="heroImageList.length > 1"
-            class="flex justify-center items-center gap-2 mt-5"
+            class="flex justify-center items-center gap-1 mt-5"
+            role="tablist"
+            aria-label="슬라이드 네비게이션"
           >
             <button
               v-for="(_, index) in heroImageList"
               :key="index"
               @click="goToSlideManual(index)"
-              class="h-2 rounded-full transition-all duration-500 ease-out"
-              :class="
-                currentHeroIndex === index
-                  ? 'bg-primary w-8 shadow-sm shadow-primary/30'
-                  : 'bg-gray-300/80 w-2 hover:bg-gray-400 hover:w-3'
-              "
+              class="flex items-center justify-center min-w-[44px] min-h-[44px] transition-all duration-500 ease-out"
+              role="tab"
+              :aria-selected="currentHeroIndex === index"
               :aria-label="`슬라이드 ${index + 1}로 이동`"
-            />
+            >
+              <span
+                class="h-2 rounded-full transition-all duration-500 ease-out"
+                :class="
+                  currentHeroIndex === index
+                    ? 'bg-primary w-8 shadow-sm shadow-primary/30'
+                    : 'bg-gray-400 w-2.5'
+                "
+              />
+            </button>
           </div>
         </div>
       </div>
@@ -327,6 +335,7 @@ onUnmounted(() => {
           :class="{ 'cursor-pointer': img.linkUrl }"
           loading="lazy"
           decoding="async"
+          crossorigin="anonymous"
           draggable="false"
           @click="handleImageClick(img.linkUrl)"
         />

@@ -97,6 +97,7 @@ onMounted(() => {
               :src="imageUrl"
               alt=""
               class="w-full aspect-square object-cover transition-all duration-200 ease-linear size-full group-hover/hoverimg:saturate-100 group-hover/hoverimg:scale-[1.01]"
+              crossorigin="anonymous"
             />
           </div>
           <CardContent class="text-body py-6 pb-1 px-6">{{ name }} </CardContent>
