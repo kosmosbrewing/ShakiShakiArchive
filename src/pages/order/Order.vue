@@ -20,6 +20,7 @@ import {
   cancelOrder,
   deleteOrder,
   cleanupOrder,
+  readyKakaoPay,
 } from "@/lib/api";
 import { initNaverPay } from "@/services/payment";
 
@@ -53,9 +54,10 @@ import {
 } from "@/lib/validators";
 import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
-// [이미지 Import] - WebP 최적화 (95.3% 용량 감소)
-import tossLogo from "@/assets/optimized/tossSymbol.webp";
+// [이미지 Import] - 결제 수단 로고
+// import tossLogo from "@/assets/optimized/tossSymbol.webp";  // 토스페이먼츠 비활성화 (867KB → 40KB 최적화 완료)
 import naverLogo from "@/assets/naverSymbol.svg";
+import kakaoLogo from "@/assets/kakaoSymbol.png";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -116,7 +118,7 @@ const isMobile = computed(() => {
 const isAddressModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
-const paymentProvider = ref<"toss" | "naverpay" | null>(null);
+const paymentProvider = ref<"toss" | "naverpay" | "kakaopay" | null>(null);
 
 // 유효성 검사 상태
 const showValidationAlert = ref(false);
@@ -125,10 +127,11 @@ const validationMessage = ref("");
 // AddressForm ref
 const addressFormRef = ref<InstanceType<typeof AddressForm> | null>(null);
 
-// [결제 수단 옵션] icon에 import한 이미지 변수 할당
+// [결제 수단 옵션] - 로고 이미지만 표시 (한글 라벨 제거)
 const paymentMethods = [
-  { label: "토스페이", value: "toss", icon: tossLogo },
-  { label: "네이버페이", value: "naverpay", icon: naverLogo },
+  // { label: "토스페이", value: "toss", icon: tossLogo },  // 비활성화 (코드 유지)
+  { value: "naverpay", icon: naverLogo },
+  { value: "kakaopay", icon: kakaoLogo },
 ];
 
 // 배송지 모드 변경 감시
@@ -353,6 +356,8 @@ const handlePayment = async () => {
       await processTossPayment(orderData);
     } else if (paymentProvider.value === "naverpay") {
       await processNaverPayment(orderData);
+    } else if (paymentProvider.value === "kakaopay") {
+      await processKakaoPayment(orderData);
     }
   } catch (error: unknown) {
     const errorMsg =
@@ -1057,6 +1062,307 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
   }
 };
 
+// [카카오페이] 결제 로직 (PC: 팝업 방식, 모바일: 리다이렉트 방식)
+const processKakaoPayment = async (orderData: CreateOrderResponse) => {
+  // 카카오페이 팝업 체크 인터벌 (PC 전용)
+  let kakaoPayPopupCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+  try {
+    // 1. 기본 배송지 저장 (결제 전에 저장)
+    await saveDefaultAddressIfNeeded();
+
+    // 2. 주문 상태를 paying으로 변경 (결제창 오픈 직전)
+    try {
+      await updateOrderStatusToPaying(orderData.orderId);
+      console.log("[카카오페이] 주문 상태 변경: paying");
+    } catch (statusErr) {
+      console.error("[카카오페이] 상태 업데이트 실패:", statusErr);
+      throw new Error(ORDER_MESSAGES.paymentPrepareError);
+    }
+
+    // 3. 카카오페이 결제 준비 API 호출
+    const readyResult = await readyKakaoPay(orderData.orderId);
+    console.log("[카카오페이] 결제 준비 완료:", readyResult.tid);
+
+    // 4. PC/모바일 분기
+    if (isMobile.value) {
+      // ========== 모바일: 리다이렉트 방식 ==========
+      localStorage.setItem("payment_confirming", "true");
+      localStorage.setItem("kakaopay_current_order", orderData.orderId);
+      console.log("[카카오페이] 모바일 리다이렉트 전 플래그 설정");
+
+      window.location.replace(readyResult.next_redirect_mobile_url);
+    } else {
+      // ========== PC: 팝업 방식 (네이버페이와 동일) ==========
+      localStorage.setItem("kakaopay_popup", "true");
+      localStorage.setItem("kakaopay_current_order", orderData.orderId);
+      console.log("[카카오페이] PC 팝업 플래그 설정");
+
+      // 팝업 창 열기
+      const popupWidth = 500;
+      const popupHeight = 700;
+      const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+      const top = window.screenY + (window.outerHeight - popupHeight) / 2;
+
+      const popup = window.open(
+        readyResult.next_redirect_pc_url,
+        "kakaopay_popup",
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
+      );
+
+      if (!popup || popup.closed) {
+        throw new Error("팝업이 차단되었습니다. 팝업 차단을 해제해주세요.");
+      }
+
+      console.log("[카카오페이] 팝업 열림");
+
+      // 팝업 강제 종료 처리 함수
+      const handlePopupForceClosed = async () => {
+        console.log("[카카오페이] 팝업 강제 종료 처리 시작");
+
+        if (currentOrderId.value) {
+          try {
+            console.log("[카카오페이 팝업 강제 종료] 주문 취소:", currentOrderId.value);
+            await cancelOrder(currentOrderId.value, {
+              cancelReason: "카카오페이 팝업 강제 종료",
+            });
+            console.log("[카카오페이 팝업 강제 종료] 주문 취소 완료");
+            currentOrderId.value = null;
+            resetReservation();
+          } catch (cancelError) {
+            console.error("[카카오페이 팝업 강제 종료] 주문 취소 실패:", cancelError);
+            currentOrderId.value = null;
+          }
+        }
+
+        isPaymentPopupOpen.value = false;
+        isPaymentProcessing.value = false;
+        showAlert(ORDER_MESSAGES.paymentCancelled);
+
+        localStorage.removeItem("kakaopay_popup");
+        localStorage.removeItem("kakaopay_current_order");
+      };
+
+      // 결과 처리 함수
+      const handleKakaoPayResult = async (resultStr: string) => {
+        try {
+          const result = JSON.parse(resultStr);
+          const { type, orderId, message } = result;
+          console.log("[카카오페이] 결제 결과 수신:", { type, orderId });
+
+          isProcessingPaymentResult.value = true;
+
+          if (paymentTimeoutId) {
+            clearTimeout(paymentTimeoutId);
+            paymentTimeoutId = null;
+          }
+
+          if (kakaoPayPopupCheckInterval) {
+            clearInterval(kakaoPayPopupCheckInterval);
+            kakaoPayPopupCheckInterval = null;
+          }
+
+          localStorage.removeItem("kakaopay_result");
+          localStorage.removeItem("kakaopay_popup");
+          localStorage.removeItem("kakaopay_current_order");
+
+          if (type === "PAYMENT_SUCCESS") {
+            isPaymentPopupOpen.value = false;
+            isPaymentProcessing.value = true;
+
+            resetReservation();
+            clearDirectPurchase();
+            currentOrderId.value = null;
+
+            router.replace(
+              `/checkout/success?result=success&orderId=${orderId}&provider=kakaopay`
+            );
+          } else if (type === "PAYMENT_ERROR") {
+            isPaymentPopupOpen.value = false;
+
+            if (orderId) {
+              try {
+                console.log("[카카오페이] 주문 취소 (실패):", orderId);
+                await cancelOrder(orderId, { cancelReason: "카카오페이 결제 실패" });
+                currentOrderId.value = null;
+                resetReservation();
+              } catch (cancelError) {
+                console.error("[카카오페이] 주문 취소 실패:", cancelError);
+                currentOrderId.value = null;
+              }
+            }
+
+            showAlert(message || ORDER_MESSAGES.paymentError, { type: "error" });
+          } else if (type === "PAYMENT_CANCEL") {
+            isPaymentPopupOpen.value = false;
+
+            if (orderId) {
+              try {
+                console.log("[카카오페이] 주문 취소 (사용자 취소):", orderId);
+                await cancelOrder(orderId, { cancelReason: "사용자가 결제를 취소했습니다." });
+                currentOrderId.value = null;
+                resetReservation();
+              } catch (cancelError) {
+                console.error("[카카오페이] 주문 취소 실패:", cancelError);
+                currentOrderId.value = null;
+              }
+            }
+
+            showAlert(ORDER_MESSAGES.paymentCancelled);
+          } else if (type === "STOCK_SHORTAGE") {
+            isPaymentPopupOpen.value = false;
+            currentOrderId.value = null;
+            resetReservation();
+
+            showAlert(message || ORDER_MESSAGES.stockShortageRefund, { type: "error" });
+          }
+
+          setTimeout(() => {
+            isProcessingPaymentResult.value = false;
+          }, 1000);
+        } catch (e) {
+          console.error("카카오페이 결과 파싱 오류:", e);
+          isPaymentPopupOpen.value = false;
+          isProcessingPaymentResult.value = false;
+        }
+      };
+
+      // localStorage 주기적 체크 (팝업 상태 감시)
+      let pollCount = 0;
+      const maxPolls = 360; // 3분
+      let popupClosedDetected = false;
+
+      kakaoPayPopupCheckInterval = setInterval(async () => {
+        pollCount++;
+
+        const popupFlag = localStorage.getItem("kakaopay_popup");
+        const resultStr = localStorage.getItem("kakaopay_result");
+
+        if (resultStr) {
+          clearInterval(kakaoPayPopupCheckInterval!);
+          kakaoPayPopupCheckInterval = null;
+          await handleKakaoPayResult(resultStr);
+        } else if (!popupFlag && isPaymentPopupOpen.value) {
+          if (!popupClosedDetected) {
+            popupClosedDetected = true;
+          } else {
+            clearInterval(kakaoPayPopupCheckInterval!);
+            kakaoPayPopupCheckInterval = null;
+            await handlePopupForceClosed();
+          }
+        } else if (popup.closed && isPaymentPopupOpen.value) {
+          // 팝업이 닫혔는지 직접 확인
+          if (!popupClosedDetected) {
+            popupClosedDetected = true;
+          } else {
+            clearInterval(kakaoPayPopupCheckInterval!);
+            kakaoPayPopupCheckInterval = null;
+            // 결과 확인 후 처리
+            const finalResult = localStorage.getItem("kakaopay_result");
+            if (finalResult) {
+              await handleKakaoPayResult(finalResult);
+            } else {
+              await handlePopupForceClosed();
+            }
+          }
+        } else if (pollCount >= maxPolls) {
+          clearInterval(kakaoPayPopupCheckInterval!);
+          kakaoPayPopupCheckInterval = null;
+          if (isPaymentPopupOpen.value) {
+            isPaymentPopupOpen.value = false;
+            isPaymentProcessing.value = false;
+          }
+        }
+      }, 500);
+
+      // focus 이벤트 핸들러 (팝업 닫힘 감지)
+      let focusCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+      let focusCount = 0;
+
+      const handleWindowFocus = () => {
+        focusCount++;
+
+        if (focusCheckTimeout) clearTimeout(focusCheckTimeout);
+        focusCheckTimeout = setTimeout(async () => {
+          if (!isPaymentPopupOpen.value) return;
+
+          const resultStr = localStorage.getItem("kakaopay_result");
+          const popupFlag = localStorage.getItem("kakaopay_popup");
+
+          if (resultStr) {
+            window.removeEventListener("focus", handleWindowFocus);
+            if (kakaoPayPopupCheckInterval) {
+              clearInterval(kakaoPayPopupCheckInterval);
+              kakaoPayPopupCheckInterval = null;
+            }
+            await handleKakaoPayResult(resultStr);
+          } else if (!popupFlag || popup.closed) {
+            window.removeEventListener("focus", handleWindowFocus);
+            if (kakaoPayPopupCheckInterval) {
+              clearInterval(kakaoPayPopupCheckInterval);
+              kakaoPayPopupCheckInterval = null;
+            }
+            await handlePopupForceClosed();
+          } else if (focusCount >= 2) {
+            window.removeEventListener("focus", handleWindowFocus);
+            if (kakaoPayPopupCheckInterval) {
+              clearInterval(kakaoPayPopupCheckInterval);
+              kakaoPayPopupCheckInterval = null;
+            }
+            await handlePopupForceClosed();
+          }
+        }, 500);
+      };
+
+      // storage 이벤트 핸들러
+      const handleStorageChange = async (event: StorageEvent) => {
+        if (event.key !== "kakaopay_result" || !event.newValue) return;
+
+        console.log("[카카오페이] storage 이벤트로 결과 수신");
+        window.removeEventListener("focus", handleWindowFocus);
+        window.removeEventListener("storage", handleStorageChange);
+        await handleKakaoPayResult(event.newValue);
+      };
+
+      window.addEventListener("focus", handleWindowFocus);
+      window.addEventListener("storage", handleStorageChange);
+    }
+  } catch (err: unknown) {
+    console.error("[카카오페이] 결제 오류:", err);
+
+    // 플래그 정리
+    localStorage.removeItem("payment_confirming");
+    localStorage.removeItem("kakaopay_popup");
+    localStorage.removeItem("kakaopay_current_order");
+
+    // 주문 취소 (에러 발생 시)
+    if (orderData.orderId) {
+      try {
+        console.log("[카카오페이] 주문 취소:", orderData.orderId);
+        await cancelOrder(orderData.orderId, { cancelReason: "카카오페이 결제 오류" });
+        console.log("[카카오페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
+        currentOrderId.value = null;
+        resetReservation();
+      } catch (cancelError) {
+        console.error("[카카오페이] 주문 취소 실패:", cancelError);
+        currentOrderId.value = null;
+      }
+    }
+
+    const errorMsg =
+      err instanceof Error
+        ? err.message
+        : ORDER_MESSAGES.paymentError;
+    showAlert(`결제 요청 중 오류가 발생했습니다:\n${errorMsg}`, {
+      type: "error",
+    });
+
+    // 상태 복구
+    isPaymentProcessing.value = false;
+    isPaymentPopupOpen.value = false;
+  }
+};
+
 // 기본 배송지 저장 헬퍼 함수
 const saveDefaultAddressIfNeeded = async () => {
   if (shippingForm.form.saveDefault && deliveryMode.value !== "saved") {
@@ -1508,7 +1814,7 @@ onUnmounted(() => {
                   type="button"
                   @click="paymentProvider = method.value as any"
                   :class="[
-                    'flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
+                    'flex items-center justify-center py-4 px-6 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
                     paymentProvider === method.value
                       ? 'border-primary'
                       : 'border-border',
@@ -1516,20 +1822,10 @@ onUnmounted(() => {
                 >
                   <img
                     :src="method.icon"
-                    :alt="method.label"
-                    class="h-8 w-auto mb-2 object-contain"
+                    :alt="method.value"
+                    class="h-6 w-auto object-contain"
                     draggable="false"
                   />
-                  <span
-                    class="text-body font-bold"
-                    :class="
-                      paymentProvider === method.value
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
-                    "
-                  >
-                    {{ method.label }}
-                  </span>
                 </button>
               </div>
             </CardContent>

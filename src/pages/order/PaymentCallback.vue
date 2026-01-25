@@ -58,25 +58,41 @@ const isMobile = computed(() => {
   );
 });
 
+// 팝업 제공자 타입 (네이버페이 또는 카카오페이)
+const popupProvider = ref<"naverpay" | "kakaopay" | null>(null);
+
 onMounted(async () => {
-  // 팝업 창 여부 확인 (네이버페이 PC 결제)
-  isPopup.value = localStorage.getItem("naverpay_popup") === "true";
-  // 주의: naverpay_popup 플래그는 여기서 제거하지 않음!
+  // 팝업 창 여부 확인 (네이버페이 또는 카카오페이 PC 결제)
+  const isNaverPayPopup = localStorage.getItem("naverpay_popup") === "true";
+  const isKakaoPayPopup = localStorage.getItem("kakaopay_popup") === "true";
+  isPopup.value = isNaverPayPopup || isKakaoPayPopup;
+  popupProvider.value = isNaverPayPopup ? "naverpay" : isKakaoPayPopup ? "kakaopay" : null;
+  // 주의: 팝업 플래그는 여기서 제거하지 않음!
   // window.close() 직전이나 beforeunload에서만 제거해야 함
 
   // 팝업 강제 종료 감지 (X 버튼 클릭 등)
   if (isPopup.value) {
     const handlePopupClose = () => {
-      const orderId = localStorage.getItem("naverpay_current_order");
-      console.log("[팝업 강제 종료] 감지, orderId:", orderId);
+      const currentOrderKey = popupProvider.value === "kakaopay"
+        ? "kakaopay_current_order"
+        : "naverpay_current_order";
+      const resultKey = popupProvider.value === "kakaopay"
+        ? "kakaopay_result"
+        : "naverpay_result";
+      const popupKey = popupProvider.value === "kakaopay"
+        ? "kakaopay_popup"
+        : "naverpay_popup";
+
+      const orderId = localStorage.getItem(currentOrderKey);
+      console.log(`[${popupProvider.value} 팝업 강제 종료] 감지, orderId:`, orderId);
 
       // 팝업 플래그 먼저 제거 (Order.vue의 폴링이 감지)
-      localStorage.removeItem("naverpay_popup");
+      localStorage.removeItem(popupKey);
 
       if (orderId) {
-        console.log("[팝업 강제 종료] 부모 창에 취소 알림");
+        console.log(`[${popupProvider.value} 팝업 강제 종료] 부모 창에 취소 알림`);
         localStorage.setItem(
-          "naverpay_result",
+          resultKey,
           JSON.stringify({
             type: "PAYMENT_CANCEL",
             orderId: orderId,
@@ -104,9 +120,12 @@ onMounted(async () => {
   const alreadyPaid = route.query.alreadyPaid as string;
   const errorCode = route.query.code as string; // INSUFFICIENT_STOCK 등
 
-  // orderId가 URL에 없으면 localStorage에서 가져오기 (네이버페이 취소 시 백업)
+  // orderId가 URL에 없으면 localStorage에서 가져오기 (네이버페이/카카오페이 취소 시 백업)
   if (!orderId && isPopup.value) {
-    const savedOrderId = localStorage.getItem("naverpay_current_order");
+    const currentOrderKey = popupProvider.value === "kakaopay"
+      ? "kakaopay_current_order"
+      : "naverpay_current_order";
+    const savedOrderId = localStorage.getItem(currentOrderKey);
     if (savedOrderId) {
       orderId = savedOrderId;
       console.log(
@@ -115,8 +134,9 @@ onMounted(async () => {
       );
     }
   }
-  // localStorage 정리
+  // localStorage 정리 (네이버페이/카카오페이 공통)
   localStorage.removeItem("naverpay_current_order");
+  localStorage.removeItem("kakaopay_current_order");
 
   // 디버깅: 팝업 및 쿼리 파라미터 로그
   console.log("[PaymentCallback] isPopup:", isPopup.value);
@@ -150,9 +170,9 @@ onMounted(async () => {
     }
   }
 
-  // 네이버페이 실패/취소 경로 (/checkout/fail)
+  // 네이버페이/카카오페이 실패/취소 경로 (/checkout/fail)
   if (route.path === "/checkout/fail") {
-    console.log("[PaymentCallback] 네이버페이 결제 실패/취소");
+    console.log("[PaymentCallback] 결제 실패/취소");
     console.log("[PaymentCallback] orderId:", orderId);
     console.log("[PaymentCallback] message:", message);
     console.log("[PaymentCallback] errorCode:", errorCode);
@@ -171,13 +191,20 @@ onMounted(async () => {
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
     if (isPopup.value) {
+      const resultKey = popupProvider.value === "kakaopay"
+        ? "kakaopay_result"
+        : "naverpay_result";
+      const popupKey = popupProvider.value === "kakaopay"
+        ? "kakaopay_popup"
+        : "naverpay_popup";
+
       console.log(
-        "[PaymentCallback] /checkout/fail - 팝업 닫기, orderId:",
+        `[PaymentCallback] /checkout/fail - ${popupProvider.value} 팝업 닫기, orderId:`,
         orderId,
       );
       console.log("[PaymentCallback] 에러 메시지:", errorMessage.value);
       localStorage.setItem(
-        "naverpay_result",
+        resultKey,
         JSON.stringify({
           type:
             errorCode === "INSUFFICIENT_STOCK"
@@ -188,7 +215,7 @@ onMounted(async () => {
           timestamp: Date.now(),
         }),
       );
-      localStorage.removeItem("naverpay_popup");
+      localStorage.removeItem(popupKey);
       window.close();
       return;
     }
@@ -196,6 +223,85 @@ onMounted(async () => {
     // 팝업이 아닌 경우 (모바일 리다이렉트): 에러 화면 표시
     // 백엔드에서 이미 주문 취소 처리됨 (별도 취소 API 호출 불필요)
     localStorage.removeItem("payment_confirming");
+    localStorage.removeItem("kakaopay_popup");
+    localStorage.removeItem("kakaopay_current_order");
+    return;
+  }
+
+  // 카카오페이 백엔드 리다이렉트 처리 (/checkout/success with provider=kakaopay)
+  // 백엔드에서 결제 승인 완료 후 프론트엔드로 리다이렉트하는 경우
+  if (route.path === "/checkout/success" && provider === "kakaopay") {
+    console.log("[PaymentCallback] 카카오페이 백엔드 리다이렉트 감지");
+    console.log("[PaymentCallback] 파라미터:", {
+      orderId,
+      externalOrderId,
+      amount,
+      alreadyPaid,
+      isPopup: isPopup.value,
+    });
+
+    // 🔒 중복 결제 처리 방지 (alreadyPaid=true)
+    if (alreadyPaid === "true") {
+      console.log("[PaymentCallback] 이미 결제된 주문 - 주문 목록으로 이동");
+      localStorage.removeItem("payment_confirming");
+      localStorage.removeItem("kakaopay_popup");
+      localStorage.removeItem("kakaopay_current_order");
+      if (isPopup.value) {
+        window.close();
+        return;
+      }
+      if (isMobile.value) {
+        window.location.replace("/orderlist");
+      } else {
+        router.replace("/orderlist");
+      }
+      return;
+    }
+
+    // 결제 승인 플래그 제거
+    localStorage.removeItem("payment_confirming");
+    localStorage.removeItem("kakaopay_current_order");
+
+    status.value = "success";
+    orderInfo.value = {
+      orderId: orderId,
+      externalOrderId: externalOrderId,
+      orderName: orderNameParam
+        ? decodeURIComponent(orderNameParam)
+        : undefined,
+      amount: amount ? Number(amount) : undefined,
+      paymentMethod: "kakaopay",
+    };
+
+    // 팝업인 경우: localStorage로 부모 창에 결과 전달 후 닫기
+    if (isPopup.value && popupProvider.value === "kakaopay") {
+      console.log("[PaymentCallback] 카카오페이 성공 - 팝업 닫기");
+      localStorage.setItem(
+        "kakaopay_result",
+        JSON.stringify({
+          type: "PAYMENT_SUCCESS",
+          orderId: orderId,
+          timestamp: Date.now(),
+        }),
+      );
+      localStorage.removeItem("kakaopay_popup");
+      window.close();
+      return;
+    }
+
+    // 모바일/일반: 주문 상세로 자동 이동
+    setTimeout(() => {
+      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+      console.log(
+        "[PaymentCallback] 카카오페이 성공 - 주문 상세로 이동:",
+        targetUrl,
+      );
+      if (isMobile.value) {
+        window.location.replace(targetUrl);
+      } else {
+        router.replace(targetUrl);
+      }
+    }, 2000);
     return;
   }
 

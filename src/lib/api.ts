@@ -20,6 +20,8 @@ import type {
   NaverPaySdkConfigResponse,
   NaverPayCancelRequest,
   NaverPayCancelResponse,
+  KakaoPayClientInfoResponse,
+  KakaoPayReadyResponse,
   ImageUploadResponse,
   ImagesUploadResponse,
   ImageDeleteResponse,
@@ -1085,6 +1087,23 @@ export async function cancelNaverPayment(
       body: JSON.stringify(data),
     }
   );
+}
+
+// ------------------------------------------------------------------
+// [6-3] 카카오페이 (KakaoPay)
+// ------------------------------------------------------------------
+
+// 카카오페이 클라이언트 정보 조회
+export async function getKakaoPayClientInfo(): Promise<KakaoPayClientInfoResponse> {
+  return apiRequest<KakaoPayClientInfoResponse>("/api/payments/kakaopay/client-info");
+}
+
+// 카카오페이 결제 준비 (서버 리다이렉트 방식)
+export async function readyKakaoPay(orderId: string): Promise<KakaoPayReadyResponse> {
+  return apiRequest<KakaoPayReadyResponse>("/api/payments/kakaopay/ready", {
+    method: "POST",
+    body: JSON.stringify({ orderId }),
+  });
 }
 
 // --- 관리자 결제 관리 ---

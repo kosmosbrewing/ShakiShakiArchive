@@ -245,7 +245,7 @@ export interface CreateOrderRequest {
   shippingAddress: string;
   shippingDetailAddress?: string; // 상세 주소 (NEW)
   shippingRequestNote?: string; // 배송 요청사항 (NEW)
-  paymentMethod?: "toss" | "naverpay"; // 결제 수단
+  paymentMethod?: "toss" | "naverpay" | "kakaopay"; // 결제 수단
   directPurchaseItem?: DirectPurchaseItem; // 바로 구매 시 상품 정보
   reservationId?: string; // 재고 선점 ID (선점 패턴 사용 시)
 }
@@ -399,6 +399,25 @@ export interface NaverPaySdkConfigResponse {
   payType: "normal" | "recurrent";
   openType: "popup" | "page"; // 결제창 오픈 방식 (popup: 모달, page: 리다이렉트)
   returnUrl: string; // 결제 완료 후 리다이렉트 URL
+}
+
+// ------------------------------------------------------------------
+// 카카오페이 관련 타입
+// ------------------------------------------------------------------
+
+// 카카오페이 클라이언트 정보 응답
+export interface KakaoPayClientInfoResponse {
+  isEnabled: boolean;
+  mode: "dev" | "prod";
+}
+
+// 카카오페이 결제 준비 응답
+export interface KakaoPayReadyResponse {
+  tid: string;
+  next_redirect_pc_url: string;
+  next_redirect_mobile_url: string;
+  next_redirect_app_url: string;
+  created_at: string;
 }
 
 // 카테고리 타입
