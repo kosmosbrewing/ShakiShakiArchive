@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Vue 및 라우터
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 
 // 스토어 및 유틸리티
@@ -9,7 +9,7 @@ import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 
 // API
-import { fetchAdminUsers, fetchAdminUserDetail } from "@/lib/api";
+import { fetchAdminUsers, fetchAdminUserDetail, updateUserRole } from "@/lib/api";
 
 // 타입
 import type {
@@ -29,21 +29,24 @@ import { LoadingSpinner } from "@/components/common";
 import {
   Users,
   Search,
-  RotateCcw,
   X,
   Mail,
   Phone,
   Calendar,
   Shield,
+  ShieldCheck,
+  ShieldOff,
   ChevronLeft,
   ChevronRight,
   MapPin,
+  UserCog,
+  Loader2,
 } from "lucide-vue-next";
 
 // --- 상태 관리 ---
 const router = useRouter();
 const authStore = useAuthStore();
-const { showAlert } = useAlert();
+const { showAlert, showConfirm } = useAlert();
 
 const users = ref<User[]>([]);
 const loading = ref(false);
@@ -64,6 +67,14 @@ const isDetailModalOpen = ref(false);
 const selectedUser = ref<User | null>(null);
 const userStats = ref<AdminUserDetailResponse["stats"] | null>(null);
 const loadingDetail = ref(false);
+
+// 관리자 권한 관리 모달 상태
+const isRoleModalOpen = ref(false);
+const roleSearchInput = ref("");
+const roleSearchResults = ref<User[]>([]);
+const selectedUserForRole = ref<User | null>(null);
+const loadingRoleSearch = ref(false);
+const loadingRoleUpdate = ref(false);
 
 // --- 검색 디바운싱 ---
 let searchTimeout: NodeJS.Timeout | null = null;
@@ -137,6 +148,95 @@ const clearSearch = () => {
   searchQuery.value = "";
   pagination.value.page = 1;
   loadData();
+};
+
+// --- 관리자 권한 관리 모달 ---
+const openRoleModal = () => {
+  isRoleModalOpen.value = true;
+  roleSearchInput.value = "";
+  roleSearchResults.value = [];
+  selectedUserForRole.value = null;
+};
+
+const closeRoleModal = () => {
+  isRoleModalOpen.value = false;
+  roleSearchInput.value = "";
+  roleSearchResults.value = [];
+  selectedUserForRole.value = null;
+};
+
+// 권한 관리용 사용자 검색
+let roleSearchTimeout: NodeJS.Timeout | null = null;
+
+const searchUsersForRole = () => {
+  if (roleSearchTimeout) clearTimeout(roleSearchTimeout);
+
+  if (!roleSearchInput.value.trim()) {
+    roleSearchResults.value = [];
+    return;
+  }
+
+  roleSearchTimeout = setTimeout(async () => {
+    loadingRoleSearch.value = true;
+    try {
+      const response = await fetchAdminUsers({
+        search: roleSearchInput.value,
+        limit: 10,
+      });
+      roleSearchResults.value = response.users;
+    } catch (error: any) {
+      console.error("사용자 검색 실패:", error);
+      showAlert(error.message || ADMIN_MESSAGES.userSearchFailed, { type: "error" });
+    } finally {
+      loadingRoleSearch.value = false;
+    }
+  }, 300);
+};
+
+// 권한 변경 대상 사용자 선택
+const selectUserForRole = (user: User) => {
+  selectedUserForRole.value = user;
+  roleSearchResults.value = [];
+  roleSearchInput.value = "";
+};
+
+// 선택 취소
+const clearSelectedUserForRole = () => {
+  selectedUserForRole.value = null;
+};
+
+// 관리자 권한 부여/해제
+const handleRoleUpdate = async (grantAdmin: boolean) => {
+  if (!selectedUserForRole.value) return;
+
+  const actionText = grantAdmin ? "부여" : "해제";
+
+  const confirmed = await showConfirm(
+    `${selectedUserForRole.value.userName}님에게 관리자 권한을 ${actionText}하시겠습니까?`,
+    {
+      confirmText: actionText,
+      cancelText: "취소",
+    }
+  );
+
+  if (!confirmed) return;
+
+  loadingRoleUpdate.value = true;
+  try {
+    const response = await updateUserRole(selectedUserForRole.value.id, grantAdmin);
+    showAlert(response.message, { type: "success" });
+
+    // 선택된 사용자 정보 업데이트
+    selectedUserForRole.value = response.user;
+
+    // 목록 새로고침
+    loadData();
+  } catch (error: any) {
+    console.error("권한 변경 실패:", error);
+    showAlert(error.message || ADMIN_MESSAGES.userRoleUpdateFailed, { type: "error" });
+  } finally {
+    loadingRoleUpdate.value = false;
+  }
 };
 
 // --- 페이지네이션 ---
@@ -217,7 +317,21 @@ const getProviderColor = (_socialProvider: string | undefined | null): "outline"
   return "outline";
 };
 
+// --- ESC 키로 모달 닫기 ---
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === "Escape") {
+    if (isRoleModalOpen.value) {
+      closeRoleModal();
+    } else if (isDetailModalOpen.value) {
+      closeDetailModal();
+    }
+  }
+};
+
 onMounted(async () => {
+  // ESC 키 이벤트 등록
+  window.addEventListener("keydown", handleKeydown);
+
   // 관리자 권한 확인
   if (!authStore.user) await authStore.loadUser();
   if (!authStore.user?.isAdmin) {
@@ -225,6 +339,11 @@ onMounted(async () => {
     return;
   }
   loadData();
+});
+
+onUnmounted(() => {
+  // ESC 키 이벤트 해제
+  window.removeEventListener("keydown", handleKeydown);
 });
 </script>
 
@@ -240,11 +359,11 @@ onMounted(async () => {
       </div>
       <Button
         variant="outline"
-        @click="loadData"
+        @click="openRoleModal"
         class="mb-2 gap-2 text-admin font-semibold"
       >
-        <RotateCcw class="w-4 h-4" />
-        새로고침
+        <UserCog class="w-4 h-4" />
+        관리자 권한 관리
       </Button>
     </div>
     <Separator class="mb-6"></Separator>
@@ -583,6 +702,192 @@ onMounted(async () => {
                 닫기
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 관리자 권한 관리 모달 -->
+    <div
+      v-if="isRoleModalOpen"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="role-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+      @click.self="closeRoleModal"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+      >
+        <div class="p-6">
+          <!-- 헤더 -->
+          <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+              <div
+                class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+              >
+                <UserCog class="w-5 h-5 text-primary" />
+              </div>
+              <h2 id="role-modal-title" class="text-lg font-bold text-admin">관리자 권한 관리</h2>
+            </div>
+            <Button variant="ghost" size="icon" @click="closeRoleModal">
+              <X class="w-5 h-5" />
+            </Button>
+          </div>
+
+          <!-- 선택된 사용자 표시 -->
+          <div v-if="selectedUserForRole" class="mb-6">
+            <div class="bg-muted/30 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-body font-bold text-primary">
+                      {{ selectedUserForRole.userName.charAt(0) }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="text-body font-semibold text-admin">
+                      {{ selectedUserForRole.userName }}
+                    </div>
+                    <div class="text-caption text-admin-muted">
+                      {{ selectedUserForRole.email }}
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Badge
+                    :variant="selectedUserForRole.isAdmin ? 'default' : 'outline'"
+                    class="gap-1"
+                  >
+                    <Shield v-if="selectedUserForRole.isAdmin" class="w-3 h-3" />
+                    {{ selectedUserForRole.isAdmin ? "관리자" : "일반회원" }}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8"
+                    @click="clearSelectedUserForRole"
+                  >
+                    <X class="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <!-- 권한 변경 버튼 -->
+              <div class="flex gap-2 mt-4">
+                <Button
+                  v-if="!selectedUserForRole.isAdmin"
+                  class="flex-1 gap-2"
+                  :disabled="loadingRoleUpdate"
+                  @click="handleRoleUpdate(true)"
+                >
+                  <Loader2 v-if="loadingRoleUpdate" class="w-4 h-4 animate-spin" />
+                  <ShieldCheck v-else class="w-4 h-4" />
+                  관리자 권한 부여
+                </Button>
+                <Button
+                  v-else
+                  variant="destructive"
+                  class="flex-1 gap-2"
+                  :disabled="loadingRoleUpdate"
+                  @click="handleRoleUpdate(false)"
+                >
+                  <Loader2 v-if="loadingRoleUpdate" class="w-4 h-4 animate-spin" />
+                  <ShieldOff v-else class="w-4 h-4" />
+                  관리자 권한 해제
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 사용자 검색 -->
+          <div v-else>
+            <label class="text-caption font-semibold text-admin-muted mb-2 block">
+              회원 검색
+            </label>
+            <div class="relative">
+              <Search
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted"
+              />
+              <Input
+                v-model="roleSearchInput"
+                type="text"
+                placeholder="이름, 이메일, 연락처로 검색..."
+                class="pl-10"
+                @input="searchUsersForRole"
+              />
+            </div>
+
+            <!-- 검색 결과 -->
+            <div
+              v-if="roleSearchInput && (loadingRoleSearch || roleSearchResults.length > 0)"
+              class="mt-2 border rounded-lg overflow-hidden"
+            >
+              <LoadingSpinner v-if="loadingRoleSearch" :center="false" class="py-4" />
+              <div v-else class="max-h-64 overflow-y-auto">
+                <button
+                  v-for="user in roleSearchResults"
+                  :key="user.id"
+                  class="w-full flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors text-left border-b last:border-b-0"
+                  @click="selectUserForRole(user)"
+                >
+                  <div
+                    class="h-8 w-8 bg-primary/5 rounded-full flex items-center justify-center flex-shrink-0"
+                  >
+                    <span class="text-caption font-bold text-primary">
+                      {{ user.userName.charAt(0) }}
+                    </span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-body font-medium text-admin truncate">
+                      {{ user.userName }}
+                    </div>
+                    <div class="text-caption text-admin-muted truncate">
+                      {{ user.email }}
+                    </div>
+                  </div>
+                  <Badge
+                    :variant="user.isAdmin ? 'default' : 'outline'"
+                    class="gap-1 flex-shrink-0"
+                  >
+                    <Shield v-if="user.isAdmin" class="w-3 h-3" />
+                    {{ user.isAdmin ? "관리자" : "일반" }}
+                  </Badge>
+                </button>
+              </div>
+            </div>
+
+            <!-- 검색어 없을 때 안내 -->
+            <div
+              v-if="!roleSearchInput"
+              class="mt-4 text-center text-admin-muted py-8"
+            >
+              <Users class="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p class="text-caption">
+                권한을 변경할 회원을 검색하세요.
+              </p>
+            </div>
+
+            <!-- 검색 결과 없음 -->
+            <div
+              v-if="roleSearchInput && !loadingRoleSearch && roleSearchResults.length === 0"
+              class="mt-4 text-center text-admin-muted py-8"
+            >
+              <Users class="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p class="text-caption">
+                검색 결과가 없습니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 안내 문구 -->
+          <div class="mt-6 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <p class="text-caption text-amber-800">
+              <strong>주의:</strong> 관리자 권한은 슈퍼 관리자만 변경할 수 있습니다.
+              자기 자신의 권한은 변경할 수 없습니다.
+            </p>
           </div>
         </div>
       </div>

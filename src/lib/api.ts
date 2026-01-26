@@ -48,6 +48,7 @@ import type {
   AdminUsersResponse,
   AdminUserDetailResponse,
   UpdateUserRequest,
+  UpdateUserRoleResponse,
 } from "@/types/api";
 import { apiCache, cachePolicies, NEVER_CACHE_PATTERNS } from "./apiCache";
 
@@ -1455,6 +1456,17 @@ export async function updateAdminUser(
   return apiRequest<User>(`/api/admin/users/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+// 회원 권한 변경 (슈퍼 관리자 전용)
+export async function updateUserRole(
+  userId: string,
+  isAdmin: boolean
+): Promise<UpdateUserRoleResponse> {
+  return apiRequest<UpdateUserRoleResponse>(`/api/admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: JSON.stringify({ isAdmin }),
   });
 }
 

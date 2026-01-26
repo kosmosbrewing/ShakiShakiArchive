@@ -760,6 +760,17 @@ export interface UpdateUserRequest {
   emailOptIn?: boolean;
 }
 
+// 회원 권한 변경 요청 (슈퍼 관리자 전용)
+export interface UpdateUserRoleRequest {
+  isAdmin: boolean;
+}
+
+// 회원 권한 변경 응답
+export interface UpdateUserRoleResponse {
+  message: string;
+  user: User;
+}
+
 // ------------------------------------------------------------------
 // 택배사 관련 타입 (Courier Company)
 // ------------------------------------------------------------------

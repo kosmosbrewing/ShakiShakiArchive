@@ -50,6 +50,8 @@ export const ADMIN_MESSAGES = {
   // 회원 관리
   userListLoadFailed: "회원 목록을 불러오는데 실패했습니다.",
   userDetailLoadFailed: "회원 상세 정보를 불러오는데 실패했습니다.",
+  userSearchFailed: "사용자 검색에 실패했습니다.",
+  userRoleUpdateFailed: "관리자 권한 변경에 실패했습니다.",
 
   // 확인
   deleteConfirm: "정말 삭제하시겠습니까?",
