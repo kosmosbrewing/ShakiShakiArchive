@@ -2,18 +2,23 @@
 // src/pages/Modify.vue
 // 회원정보 수정 페이지
 
-import { ref, reactive, onMounted, nextTick, computed } from "vue";
+import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
-import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
+import {
+  updateMyInfo,
+  changeMyPassword,
+  withdrawUser,
+  getKakaoLoginUrl,
+  getNaverLoginUrl,
+} from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 import { getPasswordErrorMessage, getPasswordStrength } from "@/utils/password-validation";
 import { ACCOUNT_MESSAGES } from "@/lib/messages";
-import { reauthWithKakao, reauthWithNaver } from "@/services/socialAuth";
 
 // 공통 컴포넌트
-import { PhoneInput, AddressSearchModal } from "@/components/common";
+import { PhoneInput, AddressSearchModal, LoadingSpinner } from "@/components/common";
 
 // Shadcn UI 컴포넌트
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,14 +109,15 @@ const restoreFormDataAfterReauth = () => {
   if (savedData) {
     try {
       const formData = JSON.parse(savedData);
-      form.userName = formData.userName || form.userName;
-      form.phone1 = formData.phone1 || form.phone1;
-      form.phone2 = formData.phone2 || form.phone2;
-      form.phone3 = formData.phone3 || form.phone3;
-      form.zipCode = formData.zipCode || form.zipCode;
-      form.address = formData.address || form.address;
-      form.detailAddress = formData.detailAddress || form.detailAddress;
-      form.emailOptIn = formData.emailOptIn ?? form.emailOptIn;
+      // undefined가 아닌 경우에만 복원 (빈 문자열도 유효한 값으로 처리)
+      if (formData.userName !== undefined) form.userName = formData.userName;
+      if (formData.phone1 !== undefined) form.phone1 = formData.phone1;
+      if (formData.phone2 !== undefined) form.phone2 = formData.phone2;
+      if (formData.phone3 !== undefined) form.phone3 = formData.phone3;
+      if (formData.zipCode !== undefined) form.zipCode = formData.zipCode;
+      if (formData.address !== undefined) form.address = formData.address;
+      if (formData.detailAddress !== undefined) form.detailAddress = formData.detailAddress;
+      if (formData.emailOptIn !== undefined) form.emailOptIn = formData.emailOptIn;
       // 복원 후 삭제
       sessionStorage.removeItem("modify_form_data");
     } catch (e) {
@@ -120,16 +126,125 @@ const restoreFormDataAfterReauth = () => {
   }
 };
 
-// 소셜 재인증 요청
-const handleSocialReauth = () => {
-  // 현재 폼 데이터 저장
-  saveFormDataBeforeReauth();
+// 모바일 환경 체크 (Login.vue와 동일)
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
 
-  if (socialProvider.value === "kakao") {
-    reauthWithKakao();
-  } else if (socialProvider.value === "naver") {
-    reauthWithNaver();
+// 소셜 재인증 로딩 상태
+const isSocialReauthLoading = ref(false);
+
+// 컴포넌트 정리를 위한 참조 (메모리 누수 방지)
+let popupCheckInterval: ReturnType<typeof setInterval> | null = null;
+let storageEventHandler: ((event: StorageEvent) => void) | null = null;
+
+// 소셜 재인증 요청 (PC: 팝업, 모바일: 리다이렉트 - Login.vue와 동일한 패턴)
+const handleSocialReauth = () => {
+  isSocialReauthLoading.value = true;
+
+  const provider = socialProvider.value;
+  const loginUrl = provider === "kakao"
+    ? getKakaoLoginUrl({ forceLogin: true, returnUrl: "/modify" })
+    : getNaverLoginUrl({ forceLogin: true, returnUrl: "/modify" });
+
+  // 모바일: 리다이렉트 방식
+  if (isMobile()) {
+    // 현재 폼 데이터 저장 (리다이렉트 시에만 필요)
+    saveFormDataBeforeReauth();
+
+    // 재인증 후 돌아올 페이지 저장
+    sessionStorage.setItem("social_reauth_redirect", "/modify");
+    sessionStorage.setItem("social_reauth_provider", provider || "");
+
+    window.location.href = loginUrl;
+    return;
   }
+
+  // PC: 팝업 창 방식 (Login.vue와 동일)
+  const width = 500;
+  const height = 600;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+
+  // 팝업 여부를 localStorage에 저장 (팝업 창과 공유)
+  localStorage.setItem("oauth_popup", "true");
+  // 재인증임을 표시 (팝업에서 결과 저장 시 구분용)
+  localStorage.setItem("oauth_reauth", "true");
+
+  const popupName = provider === "kakao" ? "kakaoReauth" : "naverReauth";
+  const popup = window.open(
+    loginUrl,
+    popupName,
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+  );
+
+  // 팝업이 차단된 경우 리다이렉트로 대체
+  if (!popup) {
+    localStorage.removeItem("oauth_popup");
+    localStorage.removeItem("oauth_reauth");
+    saveFormDataBeforeReauth();
+    sessionStorage.setItem("social_reauth_redirect", "/modify");
+    sessionStorage.setItem("social_reauth_provider", provider || "");
+    window.location.href = loginUrl;
+    return;
+  }
+
+  // 기존 interval/이벤트 정리
+  if (popupCheckInterval) clearInterval(popupCheckInterval);
+  if (storageEventHandler) window.removeEventListener("storage", storageEventHandler);
+
+  // 팝업 창 닫힘 감지
+  popupCheckInterval = setInterval(() => {
+    if (popup.closed) {
+      if (popupCheckInterval) clearInterval(popupCheckInterval);
+      popupCheckInterval = null;
+      isSocialReauthLoading.value = false;
+      localStorage.removeItem("oauth_reauth");
+    }
+  }, 500);
+
+  // localStorage를 통한 OAuth 결과 수신 (storage 이벤트)
+  storageEventHandler = (event: StorageEvent) => {
+    if (event.key !== "oauth_result" || !event.newValue) return;
+
+    try {
+      const result = JSON.parse(event.newValue);
+      const { type, message } = result;
+
+      // 결과 처리 후 localStorage 정리
+      localStorage.removeItem("oauth_result");
+      localStorage.removeItem("oauth_reauth");
+
+      if (type === "OAUTH_SUCCESS") {
+        if (popupCheckInterval) clearInterval(popupCheckInterval);
+        popupCheckInterval = null;
+        if (storageEventHandler) window.removeEventListener("storage", storageEventHandler);
+        storageEventHandler = null;
+
+        isSocialReauthLoading.value = false;
+
+        // 재인증 성공 처리
+        sessionStorage.setItem("social_reauth_verified", Date.now().toString());
+        isSocialReauthVerified.value = true;
+
+        showAlert("본인 인증이 완료되었습니다.", { type: "success" });
+      } else if (type === "OAUTH_ERROR") {
+        if (popupCheckInterval) clearInterval(popupCheckInterval);
+        popupCheckInterval = null;
+        if (storageEventHandler) window.removeEventListener("storage", storageEventHandler);
+        storageEventHandler = null;
+
+        isSocialReauthLoading.value = false;
+        showAlert(message || "인증에 실패했습니다.", { type: "error" });
+      }
+    } catch (e) {
+      console.error("OAuth 결과 파싱 오류:", e);
+    }
+  };
+
+  window.addEventListener("storage", storageEventHandler);
 };
 
 // 닉네임 필드 Enter 키 처리 (1자 이상일 때만 이동)
@@ -486,12 +601,35 @@ onMounted(async () => {
   if (!authStore.user) await authStore.loadUser();
   initializeForm();
 
+  // 소셜 재인증 에러 확인 (취소/실패 시)
+  const reauthError = sessionStorage.getItem("social_reauth_error");
+  if (reauthError) {
+    sessionStorage.removeItem("social_reauth_error");
+    // 에러 메시지 표시 (인증 취소 등)
+    showAlert(reauthError, { type: "error" });
+    // 폼 데이터 복원 (리다이렉트 전 저장한 데이터)
+    restoreFormDataAfterReauth();
+    return;
+  }
+
   // 소셜 재인증 상태 확인
   const isReauthVerified = checkSocialReauthVerified();
 
   // 소셜 재인증 후 폼 데이터 복원
   if (isReauthVerified) {
     restoreFormDataAfterReauth();
+  }
+});
+
+// 컴포넌트 언마운트 시 정리 (메모리 누수 방지)
+onUnmounted(() => {
+  if (popupCheckInterval) {
+    clearInterval(popupCheckInterval);
+    popupCheckInterval = null;
+  }
+  if (storageEventHandler) {
+    window.removeEventListener("storage", storageEventHandler);
+    storageEventHandler = null;
   }
 });
 </script>
@@ -630,10 +768,22 @@ onMounted(async () => {
                   type="button"
                   variant="outline"
                   :class="['w-full h-11', socialButtonClass]"
+                  :disabled="isSocialReauthLoading"
                   @click="handleSocialReauth"
                 >
+                  <!-- 로딩 상태 -->
+                  <template v-if="isSocialReauthLoading">
+                    <LoadingSpinner
+                      variant="spinner"
+                      size="sm"
+                      :color="socialProvider === 'kakao' ? 'foreground' : 'white'"
+                      :center="false"
+                      class="mr-2"
+                    />
+                    <span :class="socialProvider === 'kakao' ? 'text-[#191919]' : 'text-white'">인증 중...</span>
+                  </template>
                   <!-- 네이버 아이콘 -->
-                  <template v-if="socialProvider === 'naver'">
+                  <template v-else-if="socialProvider === 'naver'">
                     <div class="inline-flex items-center leading-none text-white">
                       <svg
                         viewBox="0 0 20 20"

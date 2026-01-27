@@ -41,8 +41,8 @@ onMounted(async () => {
   // 재인증 여부 확인 (회원정보 수정용)
   const reauthStatus = checkReauthStatus();
 
-  // returnUrl 파라미터 확인 (로그인 전 페이지로 돌아가기 위함)
-  const returnUrl = (route.query.returnUrl as string) || "/";
+  // returnUrl 파라미터 확인 (로그인 전 페이지로 돌아가기 위함, Open Redirect 방지)
+  const returnUrl = validateReturnUrl((route.query.returnUrl as string) || "/");
 
   try {
     // URL에서 에러 파라미터 확인
@@ -59,15 +59,7 @@ onMounted(async () => {
 
       // 팝업 창인 경우: localStorage를 통해 부모 창에 결과 전달
       if (isPopup.value) {
-        // localStorage에 성공 결과 저장 (부모 창에서 storage 이벤트로 감지)
-        localStorage.setItem(
-          "oauth_result",
-          JSON.stringify({ type: "OAUTH_SUCCESS", timestamp: Date.now() })
-        );
-        // 창 닫기
-        setTimeout(() => {
-          window.close();
-        }, 100);
+        notifyPopupResult("OAUTH_SUCCESS");
         return;
       }
 
@@ -96,24 +88,26 @@ onMounted(async () => {
     status.value = "error";
     errorMessage.value = error.message || ERROR_MESSAGES.serverError;
 
-    // 재인증 실패 시 상태 초기화
+    // 재인증 실패 시: 에러 화면 대신 원래 페이지로 돌아가기
     if (reauthStatus.isReauth) {
+      const redirectUrl = reauthStatus.redirect || "/modify";
       clearReauthStatus();
+
+      // 팝업 창인 경우: localStorage를 통해 부모 창에 에러 전달 후 창 닫기
+      if (isPopup.value) {
+        notifyPopupResult("OAUTH_ERROR", errorMessage.value);
+        return;
+      }
+
+      // 리다이렉트 방식인 경우: 에러 메시지를 세션에 저장하고 원래 페이지로 이동
+      sessionStorage.setItem("social_reauth_error", errorMessage.value);
+      await router.replace(redirectUrl);
+      return;
     }
 
-    // 팝업 창인 경우: localStorage를 통해 부모 창에 에러 전달
+    // 팝업 창인 경우 (일반 로그인): localStorage를 통해 부모 창에 에러 전달
     if (isPopup.value) {
-      localStorage.setItem(
-        "oauth_result",
-        JSON.stringify({
-          type: "OAUTH_ERROR",
-          message: errorMessage.value,
-          timestamp: Date.now(),
-        })
-      );
-      setTimeout(() => {
-        window.close();
-      }, 100);
+      notifyPopupResult("OAUTH_ERROR", errorMessage.value);
       return;
     }
 
@@ -128,7 +122,7 @@ onMounted(async () => {
 function getErrorMessage(errorCode: string): string {
   switch (errorCode) {
     case "access_denied":
-      return "네이버 로그인이 취소되었습니다.";
+      return "소셜 로그인이 취소되었습니다.";
     case "invalid_request":
       return "잘못된 요청입니다. 다시 시도해주세요.";
     case "server_error":
@@ -136,6 +130,34 @@ function getErrorMessage(errorCode: string): string {
     default:
       return "로그인 중 오류가 발생했습니다.";
   }
+}
+
+// 팝업 창에서 부모 창에 OAuth 결과 전달 후 창 닫기
+function notifyPopupResult(type: "OAUTH_SUCCESS" | "OAUTH_ERROR", message?: string): void {
+  localStorage.setItem(
+    "oauth_result",
+    JSON.stringify({
+      type,
+      message,
+      timestamp: Date.now(),
+    })
+  );
+  setTimeout(() => {
+    window.close();
+  }, 100);
+}
+
+// returnUrl 검증 (Open Redirect 방지)
+function validateReturnUrl(url: string): string {
+  // 상대 경로만 허용 (절대 URL, 프로토콜 포함 URL 차단)
+  if (!url || url.startsWith("//") || /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+    return "/";
+  }
+  // 슬래시로 시작하는 상대 경로만 허용
+  if (!url.startsWith("/")) {
+    return "/";
+  }
+  return url;
 }
 
 // 로그인 페이지로 이동
