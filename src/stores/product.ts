@@ -17,16 +17,35 @@ interface ProductItem {
 
 const PAGE_SIZE = 12;
 
+// 캐시 설정 (재고/신상품 실시간 반영용)
+const STALE_TIME = 30 * 1000; // 30초 - 데이터가 stale로 간주되는 시간
+const CACHE_TIME = 60 * 1000; // 60초 - 캐시 완전 무효화 시간
+
 export const useProductStore = defineStore("product", () => {
   // 상태
   const products = ref<ProductItem[]>([]);
   const loading = ref(false);
   const loaded = ref(false);
+  const lastFetchedAt = ref<number | null>(null); // 마지막 fetch 시간
 
   // 무한스크롤 상태
   const loadingMore = ref(false);
   const hasMore = ref(true);
   const currentPage = ref(1);
+
+  // 중복 요청 방지용 Promise
+  let fetchPromise: Promise<void> | null = null;
+
+  // 캐시 상태 확인
+  const isStale = computed(() => {
+    if (!lastFetchedAt.value) return true;
+    return Date.now() - lastFetchedAt.value > STALE_TIME;
+  });
+
+  const isCacheExpired = computed(() => {
+    if (!lastFetchedAt.value) return true;
+    return Date.now() - lastFetchedAt.value > CACHE_TIME;
+  });
 
   // 상품 매핑 (API 응답 → ProductItem)
   const mapProduct = (item: any): ProductItem => {
@@ -68,28 +87,63 @@ export const useProductStore = defineStore("product", () => {
   };
 
   // 홈페이지용 상품 로드 (첫 페이지)
-  const loadHomeProducts = async () => {
-    // 이미 로드된 경우 스킵
-    if (loaded.value && products.value.length > 0) return;
+  // force: true면 캐시 무시하고 강제 로드
+  const loadHomeProducts = async (force: boolean = false) => {
+    // 캐시 유효성 검사
+    const hasValidCache = loaded.value && products.value.length > 0;
+    const shouldSkip = hasValidCache && !isStale.value && !force;
 
-    loading.value = true;
+    // 유효한 캐시가 있고 stale이 아니면 스킵
+    if (shouldSkip) {
+      console.log("[ProductStore] 캐시 유효 - API 호출 스킵");
+      return;
+    }
+
+    // 🔒 중복 요청 방지: 이미 진행 중인 요청이 있으면 대기
+    if (fetchPromise && !force) {
+      console.log("[ProductStore] 중복 요청 방지 - 기존 요청 대기");
+      return fetchPromise;
+    }
+
+    // stale 데이터가 있으면 백그라운드 갱신 (기존 데이터 유지하며 로딩)
+    const isBackgroundRefresh = hasValidCache && isStale.value && !force;
+    if (isBackgroundRefresh) {
+      console.log("[ProductStore] Stale 데이터 - 백그라운드 갱신");
+    }
+
+    // 캐시 만료 또는 강제 새로고침이면 로딩 표시
+    if (!isBackgroundRefresh) {
+      loading.value = true;
+    }
+
     currentPage.value = 1;
     hasMore.value = true;
 
-    try {
-      // 홈페이지용 상품 (백엔드에서 isAvailable=true 우선 정렬)
-      const response = await fetchProducts({ page: 1, limit: PAGE_SIZE });
-      const mappedProducts = response.products.map(mapProduct);
-      products.value = sortByStock(mappedProducts);
-      hasMore.value = response.pagination?.hasMore ?? false;
-      loaded.value = true;
-    } catch (error) {
-      console.error("상품 목록 로드 실패:", error);
-      products.value = [];
-      hasMore.value = false;
-    } finally {
-      loading.value = false;
-    }
+    // fetch 시작 - Promise 저장
+    fetchPromise = (async () => {
+      try {
+        // 홈페이지용 상품 (백엔드에서 isAvailable=true 우선 정렬)
+        const response = await fetchProducts({ page: 1, limit: PAGE_SIZE });
+        const mappedProducts = response.products.map(mapProduct);
+        products.value = sortByStock(mappedProducts);
+        hasMore.value = response.pagination?.hasMore ?? false;
+        loaded.value = true;
+        lastFetchedAt.value = Date.now(); // 캐시 타임스탬프 갱신
+        console.log("[ProductStore] 상품 데이터 갱신 완료");
+      } catch (error) {
+        console.error("상품 목록 로드 실패:", error);
+        // 백그라운드 갱신 실패 시 기존 데이터 유지
+        if (!isBackgroundRefresh) {
+          products.value = [];
+          hasMore.value = false;
+        }
+      } finally {
+        loading.value = false;
+        fetchPromise = null; // 요청 완료 후 초기화
+      }
+    })();
+
+    return fetchPromise;
   };
 
   // 추가 상품 로드 (무한스크롤)
@@ -115,13 +169,32 @@ export const useProductStore = defineStore("product", () => {
     }
   };
 
-  // 강제 새로고침
+  // 강제 새로고침 (캐시 무시)
   const refreshProducts = async () => {
     loaded.value = false;
+    lastFetchedAt.value = null;
     currentPage.value = 1;
     hasMore.value = true;
-    await loadHomeProducts();
+    await loadHomeProducts(true);
   };
+
+  // 캐시 초기화 (로그아웃 등)
+  const clearCache = () => {
+    products.value = [];
+    loaded.value = false;
+    lastFetchedAt.value = null;
+    currentPage.value = 1;
+    hasMore.value = true;
+    fetchPromise = null;
+  };
+
+  // 로그아웃 이벤트 리스너 (reload=false일 때 캐시 정리)
+  if (typeof window !== "undefined") {
+    window.addEventListener("auth-logout", () => {
+      clearCache();
+      console.log("[ProductStore] 로그아웃으로 캐시 정리");
+    });
+  }
 
   // Computed: ProductHome용 (1~4번)
   const featuredProducts = computed(() => products.value.slice(0, 4));
@@ -134,6 +207,10 @@ export const useProductStore = defineStore("product", () => {
     products,
     loading,
     loaded,
+    lastFetchedAt,
+    // 캐시 상태
+    isStale,
+    isCacheExpired,
     // 무한스크롤 상태
     loadingMore,
     hasMore,
@@ -141,6 +218,7 @@ export const useProductStore = defineStore("product", () => {
     loadHomeProducts,
     loadMoreProducts,
     refreshProducts,
+    clearCache,
     // Computed
     featuredProducts,
     remainingProducts,

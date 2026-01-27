@@ -62,6 +62,7 @@ const statusOptions = [
   { value: "preparing", label: "배송준비중" },
   { value: "shipped", label: "배송중" },
   { value: "delivered", label: "배송완료" },
+  { value: "purchase_confirmed", label: "구매확정" },
   { value: "refunded", label: "주문취소" },
 ];
 

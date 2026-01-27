@@ -14,6 +14,7 @@ import {
   ERROR_MESSAGES,
 } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
+import { checkReauthStatus, clearReauthStatus } from "@/services/socialAuth";
 
 const router = useRouter();
 const route = useRoute();
@@ -36,6 +37,9 @@ onMounted(async () => {
   isPopup.value = localStorage.getItem("oauth_popup") === "true";
   // 확인 후 삭제
   localStorage.removeItem("oauth_popup");
+
+  // 재인증 여부 확인 (회원정보 수정용)
+  const reauthStatus = checkReauthStatus();
 
   // returnUrl 파라미터 확인 (로그인 전 페이지로 돌아가기 위함)
   const returnUrl = (route.query.returnUrl as string) || "/";
@@ -67,6 +71,17 @@ onMounted(async () => {
         return;
       }
 
+      // 재인증인 경우: 재인증 완료 상태 저장 후 Modify 페이지로 이동
+      if (reauthStatus.isReauth && reauthStatus.redirect) {
+        // 재인증 완료 상태 저장 (5분간 유효)
+        sessionStorage.setItem("social_reauth_verified", Date.now().toString());
+        clearReauthStatus();
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await router.replace(reauthStatus.redirect);
+        return;
+      }
+
       // 일반 리다이렉트: 환영 메시지 설정 후 홈으로 이동
       const userName = authStore.user?.userName || "회원";
       authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
@@ -80,6 +95,11 @@ onMounted(async () => {
   } catch (error: any) {
     status.value = "error";
     errorMessage.value = error.message || ERROR_MESSAGES.serverError;
+
+    // 재인증 실패 시 상태 초기화
+    if (reauthStatus.isReauth) {
+      clearReauthStatus();
+    }
 
     // 팝업 창인 경우: localStorage를 통해 부모 창에 에러 전달
     if (isPopup.value) {

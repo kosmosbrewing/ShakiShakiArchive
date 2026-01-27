@@ -89,6 +89,26 @@ export const ORDER_MESSAGES = {
   // 상품 정보 오류
   invalidProductInfo: "잘못된 상품 정보입니다.",
   noOrderItemsInfo: "주문할 상품 정보가 없습니다.",
+
+  // 부분 취소 관련
+  partialCancelSuccess: "선택한 상품이 취소되었습니다.",
+  partialCancelFailed: "부분 취소에 실패했습니다.",
+  partialCancelConfirm: "선택한 상품을 취소하시겠습니까?\n취소된 상품은 되돌릴 수 없습니다.",
+  selectCancelItems: "취소할 상품을 선택해주세요.",
+  noSelectableItems: "취소 가능한 상품이 없습니다.",
+
+  // 반품 관련
+  returnRequestSuccess: "반품 요청이 접수되었습니다.",
+  returnRequestFailed: "반품 요청에 실패했습니다.",
+  returnTrackingSuccess: "반품 운송장이 등록되었습니다.",
+  returnTrackingFailed: "운송장 등록에 실패했습니다.",
+  returnReasonRequired: "반품 사유를 선택해주세요.",
+  returnDetailReasonRequired: "상세 사유를 입력해주세요.",
+  returnTrackingRequired: "운송장 번호를 입력해주세요.",
+  returnCourierRequired: "택배사를 선택해주세요.",
+  returnGuide: "반품 요청 후 7일 이내에 운송장을 등록해주세요.",
+  returnShippingGuide: "상품을 포장 후 택배로 발송해주세요.\n발송 후 운송장 번호를 등록하면 반품 처리가 진행됩니다.",
+  returnNotReturnable: "반품 가능한 상태가 아닙니다.",
 } as const;
 
 // 타입 추출

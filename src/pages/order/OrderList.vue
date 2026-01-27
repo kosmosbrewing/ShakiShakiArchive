@@ -5,12 +5,13 @@
 import { onMounted, onUnmounted, ref, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthGuard } from "@/composables/useAuthGuard";
-import { useOrders, useCancelOrder } from "@/composables/useOrders";
+import { useOrders } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
 import { fetchAllOrders } from "@/lib/api";
+import { sortOrderItems } from "@/lib/constants/order";
 import { useDebounceFn } from "@vueuse/core";
 import { ORDER_MESSAGES } from "@/lib/messages";
 
@@ -20,7 +21,6 @@ import {
   EmptyState,
   ProductThumbnail,
   OrderStatusBadge,
-  CancelOrderDialog,
 } from "@/components/common";
 
 // Shadcn UI 컴포넌트
@@ -89,9 +89,6 @@ watch(loadMoreTrigger, (newEl) => {
     setupIntersectionObserver();
   }
 });
-
-// 주문 취소 훅
-const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
 
 // 현재 필터 상태
 const currentFilter = ref<string | null>(null);
@@ -174,9 +171,9 @@ const filteredOrders = computed((): Order[] => {
       return true;
     });
 
-    // 필터링된 아이템이 있는 주문만 추가
+    // 필터링된 아이템이 있는 주문만 추가 (정렬 적용)
     if (filteredItems.length > 0) {
-      result.push({ ...order, orderItems: filteredItems });
+      result.push({ ...order, orderItems: sortOrderItems(filteredItems) });
     }
   }
 
@@ -264,70 +261,14 @@ watch(loadingMore, (newValue) => {
   }
 });
 
-// 취소 다이얼로그 상태
-const cancelDialogOpen = ref(false);
-const cancelTargetOrder = ref<Order | null>(null);
-const cancelTargetItem = ref<OrderItem | null>(null);
-
 // 주문 상세 이동
 const goToOrderDetail = (orderId: string | number) => {
   router.push(`/orderdetail/${orderId}`);
 };
 
-// 상태별 버튼 노출 로직
-const canCancel = (status: string) => {
-  return ["payment_confirmed", "preparing"].includes(status);
-};
+// 상태별 버튼 노출 로직 (배송조회만 사용, 취소는 OrderDetail에서만)
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
-};
-
-// 취소 다이얼로그 열기
-const openCancelDialog = (order: Order, item: OrderItem) => {
-  cancelTargetOrder.value = order;
-  cancelTargetItem.value = item;
-  cancelDialogOpen.value = true;
-};
-
-// 취소 다이얼로그 닫기
-const closeCancelDialog = () => {
-  cancelDialogOpen.value = false;
-  cancelTargetOrder.value = null;
-  cancelTargetItem.value = null;
-};
-
-// 주문 취소 확인 핸들러
-const handleConfirmCancel = async (reason: string) => {
-  if (!cancelTargetOrder.value) return;
-
-  const result = await cancelOrder(cancelTargetOrder.value.id, reason);
-
-  if (result) {
-    // 취소 성공 시 주문 목록 갱신
-    await loadOrders();
-
-    // 필터나 검색어가 적용된 경우 전체 주문도 갱신
-    if (currentFilter.value || searchQuery.value) {
-      loadingAllOrders.value = true;
-      try {
-        // 백엔드에서 이미 orderItems와 product 정보를 포함하여 반환
-        allOrders.value = await fetchAllOrders();
-      } catch (e) {
-        console.error("전체 주문 로드 실패:", e);
-      } finally {
-        loadingAllOrders.value = false;
-      }
-    }
-
-    closeCancelDialog();
-
-    // 취소 완료 알림
-    showAlert(ORDER_MESSAGES.cancelSuccess);
-  } else {
-    showAlert(ORDER_MESSAGES.cancelFailedRetry, {
-      type: "error",
-    });
-  }
 };
 
 // 배송 조회 핸들러
@@ -336,10 +277,10 @@ const handleTrackShipment = (item: OrderItem) => {
     showAlert(ORDER_MESSAGES.trackingNumberNotReady, { type: "error" });
     return;
   }
-  window.open(
-    `https://search.naver.com/search.naver?query=${item.trackingNumber}`,
-    "_blank"
-  );
+  // 네이버 통합 택배조회: 택배사+운송장번호
+  const courier = item.courierCompany || "택배";
+  const url = `https://search.naver.com/search.naver?query=${encodeURIComponent(courier)}+${encodeURIComponent(item.trackingNumber)}`;
+  window.open(url, "_blank");
 };
 
 onMounted(() => {
@@ -521,19 +462,8 @@ onUnmounted(() => {
                     </p>
 
                     <!-- 모바일 버튼 (금액과 같은 라인) -->
-                    <div class="flex gap-2 sm:hidden">
+                    <div v-if="canTrack(item.status)" class="flex gap-2 sm:hidden">
                       <Button
-                        v-if="canCancel(item.status)"
-                        variant="outline"
-                        size="sm"
-                        class="text-caption px-2.5 py-1"
-                        @click="openCancelDialog(order, item)"
-                      >
-                        주문취소
-                      </Button>
-
-                      <Button
-                        v-if="canTrack(item.status)"
                         variant="outline"
                         size="sm"
                         class="text-caption px-2.5 py-1"
@@ -546,30 +476,18 @@ onUnmounted(() => {
                 </div>
 
                 <!-- 데스크톱 버튼 (하단 우측) -->
-                <div class="hidden sm:flex items-end justify-between">
-                  <div></div>
-
-                  <div class="flex gap-2">
-                    <Button
-                      v-if="canCancel(item.status)"
-                      variant="outline"
-                      size="sm"
-                      class="text-caption px-3 py-1.5"
-                      @click="openCancelDialog(order, item)"
-                    >
-                      주문취소
-                    </Button>
-
-                    <Button
-                      v-if="canTrack(item.status)"
-                      variant="outline"
-                      size="sm"
-                      class="text-caption px-3 py-1.5"
-                      @click="handleTrackShipment(item)"
-                    >
-                      배송조회
-                    </Button>
-                  </div>
+                <div
+                  v-if="canTrack(item.status)"
+                  class="hidden sm:flex items-end justify-end"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="text-caption px-3 py-1.5"
+                    @click="handleTrackShipment(item)"
+                  >
+                    배송조회
+                  </Button>
                 </div>
               </div>
             </div>
@@ -597,14 +515,5 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
-    <!-- 주문 취소 다이얼로그 -->
-    <CancelOrderDialog
-      :open="cancelDialogOpen"
-      :product-name="cancelTargetItem?.productName"
-      :loading="cancelLoading"
-      @close="closeCancelDialog"
-      @confirm="handleConfirmCancel"
-    />
   </div>
 </template>

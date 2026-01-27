@@ -49,6 +49,13 @@ import type {
   AdminUserDetailResponse,
   UpdateUserRequest,
   UpdateUserRoleResponse,
+  PartialCancelRequest,
+  PartialCancelResponse,
+  CreateReturnRequest,
+  CreateReturnResponse,
+  UpdateReturnTrackingRequest,
+  UpdateReturnTrackingResponse,
+  Return,
 } from "@/types/api";
 import { apiCache, cachePolicies, NEVER_CACHE_PATTERNS } from "./apiCache";
 
@@ -679,6 +686,60 @@ export async function cancelOrder(
   return apiRequest(`/api/orders/${orderId}/cancel`, {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// 부분 취소 (선택한 아이템만 취소)
+export async function partialCancelOrder(
+  orderId: number | string,
+  data: PartialCancelRequest
+): Promise<PartialCancelResponse> {
+  return apiRequest<PartialCancelResponse>(
+    `/api/orders/${orderId}/partial-cancel`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+// ------------------------------------------------------------------
+// [4-1] 반품 (Returns)
+// ------------------------------------------------------------------
+
+// 반품 요청
+export async function createReturn(
+  data: CreateReturnRequest
+): Promise<CreateReturnResponse> {
+  return apiRequest<CreateReturnResponse>("/api/returns", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 반품 운송장 등록
+export async function updateReturnTracking(
+  returnId: string,
+  data: UpdateReturnTrackingRequest
+): Promise<UpdateReturnTrackingResponse> {
+  return apiRequest<UpdateReturnTrackingResponse>(
+    `/api/returns/${returnId}/tracking`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+// 내 반품 목록 조회
+export async function getReturns(): Promise<Return[]> {
+  return apiRequest<Return[]>("/api/returns", { cachePolicy: "noCache" });
+}
+
+// 반품 상세 조회
+export async function getReturn(returnId: string): Promise<Return> {
+  return apiRequest<Return>(`/api/returns/${returnId}`, {
+    cachePolicy: "noCache",
   });
 }
 

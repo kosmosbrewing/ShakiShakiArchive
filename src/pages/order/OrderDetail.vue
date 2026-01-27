@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useOrders, useCancelOrder } from "@/composables/useOrders";
+import { useOrders } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
-import type { Order, OrderItem } from "@/types/api";
+import type {
+  Order,
+  OrderItem,
+  Return,
+  ReturnReasonType,
+} from "@/types/api";
 import { getDayName } from "@/lib/utils";
 import { ORDER_MESSAGES } from "@/lib/messages";
+import {
+  isCancelable,
+  isReturnable,
+  isReturnInProgress,
+  sortOrderItems,
+} from "@/lib/constants/order";
+import {
+  partialCancelOrder,
+  createReturn,
+  updateReturnTracking,
+  fetchOrder,
+} from "@/lib/api";
 
 // 공통 컴포넌트
 import {
@@ -16,27 +33,42 @@ import {
   CancelOrderDialog,
 } from "@/components/common";
 
+// 주문 관련 모달 컴포넌트
+import {
+  ReturnRequestModal,
+  ReturnTrackingModal,
+} from "@/components/order";
+
 // UI 컴포넌트
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
 // UI 강화를 위한 아이콘
 import { AlertCircle } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
-const { showAlert } = useAlert();
+const { showAlert, showConfirm } = useAlert();
 
 // useOrders 훅 사용
 const { loadOrder, loading, error } = useOrders();
 const order = ref<Order | null>(null);
 
-// 주문 취소 훅
-const { cancel: cancelOrder, loading: cancelLoading } = useCancelOrder();
-
-// 취소 다이얼로그 상태
+// 개별 취소 다이얼로그 상태
 const cancelDialogOpen = ref(false);
 const cancelTargetItem = ref<OrderItem | null>(null);
+const cancelLoading = ref(false);
+
+// 반품 요청 모달 상태
+const returnModalOpen = ref(false);
+const returnTargetItem = ref<OrderItem | null>(null);
+const returnLoading = ref(false);
+
+// 운송장 등록 모달 상태
+const trackingModalOpen = ref(false);
+const trackingTargetReturn = ref<Return | null>(null);
+const trackingLoading = ref(false);
 
 // 배송비 (백엔드에서 제공)
 const shippingFee = computed(() => {
@@ -49,6 +81,19 @@ const shippingFeeText = computed(() => {
   return shippingFee.value === 0 ? "무료" : formatPrice(shippingFee.value);
 });
 
+// 상품 금액 (총 결제 금액 - 배송비)
+const subtotal = computed(() => {
+  if (!order.value) return 0;
+  const total = Number(order.value.totalAmount) || 0;
+  return total - shippingFee.value;
+});
+
+// 정렬된 주문 아이템 (활성 상태 먼저, 취소/환불 나중에)
+const sortedOrderItems = computed(() => {
+  if (!order.value?.orderItems) return [];
+  return sortOrderItems(order.value.orderItems);
+});
+
 // 데이터 로드
 onMounted(async () => {
   const orderId = route.params.id as string;
@@ -59,6 +104,15 @@ onMounted(async () => {
   }
 });
 
+// 주문 다시 로드
+const reloadOrder = async () => {
+  if (!order.value) return;
+  const orderData = await fetchOrder(order.value.id);
+  if (orderData) {
+    order.value = orderData;
+  }
+};
+
 // 뒤로가기
 const goBack = () => {
   router.push("/orderlist");
@@ -66,13 +120,22 @@ const goBack = () => {
 
 // 상태별 버튼 노출 로직
 const canCancel = (status: string) => {
-  return ["payment_confirmed", "preparing"].includes(status);
+  return isCancelable(status as any);
 };
+
+const canReturn = (status: string) => {
+  return isReturnable(status as any);
+};
+
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
 };
 
-// 취소 다이얼로그 열기
+const isInReturnProcess = (status: string) => {
+  return isReturnInProgress(status as any);
+};
+
+// 취소 다이얼로그 열기 (개별 아이템)
 const openCancelDialog = (item: OrderItem) => {
   cancelTargetItem.value = item;
   cancelDialogOpen.value = true;
@@ -84,25 +147,148 @@ const closeCancelDialog = () => {
   cancelTargetItem.value = null;
 };
 
-// 주문 취소 확인 핸들러
+// 개별 취소 확인 핸들러 (부분 취소 API 사용)
 const handleConfirmCancel = async (reason: string) => {
-  if (!order.value) return;
+  if (!order.value || !cancelTargetItem.value || cancelLoading.value) return;
 
-  const result = await cancelOrder(order.value.id, reason);
+  cancelLoading.value = true;
 
-  if (result) {
-    // 취소 성공 시 주문 정보 갱신
-    order.value = result.order;
+  try {
+    await partialCancelOrder(order.value.id, {
+      cancelReason: reason,
+      cancelItems: [{ orderItemId: cancelTargetItem.value.id }],
+    });
 
-    // 취소 완료 알림 (먼저 표시)
+    // 성공 알림
     showAlert(ORDER_MESSAGES.cancelSuccess);
 
-    // 다이얼로그 닫기 (Alert와 자연스럽게 전환)
+    // 주문 정보 다시 로드
+    await reloadOrder();
+
+    // 모달 닫기
     closeCancelDialog();
-  } else {
-    showAlert(ORDER_MESSAGES.cancelFailedRetry, {
-      type: "error",
+  } catch (e: unknown) {
+    const errorMessage =
+      e instanceof Error ? e.message : ORDER_MESSAGES.cancelFailed;
+    showAlert(errorMessage, { type: "error" });
+  } finally {
+    cancelLoading.value = false;
+  }
+};
+
+// 반품 요청 모달 열기
+const openReturnModal = (item: OrderItem) => {
+  returnTargetItem.value = item;
+  returnModalOpen.value = true;
+};
+
+// 반품 요청 모달 닫기
+const closeReturnModal = () => {
+  returnModalOpen.value = false;
+  returnTargetItem.value = null;
+};
+
+// 반품 요청 확인 핸들러
+const handleConfirmReturn = async (data: {
+  orderItemId: number;
+  reason: string;
+  reasonType: ReturnReasonType;
+}) => {
+  if (returnLoading.value) return;
+
+  returnLoading.value = true;
+
+  try {
+    const result = await createReturn(data);
+
+    // 성공 알림
+    showAlert(ORDER_MESSAGES.returnRequestSuccess);
+
+    // 주문 정보 다시 로드
+    await reloadOrder();
+
+    // 모달 닫기
+    closeReturnModal();
+
+    // 운송장 등록 안내 (반품 ID를 사용해 운송장 모달 열기)
+    const shouldOpenTracking = await showConfirm(
+      `${result.nextStep}\n\n지금 운송장을 등록하시겠습니까?`,
+      { confirmText: "운송장 등록", cancelText: "나중에" }
+    );
+
+    if (shouldOpenTracking) {
+      // 새로 생성된 반품 정보로 운송장 모달 열기
+      trackingTargetReturn.value = {
+        id: result.returnId,
+        orderId: order.value!.id,
+        orderItemId: data.orderItemId,
+        reason: data.reason,
+        reasonType: data.reasonType,
+        status: "requested",
+        createdAt: new Date().toISOString(),
+      };
+      trackingModalOpen.value = true;
+    }
+  } catch (e: unknown) {
+    const errorMessage =
+      e instanceof Error ? e.message : ORDER_MESSAGES.returnRequestFailed;
+    showAlert(errorMessage, { type: "error" });
+  } finally {
+    returnLoading.value = false;
+  }
+};
+
+// 운송장 등록 모달 열기 (반품 진행 중인 아이템용)
+// TODO: 백엔드에서 OrderItem에 returnId 필드를 포함해서 내려줘야 합니다.
+const openTrackingModal = async (item: OrderItem) => {
+  trackingTargetReturn.value = {
+    id: `return-${item.id}`, // TODO: item.returnId로 대체 필요
+    orderId: order.value!.id,
+    orderItemId: item.id,
+    reason: "",
+    reasonType: "other",
+    status: "requested",
+    createdAt: new Date().toISOString(),
+  };
+  trackingModalOpen.value = true;
+};
+
+// 운송장 등록 모달 닫기
+const closeTrackingModal = () => {
+  trackingModalOpen.value = false;
+  trackingTargetReturn.value = null;
+};
+
+// 운송장 등록 확인 핸들러
+const handleConfirmTracking = async (data: {
+  returnId: string;
+  trackingNumber: string;
+  courierCompany: string;
+}) => {
+  if (trackingLoading.value) return;
+
+  trackingLoading.value = true;
+
+  try {
+    await updateReturnTracking(data.returnId, {
+      trackingNumber: data.trackingNumber,
+      courierCompany: data.courierCompany,
     });
+
+    // 성공 알림
+    showAlert(ORDER_MESSAGES.returnTrackingSuccess);
+
+    // 주문 정보 다시 로드
+    await reloadOrder();
+
+    // 모달 닫기
+    closeTrackingModal();
+  } catch (e: unknown) {
+    const errorMessage =
+      e instanceof Error ? e.message : ORDER_MESSAGES.returnTrackingFailed;
+    showAlert(errorMessage, { type: "error" });
+  } finally {
+    trackingLoading.value = false;
   }
 };
 
@@ -112,8 +298,9 @@ const handleTrackShipment = (item: OrderItem) => {
     showAlert(ORDER_MESSAGES.trackingNumberNotReady, { type: "error" });
     return;
   }
-  // 스마트택배 등 통합 조회 링크 권장
-  const url = `https://search.naver.com/search.naver?query=${item.trackingNumber}`;
+  // 네이버 통합 택배조회: 택배사+운송장번호
+  const courier = item.courierCompany || "택배";
+  const url = `https://search.naver.com/search.naver?query=${encodeURIComponent(courier)}+${encodeURIComponent(item.trackingNumber)}`;
   window.open(url, "_blank");
 };
 
@@ -129,7 +316,7 @@ const getPaymentProviderLabel = (provider: string): string => {
     virtual_account: "가상계좌",
     mobile_phone: "휴대폰 결제",
   };
-  return labels[provider] || provider; // 매핑되지 않은 경우 원본 출력
+  return labels[provider] || provider;
 };
 </script>
 
@@ -216,14 +403,14 @@ const getPaymentProviderLabel = (provider: string): string => {
               {{
                 order?.orderItems?.reduce(
                   (sum, item) => sum + item.quantity,
-                  0,
+                  0
                 ) ?? 0
               }}개
             </CardTitle>
           </CardHeader>
           <CardContent class="p-0 divide-y divide-border">
             <div
-              v-for="item in order.orderItems"
+              v-for="item in sortedOrderItems"
               :key="item.id"
               class="pl-6 pr-6 pb-6 pt-3 flex flex-col gap-3"
             >
@@ -265,7 +452,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                       </p>
 
                       <!-- 모바일 버튼 (금액과 같은 라인) -->
-                      <div class="flex gap-2 sm:hidden">
+                      <div class="flex gap-2 sm:hidden flex-wrap justify-end">
                         <Button
                           v-if="canCancel(item.status)"
                           variant="outline"
@@ -284,6 +471,26 @@ const getPaymentProviderLabel = (provider: string): string => {
                           @click="handleTrackShipment(item)"
                         >
                           배송조회
+                        </Button>
+
+                        <Button
+                          v-if="canReturn(item.status)"
+                          variant="outline"
+                          size="sm"
+                          class="text-caption px-2.5 py-1"
+                          @click="openReturnModal(item)"
+                        >
+                          반품요청
+                        </Button>
+
+                        <Button
+                          v-if="isInReturnProcess(item.status)"
+                          variant="outline"
+                          size="sm"
+                          class="text-caption px-2.5 py-1"
+                          @click="openTrackingModal(item)"
+                        >
+                          운송장등록
                         </Button>
                       </div>
                     </div>
@@ -313,6 +520,26 @@ const getPaymentProviderLabel = (provider: string): string => {
                       >
                         배송조회
                       </Button>
+
+                      <Button
+                        v-if="canReturn(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-3 py-1.5"
+                        @click="openReturnModal(item)"
+                      >
+                        반품요청
+                      </Button>
+
+                      <Button
+                        v-if="isInReturnProcess(item.status)"
+                        variant="outline"
+                        size="sm"
+                        class="text-caption px-3 py-1.5"
+                        @click="openTrackingModal(item)"
+                      >
+                        운송장등록
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -333,7 +560,7 @@ const getPaymentProviderLabel = (provider: string): string => {
           <CardContent class="space-y-2">
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">상품 금액</span>
-              <span>{{ formatPrice(order.totalAmount) }}</span>
+              <span>{{ formatPrice(subtotal) }}</span>
             </div>
             <div class="flex justify-between text-body pb-2">
               <span class="text-muted-foreground">배송비</span>
@@ -361,15 +588,16 @@ const getPaymentProviderLabel = (provider: string): string => {
               </div>
             </div>
 
+            <!-- 취소/환불 정보 -->
             <div
-              v-if="order.status === 'refunded'"
+              v-if="order.status === 'refunded' || order.status === 'partial_refunded'"
               class="pt-3 border-t !mt-4 bg-destructive/5 -mx-6 px-6 pb-2"
             >
               <div
                 class="flex items-center gap-2 text-destructive font-bold text-body mb-2"
               >
                 <AlertCircle class="w-4 h-4" />
-                주문 취소됨
+                {{ order.status === 'partial_refunded' ? '부분 환불' : '주문 취소됨' }}
               </div>
               <div class="space-y-2 text-body">
                 <div v-if="order.canceledAt" class="flex justify-between">
@@ -399,13 +627,31 @@ const getPaymentProviderLabel = (provider: string): string => {
       </div>
     </div>
 
-    <!-- 주문 취소 다이얼로그 -->
+    <!-- 주문 취소 다이얼로그 (개별 아이템용) -->
     <CancelOrderDialog
       :open="cancelDialogOpen"
       :product-name="cancelTargetItem?.productName"
       :loading="cancelLoading"
       @close="closeCancelDialog"
       @confirm="handleConfirmCancel"
+    />
+
+    <!-- 반품 요청 모달 -->
+    <ReturnRequestModal
+      :open="returnModalOpen"
+      :order-item="returnTargetItem"
+      :loading="returnLoading"
+      @close="closeReturnModal"
+      @confirm="handleConfirmReturn"
+    />
+
+    <!-- 운송장 등록 모달 -->
+    <ReturnTrackingModal
+      :open="trackingModalOpen"
+      :return-info="trackingTargetReturn"
+      :loading="trackingLoading"
+      @close="closeTrackingModal"
+      @confirm="handleConfirmTracking"
     />
   </div>
 </template>

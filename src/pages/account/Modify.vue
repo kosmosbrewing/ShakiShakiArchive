@@ -10,6 +10,7 @@ import { updateMyInfo, changeMyPassword, withdrawUser } from "@/lib/api";
 import { parsePhone } from "@/lib/formatters";
 import { getPasswordErrorMessage, getPasswordStrength } from "@/utils/password-validation";
 import { ACCOUNT_MESSAGES } from "@/lib/messages";
+import { reauthWithKakao, reauthWithNaver } from "@/services/socialAuth";
 
 // 공통 컴포넌트
 import { PhoneInput, AddressSearchModal } from "@/components/common";
@@ -41,6 +42,55 @@ const authStore = useAuthStore();
 const { showAlert, showDestructiveConfirm, showPromptConfirm } = useAlert();
 const isLoading = ref(false);
 const isAddressSearchOpen = ref(false);
+
+// 소셜 로그인 사용자 여부
+const isSocialUser = computed(() => {
+  const provider = authStore.user?.socialProvider;
+  return provider && provider !== "local";
+});
+
+// 소셜 로그인 제공자
+const socialProvider = computed(() => authStore.user?.socialProvider);
+
+// 소셜 로그인 제공자 표시 이름
+const socialProviderLabel = computed(() => {
+  return socialProvider.value === "kakao" ? "카카오" : "네이버";
+});
+
+// 소셜 인증 버튼 스타일
+const socialButtonClass = computed(() => {
+  return socialProvider.value === "kakao"
+    ? "bg-[#FEE500] hover:bg-[#FDD835] text-black"
+    : "bg-[#03C75A] hover:bg-[#02B350] text-white";
+});
+
+// 소셜 재인증 완료 여부 (5분간 유효)
+const isSocialReauthVerified = ref(false);
+
+// 소셜 재인증 상태 확인
+const checkSocialReauthVerified = () => {
+  const verifiedTime = sessionStorage.getItem("social_reauth_verified");
+  if (verifiedTime) {
+    const elapsed = Date.now() - parseInt(verifiedTime, 10);
+    // 5분(300000ms) 이내이면 인증 유효
+    if (elapsed < 300000) {
+      isSocialReauthVerified.value = true;
+      return true;
+    }
+    // 만료된 경우 삭제
+    sessionStorage.removeItem("social_reauth_verified");
+  }
+  return false;
+};
+
+// 소셜 재인증 요청
+const handleSocialReauth = () => {
+  if (socialProvider.value === "kakao") {
+    reauthWithKakao();
+  } else if (socialProvider.value === "naver") {
+    reauthWithNaver();
+  }
+};
 
 // 닉네임 필드 Enter 키 처리 (1자 이상일 때만 이동)
 const handleUserNameEnter = (e: KeyboardEvent) => {
@@ -213,22 +263,34 @@ const handleUpdateProfile = async () => {
     showValidationError(ACCOUNT_MESSAGES.userNameRequired, userNameInputRef);
     return;
   }
-  if (!form.currentPassword) {
-    showValidationError(
-      ACCOUNT_MESSAGES.currentPasswordRequiredForUpdate,
-      currentPasswordInputRef
-    );
-    return;
+
+  // 소셜 로그인 사용자: 재인증 확인
+  if (isSocialUser.value) {
+    if (!isSocialReauthVerified.value) {
+      showAlert(`${socialProviderLabel.value} 인증이 필요합니다. 인증 버튼을 눌러주세요.`, { type: "error" });
+      return;
+    }
+  } else {
+    // 일반 사용자: 비밀번호 확인
+    if (!form.currentPassword) {
+      showValidationError(
+        ACCOUNT_MESSAGES.currentPasswordRequiredForUpdate,
+        currentPasswordInputRef
+      );
+      return;
+    }
   }
 
   try {
     isLoading.value = true;
 
-    // 비밀번호 확인 (현재 비밀번호를 동일하게 전송하여 검증)
-    await changeMyPassword({
-      currentPassword: form.currentPassword,
-      newPassword: form.currentPassword,
-    });
+    // 일반 사용자만 비밀번호 확인 (현재 비밀번호를 동일하게 전송하여 검증)
+    if (!isSocialUser.value) {
+      await changeMyPassword({
+        currentPassword: form.currentPassword,
+        newPassword: form.currentPassword,
+      });
+    }
 
     // 정보 업데이트
     const fullPhone = `${form.phone1}-${form.phone2}-${form.phone3}`;
@@ -242,6 +304,12 @@ const handleUpdateProfile = async () => {
     });
 
     await authStore.loadUser();
+
+    // 소셜 재인증 상태 초기화
+    if (isSocialUser.value) {
+      sessionStorage.removeItem("social_reauth_verified");
+      isSocialReauthVerified.value = false;
+    }
 
     // Account 페이지로 이동 후 성공 Alert 표시
     await router.push("/account");
@@ -377,6 +445,9 @@ onMounted(async () => {
   }
   if (!authStore.user) await authStore.loadUser();
   initializeForm();
+
+  // 소셜 재인증 상태 확인
+  checkSocialReauthVerified();
 });
 </script>
 
@@ -476,7 +547,8 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="space-y-2">
+          <!-- 일반 사용자: 비밀번호 재확인 -->
+          <div v-if="!isSocialUser" class="space-y-2">
             <Label for="currentPassword"
               >현재 비밀번호
               <span class="text-primary text-body font-normal ml-2">
@@ -493,6 +565,33 @@ onMounted(async () => {
               placeholder="현재 비밀번호 입력"
               @keydown.enter.prevent="handleCurrentPasswordEnter"
             />
+          </div>
+
+          <!-- 소셜 로그인 사용자: 소셜 인증 버튼 -->
+          <div v-else class="space-y-2">
+            <Label>본인 인증</Label>
+            <div
+              class="flex items-center gap-3 p-4 rounded-lg border"
+              :class="isSocialReauthVerified ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/30 border-border'"
+            >
+              <div class="flex-1">
+                <p v-if="isSocialReauthVerified" class="text-body text-green-600 dark:text-green-400 font-medium">
+                  인증 완료
+                </p>
+                <p v-else class="text-body text-muted-foreground">
+                  정보 수정을 위해 {{ socialProviderLabel }} 인증이 필요합니다.
+                </p>
+              </div>
+              <Button
+                v-if="!isSocialReauthVerified"
+                type="button"
+                size="sm"
+                :class="socialButtonClass"
+                @click="handleSocialReauth"
+              >
+                {{ socialProviderLabel }} 인증
+              </Button>
+            </div>
           </div>
 
           <div class="flex items-center space-x-2">
@@ -525,10 +624,12 @@ onMounted(async () => {
       </div>
     </form>
 
-    <Separator class="my-6 sm:my-8" />
+    <!-- 일반 사용자만 비밀번호 변경 섹션 표시 -->
+    <template v-if="!isSocialUser">
+      <Separator class="my-6 sm:my-8" />
 
-    <!-- 비밀번호 변경 섹션 (별도 폼) -->
-    <form @submit.prevent="handleChangePassword" class="space-y-6 sm:space-y-8">
+      <!-- 비밀번호 변경 섹션 (별도 폼) -->
+      <form @submit.prevent="handleChangePassword" class="space-y-6 sm:space-y-8">
       <Card>
         <CardHeader class="px-4 sm:px-6 py-4 sm:py-5">
           <CardTitle class="text-heading">비밀번호 변경</CardTitle>
@@ -622,6 +723,7 @@ onMounted(async () => {
         </Button>
       </div>
     </form>
+    </template>
 
     <!-- 회원 탈퇴 -->
     <div class="mt-12 sm:mt-16 pt-3 border-t border-border flex justify-end">

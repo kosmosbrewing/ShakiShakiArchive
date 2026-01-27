@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { OrderStatus } from '@/types/api';
+import type { OrderStatus, OrderItemStatus } from '@/types/api';
 
 const props = defineProps<{
-  status: OrderStatus;
+  status: OrderStatus | OrderItemStatus;
 }>();
 
 const statusConfig = computed(() => {
-  const configs: Record<OrderStatus, { label: string; class: string }> = {
+  const configs: Record<OrderStatus | OrderItemStatus, { label: string; class: string }> = {
     pending_payment: {
       label: '결제 대기',
       class: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -32,6 +32,10 @@ const statusConfig = computed(() => {
       label: '배송 완료',
       class: 'bg-green-100 text-green-800 border-green-300',
     },
+    purchase_confirmed: {
+      label: '구매 확정',
+      class: 'bg-blue-100 text-blue-800 border-blue-300',
+    },
     cancelled: {
       label: '취소됨',
       class: 'bg-red-100 text-red-800 border-red-300',
@@ -39,6 +43,22 @@ const statusConfig = computed(() => {
     refunded: {
       label: '환불 완료',
       class: 'bg-pink-100 text-pink-800 border-pink-300',
+    },
+    partial_refunded: {
+      label: '부분 환불',
+      class: 'bg-purple-100 text-purple-800 border-purple-300',
+    },
+    return_requested: {
+      label: '반품 요청',
+      class: 'bg-amber-100 text-amber-800 border-amber-300',
+    },
+    return_in_transit: {
+      label: '반품 배송 중',
+      class: 'bg-amber-100 text-amber-800 border-amber-300',
+    },
+    return_received: {
+      label: '검수 대기',
+      class: 'bg-amber-100 text-amber-800 border-amber-300',
     },
   };
 

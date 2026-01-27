@@ -2,6 +2,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { fetchCurrentUser, login, logout, signup, addToCart } from "@/lib/api";
+import { apiCache } from "@/lib/apiCache";
 import type { User } from "@/types/api";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -144,7 +145,11 @@ export const useAuthStore = defineStore("auth", () => {
     error.value = null;
     isLoading.value = false;
 
-    // 3. 민감한 로컬 스토리지 데이터 정리
+    // 3. API 캐시 전체 정리 (보안: 사용자별 데이터 제거)
+    apiCache.clear();
+    console.log("[Auth] API 캐시 정리 완료");
+
+    // 4. 민감한 로컬 스토리지 데이터 정리
     const sensitiveKeys = [
       "guest_cart",
       "auth_token",
@@ -160,17 +165,22 @@ export const useAuthStore = defineStore("auth", () => {
       }
     });
 
-    // 4. 세션 스토리지 전체 정리
+    // 5. 세션 스토리지 전체 정리
     try {
       sessionStorage.clear();
     } catch (e) {
       // 무시
     }
 
-    // 5. 장바구니 업데이트 이벤트 발생
+    // 6. 장바구니 업데이트 이벤트 발생
     window.dispatchEvent(new Event("cart-updated"));
 
-    // 6. 페이지 새로고침으로 메모리 상태 완전 초기화
+    // 7. Pinia 스토어 캐시 정리 이벤트 발생 (reload=false일 때 다른 스토어에서 처리)
+    if (!options.reload) {
+      window.dispatchEvent(new Event("auth-logout"));
+    }
+
+    // 8. 페이지 새로고침으로 메모리 상태 완전 초기화
     if (options.reload) {
       window.location.href = "/";
     }

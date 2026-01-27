@@ -8,8 +8,17 @@ export type OrderStatus =
   | "preparing"
   | "shipped"
   | "delivered"
+  | "purchase_confirmed"  // 구매확정 (배송완료 7일 후 자동 전환)
   | "cancelled"           // 결제 전 취소 (환불 없음)
-  | "refunded";           // 결제 후 환불 (실제 환불 발생)
+  | "refunded"            // 결제 후 환불 (실제 환불 발생)
+  | "partial_refunded";   // 일부 상품만 환불됨
+
+// 주문 아이템 상태 타입 (반품 상태 포함)
+export type OrderItemStatus =
+  | OrderStatus
+  | "return_requested"    // 반품 요청됨
+  | "return_in_transit"   // 반품 배송 중
+  | "return_received";    // 반품 도착 (검수 대기)
 
 // 결제 제공자 타입 (PG사 통합)
 export type PaymentProvider = "toss" | "naverpay" | "kakaopay" | string;
@@ -100,7 +109,7 @@ export interface OrderItem {
   productPrice: string;
   options?: string; // 옵션 정보 (사이즈/색상 등)
   quantity: number;
-  status: OrderStatus;
+  status: OrderItemStatus; // 반품 상태 포함
   trackingNumber?: string;
   courierCompany?: string; // 택배사 정보 (한글 또는 코드)
   paymentMethod?: "toss" | "naverpay"; // 결제 수단
@@ -797,4 +806,86 @@ export const COURIER_COMPANIES: Record<string, string> = {
   gs25: "GS25",
   cvsnet: "CU",
 };
+
+// ------------------------------------------------------------------
+// 부분 취소 관련 타입 (Partial Cancel)
+// ------------------------------------------------------------------
+
+// 부분 취소 요청
+export interface PartialCancelRequest {
+  cancelReason: string;
+  cancelItems: { orderItemId: number }[];
+}
+
+// 부분 취소 환불 상세 정보
+export interface PartialCancelRefundDetails {
+  itemsRefund: number;      // 상품 환불 금액
+  shippingRefund: number;   // 배송비 환불 금액
+  penalty: number;          // 패널티 금액
+  credit: number;           // 적립금
+  totalRefund: number;      // 총 환불 금액
+}
+
+// 부분 취소 응답
+export interface PartialCancelResponse {
+  message: string;
+  canceledItems: number[];  // 취소된 아이템 ID 목록
+  refundDetails: PartialCancelRefundDetails;
+  summary: string;          // 환불 요약 문구
+}
+
+// ------------------------------------------------------------------
+// 반품 관련 타입 (Return)
+// ------------------------------------------------------------------
+
+// 반품 사유 타입
+export type ReturnReasonType = "change_mind" | "defect" | "wrong_item" | "other";
+
+// 반품 상태 타입
+export type ReturnStatus =
+  | "requested"     // 반품 요청됨
+  | "in_transit"    // 반품 배송 중
+  | "received"      // 반품 도착 (검수 대기)
+  | "refunded"      // 환불 완료
+  | "rejected";     // 반품 거절됨
+
+// 반품 요청
+export interface CreateReturnRequest {
+  orderItemId: number;
+  reason: string;           // 상세 사유
+  reasonType: ReturnReasonType;
+}
+
+// 반품 요청 응답
+export interface CreateReturnResponse {
+  message: string;
+  returnId: string;
+  nextStep: string;         // 다음 단계 안내
+}
+
+// 반품 운송장 등록 요청
+export interface UpdateReturnTrackingRequest {
+  trackingNumber: string;
+  courierCompany: string;
+}
+
+// 반품 운송장 등록 응답
+export interface UpdateReturnTrackingResponse {
+  message: string;
+  nextStep: string;         // 다음 단계 안내
+}
+
+// 반품 정보
+export interface Return {
+  id: string;               // 반품 ID (UUID)
+  orderId: string;          // 주문 ID
+  orderItemId: number;      // 주문 아이템 ID
+  reason: string;           // 상세 사유
+  reasonType: ReturnReasonType;
+  status: ReturnStatus;
+  returnTrackingNumber?: string;  // 반품 운송장 번호
+  returnCourierCompany?: string;  // 반품 택배사
+  createdAt: string;
+  updatedAt?: string;
+}
 

@@ -230,8 +230,8 @@ onMounted(async () => {
     // 카테고리 페이지: 기존 composable 사용 (무한 스크롤)
     await loadProducts();
   } else {
-    // 홈페이지: 스토어 사용 (ProductHome과 데이터 공유)
-    await productStore.loadHomeProducts();
+    // 홈페이지: 스토어 사용 (force: true로 최신 재고 반영)
+    await productStore.loadHomeProducts(true);
   }
 
   // DOM이 준비된 후 옵저버 설정 (홈/카테고리 모두)

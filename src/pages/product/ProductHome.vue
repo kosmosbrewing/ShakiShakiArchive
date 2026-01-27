@@ -68,8 +68,9 @@ const goToDetail = (id: string) => {
 };
 
 onMounted(async () => {
-  // 스토어에서 홈페이지용 상품 로드 (Product.vue와 데이터 공유)
-  await productStore.loadHomeProducts();
+  // 스토어에서 홈페이지용 상품 로드 (force: true로 최신 재고 반영)
+  // 홈페이지 진입 시 항상 최신 데이터 표시 (SOLD OUT 즉시 반영)
+  await productStore.loadHomeProducts(true);
   if (authStore.isAuthenticated) {
     await wishlistStore.loadWishlist();
   }

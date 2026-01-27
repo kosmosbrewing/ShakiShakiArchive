@@ -2,7 +2,7 @@
 // src/pages/order/PaymentCallback.vue
 // 결제 완료/실패 콜백 페이지
 
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { CheckCircle, XCircle, AlertTriangle, Ban } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,33 @@ const orderInfo = ref<{
   paymentMethod?: string;
 }>({});
 
+// 카운트다운 (주문 상세 자동 이동)
+const countdown = ref<number>(0);
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+// 카운트다운 시작 함수
+const startCountdown = (seconds: number, targetUrl: string) => {
+  countdown.value = seconds;
+
+  countdownInterval = setInterval(() => {
+    countdown.value--;
+
+    if (countdown.value <= 0) {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      // 주문 상세로 이동
+      if (isMobile.value && !isPopup.value) {
+        window.location.replace(targetUrl);
+      } else {
+        router.replace(targetUrl);
+      }
+    }
+  }, 1000);
+};
+
 // 팝업 창인지 확인 (네이버페이 PC 결제용)
 const isPopup = ref<boolean>(false);
 
@@ -66,31 +93,43 @@ onMounted(async () => {
   const isNaverPayPopup = localStorage.getItem("naverpay_popup") === "true";
   const isKakaoPayPopup = localStorage.getItem("kakaopay_popup") === "true";
   isPopup.value = isNaverPayPopup || isKakaoPayPopup;
-  popupProvider.value = isNaverPayPopup ? "naverpay" : isKakaoPayPopup ? "kakaopay" : null;
+  popupProvider.value = isNaverPayPopup
+    ? "naverpay"
+    : isKakaoPayPopup
+      ? "kakaopay"
+      : null;
   // 주의: 팝업 플래그는 여기서 제거하지 않음!
   // window.close() 직전이나 beforeunload에서만 제거해야 함
 
   // 팝업 강제 종료 감지 (X 버튼 클릭 등)
   if (isPopup.value) {
     const handlePopupClose = () => {
-      const currentOrderKey = popupProvider.value === "kakaopay"
-        ? "kakaopay_current_order"
-        : "naverpay_current_order";
-      const resultKey = popupProvider.value === "kakaopay"
-        ? "kakaopay_result"
-        : "naverpay_result";
-      const popupKey = popupProvider.value === "kakaopay"
-        ? "kakaopay_popup"
-        : "naverpay_popup";
+      const currentOrderKey =
+        popupProvider.value === "kakaopay"
+          ? "kakaopay_current_order"
+          : "naverpay_current_order";
+      const resultKey =
+        popupProvider.value === "kakaopay"
+          ? "kakaopay_result"
+          : "naverpay_result";
+      const popupKey =
+        popupProvider.value === "kakaopay"
+          ? "kakaopay_popup"
+          : "naverpay_popup";
 
       const orderId = localStorage.getItem(currentOrderKey);
-      console.log(`[${popupProvider.value} 팝업 강제 종료] 감지, orderId:`, orderId);
+      console.log(
+        `[${popupProvider.value} 팝업 강제 종료] 감지, orderId:`,
+        orderId,
+      );
 
       // 팝업 플래그 먼저 제거 (Order.vue의 폴링이 감지)
       localStorage.removeItem(popupKey);
 
       if (orderId) {
-        console.log(`[${popupProvider.value} 팝업 강제 종료] 부모 창에 취소 알림`);
+        console.log(
+          `[${popupProvider.value} 팝업 강제 종료] 부모 창에 취소 알림`,
+        );
         localStorage.setItem(
           resultKey,
           JSON.stringify({
@@ -122,9 +161,10 @@ onMounted(async () => {
 
   // orderId가 URL에 없으면 localStorage에서 가져오기 (네이버페이/카카오페이 취소 시 백업)
   if (!orderId && isPopup.value) {
-    const currentOrderKey = popupProvider.value === "kakaopay"
-      ? "kakaopay_current_order"
-      : "naverpay_current_order";
+    const currentOrderKey =
+      popupProvider.value === "kakaopay"
+        ? "kakaopay_current_order"
+        : "naverpay_current_order";
     const savedOrderId = localStorage.getItem(currentOrderKey);
     if (savedOrderId) {
       orderId = savedOrderId;
@@ -191,12 +231,14 @@ onMounted(async () => {
 
     // 팝업 창인 경우: localStorage로 부모 창에 에러 메시지 전달 후 닫기
     if (isPopup.value) {
-      const resultKey = popupProvider.value === "kakaopay"
-        ? "kakaopay_result"
-        : "naverpay_result";
-      const popupKey = popupProvider.value === "kakaopay"
-        ? "kakaopay_popup"
-        : "naverpay_popup";
+      const resultKey =
+        popupProvider.value === "kakaopay"
+          ? "kakaopay_result"
+          : "naverpay_result";
+      const popupKey =
+        popupProvider.value === "kakaopay"
+          ? "kakaopay_popup"
+          : "naverpay_popup";
 
       console.log(
         `[PaymentCallback] /checkout/fail - ${popupProvider.value} 팝업 닫기, orderId:`,
@@ -289,19 +331,13 @@ onMounted(async () => {
       return;
     }
 
-    // 모바일/일반: 주문 상세로 자동 이동
-    setTimeout(() => {
-      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-      console.log(
-        "[PaymentCallback] 카카오페이 성공 - 주문 상세로 이동:",
-        targetUrl,
-      );
-      if (isMobile.value) {
-        window.location.replace(targetUrl);
-      } else {
-        router.replace(targetUrl);
-      }
-    }, 2000);
+    // 모바일/일반: 주문 상세로 자동 이동 (3초 카운트다운)
+    const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+    console.log(
+      "[PaymentCallback] 카카오페이 성공 - 주문 상세로 이동 예정:",
+      targetUrl,
+    );
+    startCountdown(3, targetUrl);
     return;
   }
 
@@ -358,19 +394,13 @@ onMounted(async () => {
       return;
     }
 
-    // 모바일/일반: 주문 상세로 자동 이동
-    setTimeout(() => {
-      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-      console.log(
-        "[PaymentCallback] 네이버페이 성공 - 주문 상세로 이동:",
-        targetUrl,
-      );
-      if (isMobile.value) {
-        window.location.replace(targetUrl);
-      } else {
-        router.replace(targetUrl);
-      }
-    }, 2000);
+    // 모바일/일반: 주문 상세로 자동 이동 (3초 카운트다운)
+    const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+    console.log(
+      "[PaymentCallback] 네이버페이 성공 - 주문 상세로 이동 예정:",
+      targetUrl,
+    );
+    startCountdown(3, targetUrl);
     return;
   }
 
@@ -409,20 +439,11 @@ onMounted(async () => {
           paymentMethod: confirmResult.order?.paymentProvider || "toss", // 백엔드에서 받은 paymentProvider 사용
         };
 
-        // 로딩 상태 유지하며 자동으로 주문 상세로 이동 (Login.vue 패턴)
-        setTimeout(() => {
-          const targetUrl = confirmResult.order?.id
-            ? `/orderdetail/${confirmResult.order.id}`
-            : "/orderlist";
-
-          // 모바일 리다이렉트: 히스토리 완전 대체
-          if (isMobile.value && !isPopup.value) {
-            window.location.replace(targetUrl);
-          } else {
-            // PC 또는 팝업: Vue Router 사용 (부드러운 전환)
-            router.replace(targetUrl);
-          }
-        }, 2000); // 2초 대기 (사용자가 결제 성공 메시지 확인)
+        // 주문 상세로 자동 이동 (3초 카운트다운)
+        const targetUrl = confirmResult.order?.id
+          ? `/orderdetail/${confirmResult.order.id}`
+          : "/orderlist";
+        startCountdown(3, targetUrl);
         return;
       } else {
         throw new Error(ORDER_MESSAGES.paymentApprovalFailed);
@@ -444,8 +465,7 @@ onMounted(async () => {
       } else {
         status.value = "error";
         // 백엔드 메시지를 정제하여 사용자 친화적으로 표시
-        const rawMessage =
-          err.message || ORDER_MESSAGES.paymentError;
+        const rawMessage = err.message || ORDER_MESSAGES.paymentError;
         errorMessage.value = cleanErrorMessage(rawMessage);
         console.log("[PaymentCallback] 원본 에러 메시지:", rawMessage);
         console.log(
@@ -488,15 +508,9 @@ onMounted(async () => {
     // 결제 승인 플래그 제거
     localStorage.removeItem("payment_confirming");
 
-    // 주문 상세로 자동 이동
-    setTimeout(() => {
-      const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
-      if (isMobile.value) {
-        window.location.replace(targetUrl);
-      } else {
-        router.replace(targetUrl);
-      }
-    }, 2000);
+    // 주문 상세로 자동 이동 (3초 카운트다운)
+    const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";
+    startCountdown(3, targetUrl);
     return;
   } else if (result === "fail" || error) {
     // 결제 실패 (토스페이먼츠 등)
@@ -698,6 +712,14 @@ const goToCart = () => {
     router.push(targetUrl);
   }
 };
+
+// 컴포넌트 언마운트 시 interval 정리
+onUnmounted(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+});
 </script>
 
 <template>
@@ -759,16 +781,15 @@ const goToCart = () => {
             </div>
           </div>
 
+          <!-- 카운트다운 표시 -->
+          <p v-if="countdown > 0" class="text-sm text-muted-foreground mb-4">
+            <span class="font-semibold text-primary">{{ countdown }}초</span> 후
+            주문 상세 페이지로 이동합니다!
+          </p>
+
           <div class="flex flex-col gap-3 w-full">
             <Button @click="goToOrderDetail" class="w-full">
               주문 상세 보기
-            </Button>
-            <Button
-              variant="outline"
-              class="w-full font-medium"
-              @click="goToHome"
-            >
-              쇼핑 계속하기
             </Button>
           </div>
         </div>

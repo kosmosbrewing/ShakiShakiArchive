@@ -131,6 +131,14 @@ export const useWishlistStore = defineStore("wishlist", () => {
     lastFetchedAt.value = null;
   }
 
+  // 로그아웃 이벤트 리스너 (reload=false일 때 캐시 정리)
+  if (typeof window !== "undefined") {
+    window.addEventListener("auth-logout", () => {
+      clearWishlist();
+      console.log("[WishlistStore] 로그아웃으로 캐시 정리");
+    });
+  }
+
   return {
     // 상태
     items,

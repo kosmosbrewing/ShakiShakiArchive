@@ -54,6 +54,7 @@ import {
 
 // Static (정적 페이지)
 import PrivacyPolicy from "@/pages/static/PrivacyPolicy.vue";
+import TermsOfService from "@/pages/static/TermsOfService.vue";
 
 // 404 페이지
 import NotFound from "@/pages/NotFound.vue";
@@ -213,6 +214,12 @@ const routes = [
     name: "PrivacyPolicy",
     component: PrivacyPolicy,
     meta: { title: "개인정보 처리방침" },
+  },
+  {
+    path: "/terms",
+    name: "TermsOfService",
+    component: TermsOfService,
+    meta: { title: "이용약관" },
   },
 
   // 404 페이지

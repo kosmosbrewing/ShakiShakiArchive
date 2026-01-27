@@ -175,7 +175,8 @@ onMounted(() => {
           <div class="bg-muted/20 rounded-lg p-6 space-y-2">
             <p><strong>성명:</strong> 손유진</p>
             <p><strong>연락처:</strong> 010-7347-4088</p>
-            <p><strong>주소:</strong> 부산광역시 부산진구 전포대로 84-1</p>
+            <p><strong>이메일:</strong> 381611sug@naver.com</p>
+            <p><strong>주소:</strong> 경상남도 밀양시 부북면 덕곡2길 203-28</p>
           </div>
         </div>
       </section>

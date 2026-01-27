@@ -89,8 +89,9 @@ export function initKakaoSdk(): boolean {
 
 /**
  * 카카오 로그인 요청
+ * @param forceLogin - true일 경우 기존 로그인 세션 무시하고 재인증 요청 (prompt=login)
  */
-export function loginWithKakao(): void {
+export function loginWithKakao(forceLogin: boolean = false): void {
   const Kakao = (window as any).Kakao;
   const { showAlert } = useAlert();
 
@@ -101,10 +102,17 @@ export function loginWithKakao(): void {
     }
   }
 
-  Kakao.Auth.authorize({
+  const options: any = {
     redirectUri: config.kakao?.redirectUri,
     scope: "profile_nickname,account_email",
-  });
+  };
+
+  // 재인증 요청 시 prompt=login 파라미터 추가
+  if (forceLogin) {
+    options.prompt = "login";
+  }
+
+  Kakao.Auth.authorize(options);
 }
 
 /**
@@ -129,8 +137,9 @@ export async function handleKakaoCallback(code: string): Promise<SocialAuthRespo
 /**
  * 네이버 로그인 요청
  * @see https://developers.naver.com/docs/login/web/web.md
+ * @param forceLogin - true일 경우 기존 로그인 세션 무시하고 재인증 요청 (auth_type=reprompt)
  */
-export function loginWithNaver(): void {
+export function loginWithNaver(forceLogin: boolean = false): void {
   const { showAlert } = useAlert();
   if (!config.naver?.clientId) {
     showAlert("네이버 로그인 설정이 필요합니다.", { type: "error" });
@@ -146,6 +155,11 @@ export function loginWithNaver(): void {
     redirect_uri: config.naver.redirectUri,
     state,
   });
+
+  // 재인증 요청 시 auth_type=reprompt 파라미터 추가
+  if (forceLogin) {
+    params.set("auth_type", "reprompt");
+  }
 
   window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params}`;
 }
@@ -233,6 +247,82 @@ export async function handleGoogleCallback(
   }
 
   return response.json();
+}
+
+/**
+ * 카카오 재인증 요청 (회원정보 수정용)
+ * prompt=login 파라미터로 기존 세션 무시하고 재로그인 강제
+ */
+export function reauthWithKakao(): void {
+  const Kakao = (window as any).Kakao;
+  const { showAlert } = useAlert();
+
+  if (!Kakao?.isInitialized()) {
+    if (!initKakaoSdk()) {
+      showAlert("카카오 인증을 사용할 수 없습니다.", { type: "error" });
+      return;
+    }
+  }
+
+  // 재인증 후 돌아올 페이지 저장
+  sessionStorage.setItem("social_reauth_redirect", "/modify");
+  sessionStorage.setItem("social_reauth_provider", "kakao");
+
+  Kakao.Auth.authorize({
+    redirectUri: config.kakao?.redirectUri,
+    scope: "profile_nickname,account_email",
+    prompt: "login", // 기존 로그인 세션 무시하고 재인증 요청
+  });
+}
+
+/**
+ * 네이버 재인증 요청 (회원정보 수정용)
+ * auth_type=reprompt 파라미터로 기존 세션 무시하고 재로그인 강제
+ */
+export function reauthWithNaver(): void {
+  const { showAlert } = useAlert();
+  if (!config.naver?.clientId) {
+    showAlert("네이버 인증 설정이 필요합니다.", { type: "error" });
+    return;
+  }
+
+  const state = generateRandomState();
+  sessionStorage.setItem("naver_auth_state", state);
+  // 재인증 후 돌아올 페이지 저장
+  sessionStorage.setItem("social_reauth_redirect", "/modify");
+  sessionStorage.setItem("social_reauth_provider", "naver");
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: config.naver.clientId,
+    redirect_uri: config.naver.redirectUri,
+    state,
+    auth_type: "reprompt", // 기존 로그인 세션 무시하고 재인증 요청
+  });
+
+  window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params}`;
+}
+
+/**
+ * 소셜 재인증 상태 확인
+ * @returns 재인증 완료 여부와 리다이렉트 경로
+ */
+export function checkReauthStatus(): { isReauth: boolean; redirect: string | null; provider: string | null } {
+  const redirect = sessionStorage.getItem("social_reauth_redirect");
+  const provider = sessionStorage.getItem("social_reauth_provider");
+  return {
+    isReauth: !!redirect,
+    redirect,
+    provider,
+  };
+}
+
+/**
+ * 소셜 재인증 상태 초기화
+ */
+export function clearReauthStatus(): void {
+  sessionStorage.removeItem("social_reauth_redirect");
+  sessionStorage.removeItem("social_reauth_provider");
 }
 
 /**

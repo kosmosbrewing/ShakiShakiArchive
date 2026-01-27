@@ -216,7 +216,7 @@ onUnmounted(() => {
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
           <!-- CLS 방지: Hero 이미지 비율(800x1120 = 5:7)에 맞춤 -->
-          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 5 / 7;" />
+          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 5 / 7" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
             <Skeleton class="w-2.5 h-2.5 rounded-full" />
@@ -252,7 +252,7 @@ onUnmounted(() => {
               v-bind="getHeroAttrs(image.url, index === 0)"
               alt="ShakiShaki Archive"
               class="object-contain w-full transition-all duration-700 ease-out"
-              style="aspect-ratio: 5 / 7;"
+              style="aspect-ratio: 5 / 7"
               :class="[
                 index === 0 ? 'relative' : 'absolute inset-0',
                 getSlideClass(index),
@@ -318,7 +318,11 @@ onUnmounted(() => {
   </section>
 
   <!-- Marquee 섹션: 이미지가 있을 때만 표시 (LCP 최적화) -->
-  <section v-if="!isLoading && marqueeImageUrls.length > 0" id="marquee" class="max-w-[75%] mx-auto">
+  <section
+    v-if="!isLoading && marqueeImageUrls.length > 0"
+    id="marquee"
+    class="max-w-[75%] mx-auto"
+  >
     <div class="mx-auto mt-10 lg:mt-5">
       <Marquee
         class="gap-[2rem]"
