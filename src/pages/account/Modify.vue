@@ -57,11 +57,11 @@ const socialProviderLabel = computed(() => {
   return socialProvider.value === "kakao" ? "카카오" : "네이버";
 });
 
-// 소셜 인증 버튼 스타일
+// 소셜 인증 버튼 스타일 (로그인 페이지와 동일)
 const socialButtonClass = computed(() => {
   return socialProvider.value === "kakao"
-    ? "bg-[#FEE500] hover:bg-[#FDD835] text-black"
-    : "bg-[#03C75A] hover:bg-[#02B350] text-white";
+    ? "bg-[#FEE500] hover:bg-[#FEE500]/90 font-medium border-[#FEE500]"
+    : "bg-[#03A94D] hover:bg-[#03A94D]/90 font-medium";
 });
 
 // 소셜 재인증 완료 여부 (5분간 유효)
@@ -585,11 +585,43 @@ onMounted(async () => {
               <Button
                 v-if="!isSocialReauthVerified"
                 type="button"
-                size="sm"
-                :class="socialButtonClass"
+                variant="outline"
+                :class="['h-10', socialButtonClass]"
                 @click="handleSocialReauth"
               >
-                {{ socialProviderLabel }} 인증
+                <!-- 네이버 아이콘 -->
+                <template v-if="socialProvider === 'naver'">
+                  <div class="inline-flex items-center leading-none text-white">
+                    <svg
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="w-4 h-4 block"
+                      preserveAspectRatio="xMinYMid meet"
+                    >
+                      <path
+                        d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
+                      />
+                    </svg>
+                    <span class="text-sm font-medium tracking-tight ml-2 text-white">네이버 로그인</span>
+                  </div>
+                </template>
+                <!-- 카카오 아이콘 -->
+                <template v-else>
+                  <div class="inline-flex items-center leading-none text-[#191919]">
+                    <svg
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="w-5 h-5 block"
+                    >
+                      <path
+                        d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
+                      />
+                    </svg>
+                    <span class="text-sm font-medium tracking-tight ml-2 text-[#191919]">카카오 로그인</span>
+                  </div>
+                </template>
               </Button>
             </div>
           </div>

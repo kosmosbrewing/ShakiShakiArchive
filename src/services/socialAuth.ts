@@ -2,6 +2,7 @@
 // 소셜 로그인 API 서비스 (카카오, 네이버, 구글)
 
 import { useAlert } from "@/composables/useAlert";
+import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -254,25 +255,13 @@ export async function handleGoogleCallback(
  * prompt=login 파라미터로 기존 세션 무시하고 재로그인 강제
  */
 export function reauthWithKakao(): void {
-  const Kakao = (window as any).Kakao;
-  const { showAlert } = useAlert();
-
-  if (!Kakao?.isInitialized()) {
-    if (!initKakaoSdk()) {
-      showAlert("카카오 인증을 사용할 수 없습니다.", { type: "error" });
-      return;
-    }
-  }
-
   // 재인증 후 돌아올 페이지 저장
   sessionStorage.setItem("social_reauth_redirect", "/modify");
   sessionStorage.setItem("social_reauth_provider", "kakao");
 
-  Kakao.Auth.authorize({
-    redirectUri: config.kakao?.redirectUri,
-    scope: "profile_nickname,account_email",
-    prompt: "login", // 기존 로그인 세션 무시하고 재인증 요청
-  });
+  // 백엔드 API를 통해 카카오 인증 (prompt=login으로 재인증 강제)
+  const kakaoReauthUrl = getKakaoLoginUrl({ forceLogin: true, returnUrl: "/modify" });
+  window.location.href = kakaoReauthUrl;
 }
 
 /**
@@ -280,27 +269,13 @@ export function reauthWithKakao(): void {
  * auth_type=reprompt 파라미터로 기존 세션 무시하고 재로그인 강제
  */
 export function reauthWithNaver(): void {
-  const { showAlert } = useAlert();
-  if (!config.naver?.clientId) {
-    showAlert("네이버 인증 설정이 필요합니다.", { type: "error" });
-    return;
-  }
-
-  const state = generateRandomState();
-  sessionStorage.setItem("naver_auth_state", state);
   // 재인증 후 돌아올 페이지 저장
   sessionStorage.setItem("social_reauth_redirect", "/modify");
   sessionStorage.setItem("social_reauth_provider", "naver");
 
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: config.naver.clientId,
-    redirect_uri: config.naver.redirectUri,
-    state,
-    auth_type: "reprompt", // 기존 로그인 세션 무시하고 재인증 요청
-  });
-
-  window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params}`;
+  // 백엔드 API를 통해 네이버 인증 (auth_type=reprompt로 재인증 강제)
+  const naverReauthUrl = getNaverLoginUrl({ forceLogin: true, returnUrl: "/modify" });
+  window.location.href = naverReauthUrl;
 }
 
 /**

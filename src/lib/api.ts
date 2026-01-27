@@ -250,7 +250,7 @@ export async function logout(): Promise<void> {
 }
 
 // 네이버 소셜 로그인 URL 반환
-export function getNaverLoginUrl(): string {
+export function getNaverLoginUrl(options?: { forceLogin?: boolean; returnUrl?: string }): string {
   // 캐시 방지를 위한 타임스탬프 추가
   const timestamp = Date.now();
   // 로그인 후 돌아올 페이지 저장
@@ -258,18 +258,34 @@ export function getNaverLoginUrl(): string {
   const currentPath = window.location.pathname;
   const authPaths = ["/login", "/signup", "/forgot-password", "/auth"];
   const isAuthPage = authPaths.some((path) => currentPath.startsWith(path));
-  const returnUrl = encodeURIComponent(isAuthPage ? "/" : currentPath || "/");
-  return `${API_BASE}/api/oauth/naver/login?t=${timestamp}&returnUrl=${returnUrl}`;
+  const returnUrl = encodeURIComponent(options?.returnUrl || (isAuthPage ? "/" : currentPath || "/"));
+
+  let url = `${API_BASE}/api/oauth/naver/login?t=${timestamp}&returnUrl=${returnUrl}`;
+
+  // 재인증 요청 시 auth_type=reprompt 파라미터 추가
+  if (options?.forceLogin) {
+    url += "&auth_type=reprompt";
+  }
+
+  return url;
 }
 
 // 카카오 소셜 로그인 URL 반환
-export function getKakaoLoginUrl(): string {
+export function getKakaoLoginUrl(options?: { forceLogin?: boolean; returnUrl?: string }): string {
   const timestamp = Date.now();
   const currentPath = window.location.pathname;
   const authPaths = ["/login", "/signup", "/forgot-password", "/auth"];
   const isAuthPage = authPaths.some((path) => currentPath.startsWith(path));
-  const returnUrl = encodeURIComponent(isAuthPage ? "/" : currentPath || "/");
-  return `${API_BASE}/api/oauth/kakao?t=${timestamp}&returnUrl=${returnUrl}`;
+  const returnUrl = encodeURIComponent(options?.returnUrl || (isAuthPage ? "/" : currentPath || "/"));
+
+  let url = `${API_BASE}/api/oauth/kakao?t=${timestamp}&returnUrl=${returnUrl}`;
+
+  // 재인증 요청 시 prompt=login 파라미터 추가
+  if (options?.forceLogin) {
+    url += "&prompt=login";
+  }
+
+  return url;
 }
 
 // 현재 사용자 정보 가져오기
