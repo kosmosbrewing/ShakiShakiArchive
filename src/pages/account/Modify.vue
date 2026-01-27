@@ -83,8 +83,48 @@ const checkSocialReauthVerified = () => {
   return false;
 };
 
+// 소셜 재인증 전 폼 데이터 저장
+const saveFormDataBeforeReauth = () => {
+  const formData = {
+    userName: form.userName,
+    phone1: form.phone1,
+    phone2: form.phone2,
+    phone3: form.phone3,
+    zipCode: form.zipCode,
+    address: form.address,
+    detailAddress: form.detailAddress,
+    emailOptIn: form.emailOptIn,
+  };
+  sessionStorage.setItem("modify_form_data", JSON.stringify(formData));
+};
+
+// 소셜 재인증 후 폼 데이터 복원
+const restoreFormDataAfterReauth = () => {
+  const savedData = sessionStorage.getItem("modify_form_data");
+  if (savedData) {
+    try {
+      const formData = JSON.parse(savedData);
+      form.userName = formData.userName || form.userName;
+      form.phone1 = formData.phone1 || form.phone1;
+      form.phone2 = formData.phone2 || form.phone2;
+      form.phone3 = formData.phone3 || form.phone3;
+      form.zipCode = formData.zipCode || form.zipCode;
+      form.address = formData.address || form.address;
+      form.detailAddress = formData.detailAddress || form.detailAddress;
+      form.emailOptIn = formData.emailOptIn ?? form.emailOptIn;
+      // 복원 후 삭제
+      sessionStorage.removeItem("modify_form_data");
+    } catch (e) {
+      console.error("폼 데이터 복원 실패:", e);
+    }
+  }
+};
+
 // 소셜 재인증 요청
 const handleSocialReauth = () => {
+  // 현재 폼 데이터 저장
+  saveFormDataBeforeReauth();
+
   if (socialProvider.value === "kakao") {
     reauthWithKakao();
   } else if (socialProvider.value === "naver") {
@@ -447,7 +487,12 @@ onMounted(async () => {
   initializeForm();
 
   // 소셜 재인증 상태 확인
-  checkSocialReauthVerified();
+  const isReauthVerified = checkSocialReauthVerified();
+
+  // 소셜 재인증 후 폼 데이터 복원
+  if (isReauthVerified) {
+    restoreFormDataAfterReauth();
+  }
 });
 </script>
 
@@ -570,59 +615,58 @@ onMounted(async () => {
           <!-- 소셜 로그인 사용자: 소셜 인증 버튼 -->
           <div v-else class="space-y-2">
             <Label>본인 인증</Label>
-            <div
-              class="flex items-center gap-3 p-4 rounded-lg border"
-              :class="isSocialReauthVerified ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-muted/30 border-border'"
-            >
-              <div class="flex-1">
-                <p v-if="isSocialReauthVerified" class="text-body text-green-600 dark:text-green-400 font-medium">
-                  인증 완료
-                </p>
-                <p v-else class="text-body text-muted-foreground">
+            <div class="p-4 rounded-lg border border-border">
+              <div v-if="isSocialReauthVerified" class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="text-body font-medium">인증 완료</span>
+              </div>
+              <template v-else>
+                <p class="text-body text-muted-foreground mb-3">
                   정보 수정을 위해 {{ socialProviderLabel }} 인증이 필요합니다.
                 </p>
-              </div>
-              <Button
-                v-if="!isSocialReauthVerified"
-                type="button"
-                variant="outline"
-                :class="['h-10', socialButtonClass]"
-                @click="handleSocialReauth"
-              >
-                <!-- 네이버 아이콘 -->
-                <template v-if="socialProvider === 'naver'">
-                  <div class="inline-flex items-center leading-none text-white">
-                    <svg
-                      viewBox="0 0 20 20"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      class="w-4 h-4 block"
-                      preserveAspectRatio="xMinYMid meet"
-                    >
-                      <path
-                        d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
-                      />
-                    </svg>
-                    <span class="text-sm font-medium tracking-tight ml-2 text-white">네이버 로그인</span>
-                  </div>
-                </template>
-                <!-- 카카오 아이콘 -->
-                <template v-else>
-                  <div class="inline-flex items-center leading-none text-[#191919]">
-                    <svg
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      class="w-5 h-5 block"
-                    >
-                      <path
-                        d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
-                      />
-                    </svg>
-                    <span class="text-sm font-medium tracking-tight ml-2 text-[#191919]">카카오 로그인</span>
-                  </div>
-                </template>
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  :class="['w-full h-11', socialButtonClass]"
+                  @click="handleSocialReauth"
+                >
+                  <!-- 네이버 아이콘 -->
+                  <template v-if="socialProvider === 'naver'">
+                    <div class="inline-flex items-center leading-none text-white">
+                      <svg
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        class="w-4 h-4 block"
+                        preserveAspectRatio="xMinYMid meet"
+                      >
+                        <path
+                          d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
+                        />
+                      </svg>
+                      <span class="text-base font-medium tracking-tight ml-2 text-white">네이버 로그인</span>
+                    </div>
+                  </template>
+                  <!-- 카카오 아이콘 -->
+                  <template v-else>
+                    <div class="inline-flex items-center leading-none text-[#191919]">
+                      <svg
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        class="w-5 h-5 block"
+                      >
+                        <path
+                          d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
+                        />
+                      </svg>
+                      <span class="text-base font-medium tracking-tight ml-2 text-[#191919]">카카오 로그인</span>
+                    </div>
+                  </template>
+                </Button>
+              </template>
             </div>
           </div>
 

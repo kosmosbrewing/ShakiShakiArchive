@@ -822,10 +822,17 @@ export function cleanupOrder(orderId: number | string): boolean {
 }
 
 // --- 배송지 (Address Book) ---
-export async function fetchDeliveryAddresses(): Promise<any[]> {
+export async function fetchDeliveryAddresses(options?: { noHttpCache?: boolean }): Promise<any[]> {
+  const fetchOptions: RequestInit & { cachePolicy?: 'noCache' } = { cachePolicy: 'noCache' };
+
+  // 브라우저 HTTP 캐시 무시 옵션 (배송지 관리 페이지용)
+  if (options?.noHttpCache) {
+    fetchOptions.cache = 'no-store';
+  }
+
   const response = await apiRequest<{ addresses: any[] } | any[]>(
     "/api/user/addresses",
-    { cachePolicy: 'noCache' }
+    fetchOptions
   );
   return Array.isArray(response) ? response : response.addresses || [];
 }

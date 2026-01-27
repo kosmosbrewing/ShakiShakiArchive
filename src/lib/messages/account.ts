@@ -18,6 +18,7 @@ export const ACCOUNT_MESSAGES = {
   addressUpdateFailed: "배송지 수정에 실패했습니다.",
   addressDeleteFailed: "배송지 삭제에 실패했습니다.",
   addressRequired: "필수 항목을 모두 입력해주세요.",
+  addressLimitExceeded: "배송지는 최대 10개까지 등록할 수 있습니다.",
   noAddresses: "등록된 배송지가 없습니다.",
 
   // 회원 탈퇴

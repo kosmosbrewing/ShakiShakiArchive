@@ -2,7 +2,7 @@
 // src/pages/AddressList.vue
 // 배송지 관리 페이지
 
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useAlert } from "@/composables/useAlert";
@@ -26,18 +26,42 @@ useAuthGuard();
 
 const { showAlert } = useAlert();
 
+// 최대 배송지 개수
+const MAX_ADDRESS_COUNT = 10;
+
 // 배송지 목록 로직
-const { addresses, loading, loadAddresses, editAddress, removeAddress } =
+const { addresses, loading, loadAddresses, addAddress, editAddress, removeAddress } =
   useAddresses();
 
 // 수정 폼 관리
 const shippingForm = useShippingForm();
 
-// 수정 모달 상태
+// 모달 상태
+const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const editingAddress = ref<DeliveryAddress | null>(null);
 const isSaving = ref(false);
+const currentModalMode = ref<"add" | "edit">("add"); // 주소 검색 모달 구분용
+
+// 배송지 추가 가능 여부
+const canAddAddress = computed(() => addresses.value.length < MAX_ADDRESS_COUNT);
+
+// 배송지 추가 모달 열기
+const handleAdd = () => {
+  if (!canAddAddress.value) {
+    showAlert(ACCOUNT_MESSAGES.addressLimitExceeded, { type: "error" });
+    return;
+  }
+  shippingForm.clearForm();
+  isAddModalOpen.value = true;
+};
+
+// 배송지 추가 모달 닫기
+const closeAddModal = () => {
+  isAddModalOpen.value = false;
+  shippingForm.clearForm();
+};
 
 // 배송지 수정 모달 열기
 const handleEdit = (address: DeliveryAddress) => {
@@ -46,15 +70,16 @@ const handleEdit = (address: DeliveryAddress) => {
   isEditModalOpen.value = true;
 };
 
-// 모달 닫기
+// 배송지 수정 모달 닫기
 const closeEditModal = () => {
   isEditModalOpen.value = false;
   editingAddress.value = null;
   shippingForm.clearForm();
 };
 
-// 주소 검색 모달 열기
-const openAddressSearch = () => {
+// 주소 검색 모달 열기 (추가/수정 모달에서 호출)
+const openAddressSearch = (mode: "add" | "edit") => {
+  currentModalMode.value = mode;
   isAddressSearchOpen.value = true;
 };
 
@@ -66,6 +91,38 @@ const handleAddressSelect = (address: {
   shippingForm.form.zipCode = address.zonecode;
   shippingForm.form.address = address.address;
   shippingForm.form.detailAddress = ""; // 상세 주소 초기화
+};
+
+// 배송지 추가 저장
+const handleSaveAdd = async () => {
+  if (!shippingForm.isValid.value) {
+    showAlert(ACCOUNT_MESSAGES.addressRequired, { type: "error" });
+    return;
+  }
+
+  isSaving.value = true;
+
+  const success = await addAddress({
+    recipient: shippingForm.form.recipient,
+    phone: shippingForm.fullPhone.value,
+    zipCode: shippingForm.form.zipCode,
+    address: shippingForm.form.address,
+    detailAddress: shippingForm.form.detailAddress,
+    requestNote:
+      shippingForm.form.message === "self"
+        ? shippingForm.form.customMessage
+        : shippingForm.form.message,
+    isDefault: shippingForm.form.saveDefault,
+  });
+
+  isSaving.value = false;
+
+  if (success) {
+    showAlert(ACCOUNT_MESSAGES.addressSaveSuccess);
+    closeAddModal();
+  } else {
+    showAlert(ACCOUNT_MESSAGES.addressSaveFailed, { type: "error" });
+  }
 };
 
 // 배송지 수정 저장
@@ -116,7 +173,15 @@ onMounted(() => {
   <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
     <!-- 페이지 타이틀 -->
     <div class="mb-6">
-      <h3 class="text-heading text-primary tracking-wider mb-3">배송지 관리</h3>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-heading text-primary tracking-wider">배송지 관리</h3>
+        <Button @click="handleAdd" size="sm">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          배송지 추가
+        </Button>
+      </div>
       <Separator></Separator>
     </div>
 
@@ -141,6 +206,58 @@ onMounted(() => {
         @edit="handleEdit"
         @delete="handleDelete"
       />
+    </div>
+
+    <!-- 배송지 추가 모달 -->
+    <div
+      v-if="isAddModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm"
+      @click.self="closeAddModal"
+    >
+      <Card
+        class="w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200"
+      >
+        <CardHeader
+          class="flex flex-row items-center justify-between border-b py-3 px-4 sm:py-4 sm:px-6 shrink-0"
+        >
+          <CardTitle class="text-heading">배송지 추가</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="closeAddModal"
+            class="h-8 w-8 rounded-full shrink-0"
+          >
+            ✕
+          </Button>
+        </CardHeader>
+        <CardContent class="overflow-y-auto p-4 sm:p-6 flex-1">
+          <AddressForm
+            :form="shippingForm.form"
+            :show-save-default="true"
+            :show-delivery-message="true"
+            @update:form="Object.assign(shippingForm.form, $event)"
+            @search-address="openAddressSearch('add')"
+          />
+
+          <div class="flex gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 border-t">
+            <Button
+              variant="outline"
+              class="flex-1 h-10 sm:h-11"
+              @click="closeAddModal"
+              :disabled="isSaving"
+            >
+              취소
+            </Button>
+            <Button
+              class="flex-1 h-10 sm:h-11"
+              @click="handleSaveAdd"
+              :disabled="isSaving || !shippingForm.isValid.value"
+            >
+              {{ isSaving ? "추가 중..." : "추가" }}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- 배송지 수정 모달 -->
@@ -171,7 +288,7 @@ onMounted(() => {
             :show-save-default="true"
             :show-delivery-message="true"
             @update:form="Object.assign(shippingForm.form, $event)"
-            @search-address="openAddressSearch"
+            @search-address="openAddressSearch('edit')"
           />
 
           <div class="flex gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 border-t">

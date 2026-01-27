@@ -30,12 +30,12 @@ export function useAddresses() {
     return addresses.value.find((addr) => addr.isDefault) || addresses.value[0] || null;
   });
 
-  // 배송지 목록 로드
+  // 배송지 목록 로드 (배송지 관리 페이지에서는 브라우저 HTTP 캐시 무시)
   const loadAddresses = async () => {
     loading.value = true;
     error.value = null;
     try {
-      addresses.value = await fetchDeliveryAddresses();
+      addresses.value = await fetchDeliveryAddresses({ noHttpCache: true });
     } catch (e) {
       error.value = "배송지 목록 로드 실패";
       console.error("배송지 목록 로드 실패:", e);
@@ -63,7 +63,22 @@ export function useAddresses() {
   ) => {
     try {
       await updateDeliveryAddress(id, addressData);
-      await loadAddresses(); // 목록 갱신
+      // 로컬에서 직접 업데이트 (캐시 문제 방지)
+      const index = addresses.value.findIndex((addr) => String(addr.id) === String(id));
+      if (index !== -1) {
+        // 기본 배송지 변경 시 기존 기본 배송지 해제
+        if (addressData.isDefault) {
+          addresses.value = addresses.value.map((addr) => ({
+            ...addr,
+            isDefault: String(addr.id) === String(id),
+          }));
+        }
+        // 해당 배송지 업데이트
+        addresses.value[index] = {
+          ...addresses.value[index],
+          ...addressData,
+        };
+      }
       return true;
     } catch (e) {
       console.error("배송지 수정 실패:", e);
