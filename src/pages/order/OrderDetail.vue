@@ -4,24 +4,17 @@ import { useRoute, useRouter } from "vue-router";
 import { useOrders } from "@/composables/useOrders";
 import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
-import type {
-  Order,
-  OrderItem,
-  Return,
-  ReturnReasonType,
-} from "@/types/api";
+import type { Order, OrderItem, ReturnReasonType } from "@/types/api";
 import { getDayName } from "@/lib/utils";
 import { ORDER_MESSAGES } from "@/lib/messages";
 import {
   isCancelable,
   isReturnable,
-  isReturnInProgress,
   sortOrderItems,
 } from "@/lib/constants/order";
 import {
   partialCancelOrder,
   createReturn,
-  updateReturnTracking,
   fetchOrder,
 } from "@/lib/api";
 
@@ -34,10 +27,7 @@ import {
 } from "@/components/common";
 
 // 주문 관련 모달 컴포넌트
-import {
-  ReturnRequestModal,
-  ReturnTrackingModal,
-} from "@/components/order";
+import { ReturnRequestModal } from "@/components/order";
 
 // UI 컴포넌트
 import { Button } from "@/components/ui/button";
@@ -49,7 +39,7 @@ import { AlertCircle } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
-const { showAlert, showConfirm } = useAlert();
+const { showAlert } = useAlert();
 
 // useOrders 훅 사용
 const { loadOrder, loading, error } = useOrders();
@@ -65,10 +55,6 @@ const returnModalOpen = ref(false);
 const returnTargetItem = ref<OrderItem | null>(null);
 const returnLoading = ref(false);
 
-// 운송장 등록 모달 상태
-const trackingModalOpen = ref(false);
-const trackingTargetReturn = ref<Return | null>(null);
-const trackingLoading = ref(false);
 
 // 배송비 (백엔드에서 제공)
 const shippingFee = computed(() => {
@@ -129,10 +115,6 @@ const canReturn = (status: string) => {
 
 const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
-};
-
-const isInReturnProcess = (status: string) => {
-  return isReturnInProgress(status as any);
 };
 
 // 취소 다이얼로그 열기 (개별 아이템)
@@ -199,7 +181,7 @@ const handleConfirmReturn = async (data: {
   returnLoading.value = true;
 
   try {
-    const result = await createReturn(data);
+    await createReturn(data);
 
     // 성공 알림
     showAlert(ORDER_MESSAGES.returnRequestSuccess);
@@ -209,86 +191,12 @@ const handleConfirmReturn = async (data: {
 
     // 모달 닫기
     closeReturnModal();
-
-    // 운송장 등록 안내 (반품 ID를 사용해 운송장 모달 열기)
-    const shouldOpenTracking = await showConfirm(
-      `${result.nextStep}\n\n지금 운송장을 등록하시겠습니까?`,
-      { confirmText: "운송장 등록", cancelText: "나중에" }
-    );
-
-    if (shouldOpenTracking) {
-      // 새로 생성된 반품 정보로 운송장 모달 열기
-      trackingTargetReturn.value = {
-        id: result.returnId,
-        orderId: order.value!.id,
-        orderItemId: data.orderItemId,
-        reason: data.reason,
-        reasonType: data.reasonType,
-        status: "requested",
-        createdAt: new Date().toISOString(),
-      };
-      trackingModalOpen.value = true;
-    }
   } catch (e: unknown) {
     const errorMessage =
       e instanceof Error ? e.message : ORDER_MESSAGES.returnRequestFailed;
     showAlert(errorMessage, { type: "error" });
   } finally {
     returnLoading.value = false;
-  }
-};
-
-// 운송장 등록 모달 열기 (반품 진행 중인 아이템용)
-// TODO: 백엔드에서 OrderItem에 returnId 필드를 포함해서 내려줘야 합니다.
-const openTrackingModal = async (item: OrderItem) => {
-  trackingTargetReturn.value = {
-    id: `return-${item.id}`, // TODO: item.returnId로 대체 필요
-    orderId: order.value!.id,
-    orderItemId: item.id,
-    reason: "",
-    reasonType: "other",
-    status: "requested",
-    createdAt: new Date().toISOString(),
-  };
-  trackingModalOpen.value = true;
-};
-
-// 운송장 등록 모달 닫기
-const closeTrackingModal = () => {
-  trackingModalOpen.value = false;
-  trackingTargetReturn.value = null;
-};
-
-// 운송장 등록 확인 핸들러
-const handleConfirmTracking = async (data: {
-  returnId: string;
-  trackingNumber: string;
-  courierCompany: string;
-}) => {
-  if (trackingLoading.value) return;
-
-  trackingLoading.value = true;
-
-  try {
-    await updateReturnTracking(data.returnId, {
-      trackingNumber: data.trackingNumber,
-      courierCompany: data.courierCompany,
-    });
-
-    // 성공 알림
-    showAlert(ORDER_MESSAGES.returnTrackingSuccess);
-
-    // 주문 정보 다시 로드
-    await reloadOrder();
-
-    // 모달 닫기
-    closeTrackingModal();
-  } catch (e: unknown) {
-    const errorMessage =
-      e instanceof Error ? e.message : ORDER_MESSAGES.returnTrackingFailed;
-    showAlert(errorMessage, { type: "error" });
-  } finally {
-    trackingLoading.value = false;
   }
 };
 
@@ -483,15 +391,6 @@ const getPaymentProviderLabel = (provider: string): string => {
                           반품요청
                         </Button>
 
-                        <Button
-                          v-if="isInReturnProcess(item.status)"
-                          variant="outline"
-                          size="sm"
-                          class="text-caption px-2.5 py-1"
-                          @click="openTrackingModal(item)"
-                        >
-                          운송장등록
-                        </Button>
                       </div>
                     </div>
                   </div>
@@ -531,15 +430,6 @@ const getPaymentProviderLabel = (provider: string): string => {
                         반품요청
                       </Button>
 
-                      <Button
-                        v-if="isInReturnProcess(item.status)"
-                        variant="outline"
-                        size="sm"
-                        class="text-caption px-3 py-1.5"
-                        @click="openTrackingModal(item)"
-                      >
-                        운송장등록
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -630,7 +520,7 @@ const getPaymentProviderLabel = (provider: string): string => {
     <!-- 주문 취소 다이얼로그 (개별 아이템용) -->
     <CancelOrderDialog
       :open="cancelDialogOpen"
-      :product-name="cancelTargetItem?.productName"
+      :order-item="cancelTargetItem"
       :loading="cancelLoading"
       @close="closeCancelDialog"
       @confirm="handleConfirmCancel"
@@ -643,15 +533,6 @@ const getPaymentProviderLabel = (provider: string): string => {
       :loading="returnLoading"
       @close="closeReturnModal"
       @confirm="handleConfirmReturn"
-    />
-
-    <!-- 운송장 등록 모달 -->
-    <ReturnTrackingModal
-      :open="trackingModalOpen"
-      :return-info="trackingTargetReturn"
-      :loading="trackingLoading"
-      @close="closeTrackingModal"
-      @confirm="handleConfirmTracking"
     />
   </div>
 </template>

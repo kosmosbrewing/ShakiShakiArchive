@@ -24,7 +24,7 @@ const { showAlert, showConfirm } = useAlert();
 const { getResponsiveAttrs } = useOptimizedImage();
 
 // 스토어에서 상태 가져오기
-const { featuredProducts: productList, loading } = storeToRefs(productStore);
+const { featuredProducts: productList, loading, loaded } = storeToRefs(productStore);
 
 // 상품 카드 반응형 이미지 속성 (srcset 포함)
 const getProductImageAttrs = (url: string) => {
@@ -79,10 +79,10 @@ onMounted(async () => {
 
 <template>
   <div class="w-full grid grid-cols-2 gap-4 sm:gap-6">
-    <!-- 로딩 상태: 스켈레톤 카드 표시 -->
-    <ProductCardSkeleton v-if="loading" :count="4" />
+    <!-- 로딩 상태: 스켈레톤 카드 표시 (아직 로드되지 않은 경우도 포함) -->
+    <ProductCardSkeleton v-if="loading || !loaded" :count="4" />
 
-    <!-- 빈 상태 -->
+    <!-- 빈 상태 (로드 완료 후에만 표시) -->
     <EmptyState
       v-else-if="productList.length === 0"
       header="상품 없음"

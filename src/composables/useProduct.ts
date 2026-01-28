@@ -412,7 +412,7 @@ export function useProductList() {
   const route = useRoute();
 
   const products = ref<ProductListItem[]>([]);
-  const loading = ref(false);
+  const loading = ref(true); // 초기 로딩 상태 true로 시작 (첫 렌더링 시 스켈레톤 표시)
   const loadingMore = ref(false);
   const error = ref<string | null>(null);
 

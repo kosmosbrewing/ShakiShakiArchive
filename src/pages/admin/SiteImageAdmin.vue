@@ -14,8 +14,11 @@ import {
   deleteSiteImage,
   reorderSiteImages,
   uploadProductImage,
+  fetchEmailTemplates,
+  fetchEmailPreview,
 } from "@/lib/api";
 import type { SiteImage, SiteImageType } from "@/types/api";
+import type { EmailTemplateInfo, EmailTemplateType } from "@/lib/api";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +36,8 @@ import {
   GripVertical,
   ExternalLink,
   Upload,
+  Mail,
+  Eye,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -47,7 +52,14 @@ const isEditMode = ref(false);
 const isUploading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
-const activeTab = ref<SiteImageType>("hero");
+const activeTab = ref<"hero" | "marquee" | "email">("hero");
+
+// 이메일 템플릿 미리보기 상태
+const emailTemplates = ref<EmailTemplateInfo[]>([]);
+const selectedEmailTemplate = ref<EmailTemplateType | null>(null);
+const emailPreviewHtml = ref("");
+const isEmailLoading = ref(false);
+const isEmailPreviewOpen = ref(false);
 
 // 타입별 최대 개수 제한
 const MAX_HERO_IMAGES = 3;
@@ -84,6 +96,7 @@ const currentImages = computed(() =>
 
 // 추가 가능 여부
 const canAddMore = computed(() => {
+  if (activeTab.value === "email") return false;
   if (activeTab.value === "hero") {
     return heroImages.value.length < MAX_HERO_IMAGES;
   }
@@ -117,9 +130,11 @@ const openCreateModal = () => {
     return;
   }
   isEditMode.value = false;
+  // email 탭에서는 이미지 추가 불가 (canAddMore에서 이미 false 처리됨)
+  const imageType = activeTab.value === "email" ? "hero" : activeTab.value;
   form.value = {
     ...initialForm,
-    type: activeTab.value,
+    type: imageType as SiteImageType,
     displayOrder: currentImages.value.length,
   };
   errorMessage.value = "";
@@ -272,7 +287,7 @@ const moveUp = async (index: number) => {
   images[index].displayOrder = prevOrder;
 
   try {
-    await reorderSiteImages({ type: activeTab.value, imageIds });
+    await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
   } catch (e: any) {
     // 실패 시 롤백
     images[index].displayOrder = images[index - 1].displayOrder;
@@ -298,13 +313,47 @@ const moveDown = async (index: number) => {
   images[index + 1].displayOrder = currentOrder;
 
   try {
-    await reorderSiteImages({ type: activeTab.value, imageIds });
+    await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
   } catch (e: any) {
     // 실패 시 롤백
     images[index + 1].displayOrder = images[index].displayOrder;
     images[index].displayOrder = currentOrder;
     showAlert(e.message, { type: "error" });
   }
+};
+
+// 이메일 템플릿 목록 로드
+const loadEmailTemplates = async () => {
+  try {
+    isEmailLoading.value = true;
+    const { templates } = await fetchEmailTemplates();
+    emailTemplates.value = templates;
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isEmailLoading.value = false;
+  }
+};
+
+// 이메일 템플릿 미리보기 열기
+const openEmailPreview = async (type: EmailTemplateType) => {
+  try {
+    selectedEmailTemplate.value = type;
+    isEmailLoading.value = true;
+    emailPreviewHtml.value = await fetchEmailPreview(type);
+    isEmailPreviewOpen.value = true;
+  } catch (error: any) {
+    showAlert(error.message || "미리보기를 불러오는데 실패했습니다.", { type: "error" });
+  } finally {
+    isEmailLoading.value = false;
+  }
+};
+
+// 이메일 미리보기 닫기
+const closeEmailPreview = () => {
+  isEmailPreviewOpen.value = false;
+  selectedEmailTemplate.value = null;
+  emailPreviewHtml.value = "";
 };
 
 // 초기화
@@ -315,6 +364,7 @@ onMounted(async () => {
     return;
   }
   loadData();
+  loadEmailTemplates();
 });
 </script>
 
@@ -366,13 +416,88 @@ onMounted(async () => {
         <ImageIcon class="w-4 h-4" />
         Marquee ({{ marqueeImages.length }}/{{ MAX_MARQUEE_IMAGES }})
       </Button>
+      <Button
+        @click="activeTab = 'email'"
+        :variant="activeTab === 'email' ? undefined : 'outline'"
+        :class="
+          activeTab === 'email'
+            ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
+            : 'gap-2'
+        "
+      >
+        <Mail class="w-4 h-4" />
+        이메일 템플릿
+      </Button>
     </div>
 
     <!-- 로딩 -->
-    <LoadingSpinner v-if="isLoading" />
+    <LoadingSpinner v-if="isLoading && activeTab !== 'email'" />
+
+    <!-- 이메일 템플릿 목록 -->
+    <Card v-if="activeTab === 'email'" class="overflow-hidden border-none shadow-lg">
+      <CardContent class="p-0">
+        <LoadingSpinner v-if="isEmailLoading && !isEmailPreviewOpen" />
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[600px]">
+            <thead
+              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+            >
+              <tr>
+                <th class="px-6 py-5">템플릿명</th>
+                <th class="px-6 py-5">설명</th>
+                <th class="px-6 py-5 text-right pr-10">작업</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="template in emailTemplates"
+                :key="template.type"
+                class="hover:bg-muted/30 transition-colors group"
+              >
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="p-2 bg-primary/10 rounded-lg">
+                      <Mail class="w-4 h-4 text-primary" />
+                    </div>
+                    <span class="text-body font-medium text-foreground">
+                      {{ template.name }}
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-body text-muted-foreground">
+                    {{ template.description }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="gap-2"
+                    @click="openEmailPreview(template.type)"
+                    :disabled="isEmailLoading"
+                  >
+                    <Eye class="w-4 h-4" />
+                    미리보기
+                  </Button>
+                </td>
+              </tr>
+              <tr v-if="emailTemplates.length === 0">
+                <td
+                  colspan="3"
+                  class="px-6 py-16 text-center text-admin-muted text-caption"
+                >
+                  등록된 이메일 템플릿이 없습니다.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
 
     <!-- 이미지 목록 -->
-    <Card v-else class="overflow-hidden border-none shadow-lg">
+    <Card v-else-if="!isLoading" class="overflow-hidden border-none shadow-lg">
       <CardContent class="p-0">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse min-w-[800px]">
@@ -668,6 +793,60 @@ onMounted(async () => {
               </Button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이메일 미리보기 모달 -->
+    <div
+      v-if="isEmailPreviewOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col"
+      >
+        <div class="p-6 border-b border-border flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <Mail class="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 class="text-heading font-semibold text-admin tracking-wide">
+                이메일 미리보기
+              </h2>
+              <p class="text-caption text-muted-foreground mt-0.5">
+                {{ emailTemplates.find(t => t.type === selectedEmailTemplate)?.name }}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="closeEmailPreview"
+          >
+            <X class="w-5 h-5" />
+          </Button>
+        </div>
+
+        <div class="flex-1 overflow-auto bg-muted/30 p-4">
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <iframe
+              v-if="emailPreviewHtml"
+              :srcdoc="emailPreviewHtml"
+              class="w-full h-[600px] border-0"
+              title="이메일 미리보기"
+            />
+          </div>
+        </div>
+
+        <div class="p-4 border-t border-border flex justify-end">
+          <Button
+            variant="outline"
+            class="font-medium"
+            @click="closeEmailPreview"
+          >
+            닫기
+          </Button>
         </div>
       </div>
     </div>

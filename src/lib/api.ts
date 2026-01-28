@@ -1398,6 +1398,44 @@ export async function uploadSiteImage(
 }
 
 // ------------------------------------------------------------------
+// [8.5] 이메일 템플릿 미리보기 (Admin Only)
+// ------------------------------------------------------------------
+
+// 이메일 템플릿 타입
+export type EmailTemplateType =
+  | "payment_confirm"
+  | "order_cancel"
+  | "refund_complete"
+  | "return_request"
+  | "verification";
+
+// 이메일 템플릿 정보
+export interface EmailTemplateInfo {
+  type: EmailTemplateType;
+  name: string;
+  description: string;
+}
+
+// 이메일 템플릿 목록 조회
+export async function fetchEmailTemplates(): Promise<{
+  templates: EmailTemplateInfo[];
+  colors: Record<string, string>;
+}> {
+  return apiRequest("/api/admin/email-preview/templates", { cachePolicy: "noCache" });
+}
+
+// 이메일 템플릿 미리보기 HTML 조회
+export async function fetchEmailPreview(type: EmailTemplateType): Promise<string> {
+  const response = await fetch(`${API_BASE}/api/admin/email-preview/${type}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("이메일 템플릿을 불러오는데 실패했습니다.");
+  }
+  return response.text();
+}
+
+// ------------------------------------------------------------------
 // [9] 문의하기 (Q&A Inquiries)
 // ------------------------------------------------------------------
 

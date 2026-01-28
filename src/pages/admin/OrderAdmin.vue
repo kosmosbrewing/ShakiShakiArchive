@@ -4,10 +4,11 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
-import { fetchAdminOrders, updateAdminOrderItem } from "@/lib/api";
+import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress } from "@/lib/formatters";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
+import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
 // UI 컴포넌트 및 아이콘
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   MapPin,
   Image as ImageIcon,
   Truck,
+  XCircle,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -43,6 +45,12 @@ const shippingModalOpen = ref(false);
 const selectedOrderItem = ref<any>(null);
 const selectedOrder = ref<any>(null);
 const savingShipping = ref(false);
+
+// 관리자 취소 모달 상태
+const cancelModalOpen = ref(false);
+const cancelTargetItem = ref<any>(null);
+const cancelTargetOrder = ref<any>(null);
+const cancelLoading = ref(false);
 
 // 상태 저장 중 표시
 const savingStatus = ref<Record<number, boolean>>({}); // key: orderItemId, value: saving 여부
@@ -64,6 +72,9 @@ const statusOptions = [
   { value: "delivered", label: "배송완료" },
   { value: "purchase_confirmed", label: "구매확정" },
   { value: "refunded", label: "주문취소" },
+  { value: "return_requested", label: "반품요청" },
+  { value: "return_in_progress", label: "반품진행중" },
+  { value: "returned", label: "반품완료" },
 ];
 
 // 필터링된 주문 목록 (전체)
@@ -113,8 +124,10 @@ const statusCounts = computed(() => [
   { label: "배송준비중", count: getStatusCount("preparing"), emphasized: true },
   { label: "배송중", count: getStatusCount("shipped"), emphasized: true },
   { label: "배송완료", count: getStatusCount("delivered"), emphasized: false },
-
   { label: "주문취소", count: getStatusCount("refunded"), emphasized: false },
+  { label: "반품요청", count: getStatusCount("return_requested"), emphasized: true },
+  { label: "반품진행중", count: getStatusCount("return_in_progress"), emphasized: true },
+  { label: "반품완료", count: getStatusCount("returned"), emphasized: false },
 ]);
 
 const getStatusClass = (status: string) => {
@@ -126,10 +139,16 @@ const getStatusClass = (status: string) => {
       return "bg-blue-50 text-blue-700 border-blue-100";
     // 완료 상태 - 파스텔 녹색
     case "delivered":
+    case "purchase_confirmed":
       return "bg-green-50 text-green-700 border-green-200";
     // 취소/환불 상태 - 파스텔 빨간색
     case "refunded":
+    case "returned":
       return "bg-red-50 text-red-700 border-red-200";
+    // 반품 진행 상태 - 주황색 계열
+    case "return_requested":
+    case "return_in_progress":
+      return "bg-orange-50 text-orange-700 border-orange-200";
     // 기타 상태 - 회색
     case "pending_payment":
     case "paying":
@@ -154,9 +173,9 @@ const isItemStatusChanged = (item: any) => {
   return originalItem.status !== item.status;
 };
 
-// 저장 버튼 비활성화 여부 확인 (입금대기, 결제진행중, 주문중단, 주문취소 상태)
+// 저장 버튼 비활성화 여부 확인 (입금대기, 결제진행중, 주문중단, 주문취소, 반품완료 상태)
 const isSaveDisabled = (item: any) => {
-  const disabledStatuses = ["pending_payment", "paying", "cancelled", "refunded"];
+  const disabledStatuses = ["pending_payment", "paying", "cancelled", "refunded", "returned"];
   return disabledStatuses.includes(item.status) || !isItemStatusChanged(item);
 };
 
@@ -243,6 +262,53 @@ const closeShippingModal = () => {
   shippingModalOpen.value = false;
   selectedOrderItem.value = null;
   selectedOrder.value = null;
+};
+
+// 관리자 취소 모달 열기
+const openCancelModal = (item: any, order: any) => {
+  cancelTargetItem.value = item;
+  cancelTargetOrder.value = order;
+  cancelModalOpen.value = true;
+};
+
+// 관리자 취소 모달 닫기
+const closeCancelModal = () => {
+  cancelModalOpen.value = false;
+  cancelTargetItem.value = null;
+  cancelTargetOrder.value = null;
+};
+
+// 취소 가능 상태 확인 (결제완료, 반품진행중)
+const isCancelable = (status: string) => {
+  const cancelableStatuses = ["payment_confirmed", "return_in_progress"];
+  return cancelableStatuses.includes(status);
+};
+
+// 관리자 주문 취소 처리
+const handleAdminCancel = async (data: {
+  cancelType: string;
+  customerMessage: string;
+  adminMemo: string;
+  cancelReason: string;
+}) => {
+  if (!cancelTargetItem.value || !cancelTargetOrder.value) return;
+
+  cancelLoading.value = true;
+  try {
+    // API 호출 - 주문 취소
+    await adminCancelPayment(
+      cancelTargetOrder.value.id,
+      `[${data.cancelType === "customer_request" ? "고객요청" : "직권취소"}] ${data.cancelReason}\n\n[고객메시지]\n${data.customerMessage}\n\n[관리메모]\n${data.adminMemo}`
+    );
+
+    showAlert(ADMIN_MESSAGES.orderCancelSuccess);
+    closeCancelModal();
+    await loadData();
+  } catch (error: any) {
+    showAlert(ADMIN_MESSAGES.orderCancelFailed.replace("{message}", error.message || "알 수 없는 오류"), { type: "error" });
+  } finally {
+    cancelLoading.value = false;
+  }
 };
 
 // 주문 아이템 상태 저장
@@ -378,7 +444,11 @@ onUnmounted(() => {
             <SelectItem value="preparing">배송준비중</SelectItem>
             <SelectItem value="shipped">배송중</SelectItem>
             <SelectItem value="delivered">배송완료</SelectItem>
+            <SelectItem value="purchase_confirmed">구매확정</SelectItem>
             <SelectItem value="refunded">주문취소</SelectItem>
+            <SelectItem value="return_requested">반품요청</SelectItem>
+            <SelectItem value="return_in_progress">반품진행중</SelectItem>
+            <SelectItem value="returned">반품완료</SelectItem>
           </SelectContent>
         </Select>
 
@@ -507,17 +577,18 @@ onUnmounted(() => {
         </CardHeader>
 
         <CardContent class="p-0 overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[1000px]">
+          <table class="w-full text-left border-collapse min-w-[1200px]">
             <thead
               class="bg-white border-l border-r text-caption font-bold text-admin-muted uppercase tracking-tight shadow-sm shadow-light"
             >
               <tr>
                 <th class="px-8 py-4 w-24">이미지</th>
-                <th class="px-8 py-4 w-1/3">상품명 / 옵션</th>
+                <th class="px-8 py-4 w-1/4">상품명 / 옵션</th>
                 <th class="px-8 py-4 text-center">수량/금액</th>
                 <th class="px-8 py-4 text-center">상태 정보</th>
                 <th class="px-8 py-4 text-center">배송 정보</th>
                 <th class="px-8 py-4 text-center">상태 관리</th>
+                <th class="px-8 py-4 text-center">취소 관리</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -615,6 +686,25 @@ onUnmounted(() => {
                     <span v-else>저장</span>
                   </Button>
                 </td>
+
+                <td class="px-8 py-5 text-center">
+                  <Button
+                    v-if="isCancelable(item.status)"
+                    variant="outline"
+                    size="sm"
+                    @click="openCancelModal(item, order)"
+                    class="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <XCircle class="w-4 h-4" />
+                    <span class="text-caption">취소</span>
+                  </Button>
+                  <span
+                    v-else
+                    class="text-caption text-muted-foreground"
+                  >
+                    -
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -662,6 +752,16 @@ onUnmounted(() => {
       :loading="savingShipping"
       @close="closeShippingModal"
       @save="handleSaveShipping"
+    />
+
+    <!-- 관리자 주문 취소 모달 -->
+    <AdminCancelOrderModal
+      :open="cancelModalOpen"
+      :order-item="cancelTargetItem"
+      :order="cancelTargetOrder"
+      :loading="cancelLoading"
+      @close="closeCancelModal"
+      @confirm="handleAdminCancel"
     />
   </div>
 </template>

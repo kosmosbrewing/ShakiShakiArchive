@@ -3,15 +3,17 @@
 // 취소할 아이템 선택 + 취소 사유 입력 + 환불 예상 금액 표시
 
 import { ref, computed, watch } from "vue";
+import { useAlert } from "@/composables/useAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
-import { X, AlertTriangle, Package, Check } from "lucide-vue-next";
+import { X, AlertTriangle, Package, Check, Info } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
 import { CANCEL_REASON_OPTIONS, isCancelable } from "@/lib/constants/order";
+import { ORDER_MESSAGES } from "@/lib/messages";
 import type { OrderItem, PartialCancelRefundDetails } from "@/types/api";
 
 interface Props {
@@ -30,6 +32,9 @@ const emit = defineEmits<{
   (e: "close"): void;
   (e: "confirm", data: { cancelItems: number[]; cancelReason: string }): void;
 }>();
+
+// Alert composable
+const { showConfirm } = useAlert();
 
 // 선택된 아이템 ID 목록
 const selectedItemIds = ref<number[]>([]);
@@ -105,8 +110,17 @@ const isItemSelected = (itemId: number) => {
 };
 
 // 취소 확인
-const handleConfirm = () => {
+const handleConfirm = async () => {
   if (!canConfirm.value || props.loading) return;
+
+  // 최종 확인
+  const confirmed = await showConfirm(
+    "선택한 상품을 취소하시겠습니까?\n취소된 주문은 되돌릴 수 없습니다.",
+    { confirmText: "취소하기", cancelText: "돌아가기" }
+  );
+
+  if (!confirmed) return;
+
   emit("confirm", {
     cancelItems: selectedItemIds.value,
     cancelReason: finalReason.value,
@@ -153,8 +167,8 @@ watch(
           <CardHeader class="pb-4 sticky top-0 bg-background z-10">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-primary/10 rounded-full">
-                  <AlertTriangle class="w-5 h-5 text-primary" />
+                <div class="p-2 bg-destructive/10 rounded-full">
+                  <AlertTriangle class="w-5 h-5 text-destructive" />
                 </div>
                 <div>
                   <CardTitle class="text-heading">부분 취소</CardTitle>
@@ -201,8 +215,8 @@ watch(
                   class="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                   :class="
                     isAllSelected
-                      ? 'bg-primary border-primary text-white'
-                      : 'border-muted-foreground/50 hover:border-primary'
+                      ? 'bg-destructive border-destructive text-white'
+                      : 'border-muted-foreground/50 hover:border-destructive'
                   "
                 >
                   <Check v-if="isAllSelected" class="w-3 h-3" />
@@ -215,46 +229,43 @@ watch(
               <Separator />
 
               <!-- 상품 목록 -->
-              <div class="space-y-3 max-h-[200px] overflow-y-auto" role="group" aria-label="취소할 상품 목록">
-                <button
+              <div class="space-y-3 max-h-[240px] overflow-y-auto" role="group" aria-label="취소할 상품 목록">
+                <Card
                   v-for="item in cancelableItems"
                   :key="item.id"
-                  type="button"
-                  role="checkbox"
-                  :aria-checked="isItemSelected(item.id)"
-                  :aria-label="`${item.productName} 선택`"
-                  class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors w-full text-left"
-                  :class="{ 'bg-primary/5': isItemSelected(item.id) }"
-                  :disabled="loading"
+                  class="rounded-2xl overflow-hidden cursor-pointer transition-colors"
+                  :class="{ 'border-destructive/30 bg-destructive/5': isItemSelected(item.id) }"
                   @click="toggleItem(item.id)"
                 >
-                  <div
-                    class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                    :class="
-                      isItemSelected(item.id)
-                        ? 'bg-primary border-primary text-white'
-                        : 'border-muted-foreground/50 hover:border-primary'
-                    "
-                  >
-                    <Check v-if="isItemSelected(item.id)" class="w-3 h-3" />
-                  </div>
-                  <ProductThumbnail
-                    :image-url="item.product?.imageUrl"
-                    class="w-12 h-12 flex-shrink-0"
-                  />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-body font-medium truncate">
-                      {{ item.productName }}
-                    </p>
-                    <p class="text-caption text-muted-foreground">
-                      <template v-if="item.options">{{ item.options }} / </template>
-                      {{ item.quantity }}개
-                    </p>
-                  </div>
-                  <p class="text-body font-medium whitespace-nowrap">
-                    {{ formatPrice(Number(item.productPrice) * item.quantity) }}
-                  </p>
-                </button>
+                  <CardContent class="flex gap-4 p-4">
+                    <div
+                      class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors mt-1"
+                      :class="
+                        isItemSelected(item.id)
+                          ? 'bg-destructive border-destructive text-white'
+                          : 'border-muted-foreground/50 hover:border-destructive'
+                      "
+                    >
+                      <Check v-if="isItemSelected(item.id)" class="w-3 h-3" />
+                    </div>
+                    <ProductThumbnail
+                      :image-url="item.product?.imageUrl"
+                      class="flex-shrink-0"
+                    />
+                    <div class="flex-1 flex flex-col min-w-0">
+                      <h3 class="text-body font-medium text-foreground line-clamp-2">
+                        {{ item.productName }}
+                      </h3>
+                      <p class="text-body text-muted-foreground mt-1">
+                        <template v-if="item.options">{{ item.options }} / </template>
+                        {{ item.quantity }}개
+                      </p>
+                      <p class="text-body font-medium text-foreground mt-1">
+                        {{ formatPrice(Number(item.productPrice) * item.quantity) }}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
@@ -267,11 +278,11 @@ watch(
                   v-for="reason in CANCEL_REASON_OPTIONS"
                   :key="reason.value"
                   type="button"
-                  class="px-3 py-2 text-body text-left rounded-md border transition-colors"
+                  class="px-3 py-2.5 text-body text-left rounded-md border transition-colors"
                   :class="[
                     selectedReason === reason.value
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50',
+                      ? 'ring-2 ring-ring ring-offset-2 font-medium'
+                      : 'border-border hover:bg-muted/50',
                   ]"
                   :disabled="loading"
                   @click="selectedReason = reason.value"
@@ -331,6 +342,14 @@ watch(
               </template>
             </div>
 
+            <!-- 환불 안내 -->
+            <div
+              class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
+            >
+              <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p class="text-caption">{{ ORDER_MESSAGES.refundGuide }}</p>
+            </div>
+
             <!-- 버튼 영역 -->
             <div class="flex gap-3 pt-2">
               <Button
@@ -342,7 +361,8 @@ watch(
                 취소
               </Button>
               <Button
-                class="flex-1 hover:bg-primary/80"
+                variant="destructive"
+                class="flex-1"
                 :disabled="!canConfirm || loading"
                 @click="handleConfirm"
               >

@@ -6,17 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { LoadingSpinner } from "@/components/common";
-import { X, AlertTriangle } from "lucide-vue-next";
+import { LoadingSpinner, ProductThumbnail } from "@/components/common";
+import { X, AlertTriangle, Info } from "lucide-vue-next";
+import { formatPrice } from "@/lib/formatters";
+import { ORDER_MESSAGES } from "@/lib/messages";
+import type { OrderItem } from "@/types/api";
 
 interface Props {
   open: boolean;
-  productName?: string;
+  orderItem: OrderItem | null;
   loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  productName: "",
   loading: false,
 });
 
@@ -93,7 +95,7 @@ const selectReason = async (reason: string) => {
   <Teleport to="body">
     <Transition name="fade">
       <div
-        v-if="open"
+        v-if="open && orderItem"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         <!-- 배경 오버레이 -->
@@ -107,16 +109,13 @@ const selectReason = async (reason: string) => {
           <CardHeader class="pb-4">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-primary/10 rounded-full">
-                  <AlertTriangle class="w-5 h-5 text-primary" />
+                <div class="p-2 bg-destructive/10 rounded-full">
+                  <AlertTriangle class="w-5 h-5 text-destructive" />
                 </div>
                 <div>
                   <CardTitle class="text-heading">주문 취소</CardTitle>
-                  <p
-                    v-if="productName"
-                    class="text-body text-muted-foreground mt-1"
-                  >
-                    {{ productName }}
+                  <p class="text-body text-muted-foreground mt-1">
+                    주문 취소 사유를 선택해주세요
                   </p>
                 </div>
               </div>
@@ -133,11 +132,32 @@ const selectReason = async (reason: string) => {
           </CardHeader>
 
           <CardContent class="space-y-4">
-            <!-- 안내 메시지 -->
-            <p class="text-body text-muted-foreground">
-              주문 취소 사유를 선택해주세요. 결제가 완료된 주문은 환불
-              처리됩니다.
-            </p>
+            <!-- 상품 정보 -->
+            <Card class="rounded-2xl overflow-hidden">
+              <CardContent class="flex gap-4 p-4">
+                <ProductThumbnail
+                  :image-url="orderItem.product?.imageUrl"
+                  class="flex-shrink-0"
+                />
+                <div class="flex-1 flex flex-col min-w-0">
+                  <h3 class="text-body font-medium text-foreground line-clamp-2">
+                    {{ orderItem.productName }}
+                  </h3>
+                  <p class="text-body text-muted-foreground mt-1">
+                    <template v-if="orderItem.options"
+                      >{{ orderItem.options }} / </template
+                    >{{ orderItem.quantity }}개
+                  </p>
+                  <p class="text-body font-medium text-foreground mt-1">
+                    {{
+                      formatPrice(
+                        Number(orderItem.productPrice) * orderItem.quantity
+                      )
+                    }}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             <!-- 취소 사유 선택 -->
             <div class="space-y-2">
@@ -147,11 +167,11 @@ const selectReason = async (reason: string) => {
                   v-for="reason in cancelReasons"
                   :key="reason"
                   type="button"
-                  class="px-3 py-2 text-body text-left rounded-md border transition-colors"
+                  class="px-3 py-2.5 text-body text-left rounded-md border transition-colors"
                   :class="[
                     selectedReason === reason
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50',
+                      ? 'ring-2 ring-ring ring-offset-2 font-medium'
+                      : 'border-border hover:bg-muted/50',
                   ]"
                   :disabled="loading"
                   @click="selectReason(reason)"
@@ -178,6 +198,14 @@ const selectReason = async (reason: string) => {
               </div>
             </Transition>
 
+            <!-- 환불 안내 -->
+            <div
+              class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
+            >
+              <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p class="text-caption">{{ ORDER_MESSAGES.refundGuide }}</p>
+            </div>
+
             <!-- 버튼 영역 -->
             <div class="flex gap-3 pt-2">
               <Button
@@ -189,7 +217,8 @@ const selectReason = async (reason: string) => {
                 취소
               </Button>
               <Button
-                class="flex-1 hover:bg-primary/80"
+                variant="destructive"
+                class="flex-1"
                 :disabled="!canConfirm || loading"
                 @click="handleConfirm"
               >

@@ -35,6 +35,7 @@ const { getResponsiveAttrs } = useOptimizedImage();
 const {
   remainingProducts,
   loading: storeLoading,
+  loaded: storeLoaded,
   loadingMore: storeLoadingMore,
   hasMore: storeHasMore,
 } = storeToRefs(productStore);
@@ -62,11 +63,13 @@ const displayProducts = computed(() => {
 });
 
 // 로딩 상태 (홈페이지: 스토어, 카테고리 페이지: composable)
+// 홈페이지: 아직 로드되지 않은 경우(loaded=false)도 로딩 상태로 처리
 const isLoading = computed(() => {
   if (hasCategory.value) {
     return loading.value;
   }
-  return storeLoading.value;
+  // 스토어가 아직 한 번도 로드되지 않았거나 로딩 중이면 true
+  return storeLoading.value || !storeLoaded.value;
 });
 
 // 추가 로딩 상태 (무한스크롤)
@@ -110,7 +113,7 @@ const hoveredProductId = ref<string | null>(null);
 
 // 스켈레톤 노출 지연 (150ms)
 const showLoadingSpinner = ref(false);
-let loadingDelayTimer: NodeJS.Timeout | null = null;
+let loadingDelayTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 추가 상품 로드 (페이지 타입에 따라 다른 함수 호출)
 const handleLoadMore = () => {

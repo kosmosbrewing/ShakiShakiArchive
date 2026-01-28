@@ -3,6 +3,7 @@
 // 반품 사유 타입 선택 + 상세 사유 입력
 
 import { ref, computed, watch, nextTick } from "vue";
+import { useAlert } from "@/composables/useAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,9 @@ const emit = defineEmits<{
     data: { orderItemId: number; reason: string; reasonType: ReturnReasonType }
   ): void;
 }>();
+
+// Alert composable
+const { showConfirm } = useAlert();
 
 // 선택된 사유 타입
 const selectedReasonType = ref<ReturnReasonType | "">("");
@@ -68,8 +72,16 @@ const selectReasonType = async (type: ReturnReasonType) => {
 };
 
 // 반품 요청 확인
-const handleConfirm = () => {
+const handleConfirm = async () => {
   if (!canConfirm.value || props.loading || !props.orderItem) return;
+
+  // 최종 확인
+  const confirmed = await showConfirm(
+    "반품을 요청하시겠습니까?",
+    { confirmText: "반품 요청", cancelText: "돌아가기" }
+  );
+
+  if (!confirmed) return;
 
   emit("confirm", {
     orderItemId: props.orderItem.id,
@@ -116,8 +128,8 @@ watch(
           <CardHeader class="pb-4">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-amber-100 rounded-full">
-                  <RotateCcw class="w-5 h-5 text-amber-600" />
+                <div class="p-2 bg-destructive/10 rounded-full">
+                  <RotateCcw class="w-5 h-5 text-destructive" />
                 </div>
                 <div>
                   <CardTitle class="text-heading">반품 요청</CardTitle>
@@ -140,29 +152,31 @@ watch(
 
           <CardContent class="space-y-4">
             <!-- 상품 정보 -->
-            <div class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <ProductThumbnail
-                :image-url="orderItem.product?.imageUrl"
-                class="w-14 h-14 flex-shrink-0"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-body font-medium truncate">
-                  {{ orderItem.productName }}
-                </p>
-                <p class="text-caption text-muted-foreground">
-                  <template v-if="orderItem.options"
-                    >{{ orderItem.options }} / </template
-                  >{{ orderItem.quantity }}개
-                </p>
-                <p class="text-body font-medium mt-1">
-                  {{
-                    formatPrice(
-                      Number(orderItem.productPrice) * orderItem.quantity
-                    )
-                  }}
-                </p>
-              </div>
-            </div>
+            <Card class="rounded-2xl overflow-hidden">
+              <CardContent class="flex gap-4 p-4">
+                <ProductThumbnail
+                  :image-url="orderItem.product?.imageUrl"
+                  class="flex-shrink-0"
+                />
+                <div class="flex-1 flex flex-col min-w-0">
+                  <h3 class="text-body font-medium text-foreground line-clamp-2">
+                    {{ orderItem.productName }}
+                  </h3>
+                  <p class="text-body text-muted-foreground mt-1">
+                    <template v-if="orderItem.options"
+                      >{{ orderItem.options }} / </template
+                    >{{ orderItem.quantity }}개
+                  </p>
+                  <p class="text-body font-medium text-foreground mt-1">
+                    {{
+                      formatPrice(
+                        Number(orderItem.productPrice) * orderItem.quantity
+                      )
+                    }}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             <!-- 반품 사유 선택 -->
             <div class="space-y-2">
@@ -175,8 +189,8 @@ watch(
                   class="px-3 py-2.5 text-body text-left rounded-md border transition-colors"
                   :class="[
                     selectedReasonType === reason.value
-                      ? 'border-amber-500 bg-amber-50 text-amber-700 font-medium'
-                      : 'border-border hover:border-amber-300 hover:bg-amber-50/50',
+                      ? 'ring-2 ring-ring ring-offset-2 font-medium'
+                      : 'border-border hover:bg-muted/50',
                   ]"
                   :disabled="loading"
                   @click="selectReasonType(reason.value)"
@@ -186,31 +200,17 @@ watch(
               </div>
             </div>
 
-            <!-- 상세 사유 입력 -->
+            <!-- 상세 사유 입력 (기타 선택 시에만 표시) -->
             <Transition name="slide">
-              <div
-                v-if="selectedReasonType === 'other' || selectedReasonType"
-                class="space-y-2"
-              >
+              <div v-if="selectedReasonType === 'other'" class="space-y-2">
                 <Label for="detail-reason" class="text-body font-medium">
-                  상세 사유
-                  <span
-                    v-if="selectedReasonType !== 'other'"
-                    class="text-muted-foreground font-normal"
-                    >(선택)</span
-                  >
+                  상세 사유 입력
                 </Label>
                 <Textarea
                   id="detail-reason"
                   ref="detailReasonInput"
                   v-model="detailReason"
-                  :placeholder="
-                    selectedReasonType === 'defect'
-                      ? '불량 부위나 상태를 자세히 설명해주세요'
-                      : selectedReasonType === 'wrong_item'
-                        ? '받으신 상품과 주문 상품의 차이점을 설명해주세요'
-                        : '반품 사유를 자세히 입력해주세요'
-                  "
+                  placeholder="반품 사유를 입력해주세요"
                   class="min-h-[80px] resize-none"
                   :disabled="loading"
                 />
@@ -219,7 +219,7 @@ watch(
 
             <!-- 반품 안내 -->
             <div
-              class="flex items-start gap-2 p-3 bg-blue-50 rounded-lg text-blue-700"
+              class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
             >
               <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
               <p class="text-caption">{{ ORDER_MESSAGES.returnGuide }}</p>
@@ -236,7 +236,8 @@ watch(
                 취소
               </Button>
               <Button
-                class="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                variant="destructive"
+                class="flex-1"
                 :disabled="!canConfirm || loading"
                 @click="handleConfirm"
               >

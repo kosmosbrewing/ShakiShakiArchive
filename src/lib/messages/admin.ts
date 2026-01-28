@@ -62,6 +62,10 @@ export const ADMIN_MESSAGES = {
   shippingInfoSaveSuccess: "배송 정보가 저장되었습니다.",
   saveFailed: "저장 실패: {message}",
 
+  // 주문 취소 관리
+  orderCancelSuccess: "주문이 성공적으로 취소되었습니다.",
+  orderCancelFailed: "주문 취소에 실패했습니다: {message}",
+
   // 사이트 이미지 관리
   siteImageUpdateSuccess: "이미지가 수정되었습니다.",
   siteImageCreateSuccess: "이미지가 추가되었습니다.",

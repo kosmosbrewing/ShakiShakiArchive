@@ -3,4 +3,3 @@
 
 export { default as PartialCancelModal } from "./PartialCancelModal.vue";
 export { default as ReturnRequestModal } from "./ReturnRequestModal.vue";
-export { default as ReturnTrackingModal } from "./ReturnTrackingModal.vue";

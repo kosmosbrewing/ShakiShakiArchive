@@ -176,7 +176,7 @@ onUnmounted(() => {
                 <AlertTriangle class="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <p
-                class="text-caption sm:text-body font-semibold text-foreground text-center whitespace-pre-line"
+                class="text-caption sm:text-body font-medium text-foreground text-center whitespace-pre-line"
               >
                 {{ message }}
               </p>

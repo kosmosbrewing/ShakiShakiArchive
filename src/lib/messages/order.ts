@@ -97,6 +97,9 @@ export const ORDER_MESSAGES = {
   selectCancelItems: "취소할 상품을 선택해주세요.",
   noSelectableItems: "취소 가능한 상품이 없습니다.",
 
+  // 환불 안내
+  refundGuide: "환불은 결제 수단에 따라 즉시 ~ 3영업일 내 완료됩니다.",
+
   // 반품 관련
   returnRequestSuccess: "반품 요청이 접수되었습니다.",
   returnRequestFailed: "반품 요청에 실패했습니다.",
@@ -106,7 +109,7 @@ export const ORDER_MESSAGES = {
   returnDetailReasonRequired: "상세 사유를 입력해주세요.",
   returnTrackingRequired: "운송장 번호를 입력해주세요.",
   returnCourierRequired: "택배사를 선택해주세요.",
-  returnGuide: "반품 요청 후 7일 이내에 운송장을 등록해주세요.",
+  returnGuide: "반품은 상품 회수 및 검수 완료 후 3영업일 내 처리됩니다.",
   returnShippingGuide: "상품을 포장 후 택배로 발송해주세요.\n발송 후 운송장 번호를 등록하면 반품 처리가 진행됩니다.",
   returnNotReturnable: "반품 가능한 상태가 아닙니다.",
 } as const;
