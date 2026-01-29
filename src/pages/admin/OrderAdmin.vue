@@ -7,6 +7,7 @@ import { ADMIN_MESSAGES } from "@/lib/messages";
 import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress } from "@/lib/formatters";
+import { getStatusClass as getStatusClassFromConstants } from "@/lib/constants/orderStatus";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
 // UI 컴포넌트 및 아이콘
@@ -62,6 +63,7 @@ const loadingMore = ref(false);
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
+// 상태 옵션 (백엔드 상태값 기준으로 통일)
 const statusOptions = [
   { value: "pending_payment", label: "입금대기" },
   { value: "paying", label: "결제진행중" },
@@ -72,9 +74,10 @@ const statusOptions = [
   { value: "delivered", label: "배송완료" },
   { value: "purchase_confirmed", label: "구매확정" },
   { value: "refunded", label: "주문취소" },
+  { value: "partial_refunded", label: "부분환불" },
   { value: "return_requested", label: "반품요청" },
-  { value: "return_in_progress", label: "반품진행중" },
-  { value: "returned", label: "반품완료" },
+  { value: "return_in_transit", label: "반품배송중" },
+  { value: "return_received", label: "검수대기" },
 ];
 
 // 필터링된 주문 목록 (전체)
@@ -107,55 +110,26 @@ const getStatusCount = (status: string) => {
   }, 0);
 };
 
-// 각 상태별 건수
+// 각 상태별 건수 (백엔드 상태값 기준)
 const statusCounts = computed(() => [
-  {
-    label: "입금대기",
-    count: getStatusCount("pending_payment"),
-    emphasized: false,
-  },
+  { label: "입금대기", count: getStatusCount("pending_payment"), emphasized: false },
   { label: "결제진행중", count: getStatusCount("paying"), emphasized: false },
   { label: "주문중단", count: getStatusCount("cancelled"), emphasized: false },
-  {
-    label: "결제완료",
-    count: getStatusCount("payment_confirmed"),
-    emphasized: true,
-  },
+  { label: "결제완료", count: getStatusCount("payment_confirmed"), emphasized: true },
   { label: "배송준비중", count: getStatusCount("preparing"), emphasized: true },
   { label: "배송중", count: getStatusCount("shipped"), emphasized: true },
   { label: "배송완료", count: getStatusCount("delivered"), emphasized: false },
   { label: "주문취소", count: getStatusCount("refunded"), emphasized: false },
   { label: "반품요청", count: getStatusCount("return_requested"), emphasized: true },
-  { label: "반품진행중", count: getStatusCount("return_in_progress"), emphasized: true },
-  { label: "반품완료", count: getStatusCount("returned"), emphasized: false },
+  { label: "반품배송중", count: getStatusCount("return_in_transit"), emphasized: true },
+  { label: "검수대기", count: getStatusCount("return_received"), emphasized: false },
 ]);
 
+// 공통 모듈의 getStatusClass 래핑 (관리자용 border 추가)
 const getStatusClass = (status: string) => {
-  switch (status) {
-    // 진행 중 상태 - 파란색 계열 통일
-    case "payment_confirmed":
-    case "preparing":
-    case "shipped":
-      return "bg-blue-50 text-blue-700 border-blue-100";
-    // 완료 상태 - 파스텔 녹색
-    case "delivered":
-    case "purchase_confirmed":
-      return "bg-green-50 text-green-700 border-green-200";
-    // 취소/환불 상태 - 파스텔 빨간색
-    case "refunded":
-    case "returned":
-      return "bg-red-50 text-red-700 border-red-200";
-    // 반품 진행 상태 - 주황색 계열
-    case "return_requested":
-    case "return_in_progress":
-      return "bg-orange-50 text-orange-700 border-orange-200";
-    // 기타 상태 - 회색
-    case "pending_payment":
-    case "paying":
-    case "cancelled":
-    default:
-      return "bg-muted text-admin-muted border-border";
-  }
+  const baseClass = getStatusClassFromConstants(status as any);
+  // 관리자 셀렉트박스용 border 추가
+  return `${baseClass} border`;
 };
 
 // 주문 아이템의 상태가 변경되었는지 확인
@@ -446,9 +420,10 @@ onUnmounted(() => {
             <SelectItem value="delivered">배송완료</SelectItem>
             <SelectItem value="purchase_confirmed">구매확정</SelectItem>
             <SelectItem value="refunded">주문취소</SelectItem>
+            <SelectItem value="partial_refunded">부분환불</SelectItem>
             <SelectItem value="return_requested">반품요청</SelectItem>
-            <SelectItem value="return_in_progress">반품진행중</SelectItem>
-            <SelectItem value="returned">반품완료</SelectItem>
+            <SelectItem value="return_in_transit">반품배송중</SelectItem>
+            <SelectItem value="return_received">검수대기</SelectItem>
           </SelectContent>
         </Select>
 

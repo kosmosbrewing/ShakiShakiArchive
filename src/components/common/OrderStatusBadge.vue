@@ -3,8 +3,7 @@
 // 주문 상태 뱃지 컴포넌트 (반품 상태 포함)
 
 import { Badge } from "@/components/ui/badge";
-import { formatOrderStatus } from "@/lib/formatters";
-import { getStatusVariant, getStatusClass } from "@/composables/useOrders";
+import { getStatusClass, getStatusLabel } from "@/lib/constants/orderStatus";
 import type { OrderStatus, OrderItemStatus } from "@/types/api";
 
 interface Props {
@@ -16,9 +15,9 @@ const props = defineProps<Props>();
 
 <template>
   <Badge
-    :variant="getStatusVariant(props.status)"
-    :class="['text-xs px-2 py-0.5', getStatusClass(props.status)]"
+    variant="outline"
+    :class="['text-xs px-2 py-0.5 border-0', getStatusClass(props.status)]"
   >
-    {{ formatOrderStatus(props.status) }}
+    {{ getStatusLabel(props.status) }}
   </Badge>
 </template>

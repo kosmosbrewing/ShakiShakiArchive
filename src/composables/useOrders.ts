@@ -19,71 +19,20 @@ import type {
   CreateOrderResponse,
 } from "@/types/api";
 
-// 주문 상태별 Badge variant
+// 통합 상태 스타일 모듈에서 re-export (하위 호환성)
+export { getStatusClass, getStatusLabel, ORDER_STATUS_STYLES } from "@/lib/constants/orderStatus";
+
+// 주문 상태별 Badge variant (통합 스타일 기반으로 단순화)
 export type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 /**
  * 주문 상태에 따른 Badge variant 반환
- * 주문 아이템 상태(반품 포함)도 지원
+ * 모든 상태에 outline을 사용하고 CSS 클래스로 색상 제어
  */
-export function getStatusVariant(status: OrderStatus | OrderItemStatus): BadgeVariant {
-  switch (status) {
-    // 진행 중 상태 - primary 색상 (파란색)
-    case "payment_confirmed":
-    case "preparing":
-    case "shipped":
-      return "default";
-    // 완료 상태 - 파스텔 녹색 (CSS 오버라이드)
-    case "delivered":
-      return "outline";
-    // 구매확정 상태 - 파스텔 파란색 (CSS 오버라이드)
-    case "purchase_confirmed":
-      return "outline";
-    // 취소/환불 상태 - 파스텔 빨간색 (CSS 오버라이드)
-    case "cancelled":
-    case "refunded":
-    case "partial_refunded":
-      return "outline";
-    // 반품 상태 - 파스텔 노란색 (CSS 오버라이드)
-    case "return_requested":
-    case "return_in_transit":
-    case "return_received":
-      return "outline";
-    // 기타 (거의 표시 안됨)
-    case "pending_payment":
-    case "paying":
-    default:
-      return "outline";
-  }
-}
-
-/**
- * 주문 상태별 추가 CSS 클래스
- * 파스텔 톤 색상으로 부드러운 디자인 적용 (border 완전 제거)
- */
-export function getStatusClass(status: OrderStatus | OrderItemStatus): string {
-  switch (status) {
-    case "delivered":
-      // 파스텔 녹색 - 배송완료 상태
-      return "bg-green-50 hover:bg-green-100 text-green-700 border-0";
-    case "purchase_confirmed":
-      // 파스텔 파란색 - 구매확정 상태
-      return "bg-blue-50 hover:bg-blue-100 text-blue-700 border-0";
-    case "cancelled":
-    case "refunded":
-      // 파스텔 빨간색 - 취소/환불 상태
-      return "bg-red-50 hover:bg-red-100 text-red-700 border-0";
-    case "partial_refunded":
-      // 파스텔 보라색 - 부분 환불 상태
-      return "bg-purple-50 hover:bg-purple-100 text-purple-700 border-0";
-    case "return_requested":
-    case "return_in_transit":
-    case "return_received":
-      // 파스텔 노란색 - 반품 진행 상태
-      return "bg-amber-50 hover:bg-amber-100 text-amber-700 border-0";
-    default:
-      return "";
-  }
+export function getStatusVariant(_status: OrderStatus | OrderItemStatus): BadgeVariant {
+  // 통합 스타일 시스템에서는 모든 상태에 outline 사용
+  // 실제 색상은 getStatusClass()로 제어
+  return "outline";
 }
 
 /**
@@ -172,8 +121,6 @@ export function useOrders() {
     loadOrders,
     loadMoreOrders,
     loadOrder,
-    getStatusVariant,
-    getStatusClass,
   };
 }
 

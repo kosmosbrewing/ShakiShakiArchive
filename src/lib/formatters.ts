@@ -2,6 +2,7 @@
 // 공통 포맷팅 유틸리티 함수
 
 import type { PhoneParts, OrderStatus, OrderItemStatus } from "@/types/api";
+import { getStatusLabel } from "@/lib/constants/orderStatus";
 
 /**
  * 날짜 문자열을 YYYY.MM.DD 형식으로 변환
@@ -115,24 +116,10 @@ export function isValidPhone(parts: PhoneParts): boolean {
 /**
  * 주문 상태 코드를 한글로 변환
  * 주문 아이템 상태(반품 포함)도 지원
+ * @deprecated getStatusLabel 사용 권장 (src/lib/constants/orderStatus.ts)
  */
 export function formatOrderStatus(status: OrderStatus | OrderItemStatus): string {
-  const statusMap: Record<OrderStatus | OrderItemStatus, string> = {
-    pending_payment: "입금대기",
-    paying: "결제진행중",
-    payment_confirmed: "결제완료",
-    preparing: "배송준비중",
-    shipped: "배송중",
-    delivered: "배송완료",
-    purchase_confirmed: "구매확정",
-    cancelled: "주문중단",
-    refunded: "주문취소",
-    partial_refunded: "부분환불",
-    return_requested: "반품요청",
-    return_in_transit: "반품배송중",
-    return_received: "검수대기",
-  };
-  return statusMap[status] || status;
+  return getStatusLabel(status);
 }
 
 /**
