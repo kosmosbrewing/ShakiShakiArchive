@@ -51,6 +51,9 @@ import {
   isValidPrice,
   isValidQuantity,
   validateOrderAmount,
+  calculateShippingFee,
+  isRemoteArea,
+  getRemoteAreaLabel,
 } from "@/lib/validators";
 import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
@@ -67,8 +70,7 @@ const { showAlert, showConfirm } = useAlert();
 const {
   items: orderItems,
   subtotal: orderSubtotal,
-  shippingFee: orderShippingFee,
-  totalAmount: orderTotalAmount,
+  // shippingFee, totalAmount는 도서산간 추가 배송비 미포함이므로 사용하지 않음
   orderName,
   loadOrderItems,
   clearDirectPurchase,
@@ -77,6 +79,25 @@ const {
 const { addresses, loadAddresses } = useAddresses();
 const shippingForm = useShippingForm();
 const { submitOrder } = useCreateOrder();
+
+// 🚚 배송비 계산 (도서산간 추가 배송비 포함)
+// shippingForm.form.zipCode가 변경될 때마다 재계산됨
+const orderShippingFee = computed(() => {
+  return calculateShippingFee(orderSubtotal.value, shippingForm.form.zipCode);
+});
+
+// 최종 결제 금액 (상품 금액 + 배송비)
+const orderTotalAmount = computed(() => {
+  return orderSubtotal.value + orderShippingFee.value;
+});
+
+// 도서산간 지역 여부 및 라벨
+const isRemoteAreaAddress = computed(() => {
+  return isRemoteArea(shippingForm.form.zipCode);
+});
+const remoteAreaLabel = computed(() => {
+  return getRemoteAreaLabel(shippingForm.form.zipCode);
+});
 // 🔒 Option A: useStockReservation 제거 (재고 선점 사용 안함)
 // const {
 //   reservationId,
@@ -1705,7 +1726,7 @@ onUnmounted(() => {
           <CardHeader>
             <CardTitle class="text-heading">배송지 정보</CardTitle>
             <p class="text-caption text-muted-foreground mt-1">
-              선택하신 주소로 택배 배송됩니다.
+              택배 배송 ( 제주·도서산간 추가 운임 발생 )
             </p>
           </CardHeader>
           <CardContent class="space-y-6">
@@ -1811,16 +1832,21 @@ onUnmounted(() => {
               </div>
               <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">배송비</span>
-                <span
-                  :class="
-                    orderShippingFee === 0 ? 'text-primary font-medium' : ''
-                  "
-                  >{{
-                    orderShippingFee === 0
-                      ? "무료"
-                      : formatPrice(orderShippingFee)
-                  }}</span
-                >
+                <div class="flex flex-col items-end">
+                  <span
+                    :class="
+                      orderShippingFee === 0 ? 'text-primary font-medium' : ''
+                    "
+                    >{{
+                      orderShippingFee === 0
+                        ? "무료"
+                        : formatPrice(orderShippingFee)
+                    }}</span
+                  >
+                  <span v-if="isRemoteAreaAddress" class="text-xs text-primary">
+                    {{ remoteAreaLabel }} 추가 배송비 포함
+                  </span>
+                </div>
               </div>
               <Separator />
               <div class="pt-1 flex justify-between items-center">

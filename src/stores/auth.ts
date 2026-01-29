@@ -85,7 +85,14 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   // 유저 정보 로드 (앱 초기화 시 실행됨)
-  async function loadUser() {
+  // 🔒 Rate Limit 방지: 이미 로그인된 상태면 API 호출 스킵 (로그아웃 전까지 메모리 유지)
+  async function loadUser(forceRefresh = false) {
+    // 이미 유저 정보가 있고 강제 새로고침이 아니면 스킵
+    if (user.value && !forceRefresh) {
+      console.log("[Auth] 유저 정보 캐시 사용 (API 호출 스킵)");
+      return;
+    }
+
     isLoading.value = true;
 
     // Lighthouse Best Practices: ApiError를 사용하여 401 에러를 조용히 처리

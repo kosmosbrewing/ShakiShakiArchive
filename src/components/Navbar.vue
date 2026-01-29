@@ -104,7 +104,8 @@ const handleLogout = async () => {
 
   isOpen.value = false;
   showAlert(AUTH_MESSAGES.logoutSuccess);
-  await authStore.handleLogout({ reload: false });
+  // 🔒 보안: 로그아웃 시 페이지 새로고침 강제 (캐시된 개인정보 완전 제거)
+  await authStore.handleLogout({ reload: true });
   router.push("/");
 };
 

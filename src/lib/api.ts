@@ -138,6 +138,14 @@ function invalidateCacheAfterMutation(endpoint: string, method: string) {
     apiCache.invalidate('/api/wishlist');
     console.debug(`[Cache INVALIDATE] Wishlist updated - cleared /api/wishlist`);
   }
+
+  // 결제 완료 → 장바구니 및 주문 캐시 무효화
+  // 결제 승인 후 장바구니가 비워지므로 캐시도 즉시 무효화
+  if (endpoint.includes('/api/payments')) {
+    apiCache.invalidate('/api/cart');
+    apiCache.invalidate('/api/orders');
+    console.debug(`[Cache INVALIDATE] Payment processed - cleared /api/cart, /api/orders`);
+  }
 }
 
 async function apiRequest<T>(

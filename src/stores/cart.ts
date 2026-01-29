@@ -25,8 +25,8 @@ export const useCartStore = defineStore("cart", () => {
   const error = ref<string | null>(null);
   const lastFetchedAt = ref<number | null>(null);
 
-  // 캐시 유효 시간 (30초 - 장바구니는 자주 변경될 수 있음)
-  const CACHE_DURATION = 30 * 1000;
+  // 캐시 유효 시간 (10초 - 결제 완료 등 동기화 지연 최소화)
+  const CACHE_DURATION = 10 * 1000;
 
   // 계산된 속성
   const itemCount = computed(() => items.value.length);

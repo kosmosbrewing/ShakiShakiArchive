@@ -17,9 +17,9 @@ interface ProductItem {
 
 const PAGE_SIZE = 12;
 
-// 캐시 설정 (재고/신상품 실시간 반영용)
-const STALE_TIME = 30 * 1000; // 30초 - 데이터가 stale로 간주되는 시간
-const CACHE_TIME = 60 * 1000; // 60초 - 캐시 완전 무효화 시간
+// 캐시 설정 (API 캐시와 동기화: 30초)
+const STALE_TIME = 15 * 1000; // 15초 - 백그라운드 갱신 시작
+const CACHE_TIME = 30 * 1000; // 30초 - API 캐시와 일치
 
 export const useProductStore = defineStore("product", () => {
   // 상태

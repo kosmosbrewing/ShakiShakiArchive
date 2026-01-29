@@ -10,10 +10,88 @@ import type {
 import { getActivePinia } from "pinia";
 import { useConstantsStore } from "@/stores/constants";
 
-// 폴백 값 (Pinia 미초기화 시 사용)
+// 폴백 값 (Pinia 미초기화 시 사용) - 백엔드와 동기화
 const FALLBACK_QUANTITY = { MIN: 1, MAX: 99 };
 const FALLBACK_PRICE = { MIN: 0, MAX: 100000000 };
-const FALLBACK_SHIPPING = { FREE_THRESHOLD: 50000, FEE: 3000 };
+const FALLBACK_SHIPPING = { FREE_THRESHOLD: 70000, FEE: 3500, EXTRA_FEE: 2500 };
+
+/**
+ * 도서산간 우편번호 범위 목록
+ * 백엔드 shared/constants/shipping.ts와 동기화 (2024년 기준)
+ */
+const REMOTE_AREA_POSTAL_CODES = [
+  // 제주도 전지역
+  { start: 63000, end: 63644, label: "제주도" },
+  // 인천 섬지역
+  { start: 22386, end: 22388, label: "인천 중구 섬지역" },
+  { start: 23004, end: 23010, label: "인천 강화 섬지역" },
+  { start: 23100, end: 23116, label: "인천 옹진 섬지역" },
+  { start: 23124, end: 23136, label: "인천 옹진 섬지역" },
+  // 충남 섬지역
+  { start: 31708, end: 31708, label: "충남 당진 섬지역" },
+  { start: 32133, end: 32133, label: "충남 태안 섬지역" },
+  { start: 33411, end: 33411, label: "충남 보령 섬지역" },
+  // 경북 울릉도/독도
+  { start: 40200, end: 40240, label: "경북 울릉도/독도" },
+  // 부산 섬지역
+  { start: 46768, end: 46771, label: "부산 강서구 섬지역" },
+  // 경남 섬지역
+  { start: 52570, end: 52571, label: "경남 사천 섬지역" },
+  { start: 53031, end: 53033, label: "경남 통영 섬지역" },
+  { start: 53088, end: 53104, label: "경남 통영 섬지역" },
+  { start: 54000, end: 54000, label: "경남 통영 섬지역" },
+  // 전북 섬지역
+  { start: 56347, end: 56349, label: "전북 부안 섬지역" },
+  // 전남 섬지역
+  { start: 57068, end: 57069, label: "전남 영광 섬지역" },
+  { start: 58760, end: 58762, label: "전남 목포 섬지역" },
+  { start: 58800, end: 58810, label: "전남 신안 섬지역" },
+  { start: 58816, end: 58818, label: "전남 신안 섬지역" },
+  { start: 58826, end: 58826, label: "전남 신안 섬지역" },
+  { start: 58828, end: 58866, label: "전남 신안 섬지역" },
+  { start: 58953, end: 58958, label: "전남 진도 섬지역" },
+  { start: 59102, end: 59103, label: "전남 완도 섬지역" },
+  { start: 59106, end: 59106, label: "전남 완도 섬지역" },
+  { start: 59127, end: 59127, label: "전남 완도 섬지역" },
+  { start: 59129, end: 59129, label: "전남 완도 섬지역" },
+  { start: 59137, end: 59170, label: "전남 완도 섬지역" },
+  { start: 59421, end: 59421, label: "전남 여수 섬지역" },
+  { start: 59531, end: 59531, label: "전남 여수 섬지역" },
+  { start: 59558, end: 59558, label: "전남 여수 섬지역" },
+  { start: 59563, end: 59563, label: "전남 여수 섬지역" },
+  { start: 59568, end: 59568, label: "전남 여수 섬지역" },
+  { start: 59573, end: 59573, label: "전남 여수 섬지역" },
+  { start: 59650, end: 59650, label: "전남 여수 섬지역" },
+  { start: 59766, end: 59766, label: "전남 여수 섬지역" },
+  { start: 59781, end: 59790, label: "전남 여수 섬지역" },
+] as const;
+
+/**
+ * 도서산간 지역 여부 확인
+ * @param postalCode - 우편번호 (5자리 문자열)
+ * @returns 도서산간 지역이면 true
+ */
+export const isRemoteArea = (postalCode: string): boolean => {
+  const code = parseInt(postalCode, 10);
+  if (isNaN(code)) return false;
+  return REMOTE_AREA_POSTAL_CODES.some(
+    (range) => code >= range.start && code <= range.end
+  );
+};
+
+/**
+ * 도서산간 지역 라벨 반환
+ * @param postalCode - 우편번호 (5자리 문자열)
+ * @returns 도서산간 지역명 또는 null
+ */
+export const getRemoteAreaLabel = (postalCode: string): string | null => {
+  const code = parseInt(postalCode, 10);
+  if (isNaN(code)) return null;
+  const area = REMOTE_AREA_POSTAL_CODES.find(
+    (range) => code >= range.start && code <= range.end
+  );
+  return area?.label ?? null;
+};
 
 /**
  * 상수 스토어에서 현재 값을 가져오는 헬퍼
@@ -50,17 +128,24 @@ export const getShippingConfig = () => {
 };
 
 /**
- * 배송비 계산 (스토어 헬퍼 사용, 폴백 포함)
+ * 배송비 계산 (도서산간 추가 배송비 포함)
+ * @param subtotal - 상품 금액 합계
+ * @param postalCode - 우편번호 (도서산간 추가 배송비 계산용, 선택)
+ * @returns 배송비 (무료배송 시 기본 배송비 0, 도서산간은 항상 추가)
  */
-export const calculateShippingFee = (subtotal: number): number => {
+export const calculateShippingFee = (subtotal: number, postalCode?: string): number => {
   const store = getConstantsSafe();
-  if (store) {
-    return store.calculateShippingFee(subtotal);
+  const config = store?.shipping ?? FALLBACK_SHIPPING;
+
+  // 기본 배송비 (무료 배송 조건 충족 시 0)
+  let baseFee = subtotal >= config.FREE_THRESHOLD ? 0 : config.FEE;
+
+  // 도서산간 추가 배송비 (무료배송이어도 추가됨)
+  if (postalCode && isRemoteArea(postalCode)) {
+    baseFee += config.EXTRA_FEE;
   }
-  // 폴백 계산
-  return subtotal >= FALLBACK_SHIPPING.FREE_THRESHOLD
-    ? 0
-    : FALLBACK_SHIPPING.FEE;
+
+  return baseFee;
 };
 
 // UUID 형식 검증 (v4)

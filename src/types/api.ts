@@ -681,6 +681,14 @@ export interface UpdateInquiryStatusRequest {
 export interface ShippingConstants {
   FREE_THRESHOLD: number; // 무료배송 기준 금액
   FEE: number; // 기본 배송비
+  EXTRA_FEE: number; // 제주/도서산간 추가 배송비
+}
+
+// 도서산간 우편번호 범위
+export interface RemoteAreaPostalRange {
+  start: number;
+  end: number;
+  label: string;
 }
 
 // 주문 상태 설정

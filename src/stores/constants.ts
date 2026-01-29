@@ -4,6 +4,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { fetchConstants } from "@/lib/api";
+import { isRemoteArea } from "@/lib/validators";
 import type {
   AppConstants,
   ShippingConstants,
@@ -13,11 +14,12 @@ import type {
   MessagesConstants,
 } from "@/types/api";
 
-// 폴백 기본값 (API 실패 또는 응답 누락 시 사용)
+// 폴백 기본값 (API 실패 또는 응답 누락 시 사용) - 백엔드와 동기화
 const FALLBACK_CONSTANTS: AppConstants = {
   shipping: {
-    FREE_THRESHOLD: 50000,
-    FEE: 3000,
+    FREE_THRESHOLD: 70000,
+    FEE: 3500,
+    EXTRA_FEE: 2500,
   },
   order: {
     status: {
@@ -165,10 +167,21 @@ export const useConstantsStore = defineStore("constants", () => {
   }
 
   /**
-   * 배송비 계산 헬퍼
+   * 배송비 계산 헬퍼 (도서산간 추가 배송비 포함)
+   * @param subtotal - 상품 금액 합계
+   * @param postalCode - 우편번호 (도서산간 추가 배송비 계산용, 선택)
+   * @returns 배송비 (무료배송 시 기본 배송비 0, 도서산간은 항상 추가)
    */
-  function calculateShippingFee(subtotal: number): number {
-    return subtotal >= shipping.value.FREE_THRESHOLD ? 0 : shipping.value.FEE;
+  function calculateShippingFee(subtotal: number, postalCode?: string): number {
+    // 기본 배송비 (무료 배송 조건 충족 시 0)
+    let baseFee = subtotal >= shipping.value.FREE_THRESHOLD ? 0 : shipping.value.FEE;
+
+    // 도서산간 추가 배송비 (무료배송이어도 추가됨)
+    if (postalCode && isRemoteArea(postalCode)) {
+      baseFee += shipping.value.EXTRA_FEE;
+    }
+
+    return baseFee;
   }
 
   /**

@@ -12,9 +12,11 @@ import { confirmPayment, StockShortageError } from "@/lib/api";
 import { LoadingSpinner } from "@/components/common";
 import type { StockShortageItem } from "@/types/api";
 import { ORDER_MESSAGES, CART_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
+import { useCartStore } from "@/stores/cart";
 
 const router = useRouter();
 const route = useRoute();
+const cartStore = useCartStore();
 
 // 🔒 결제 승인 페이지 진입 즉시 플래그 설정 (Order.vue cleanup 충돌 방지)
 // onMounted보다 먼저 실행되도록 컴포넌트 최상단에 배치
@@ -304,6 +306,10 @@ onMounted(async () => {
     localStorage.removeItem("payment_confirming");
     localStorage.removeItem("kakaopay_current_order");
 
+    // 🔒 결제 완료 후 장바구니 캐시 명시적 정리
+    cartStore.invalidateCache();
+    cartStore.clearCart();
+
     status.value = "success";
     orderInfo.value = {
       orderId: orderId,
@@ -367,6 +373,10 @@ onMounted(async () => {
     // 결제 승인 플래그 제거
     localStorage.removeItem("payment_confirming");
 
+    // 🔒 결제 완료 후 장바구니 캐시 명시적 정리
+    cartStore.invalidateCache();
+    cartStore.clearCart();
+
     status.value = "success";
     orderInfo.value = {
       orderId: orderId,
@@ -427,6 +437,10 @@ onMounted(async () => {
       // 5분 후 자동 삭제 (메모리 정리)
       setTimeout(() => localStorage.removeItem(processedKey), 5 * 60 * 1000);
       console.log("[PaymentCallback] 결제 승인 성공:", confirmResult);
+
+      // 🔒 결제 완료 후 장바구니 캐시 명시적 정리
+      cartStore.invalidateCache();
+      cartStore.clearCart();
 
       // success 필드 또는 order가 있으면 성공으로 처리
       if (confirmResult.success || confirmResult.order) {
@@ -507,6 +521,10 @@ onMounted(async () => {
 
     // 결제 승인 플래그 제거
     localStorage.removeItem("payment_confirming");
+
+    // 🔒 결제 완료 후 장바구니 캐시 명시적 정리
+    cartStore.invalidateCache();
+    cartStore.clearCart();
 
     // 주문 상세로 자동 이동 (3초 카운트다운)
     const targetUrl = orderId ? `/orderdetail/${orderId}` : "/orderlist";

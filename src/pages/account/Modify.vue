@@ -458,7 +458,8 @@ const handleUpdateProfile = async () => {
       emailOptIn: form.emailOptIn,
     });
 
-    await authStore.loadUser();
+    // 회원정보 수정 후 최신 정보 강제 로드
+    await authStore.loadUser(true);
 
     // 소셜 재인증 상태 초기화
     if (isSocialUser.value) {
