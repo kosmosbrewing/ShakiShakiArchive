@@ -1208,11 +1208,12 @@ export async function getAdminPaymentDetail(
 
 export async function adminCancelPayment(
   orderId: number | string,
-  cancelReason: string
+  cancelReason: string,
+  cancelType: "customer_request" | "customer_request_cod" | "seller_cancel"
 ): Promise<any> {
   return apiRequest(`/api/admin/payments/${orderId}/cancel`, {
     method: "POST",
-    body: JSON.stringify({ cancelReason }),
+    body: JSON.stringify({ cancelReason, cancelType }),
   });
 }
 

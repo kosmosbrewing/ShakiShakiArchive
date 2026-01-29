@@ -260,7 +260,7 @@ const isCancelable = (status: string) => {
 
 // 관리자 주문 취소 처리
 const handleAdminCancel = async (data: {
-  cancelType: string;
+  cancelType: "customer_request" | "customer_request_cod" | "seller_cancel";
   adminMemo: string;
   cancelReason: string;
 }) => {
@@ -269,9 +269,20 @@ const handleAdminCancel = async (data: {
   cancelLoading.value = true;
   try {
     // API 호출 - 주문 취소 (이메일 자동 발송)
+    // cancelType에 따라 환불 금액이 다르게 계산됨:
+    // - customer_request: 배송비 차감 (고객 귀책)
+    // - customer_request_cod: 배송비 + 반품비 차감 (착불)
+    // - seller_cancel: 전액 환불 (판매자 귀책)
+    const typeLabel = {
+      customer_request: "고객요청",
+      customer_request_cod: "고객요청-착불",
+      seller_cancel: "직권취소",
+    }[data.cancelType];
+
     await adminCancelPayment(
       cancelTargetOrder.value.id,
-      `[${data.cancelType === "customer_request" ? "고객요청" : "직권취소"}] ${data.cancelReason}${data.adminMemo ? `\n\n[관리메모]\n${data.adminMemo}` : ""}`
+      `[${typeLabel}] ${data.cancelReason}${data.adminMemo ? `\n\n[관리메모]\n${data.adminMemo}` : ""}`,
+      data.cancelType
     );
 
     showAlert(ADMIN_MESSAGES.orderCancelSuccess);

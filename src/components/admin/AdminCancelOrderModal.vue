@@ -4,6 +4,7 @@
 
 import { ref, computed, watch } from "vue";
 import { useAlert } from "@/composables/useAlert";
+import { useConstantsStore } from "@/stores/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,12 @@ import { X, AlertTriangle, Info, FileText } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
 import type { OrderItem } from "@/types/api";
 
+// 배송비 상수
+const constantsStore = useConstantsStore();
+const SHIPPING_FEE = computed(() => constantsStore.shipping?.FEE ?? 3500);
+
 // 취소 유형
-type CancelType = "customer_request" | "seller_cancel";
+type CancelType = "customer_request" | "customer_request_cod" | "seller_cancel";
 
 interface Props {
   open: boolean;
@@ -50,19 +55,25 @@ const selectedCancelType = ref<CancelType | "">("");
 const cancelTypeOptions = [
   {
     value: "customer_request" as CancelType,
-    label: "고객 요청 취소",
-    description: "고객의 반품/취소 요청을 승인",
+    label: "반품 승인 (고객 귀책)",
+    description: "단순 변심 등: 배송비 차감 후 환불",
+  },
+  {
+    value: "customer_request_cod" as CancelType,
+    label: "반품 승인 (고객 귀책 + 착불 차감)",
+    description: "단순 변심 등 착불 반품 시: 배송비 + 반품비 차감 후 환불",
   },
   {
     value: "seller_cancel" as CancelType,
-    label: "판매자 직권 취소",
-    description: "재고 부족, 상품 오류 등",
+    label: "직권 취소 (판매자 귀책)",
+    description: "불량/오배송/재고부족: 전액 환불",
   },
 ];
 
 // 내부 관리용 메모 템플릿
 const adminMemoTemplates: Record<CancelType, string> = {
   customer_request: "[반품승인] 고객 요청에 따른 상품 회수 확인 후 취소.",
+  customer_request_cod: "[반품승인-착불] 착불 반품비 차감 후 환불 처리.",
   seller_cancel: "[직권취소] 재고부족/상품오류로 인한 관리자 취소.",
 };
 
@@ -103,20 +114,78 @@ const getStatusLabel = (status: string) => {
 
 // 최종 취소 사유 생성
 const getFinalCancelReason = () => {
-  if (selectedCancelType.value === "customer_request") {
+  if (
+    selectedCancelType.value === "customer_request" ||
+    selectedCancelType.value === "customer_request_cod"
+  ) {
     return "고객 요청에 따른 반품/취소 승인";
   }
   return "판매자 사정에 의한 주문 취소 (재고 부족/상품 오류)";
 };
 
+// 환불 금액 계산 (미리보기용)
+const calculateRefundPreview = computed(() => {
+  if (!props.order || !selectedCancelType.value) return null;
+
+  const totalAmount = Number(props.order.totalAmount) || 0;
+  const shippingFee = Number(props.order.shippingFee) || 0;
+  const itemsAmount = Number(props.order.itemsAmount) || 0;
+  const fee = SHIPPING_FEE.value;
+
+  let refundAmount = totalAmount;
+  let deductions: { label: string; amount: number }[] = [];
+
+  if (selectedCancelType.value === "customer_request") {
+    // 고객 귀책: 배송비 차감
+    deductions.push({ label: "배송비 차감", amount: fee });
+    refundAmount = totalAmount - fee;
+  } else if (selectedCancelType.value === "customer_request_cod") {
+    // 착불: 배송비 + 반품비 차감
+    deductions.push({ label: "배송비 차감", amount: fee });
+    deductions.push({ label: "착불 반품비 차감", amount: fee });
+    refundAmount = totalAmount - fee - fee;
+  }
+  // seller_cancel: 전액 환불 (차감 없음)
+
+  return {
+    totalAmount,
+    itemsAmount,
+    shippingFee,
+    deductions,
+    refundAmount: Math.max(0, refundAmount),
+  };
+});
+
 // 취소 확인
 const handleConfirm = async () => {
   if (!canConfirm.value || props.loading || !props.orderItem) return;
 
+  const preview = calculateRefundPreview.value;
+  if (!preview) return;
+
+  // 환불 금액 요약 생성
+  let refundSummary = `\n\n━━━ 환불 금액 계산 ━━━\n`;
+  refundSummary += `결제 금액: ${formatPrice(preview.totalAmount)}\n`;
+
+  if (preview.deductions.length > 0) {
+    preview.deductions.forEach((d) => {
+      refundSummary += `${d.label}: -${formatPrice(d.amount)}\n`;
+    });
+  }
+
+  refundSummary += `━━━━━━━━━━━━━━━━\n`;
+  refundSummary += `환불 금액: ${formatPrice(preview.refundAmount)}`;
+
+  const typeLabels: Record<CancelType, string> = {
+    customer_request: "반품 승인 (고객 귀책)",
+    customer_request_cod: "반품 승인 (착불 차감)",
+    seller_cancel: "직권 취소 (판매자 귀책)",
+  };
+
   const confirmMessage =
-    selectedCancelType.value === "customer_request"
-      ? "고객 요청에 따른 취소를 승인하시겠습니까?\n취소된 주문은 되돌릴 수 없습니다."
-      : "해당 주문을 직권 취소하시겠습니까?\n고객에게 취소 안내 메시지가 발송됩니다.";
+    `[${typeLabels[selectedCancelType.value as CancelType]}]\n` +
+    `주문을 취소하시겠습니까?` +
+    refundSummary;
 
   const confirmed = await showConfirm(confirmMessage, {
     confirmText: "취소 승인",
