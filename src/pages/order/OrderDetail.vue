@@ -12,11 +12,7 @@ import {
   isReturnable,
   sortOrderItems,
 } from "@/lib/constants/order";
-import {
-  partialCancelOrder,
-  createReturn,
-  fetchOrder,
-} from "@/lib/api";
+import { partialCancelOrder, createReturn, fetchOrder } from "@/lib/api";
 
 // 공통 컴포넌트
 import {
@@ -54,7 +50,6 @@ const cancelLoading = ref(false);
 const returnModalOpen = ref(false);
 const returnTargetItem = ref<OrderItem | null>(null);
 const returnLoading = ref(false);
-
 
 // 배송비 (백엔드에서 제공)
 const shippingFee = computed(() => {
@@ -263,8 +258,8 @@ const getPaymentProviderLabel = (provider: string): string => {
       </div>
     </div>
 
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div class="lg:col-span-2 space-y-6">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-8">
+      <div class="space-y-6">
         <!-- 배송지 정보 -->
         <Card>
           <CardHeader class="pb-6">
@@ -311,7 +306,7 @@ const getPaymentProviderLabel = (provider: string): string => {
               {{
                 order?.orderItems?.reduce(
                   (sum, item) => sum + item.quantity,
-                  0
+                  0,
                 ) ?? 0
               }}개
             </CardTitle>
@@ -390,7 +385,6 @@ const getPaymentProviderLabel = (provider: string): string => {
                         >
                           반품요청
                         </Button>
-
                       </div>
                     </div>
                   </div>
@@ -429,7 +423,6 @@ const getPaymentProviderLabel = (provider: string): string => {
                       >
                         반품요청
                       </Button>
-
                     </div>
                   </div>
                 </div>
@@ -440,7 +433,7 @@ const getPaymentProviderLabel = (provider: string): string => {
       </div>
 
       <!-- 우측: 결제 정보 -->
-      <div class="lg:col-span-1 space-y-6">
+      <div class="space-y-6">
         <Card>
           <CardHeader class="pb-6">
             <CardTitle class="flex items-center gap-2 text-heading">
@@ -480,14 +473,21 @@ const getPaymentProviderLabel = (provider: string): string => {
 
             <!-- 취소/환불 정보 -->
             <div
-              v-if="order.status === 'refunded' || order.status === 'partial_refunded'"
+              v-if="
+                order.status === 'refunded' ||
+                order.status === 'partial_refunded'
+              "
               class="pt-3 border-t !mt-4 bg-destructive/5 -mx-6 px-6 pb-2"
             >
               <div
                 class="flex items-center gap-2 text-destructive font-bold text-body mb-2"
               >
                 <AlertCircle class="w-4 h-4" />
-                {{ order.status === 'partial_refunded' ? '부분 환불' : '주문 취소됨' }}
+                {{
+                  order.status === "partial_refunded"
+                    ? "부분 환불"
+                    : "주문 취소됨"
+                }}
               </div>
               <div class="space-y-2 text-body">
                 <div v-if="order.canceledAt" class="flex justify-between">

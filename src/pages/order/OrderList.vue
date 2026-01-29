@@ -66,7 +66,7 @@ const setupIntersectionObserver = () => {
     {
       rootMargin: "200px", // 200px 전에 미리 로드 시작
       threshold: 0.1,
-    }
+    },
   );
 
   if (loadMoreTrigger.value) {
@@ -162,7 +162,7 @@ const filteredOrders = computed((): Order[] => {
         // 배송완료는 최근 1주일만
         if (currentFilter.value === "delivered") {
           const itemDate = new Date(
-            item.updatedAt || item.createdAt || order.createdAt
+            item.updatedAt || item.createdAt || order.createdAt,
           );
           return itemDate >= weekAgo;
         }
@@ -213,7 +213,7 @@ watch(
   (status) => {
     currentFilter.value = status as string | null;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 필터 변경 시 전체 주문 로드
@@ -234,7 +234,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 검색어 변경 감지
@@ -462,7 +462,10 @@ onUnmounted(() => {
                     </p>
 
                     <!-- 모바일 버튼 (금액과 같은 라인) -->
-                    <div v-if="canTrack(item.status)" class="flex gap-2 sm:hidden">
+                    <div
+                      v-if="canTrack(item.status)"
+                      class="flex gap-2 sm:hidden"
+                    >
                       <Button
                         variant="outline"
                         size="sm"
