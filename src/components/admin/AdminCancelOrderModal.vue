@@ -18,6 +18,7 @@ import type { OrderItem } from "@/types/api";
 // 배송비 상수
 const constantsStore = useConstantsStore();
 const SHIPPING_FEE = computed(() => constantsStore.shipping?.FEE ?? 3500);
+const FREE_THRESHOLD = computed(() => constantsStore.shipping?.FREE_THRESHOLD ?? 70000);
 
 // 취소 유형
 type CancelType = "customer_request" | "customer_request_cod" | "seller_cancel";
@@ -123,34 +124,128 @@ const getFinalCancelReason = () => {
   return "판매자 사정에 의한 주문 취소 (재고 부족/상품 오류)";
 };
 
-// 환불 금액 계산 (미리보기용)
+// 마지막 상품 여부 확인 (활성 상태인 상품이 현재 상품뿐인지)
+const isLastActiveItem = computed(() => {
+  if (!props.order?.orderItems || !props.orderItem) return true;
+  const activeStatuses = ["payment_confirmed", "preparing", "shipped", "delivered", "return_requested", "return_in_transit", "return_received"];
+  const activeItems = props.order.orderItems.filter(
+    (item: any) => activeStatuses.includes(item.status) && item.id !== props.orderItem?.id
+  );
+  return activeItems.length === 0;
+});
+
+// 환불 금액 계산 (미리보기용) - 백엔드 calculateRefund 로직과 일치
 const calculateRefundPreview = computed(() => {
-  if (!props.order || !selectedCancelType.value) return null;
+  if (!props.order || !props.orderItem || !selectedCancelType.value) return null;
 
-  const totalAmount = Number(props.order.totalAmount) || 0;
-  const shippingFee = Number(props.order.shippingFee) || 0;
-  const itemsAmount = Number(props.order.itemsAmount) || 0;
+  // 개별 상품 금액 계산
+  const itemPrice = Number(props.orderItem.productPrice) || 0;
+  const itemQuantity = props.orderItem.quantity || 1;
+  const itemAmount = itemPrice * itemQuantity;
+
+  // 주문 전체 정보
+  const orderItemsAmount = Number(props.order.itemsAmount) || 0;
+  const paidShippingFee = Number(props.order.shippingFee) || 0;
+  const alreadyRefundedAmount = Number(props.order.refundedAmount) || 0;
+  const penaltyAlreadyApplied = props.order.shippingPenaltyApplied || false;
   const fee = SHIPPING_FEE.value;
+  const threshold = FREE_THRESHOLD.value;
 
-  let refundAmount = totalAmount;
+  // 남은 금액 계산 (전체 상품 - 이미 환불 - 현재 환불)
+  const remainingAmount = orderItemsAmount - alreadyRefundedAmount - itemAmount;
+
+  let refundAmount = itemAmount;
   let deductions: { label: string; amount: number }[] = [];
+  let additions: { label: string; amount: number }[] = [];
 
-  if (selectedCancelType.value === "customer_request") {
-    // 고객 귀책: 배송비 차감
-    deductions.push({ label: "배송비 차감", amount: fee });
-    refundAmount = totalAmount - fee;
-  } else if (selectedCancelType.value === "customer_request_cod") {
-    // 착불: 배송비 + 반품비 차감
-    deductions.push({ label: "배송비 차감", amount: fee });
-    deductions.push({ label: "착불 반품비 차감", amount: fee });
-    refundAmount = totalAmount - fee - fee;
+  // === 판매자 귀책 (seller_cancel) ===
+  if (selectedCancelType.value === "seller_cancel") {
+    // 판매자 귀책: 페널티 없음
+    if (isLastActiveItem.value && paidShippingFee > 0) {
+      // 마지막 상품: 배송비도 환불
+      additions.push({ label: "배송비 환불", amount: paidShippingFee });
+      refundAmount += paidShippingFee;
+    }
+    // 부분 취소: 상품값만 (이미 refundAmount = itemAmount)
   }
-  // seller_cancel: 전액 환불 (차감 없음)
+  // === 고객 귀책 (customer_request) ===
+  else if (selectedCancelType.value === "customer_request") {
+    if (isLastActiveItem.value) {
+      // 마지막 상품: 상품값 + 낸 배송비 - 기본배송비 + 크레딧
+      if (paidShippingFee > 0) {
+        additions.push({ label: "배송비 환불", amount: paidShippingFee });
+        refundAmount += paidShippingFee;
+      }
+      deductions.push({ label: "배송비 차감", amount: fee });
+      refundAmount -= fee;
+
+      // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
+      if (penaltyAlreadyApplied) {
+        additions.push({ label: "크레딧 (중복차감 방지)", amount: fee });
+        refundAmount += fee;
+      }
+    } else {
+      // 부분 취소: 조건부 페널티 적용
+      // - 유료배송 주문 → 페널티 없음
+      // - 무료배송 + 남은 금액 >= 기준 → 페널티 없음
+      // - 무료배송 + 이미 페널티 차감 → 페널티 없음
+      // - 그 외 → 배송비 페널티
+      const isFreeShipping = paidShippingFee === 0;
+      const remainingAboveThreshold = remainingAmount >= threshold;
+
+      if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
+        // 무료배송 + 남은 금액 < 기준 + 최초 → 페널티 적용
+        deductions.push({ label: "무료배송 혜택 회수", amount: fee });
+        refundAmount -= fee;
+      }
+      // 그 외: 페널티 없이 상품값만 환불
+    }
+  }
+  // === 고객 귀책 + 착불 (customer_request_cod) ===
+  else if (selectedCancelType.value === "customer_request_cod") {
+    if (isLastActiveItem.value) {
+      // 마지막 상품: 상품값 + 낸 배송비 - 기본배송비 + 크레딧 - 착불 반품비
+      if (paidShippingFee > 0) {
+        additions.push({ label: "배송비 환불", amount: paidShippingFee });
+        refundAmount += paidShippingFee;
+      }
+      deductions.push({ label: "배송비 차감", amount: fee });
+      refundAmount -= fee;
+
+      // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
+      if (penaltyAlreadyApplied) {
+        additions.push({ label: "크레딧 (중복차감 방지)", amount: fee });
+        refundAmount += fee;
+      }
+
+      // 착불 반품비 추가 차감
+      deductions.push({ label: "착불 반품비 차감", amount: fee });
+      refundAmount -= fee;
+    } else {
+      // 부분 취소: 조건부 페널티 + 착불 반품비
+      const isFreeShipping = paidShippingFee === 0;
+      const remainingAboveThreshold = remainingAmount >= threshold;
+
+      if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
+        deductions.push({ label: "무료배송 혜택 회수", amount: fee });
+        refundAmount -= fee;
+      }
+
+      // 착불 반품비 추가 차감
+      deductions.push({ label: "착불 반품비 차감", amount: fee });
+      refundAmount -= fee;
+    }
+  }
 
   return {
-    totalAmount,
-    itemsAmount,
-    shippingFee,
+    itemAmount,
+    orderItemsAmount,
+    paidShippingFee,
+    remainingAmount,
+    isLastItem: isLastActiveItem.value,
+    isFreeShipping: paidShippingFee === 0,
+    penaltyAlreadyApplied,
+    additions,
     deductions,
     refundAmount: Math.max(0, refundAmount),
   };
@@ -165,8 +260,16 @@ const handleConfirm = async () => {
 
   // 환불 금액 요약 생성
   let refundSummary = `\n\n━━━ 환불 금액 계산 ━━━\n`;
-  refundSummary += `결제 금액: ${formatPrice(preview.totalAmount)}\n`;
+  refundSummary += `상품 금액: ${formatPrice(preview.itemAmount)}\n`;
 
+  // 추가 항목 (배송비 환불 등)
+  if (preview.additions.length > 0) {
+    preview.additions.forEach((a) => {
+      refundSummary += `${a.label}: +${formatPrice(a.amount)}\n`;
+    });
+  }
+
+  // 차감 항목
   if (preview.deductions.length > 0) {
     preview.deductions.forEach((d) => {
       refundSummary += `${d.label}: -${formatPrice(d.amount)}\n`;
@@ -176,6 +279,10 @@ const handleConfirm = async () => {
   refundSummary += `━━━━━━━━━━━━━━━━\n`;
   refundSummary += `환불 금액: ${formatPrice(preview.refundAmount)}`;
 
+  if (preview.isLastItem) {
+    refundSummary += `\n(마지막 상품)`;
+  }
+
   const typeLabels: Record<CancelType, string> = {
     customer_request: "반품 승인 (고객 귀책)",
     customer_request_cod: "반품 승인 (착불 차감)",
@@ -184,7 +291,7 @@ const handleConfirm = async () => {
 
   const confirmMessage =
     `[${typeLabels[selectedCancelType.value as CancelType]}]\n` +
-    `주문을 취소하시겠습니까?` +
+    `"${props.orderItem.productName}" 취소하시겠습니까?` +
     refundSummary;
 
   const confirmed = await showConfirm(confirmMessage, {

@@ -282,7 +282,8 @@ const handleAdminCancel = async (data: {
     await adminCancelPayment(
       cancelTargetOrder.value.id,
       `[${typeLabel}] ${data.cancelReason}${data.adminMemo ? `\n\n[관리메모]\n${data.adminMemo}` : ""}`,
-      data.cancelType
+      data.cancelType,
+      cancelTargetItem.value.id
     );
 
     showAlert(ADMIN_MESSAGES.orderCancelSuccess);
