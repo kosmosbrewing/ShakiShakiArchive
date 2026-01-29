@@ -1704,6 +1704,9 @@ onUnmounted(() => {
         <Card>
           <CardHeader>
             <CardTitle class="text-heading">배송지 정보</CardTitle>
+            <p class="text-caption text-muted-foreground mt-1">
+              선택하신 주소로 택배 배송됩니다.
+            </p>
           </CardHeader>
           <CardContent class="space-y-6">
             <div class="flex flex-wrap gap-2 p-1 bg-muted/50 rounded-lg">
@@ -1807,7 +1810,7 @@ onUnmounted(() => {
                 <span>{{ formatPrice(orderSubtotal) }}</span>
               </div>
               <div class="flex justify-between text-body">
-                <span class="text-muted-foreground pb-1">배송비</span>
+                <span class="text-muted-foreground">배송비</span>
                 <span
                   :class="
                     orderShippingFee === 0 ? 'text-primary font-medium' : ''
@@ -1828,6 +1831,14 @@ onUnmounted(() => {
               </div>
             </CardContent>
           </Card>
+
+          <!-- 배송 안내 (PG사 심사 요건) -->
+          <p
+            class="text-caption text-muted-foreground text-center leading-relaxed !mt-3"
+          >
+            결제 완료 후 <strong>영업일 기준 3~7일 이내</strong>에<br />
+            택배로 안전하게 배송됩니다.
+          </p>
 
           <Card>
             <CardHeader>
@@ -1860,7 +1871,7 @@ onUnmounted(() => {
 
           <!-- 🔒 재고 선점 UI 제거: 주문 생성 시 즉시 재고 차감 -->
 
-          <div class="px-6">
+          <div class="px-6 !mt-4">
             <Button
               @click="handlePayment"
               class="w-full font-bold hover:bg-primary/80"
@@ -1874,7 +1885,9 @@ onUnmounted(() => {
                 {{ formatPrice(orderTotalAmount) }} 결제하기
               </template>
             </Button>
-            <p class="text-caption text-center text-muted-foreground mt-3">
+            <p
+              class="text-caption text-muted-foreground text-center leading-relaxed py-2"
+            >
               위 주문 내용을 확인하였으며 결제에 동의합니다.
             </p>
           </div>

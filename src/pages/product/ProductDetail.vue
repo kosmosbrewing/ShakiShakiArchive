@@ -199,7 +199,9 @@ const handleAddToCart = async () => {
 
   if (totalQty > availableStock) {
     displayAlert(
-      formatMessage(CART_MESSAGES.stockLimitExceeded, { stock: availableStock }),
+      formatMessage(CART_MESSAGES.stockLimitExceeded, {
+        stock: availableStock,
+      }),
     );
     return;
   }
@@ -230,7 +232,12 @@ const proceedAddToCart = async () => {
   // 수량 검증
   if (!isValidQuantity(qty)) {
     const limits = getQuantityLimits();
-    displayAlert(formatMessage(CART_MESSAGES.quantityLimit, { min: limits.MIN, max: limits.MAX }));
+    displayAlert(
+      formatMessage(CART_MESSAGES.quantityLimit, {
+        min: limits.MIN,
+        max: limits.MAX,
+      }),
+    );
     return;
   }
 
@@ -269,7 +276,10 @@ const proceedAddToCart = async () => {
 
   if (totalQty > availableStock) {
     displayAlert(
-      formatMessage(CART_MESSAGES.stockExceededWithCart, { stock: availableStock, cartQty: existingQty }),
+      formatMessage(CART_MESSAGES.stockExceededWithCart, {
+        stock: availableStock,
+        cartQty: existingQty,
+      }),
     );
     return;
   }
@@ -349,7 +359,12 @@ const handleBuyNow = async () => {
   const qty = Number(variantSelection.quantity.value);
   if (!isValidQuantity(qty)) {
     const limits = getQuantityLimits();
-    displayAlert(formatMessage(CART_MESSAGES.quantityLimit, { min: limits.MIN, max: limits.MAX }));
+    displayAlert(
+      formatMessage(CART_MESSAGES.quantityLimit, {
+        min: limits.MIN,
+        max: limits.MAX,
+      }),
+    );
     return;
   }
 
@@ -781,6 +796,103 @@ onMounted(async () => {
             @load="handleDetailImageLoad(idx)"
           />
         </div>
+      </div>
+
+      <!-- 배송 및 교환/환불 안내 -->
+      <div class="order-4 lg:order-2 pt-4">
+        <Card>
+          <CardContent class="p-5 space-y-4">
+            <!-- 배송 안내 -->
+            <div class="space-y-2">
+              <h3 class="text-body font-semibold text-foreground">배송 안내</h3>
+              <ul class="space-y-1.5 text-caption text-muted-foreground">
+                <li class="flex gap-2">
+                  <span
+                    >결제 완료 후
+                    <strong class="text-foreground"
+                      >영업일 기준 3~7일 이내</strong
+                    >
+                    택배로 배송됩니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >제주 및 도서산간 지역은 별도의 추가 배송비가 발생할 수
+                    있으며, 배송일이 1~2일 더 소요될 수 있습니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >배송 조회는 마이페이지 > 주문내역에서 확인
+                    가능합니다.</span
+                  >
+                </li>
+              </ul>
+            </div>
+
+            <Separator />
+
+            <!-- 교환/환불 안내 -->
+            <div class="space-y-2">
+              <h3 class="text-body font-semibold text-foreground">
+                환불 및 반품 안내
+              </h3>
+              <ul class="space-y-1.5 text-caption text-muted-foreground">
+                <li class="flex gap-2">
+                  <span
+                    >반품 신청 후, 고객님께서 직접 원하시는 택배사를 이용해
+                    상품이 발송된 주소로 상품을 보내주셔야 합니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >상품 수령 후
+                    <strong class="text-foreground">7일 이내</strong>
+                    신청 및
+                    <strong class="text-foreground">14일 이내</strong>
+                    상품 도착 시 환불이 가능합니다.</span
+                  >
+                </li>
+
+                <li class="flex gap-2">
+                  <span
+                    >고객 단순 변심 시
+                    <strong class="text-foreground">선불</strong>로 직접
+                    발송하시거나,
+                    <strong class="text-foreground"
+                      >결제 대금에서 왕복 배송비가 차감</strong
+                    >
+                    된 후 환불됩니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >상품 불량/오배송 시 반품 배송비는 전액 무료입니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >상품이 훼손된 경우 환불이 불가능합니다. (라벨제거/세탁/착용
+                    등)</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >결제 취소는 결제 수단에 따라
+                    <strong class="text-foreground">즉시~3영업일 이내</strong>
+                    완료됩니다.</span
+                  >
+                </li>
+                <li class="flex gap-2">
+                  <span
+                    >정확한 환불 일정은 결제 수단(카드사/은행)에 따라 상이할 수
+                    있습니다.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
 
