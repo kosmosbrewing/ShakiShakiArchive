@@ -171,13 +171,14 @@ const calculateRefundPreview = computed(() => {
   // === 고객 귀책 (customer_request) ===
   else if (selectedCancelType.value === "customer_request") {
     if (isLastActiveItem.value) {
-      // 마지막 상품: 상품값 + 낸 배송비 - 기본배송비 + 크레딧
+      // 마지막 상품: 상품값 + 낸 배송비 - 실제낸배송비 + 크레딧
+      // 도서산간 추가 배송비 포함하여 전액 차감
       if (paidShippingFee > 0) {
         additions.push({ label: "배송비 환불", amount: paidShippingFee });
         refundAmount += paidShippingFee;
+        deductions.push({ label: "배송비 차감", amount: paidShippingFee });
+        refundAmount -= paidShippingFee;
       }
-      deductions.push({ label: "배송비 차감", amount: fee });
-      refundAmount -= fee;
 
       // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
       if (penaltyAlreadyApplied) {
@@ -195,7 +196,7 @@ const calculateRefundPreview = computed(() => {
 
       if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
         // 무료배송 + 남은 금액 < 기준 + 최초 → 페널티 적용
-        deductions.push({ label: "무료배송 혜택 회수", amount: fee });
+        deductions.push({ label: "배송비 차감", amount: fee });
         refundAmount -= fee;
       }
       // 그 외: 페널티 없이 상품값만 환불
@@ -204,13 +205,14 @@ const calculateRefundPreview = computed(() => {
   // === 고객 귀책 + 착불 (customer_request_cod) ===
   else if (selectedCancelType.value === "customer_request_cod") {
     if (isLastActiveItem.value) {
-      // 마지막 상품: 상품값 + 낸 배송비 - 기본배송비 + 크레딧 - 착불 반품비
+      // 마지막 상품: 상품값 + 낸 배송비 - 실제낸배송비 + 크레딧 - 착불 반품비
+      // 도서산간 추가 배송비 포함하여 전액 차감
       if (paidShippingFee > 0) {
         additions.push({ label: "배송비 환불", amount: paidShippingFee });
         refundAmount += paidShippingFee;
+        deductions.push({ label: "배송비 차감", amount: paidShippingFee });
+        refundAmount -= paidShippingFee;
       }
-      deductions.push({ label: "배송비 차감", amount: fee });
-      refundAmount -= fee;
 
       // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
       if (penaltyAlreadyApplied) {
@@ -219,7 +221,7 @@ const calculateRefundPreview = computed(() => {
       }
 
       // 착불 반품비 추가 차감
-      deductions.push({ label: "착불 반품비 차감", amount: fee });
+      deductions.push({ label: "반품 배송비 차감", amount: fee });
       refundAmount -= fee;
     } else {
       // 부분 취소: 조건부 페널티 + 착불 반품비
@@ -227,12 +229,12 @@ const calculateRefundPreview = computed(() => {
       const remainingAboveThreshold = remainingAmount >= threshold;
 
       if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
-        deductions.push({ label: "무료배송 혜택 회수", amount: fee });
+        deductions.push({ label: "배송비 차감", amount: fee });
         refundAmount -= fee;
       }
 
       // 착불 반품비 추가 차감
-      deductions.push({ label: "착불 반품비 차감", amount: fee });
+      deductions.push({ label: "반품 배송비 차감", amount: fee });
       refundAmount -= fee;
     }
   }
