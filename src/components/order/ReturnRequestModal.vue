@@ -12,7 +12,6 @@ import { LoadingSpinner, ProductThumbnail } from "@/components/common";
 import { X, RotateCcw, Info } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
 import { RETURN_REASON_OPTIONS } from "@/lib/constants/order";
-import { ORDER_MESSAGES } from "@/lib/messages";
 import type { OrderItem, ReturnReasonType } from "@/types/api";
 
 interface Props {
@@ -29,7 +28,7 @@ const emit = defineEmits<{
   (e: "close"): void;
   (
     e: "confirm",
-    data: { orderItemId: number; reason: string; reasonType: ReturnReasonType }
+    data: { orderItemId: number; reason: string; reasonType: ReturnReasonType },
   ): void;
 }>();
 
@@ -77,8 +76,8 @@ const handleConfirm = async () => {
 
   // 최종 확인
   const confirmed = await showConfirm(
-    "반품을 요청하시겠습니까?",
-    { confirmText: "반품 요청", cancelText: "돌아가기" }
+    "정말 반품을 요청하시겠습니까?\n단순 변심 왕복 배송비가 차감된 후 환불되며,\n상품 검수 결과 사용 흔적이 있을 경우\n반품이 거부될 수 있습니다.",
+    { confirmText: "반품 요청", cancelText: "돌아가기" },
   );
 
   if (!confirmed) return;
@@ -106,7 +105,7 @@ watch(
       selectedReasonType.value = "";
       detailReason.value = "";
     }
-  }
+  },
 );
 </script>
 
@@ -159,7 +158,9 @@ watch(
                   class="flex-shrink-0"
                 />
                 <div class="flex-1 flex flex-col min-w-0">
-                  <h3 class="text-body font-medium text-foreground line-clamp-2">
+                  <h3
+                    class="text-body font-medium text-foreground line-clamp-2"
+                  >
                     {{ orderItem.productName }}
                   </h3>
                   <p class="text-body text-muted-foreground mt-1">
@@ -170,7 +171,7 @@ watch(
                   <p class="text-body font-medium text-foreground mt-1">
                     {{
                       formatPrice(
-                        Number(orderItem.productPrice) * orderItem.quantity
+                        Number(orderItem.productPrice) * orderItem.quantity,
                       )
                     }}
                   </p>
@@ -217,12 +218,24 @@ watch(
               </div>
             </Transition>
 
-            <!-- 반품 안내 -->
-            <div
-              class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
-            >
-              <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <p class="text-caption">{{ ORDER_MESSAGES.returnGuide }}</p>
+            <!-- 반품 이용약관 -->
+            <div class="p-3 bg-primary/10 rounded-lg space-y-2">
+              <div class="flex items-center gap-1.5 text-primary">
+                <Info class="w-3.5 h-3.5 flex-shrink-0" />
+                <span class="text-caption font-medium">반품 안내</span>
+              </div>
+              <ul class="text-caption text-primary space-y-1 pl-1">
+                <li>
+                  • 반품 신청 후, 직접 원하시는 택배사를 이용해 발송지로
+                  보내주세요.
+                </li>
+                <li>
+                  • 수령 후 7일 이내 신청, 14일 이내 도착 시 환불 가능합니다.
+                </li>
+                <li>• 단순 변심 시 왕복 배송비가 차감됩니다.</li>
+                <li>• 불량/오배송 시 반품 배송비는 무료입니다.</li>
+                <li>• 상품 훼손 시 환불 불가 (라벨제거/세탁/착용 등)</li>
+              </ul>
             </div>
 
             <!-- 버튼 영역 -->

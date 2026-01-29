@@ -878,7 +878,7 @@ onMounted(async () => {
                 </li>
                 <li class="flex gap-2">
                   <span
-                    >결제 취소는 결제 수단에 따라
+                    >환불은 결제 수단에 따라
                     <strong class="text-foreground">즉시~3영업일 이내</strong>
                     완료됩니다.</span
                   >

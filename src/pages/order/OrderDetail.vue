@@ -276,9 +276,9 @@ const getPaymentProviderLabel = (provider: string): string => {
               </div>
               <p class="text-foreground pt-2">
                 {{ order.shippingAddress }}
-                <span v-if="order.shippingDetailAddress">
-                  {{ order.shippingDetailAddress }}
-                </span>
+              </p>
+              <p v-if="order.shippingDetailAddress" class="text-foreground">
+                {{ order.shippingDetailAddress }}
               </p>
               <p class="pt-1">
                 <span class="text-body text-muted-foreground">

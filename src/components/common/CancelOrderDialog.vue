@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
 import { X, AlertTriangle, Info } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
-import { ORDER_MESSAGES } from "@/lib/messages";
 import type { OrderItem } from "@/types/api";
 
 interface Props {
@@ -199,11 +198,15 @@ const selectReason = async (reason: string) => {
             </Transition>
 
             <!-- 환불 안내 -->
-            <div
-              class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
-            >
-              <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <p class="text-caption">{{ ORDER_MESSAGES.refundGuide }}</p>
+            <div class="p-3 bg-primary/10 rounded-lg space-y-2">
+              <div class="flex items-center gap-1.5 text-primary">
+                <Info class="w-3.5 h-3.5 flex-shrink-0" />
+                <span class="text-caption font-medium">환불 안내</span>
+              </div>
+              <ul class="text-caption text-primary space-y-1 pl-1">
+                <li>• 환불은 결제 수단에 따라 즉시~3영업일 이내 완료됩니다.</li>
+                <li>• 정확한 환불 일정은 카드사/은행에 따라 상이할 수 있습니다.</li>
+              </ul>
             </div>
 
             <!-- 버튼 영역 -->
