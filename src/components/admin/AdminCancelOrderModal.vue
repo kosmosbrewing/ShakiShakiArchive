@@ -2,7 +2,7 @@
 // 관리자 주문 취소 모달 컴포넌트
 // 고객 요청에 따른 취소 승인 / 판매자 직권 취소 두 가지 상황 지원
 
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
 import { useAlert } from "@/composables/useAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
-import { X, AlertTriangle, Info, MessageSquare, FileText } from "lucide-vue-next";
+import { X, AlertTriangle, Info, FileText } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
 import type { OrderItem } from "@/types/api";
 
@@ -30,12 +30,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "confirm", data: {
-    cancelType: CancelType;
-    customerMessage: string;
-    adminMemo: string;
-    cancelReason: string;
-  }): void;
+  (
+    e: "confirm",
+    data: {
+      cancelType: CancelType;
+      adminMemo: string;
+      cancelReason: string;
+    },
+  ): void;
 }>();
 
 // Alert composable
@@ -58,45 +60,34 @@ const cancelTypeOptions = [
   },
 ];
 
-// 고객 안내 메시지 템플릿
-const customerMessageTemplates: Record<CancelType, string> = {
-  customer_request:
-    "안녕하세요, shakishaki archive입니다.\n요청하신 반품(취소) 신청이 정상적으로 승인되었습니다.\n결제하신 수단에 따라 1~5일 이내에 환불이 완료될 예정입니다.\n저희 서비스를 이용해 주셔서 감사합니다.",
-  seller_cancel:
-    "안녕하세요, shakishaki archive입니다.\n고객님께서 주문하신 상품이 아쉽게도 갑작스러운 재고 소진(또는 상품 오류)으로 인해 준비가 어렵게 되었습니다.\n큰 기대를 하셨을 텐데 불편을 드려 진심으로 사과드립니다.\n본 주문은 즉시 전액 환불 처리될 예정이며, 빠른 시일 내에 더 좋은 상품으로 찾아뵙겠습니다.",
-};
-
 // 내부 관리용 메모 템플릿
 const adminMemoTemplates: Record<CancelType, string> = {
-  customer_request: "[반품승인] 고객 요청에 따른 상품 회수 확인 후 취소 처리 완료.",
-  seller_cancel: "[직권취소] 재고부족/상품오류로 인한 관리자 취소. 고객에게 사과 메시지 발송 완료.",
+  customer_request: "[반품승인] 고객 요청에 따른 상품 회수 확인 후 취소.",
+  seller_cancel: "[직권취소] 재고부족/상품오류로 인한 관리자 취소.",
 };
 
 // 입력 필드
-const customerMessage = ref("");
 const adminMemo = ref("");
-const customerMessageInput = ref<any>(null);
 
 // 취소 유형 선택 시 템플릿 자동 적용
-const selectCancelType = async (type: CancelType) => {
+const selectCancelType = (type: CancelType) => {
   selectedCancelType.value = type;
-  customerMessage.value = customerMessageTemplates[type];
   adminMemo.value = adminMemoTemplates[type];
-  await nextTick();
-  customerMessageInput.value?.$el?.focus();
 };
 
 // 확인 버튼 활성화 여부
 const canConfirm = computed(() => {
-  if (!selectedCancelType.value) return false;
-  if (!customerMessage.value.trim()) return false;
-  return true;
+  return !!selectedCancelType.value;
 });
 
-// 취소 가능 상태 확인 (결제완료, 반품 배송 중, 반품 도착)
+// 취소 가능 상태 확인 (결제완료, 배송준비중, 반품 도착)
 const isCancelableStatus = computed(() => {
   if (!props.orderItem) return false;
-  const cancelableStatuses = ["payment_confirmed", "return_in_transit", "return_received"];
+  const cancelableStatuses = [
+    "payment_confirmed",
+    "preparing",
+    "return_received",
+  ];
   return cancelableStatuses.includes(props.orderItem.status);
 });
 
@@ -104,7 +95,7 @@ const isCancelableStatus = computed(() => {
 const getStatusLabel = (status: string) => {
   const statusMap: Record<string, string> = {
     payment_confirmed: "결제완료",
-    return_in_transit: "반품 배송 중",
+    preparing: "배송준비중",
     return_received: "반품 도착",
   };
   return statusMap[status] || status;
@@ -137,7 +128,6 @@ const handleConfirm = async () => {
 
   emit("confirm", {
     cancelType: selectedCancelType.value as CancelType,
-    customerMessage: customerMessage.value.trim(),
     adminMemo: adminMemo.value.trim(),
     cancelReason: getFinalCancelReason(),
   });
@@ -147,7 +137,6 @@ const handleConfirm = async () => {
 const handleClose = () => {
   if (props.loading) return;
   selectedCancelType.value = "";
-  customerMessage.value = "";
   adminMemo.value = "";
   emit("close");
 };
@@ -158,10 +147,9 @@ watch(
   (isOpen) => {
     if (isOpen) {
       selectedCancelType.value = "";
-      customerMessage.value = "";
       adminMemo.value = "";
     }
-  }
+  },
 );
 </script>
 
@@ -179,7 +167,9 @@ watch(
         />
 
         <!-- 다이얼로그 카드 -->
-        <Card class="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+        <Card
+          class="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
+        >
           <CardHeader class="pb-4 sticky top-0 bg-background z-10">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
@@ -211,10 +201,12 @@ watch(
               v-if="!isCancelableStatus"
               class="py-8 text-center text-muted-foreground"
             >
-              <AlertTriangle class="w-12 h-12 mx-auto mb-3 opacity-50 text-destructive" />
+              <AlertTriangle
+                class="w-12 h-12 mx-auto mb-3 opacity-50 text-destructive"
+              />
               <p class="font-medium">현재 상태에서는 취소할 수 없습니다.</p>
               <p class="text-caption mt-1">
-                결제완료, 반품진행중 상태에서만 취소 가능합니다.
+                결제완료, 배송준비중, 반품도착 상태에서만 취소 가능합니다.
               </p>
             </div>
 
@@ -227,22 +219,34 @@ watch(
                     class="flex-shrink-0"
                   />
                   <div class="flex-1 flex flex-col min-w-0">
-                    <h3 class="text-body font-medium text-foreground line-clamp-2">
+                    <h3
+                      class="text-body font-medium text-foreground line-clamp-2"
+                    >
                       {{ orderItem.productName }}
                     </h3>
                     <p class="text-body text-muted-foreground mt-1">
-                      <template v-if="orderItem.options">{{ orderItem.options }} / </template>
+                      <template v-if="orderItem.options"
+                        >{{ orderItem.options }} /
+                      </template>
                       {{ orderItem.quantity }}개
                     </p>
                     <div class="flex items-center justify-between mt-1">
                       <p class="text-body font-medium text-foreground">
-                        {{ formatPrice(Number(orderItem.productPrice) * orderItem.quantity) }}
+                        {{
+                          formatPrice(
+                            Number(orderItem.productPrice) * orderItem.quantity,
+                          )
+                        }}
                       </p>
                       <span
                         class="text-caption px-2 py-0.5 rounded-full"
                         :class="{
-                          'bg-blue-50 text-blue-700': orderItem.status === 'payment_confirmed',
-                          'bg-orange-50 text-orange-700': orderItem.status === 'return_in_transit' || orderItem.status === 'return_received',
+                          'bg-blue-50 text-blue-700':
+                            orderItem.status === 'payment_confirmed',
+                          'bg-yellow-50 text-yellow-700':
+                            orderItem.status === 'preparing',
+                          'bg-orange-50 text-orange-700':
+                            orderItem.status === 'return_received',
                         }"
                       >
                         {{ getStatusLabel(orderItem.status) }}
@@ -269,38 +273,27 @@ watch(
                     :disabled="loading"
                     @click="selectCancelType(option.value)"
                   >
-                    <span class="text-body font-medium block">{{ option.label }}</span>
-                    <span class="text-caption text-muted-foreground">{{ option.description }}</span>
+                    <span class="text-body font-medium block">{{
+                      option.label
+                    }}</span>
+                    <span class="text-caption text-muted-foreground">{{
+                      option.description
+                    }}</span>
                   </button>
                 </div>
               </div>
 
-              <!-- 고객 안내 메시지 -->
+              <!-- 내부 관리용 메모 -->
               <Transition name="slide">
                 <div v-if="selectedCancelType" class="space-y-4">
                   <Separator />
 
                   <div class="space-y-2">
                     <div class="flex items-center gap-2">
-                      <MessageSquare class="w-4 h-4 text-primary" />
-                      <Label class="text-body font-medium">고객 안내 메시지</Label>
-                    </div>
-                    <Textarea
-                      ref="customerMessageInput"
-                      v-model="customerMessage"
-                      placeholder="고객에게 발송될 메시지를 입력해주세요"
-                      class="min-h-[120px] resize-none"
-                      :disabled="loading"
-                    />
-                    <p class="text-caption text-muted-foreground">
-                      * 해당 메시지는 고객에게 알림으로 발송됩니다.
-                    </p>
-                  </div>
-
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2">
                       <FileText class="w-4 h-4 text-muted-foreground" />
-                      <Label class="text-body font-medium">내부 관리용 메모</Label>
+                      <Label class="text-body font-medium"
+                        >내부 관리용 메모</Label
+                      >
                     </div>
                     <Textarea
                       v-model="adminMemo"
@@ -318,7 +311,8 @@ watch(
               >
                 <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p class="text-caption">
-                  취소 승인 시 결제 수단에 따라 즉시 ~ 5영업일 내 환불이 진행됩니다.
+                  취소 승인 시 결제 수단에 따라 즉시 ~ 3영업일 내 환불이
+                  진행됩니다.
                 </p>
               </div>
 

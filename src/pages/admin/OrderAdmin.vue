@@ -76,7 +76,7 @@ const statusOptions = [
   { value: "refunded", label: "주문취소" },
   { value: "partial_refunded", label: "부분환불" },
   { value: "return_requested", label: "반품요청" },
-  { value: "return_in_transit", label: "반품배송중" },
+  // { value: "return_in_transit", label: "반품배송중" }, // 비활성화 (추후 사용 예정)
   { value: "return_received", label: "검수대기" },
 ];
 
@@ -121,8 +121,8 @@ const statusCounts = computed(() => [
   { label: "배송완료", count: getStatusCount("delivered"), emphasized: false },
   { label: "주문취소", count: getStatusCount("refunded"), emphasized: false },
   { label: "반품요청", count: getStatusCount("return_requested"), emphasized: true },
-  { label: "반품배송중", count: getStatusCount("return_in_transit"), emphasized: true },
-  { label: "검수대기", count: getStatusCount("return_received"), emphasized: false },
+  // { label: "반품배송중", count: getStatusCount("return_in_transit"), emphasized: true }, // 비활성화
+  { label: "검수대기", count: getStatusCount("return_received"), emphasized: true },
 ]);
 
 // 공통 모듈의 getStatusClass 래핑 (관리자용 border 추가)
@@ -252,16 +252,15 @@ const closeCancelModal = () => {
   cancelTargetOrder.value = null;
 };
 
-// 취소 가능 상태 확인 (결제완료, 반품진행중)
+// 취소 가능 상태 확인 (결제완료, 배송준비중, 검수대기)
 const isCancelable = (status: string) => {
-  const cancelableStatuses = ["payment_confirmed", "return_in_progress"];
+  const cancelableStatuses = ["payment_confirmed", "preparing", "return_received"];
   return cancelableStatuses.includes(status);
 };
 
 // 관리자 주문 취소 처리
 const handleAdminCancel = async (data: {
   cancelType: string;
-  customerMessage: string;
   adminMemo: string;
   cancelReason: string;
 }) => {
@@ -269,10 +268,10 @@ const handleAdminCancel = async (data: {
 
   cancelLoading.value = true;
   try {
-    // API 호출 - 주문 취소
+    // API 호출 - 주문 취소 (이메일 자동 발송)
     await adminCancelPayment(
       cancelTargetOrder.value.id,
-      `[${data.cancelType === "customer_request" ? "고객요청" : "직권취소"}] ${data.cancelReason}\n\n[고객메시지]\n${data.customerMessage}\n\n[관리메모]\n${data.adminMemo}`
+      `[${data.cancelType === "customer_request" ? "고객요청" : "직권취소"}] ${data.cancelReason}${data.adminMemo ? `\n\n[관리메모]\n${data.adminMemo}` : ""}`
     );
 
     showAlert(ADMIN_MESSAGES.orderCancelSuccess);
