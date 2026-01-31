@@ -32,7 +32,7 @@ import { X, Search } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
-const { showAlert } = useAlert();
+const { showAlert, showConfirm } = useAlert();
 
 // 인증 체크
 useAuthGuard();
@@ -281,6 +281,14 @@ const confirmingItems = ref<Set<string>>(new Set());
 
 // 구매 확정 핸들러
 const handleConfirmPurchase = async (orderId: string, itemId: number) => {
+  // 확인 다이얼로그 표시
+  const confirmed = await showConfirm(
+    "구매를 확정하시겠습니까?\n확정 후에는 반품/환불이 제한됩니다.",
+    { confirmText: "구매확정", cancelText: "취소" },
+  );
+
+  if (!confirmed) return;
+
   const itemIdStr = String(itemId);
   confirmingItems.value.add(itemIdStr);
   try {
@@ -505,13 +513,17 @@ onUnmounted(() => {
                       </Button>
                       <Button
                         v-if="canConfirm(item.status)"
-                        variant="default"
+                        variant="outline"
                         size="sm"
                         class="text-caption px-2.5 py-1"
                         :disabled="confirmingItems.has(String(item.id))"
                         @click="handleConfirmPurchase(order.id, item.id)"
                       >
-                        {{ confirmingItems.has(String(item.id)) ? "처리중..." : "구매확정" }}
+                        {{
+                          confirmingItems.has(String(item.id))
+                            ? "처리중..."
+                            : "구매확정"
+                        }}
                       </Button>
                     </div>
                   </div>
@@ -533,13 +545,17 @@ onUnmounted(() => {
                   </Button>
                   <Button
                     v-if="canConfirm(item.status)"
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     class="text-caption px-3 py-1.5"
                     :disabled="confirmingItems.has(String(item.id))"
                     @click="handleConfirmPurchase(order.id, item.id)"
                   >
-                    {{ confirmingItems.has(String(item.id)) ? "처리중..." : "구매확정" }}
+                    {{
+                      confirmingItems.has(String(item.id))
+                        ? "처리중..."
+                        : "구매확정"
+                    }}
                   </Button>
                 </div>
               </div>
