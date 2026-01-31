@@ -18,7 +18,15 @@ import type { OrderItem } from "@/types/api";
 // 배송비 상수
 const constantsStore = useConstantsStore();
 const SHIPPING_FEE = computed(() => constantsStore.shipping?.FEE ?? 3500);
+const EXTRA_FEE = computed(() => constantsStore.shipping?.EXTRA_FEE ?? 2500);
 const FREE_THRESHOLD = computed(() => constantsStore.shipping?.FREE_THRESHOLD ?? 70000);
+
+// 무료배송 혜택 여부 확인
+// - paidShippingFee가 0원: 일반 지역 무료배송
+// - paidShippingFee가 도서산간 추가 배송비(2,500원)만: 도서산간 무료배송
+const hadFreeShippingBenefit = (paidShippingFee: number) => {
+  return paidShippingFee === 0 || paidShippingFee === EXTRA_FEE.value;
+};
 
 // 취소 유형
 type CancelType = "customer_request" | "customer_request_cod" | "seller_cancel";
@@ -148,11 +156,15 @@ const calculateRefundPreview = computed(() => {
   const paidShippingFee = Number(props.order.shippingFee) || 0;
   const alreadyRefundedAmount = Number(props.order.refundedAmount) || 0;
   const penaltyAlreadyApplied = props.order.shippingPenaltyApplied || false;
+  // 판매자 귀책 취소 금액 (직권 취소로 무료배송 기준 붕괴 시 고객 보호)
+  const sellerCancelledAmount = Number(props.order.sellerCancelledAmount) || 0;
   const fee = SHIPPING_FEE.value;
   const threshold = FREE_THRESHOLD.value;
 
   // 남은 금액 계산 (전체 상품 - 이미 환불 - 현재 환불)
   const remainingAmount = orderItemsAmount - alreadyRefundedAmount - itemAmount;
+  // 가상 남은 금액: 판매자 귀책 취소 금액을 더해서 계산 (고객 보호)
+  const virtualRemainingAmount = remainingAmount + sellerCancelledAmount;
 
   let refundAmount = itemAmount;
   let deductions: { label: string; amount: number }[] = [];
@@ -171,8 +183,7 @@ const calculateRefundPreview = computed(() => {
   // === 고객 귀책 (customer_request) ===
   else if (selectedCancelType.value === "customer_request") {
     if (isLastActiveItem.value) {
-      // 마지막 상품: 상품값 + 낸 배송비 - 실제낸배송비 + 크레딧
-      // 도서산간 추가 배송비 포함하여 전액 차감
+      // 마지막 상품: 상품값 + 낸 배송비 - 낸 배송비 - 기본배송비(무료배송 혜택 회수)
       if (paidShippingFee > 0) {
         additions.push({ label: "배송비 환불", amount: paidShippingFee });
         refundAmount += paidShippingFee;
@@ -180,22 +191,28 @@ const calculateRefundPreview = computed(() => {
         refundAmount -= paidShippingFee;
       }
 
-      // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
-      if (penaltyAlreadyApplied) {
-        additions.push({ label: "크레딧 (중복차감 방지)", amount: fee });
-        refundAmount += fee;
+      // 무료배송 혜택을 받았고, 아직 페널티가 적용되지 않았다면 기본 배송비도 차감
+      // 단, 판매자 귀책 취소 금액이 무료배송 기준 이상이면 페널티 면제 (고객 보호)
+      const shouldApplyPenalty =
+        hadFreeShippingBenefit(paidShippingFee) &&
+        !penaltyAlreadyApplied &&
+        sellerCancelledAmount < threshold;
+
+      if (shouldApplyPenalty) {
+        deductions.push({ label: "배송비 차감", amount: fee });
+        refundAmount -= fee;
       }
     } else {
       // 부분 취소: 조건부 페널티 적용
-      // - 유료배송 주문 → 페널티 없음
-      // - 무료배송 + 남은 금액 >= 기준 → 페널티 없음
+      // - 유료배송 주문 (기본 배송비 결제) → 페널티 없음
+      // - 무료배송 + 가상 남은 금액 >= 기준 → 페널티 없음 (판매자 귀책 취소 금액 고려)
       // - 무료배송 + 이미 페널티 차감 → 페널티 없음
       // - 그 외 → 배송비 페널티
-      const isFreeShipping = paidShippingFee === 0;
-      const remainingAboveThreshold = remainingAmount >= threshold;
+      const isFreeShipping = hadFreeShippingBenefit(paidShippingFee);
+      const virtualRemainingAboveThreshold = virtualRemainingAmount >= threshold;
 
-      if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
-        // 무료배송 + 남은 금액 < 기준 + 최초 → 페널티 적용
+      if (isFreeShipping && !virtualRemainingAboveThreshold && !penaltyAlreadyApplied) {
+        // 무료배송 + 가상 남은 금액 < 기준 + 최초 → 페널티 적용
         deductions.push({ label: "배송비 차감", amount: fee });
         refundAmount -= fee;
       }
@@ -205,8 +222,7 @@ const calculateRefundPreview = computed(() => {
   // === 고객 귀책 + 착불 (customer_request_cod) ===
   else if (selectedCancelType.value === "customer_request_cod") {
     if (isLastActiveItem.value) {
-      // 마지막 상품: 상품값 + 낸 배송비 - 실제낸배송비 + 크레딧 - 착불 반품비
-      // 도서산간 추가 배송비 포함하여 전액 차감
+      // 마지막 상품: 상품값 + 낸 배송비 - 낸 배송비 - 기본배송비(무료배송 혜택 회수) - 반품비
       if (paidShippingFee > 0) {
         additions.push({ label: "배송비 환불", amount: paidShippingFee });
         refundAmount += paidShippingFee;
@@ -214,10 +230,16 @@ const calculateRefundPreview = computed(() => {
         refundAmount -= paidShippingFee;
       }
 
-      // 크레딧: 이미 페널티 차감됐으면 중복 차감 방지
-      if (penaltyAlreadyApplied) {
-        additions.push({ label: "크레딧 (중복차감 방지)", amount: fee });
-        refundAmount += fee;
+      // 무료배송 혜택을 받았고, 아직 페널티가 적용되지 않았다면 기본 배송비도 차감
+      // 단, 판매자 귀책 취소 금액이 무료배송 기준 이상이면 페널티 면제 (고객 보호)
+      const shouldApplyPenaltyCod =
+        hadFreeShippingBenefit(paidShippingFee) &&
+        !penaltyAlreadyApplied &&
+        sellerCancelledAmount < threshold;
+
+      if (shouldApplyPenaltyCod) {
+        deductions.push({ label: "배송비 차감", amount: fee });
+        refundAmount -= fee;
       }
 
       // 착불 반품비 추가 차감
@@ -225,10 +247,10 @@ const calculateRefundPreview = computed(() => {
       refundAmount -= fee;
     } else {
       // 부분 취소: 조건부 페널티 + 착불 반품비
-      const isFreeShipping = paidShippingFee === 0;
-      const remainingAboveThreshold = remainingAmount >= threshold;
+      const isFreeShipping = hadFreeShippingBenefit(paidShippingFee);
+      const virtualRemainingAboveThresholdCod = virtualRemainingAmount >= threshold;
 
-      if (isFreeShipping && !remainingAboveThreshold && !penaltyAlreadyApplied) {
+      if (isFreeShipping && !virtualRemainingAboveThresholdCod && !penaltyAlreadyApplied) {
         deductions.push({ label: "배송비 차감", amount: fee });
         refundAmount -= fee;
       }
@@ -244,8 +266,10 @@ const calculateRefundPreview = computed(() => {
     orderItemsAmount,
     paidShippingFee,
     remainingAmount,
+    virtualRemainingAmount,
+    sellerCancelledAmount,
     isLastItem: isLastActiveItem.value,
-    isFreeShipping: paidShippingFee === 0,
+    isFreeShipping: hadFreeShippingBenefit(paidShippingFee),
     penaltyAlreadyApplied,
     additions,
     deductions,
