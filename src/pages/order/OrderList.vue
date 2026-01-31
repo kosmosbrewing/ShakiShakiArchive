@@ -10,7 +10,7 @@ import { useAlert } from "@/composables/useAlert";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import type { Order, OrderItem } from "@/types/api";
 import { getDayName } from "@/lib/utils";
-import { fetchAllOrders } from "@/lib/api";
+import { fetchAllOrders, confirmPurchase } from "@/lib/api";
 import { sortOrderItems } from "@/lib/constants/order";
 import { useDebounceFn } from "@vueuse/core";
 import { ORDER_MESSAGES } from "@/lib/messages";
@@ -271,6 +271,34 @@ const canTrack = (status: string) => {
   return ["shipped", "delivered"].includes(status);
 };
 
+// 구매 확정 가능 상태 (배송완료 상태에서만)
+const canConfirm = (status: string) => {
+  return status === "delivered";
+};
+
+// 구매 확정 로딩 상태 (itemId별로 관리)
+const confirmingItems = ref<Set<string>>(new Set());
+
+// 구매 확정 핸들러
+const handleConfirmPurchase = async (orderId: string, itemId: number) => {
+  const itemIdStr = String(itemId);
+  confirmingItems.value.add(itemIdStr);
+  try {
+    await confirmPurchase(orderId, itemIdStr);
+    showAlert("구매가 확정되었습니다.", { type: "success" });
+
+    // 주문 목록 새로고침
+    await loadOrders();
+    if (currentFilter.value || searchQuery.value) {
+      allOrders.value = await fetchAllOrders();
+    }
+  } catch (error: any) {
+    showAlert(error.message || "구매 확정에 실패했습니다.", { type: "error" });
+  } finally {
+    confirmingItems.value.delete(itemIdStr);
+  }
+};
+
 // 배송 조회 핸들러
 const handleTrackShipment = (item: OrderItem) => {
   if (!item.trackingNumber) {
@@ -304,7 +332,7 @@ onUnmounted(() => {
 <template>
   <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
     <div class="mb-6">
-      <h3 class="text-heading text-primary tracking-wider mb-3">주문 상세</h3>
+      <h3 class="text-heading text-primary tracking-wider mb-3">주문 내역</h3>
       <Separator></Separator>
     </div>
     <!-- 검색 및 필터 -->
@@ -463,10 +491,11 @@ onUnmounted(() => {
 
                     <!-- 모바일 버튼 (금액과 같은 라인) -->
                     <div
-                      v-if="canTrack(item.status)"
+                      v-if="canTrack(item.status) || canConfirm(item.status)"
                       class="flex gap-2 sm:hidden"
                     >
                       <Button
+                        v-if="canTrack(item.status)"
                         variant="outline"
                         size="sm"
                         class="text-caption px-2.5 py-1"
@@ -474,22 +503,43 @@ onUnmounted(() => {
                       >
                         배송조회
                       </Button>
+                      <Button
+                        v-if="canConfirm(item.status)"
+                        variant="default"
+                        size="sm"
+                        class="text-caption px-2.5 py-1"
+                        :disabled="confirmingItems.has(String(item.id))"
+                        @click="handleConfirmPurchase(order.id, item.id)"
+                      >
+                        {{ confirmingItems.has(String(item.id)) ? "처리중..." : "구매확정" }}
+                      </Button>
                     </div>
                   </div>
                 </div>
 
                 <!-- 데스크톱 버튼 (하단 우측) -->
                 <div
-                  v-if="canTrack(item.status)"
-                  class="hidden sm:flex items-end justify-end"
+                  v-if="canTrack(item.status) || canConfirm(item.status)"
+                  class="hidden sm:flex items-end justify-end gap-2"
                 >
                   <Button
+                    v-if="canTrack(item.status)"
                     variant="outline"
                     size="sm"
                     class="text-caption px-3 py-1.5"
                     @click="handleTrackShipment(item)"
                   >
                     배송조회
+                  </Button>
+                  <Button
+                    v-if="canConfirm(item.status)"
+                    variant="default"
+                    size="sm"
+                    class="text-caption px-3 py-1.5"
+                    :disabled="confirmingItems.has(String(item.id))"
+                    @click="handleConfirmPurchase(order.id, item.id)"
+                  >
+                    {{ confirmingItems.has(String(item.id)) ? "처리중..." : "구매확정" }}
                   </Button>
                 </div>
               </div>

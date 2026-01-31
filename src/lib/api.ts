@@ -767,6 +767,19 @@ export async function getReturn(returnId: string): Promise<Return> {
   });
 }
 
+// 개별 상품 구매 확정
+export async function confirmPurchase(
+  orderId: string,
+  itemId: string
+): Promise<{ message: string; item: { id: string; status: string } }> {
+  return apiRequest<{ message: string; item: { id: string; status: string } }>(
+    `/api/orders/${orderId}/items/${itemId}/confirm`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 // 주문 삭제 (결제 전 주문만 삭제 가능 - 입금 대기 상태)
 export async function deleteOrder(
   orderId: number | string,
