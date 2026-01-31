@@ -123,13 +123,21 @@ export function formatOrderStatus(status: OrderStatus | OrderItemStatus): string
 }
 
 /**
- * 사이즈 측정값 포맷팅 (0이면 "-" 반환)
+ * 사이즈 측정값 포맷팅
+ * - 빈 값이면 "-" 반환
+ * - 범위 형식 문자열 지원 (예: "34-54.5")
  */
-export function formatSizeValue(value: number | undefined | null): string | number {
-  if (value === undefined || value === null || Number(value) <= 0) {
+export function formatSizeValue(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) {
     return "-";
   }
-  return Number(value);
+
+  const strValue = String(value).trim();
+  if (strValue === "" || strValue === "0") {
+    return "-";
+  }
+
+  return strValue;
 }
 
 /**

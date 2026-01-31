@@ -1642,9 +1642,7 @@ onMounted(async () => {
                                   >
                                     {{
                                       formatSizeValue(
-                                        data[
-                                          col.key as keyof typeof data
-                                        ] as number,
+                                        data[col.key as keyof typeof data],
                                       )
                                     }}
                                   </TableCell>

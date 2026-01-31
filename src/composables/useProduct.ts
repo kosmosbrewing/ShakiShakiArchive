@@ -237,11 +237,13 @@ export function useSizeMeasurements(variants: Ref<ProductVariant[]>) {
   const loading = ref(false);
 
   // 데이터가 있는 측정 항목만 필터링
+  // 값이 문자열이고 비어있지 않으면 표시 (범위 형식 "34-54.5" 지원)
   const activeColumns = computed(() => {
     return MEASUREMENT_KEYS.filter((col) => {
       return allSizeData.value.some((data: SizeMeasurement & { variantSize: string }) => {
         const value = data[col.key as keyof SizeMeasurement];
-        return value !== undefined && Number(value) > 0;
+        // 문자열로 존재하고 빈 문자열이 아닌 경우
+        return value !== undefined && value !== null && String(value).trim() !== "";
       });
     });
   });

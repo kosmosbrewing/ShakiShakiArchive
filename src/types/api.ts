@@ -76,17 +76,18 @@ export interface ProductVariant {
 }
 
 // 사이즈 측정 정보
+// 백엔드에서 varchar로 저장 (예: "95" 또는 "95-100" 범위 형식)
 export interface SizeMeasurement {
   id: string; // UUID
   variantId: string; // UUID
   variantSize?: string;
-  totalLength?: number;
-  shoulderWidth?: number;
-  chestSection?: number;
-  sleeveLength?: number;
-  waistSection?: number;
-  hipSection?: number;
-  thighSection?: number;
+  totalLength?: string | null;
+  shoulderWidth?: string | null;
+  chestSection?: string | null;
+  sleeveLength?: string | null;
+  waistSection?: string | null;
+  hipSection?: string | null;
+  thighSection?: string | null;
 }
 
 // 장바구니 아이템
