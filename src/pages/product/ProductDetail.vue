@@ -810,7 +810,7 @@ onMounted(async () => {
                   <span
                     >결제 완료 후
                     <strong class="text-foreground"
-                      >영업일 기준 3~7일 이내</strong
+                      >최대 7일 이내</strong
                     >
                     택배로 배송됩니다.</span
                   >

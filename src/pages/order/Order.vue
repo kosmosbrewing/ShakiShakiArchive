@@ -154,7 +154,7 @@ const addressFormRef = ref<InstanceType<typeof AddressForm> | null>(null);
 // [결제 수단 옵션] - 로고 이미지만 표시 (한글 라벨 제거)
 const paymentMethods = [
   // { label: "토스페이", value: "toss", icon: tossLogo },  // 비활성화 (코드 유지)
-  { value: "naverpay", icon: naverLogo },
+  // { value: "naverpay", icon: naverLogo },  // 비활성화 (결제형 → 주문형 전환 대응)
   { value: "kakaopay", icon: kakaoLogo },
 ];
 
@@ -1862,7 +1862,7 @@ onUnmounted(() => {
           <p
             class="text-caption text-muted-foreground text-center leading-relaxed !mt-3"
           >
-            결제 완료 후 <strong>영업일 기준 3~7일 이내</strong>에<br />
+            결제 완료 후 <strong>최대 7일 이내</strong>에<br />
             택배로 안전하게 배송됩니다.
           </p>
 
