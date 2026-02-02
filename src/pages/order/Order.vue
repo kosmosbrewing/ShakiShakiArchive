@@ -59,7 +59,7 @@ import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
 // [이미지 Import] - 결제 수단 로고
 // import tossLogo from "@/assets/optimized/tossSymbol.webp";  // 토스페이먼츠 비활성화 (867KB → 40KB 최적화 완료)
-import naverLogo from "@/assets/naverSymbol.svg";
+// import naverLogo from "@/assets/naverSymbol.svg";  // 네이버페이 비활성화 (결제형 → 주문형 전환 대응)
 import kakaoLogo from "@/assets/kakaoSymbol.png";
 
 const router = useRouter();
