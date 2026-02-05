@@ -412,6 +412,60 @@ export interface NaverPaySdkConfigResponse {
 }
 
 // ------------------------------------------------------------------
+// 네이버페이 주문형 관련 타입
+// ------------------------------------------------------------------
+
+// 네이버페이 주문형 SDK 설정 응답
+export interface NaverPayOrderSdkConfigResponse {
+  merchantId: string;
+  buttonKey: string;
+  mode: "development" | "production";
+  productInfoUrl: string;
+  additionalFeeUrl: string;
+  backUrl: string;
+  isEnabled: boolean;
+  // SDK 스크립트 URL
+  buttonScriptUrl: string;
+  buttonScriptUrlMobile: string;
+}
+
+// 네이버페이 주문형 장바구니 아이템 (비회원용)
+export interface NaverPayCartItem {
+  productId: string;
+  variantId?: string | null;
+  quantity: number;
+}
+
+// 네이버페이 주문형 주문 등록 요청 (상품 상세 - 바로 구매)
+export interface NaverPayOrderRegisterRequest {
+  type: "PRODUCT" | "CART"; // PRODUCT: 상품 상세에서 바로 구매, CART: 장바구니
+  productId?: string; // PRODUCT 타입일 때 필수
+  variantId?: string; // 옵션 선택 시
+  quantity?: number; // PRODUCT 타입일 때 수량 (기본 1)
+  // CART 타입 (비회원용) - productId, variantId, quantity만 전달
+  // 가격은 백엔드에서 DB 조회 (Hydration)
+  cartItems?: NaverPayCartItem[];
+}
+
+// 네이버페이 주문형 주문 등록 응답
+export interface NaverPayOrderRegisterResponse {
+  message: string;
+  tempOrderId: string; // XML 등록 후 반환되는 임시 주문 ID
+  orderPageUrl: string; // 네이버페이 주문서 페이지 URL
+}
+
+// 네이버페이 주문형 위시리스트 등록 요청
+export interface NaverPayWishlistRequest {
+  productId: string;
+}
+
+// 네이버페이 주문형 위시리스트 등록 응답
+export interface NaverPayWishlistResponse {
+  message: string;
+  success: boolean;
+}
+
+// ------------------------------------------------------------------
 // 카카오페이 관련 타입
 // ------------------------------------------------------------------
 

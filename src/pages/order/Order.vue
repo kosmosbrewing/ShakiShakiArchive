@@ -3,7 +3,7 @@
 // 주문/결제 페이지
 
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
@@ -62,6 +62,7 @@ import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 // import naverLogo from "@/assets/naverSymbol.svg";  // 네이버페이 비활성화 (결제형 → 주문형 전환 대응)
 import kakaoLogo from "@/assets/kakaoSymbol.png";
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
@@ -142,7 +143,7 @@ const isMobile = computed(() => {
 const isAddressModalOpen = ref(false);
 const isAddressSearchOpen = ref(false);
 const deliveryMode = ref<"new" | "member" | "saved">("new");
-const paymentProvider = ref<"toss" | "naverpay" | "kakaopay" | null>(null);
+const paymentProvider = ref<"toss" | "naverpay" | "kakaopay">("kakaopay");
 
 // 유효성 검사 상태
 const showValidationAlert = ref(false);
@@ -1628,6 +1629,12 @@ onMounted(async () => {
 
   loadData();
 
+  // 결제 수단 쿼리 파라미터 처리 (예: ?payment=kakaopay)
+  const paymentParam = route.query.payment as string;
+  if (paymentParam && ["toss", "naverpay", "kakaopay"].includes(paymentParam)) {
+    paymentProvider.value = paymentParam as "toss" | "naverpay" | "kakaopay";
+  }
+
   // 페이지 이탈 감지 이벤트 등록 (비정상 종료 대응)
   document.addEventListener("visibilitychange", handleVisibilityChange); // Phase 2: 백그라운드 전환 감지
   document.addEventListener("freeze", handlePageFreeze); // [긴급] Page Lifecycle API
@@ -1871,27 +1878,28 @@ onUnmounted(() => {
               <CardTitle class="text-heading">결제 수단</CardTitle>
             </CardHeader>
             <CardContent>
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  v-for="method in paymentMethods"
-                  :key="method.value"
-                  type="button"
-                  @click="paymentProvider = method.value as any"
-                  :class="[
-                    'flex items-center justify-center py-4 px-6 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
-                    paymentProvider === method.value
-                      ? 'border-primary'
-                      : 'border-border',
-                  ]"
+              <button
+                v-for="method in paymentMethods"
+                :key="method.value"
+                type="button"
+                @click="paymentProvider = method.value as any"
+                :class="[
+                  'w-full flex items-center justify-center gap-2 py-4 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
+                  paymentProvider === method.value
+                    ? 'border-primary'
+                    : 'border-border',
+                ]"
+              >
+                <img
+                  :src="method.icon"
+                  :alt="method.value"
+                  class="h-6 w-auto object-contain"
+                  draggable="false"
+                />
+                <span class="text-[#191919] text-body font-medium"
+                  >카카오페이</span
                 >
-                  <img
-                    :src="method.icon"
-                    :alt="method.value"
-                    class="h-6 w-auto object-contain"
-                    draggable="false"
-                  />
-                </button>
-              </div>
+              </button>
             </CardContent>
           </Card>
 

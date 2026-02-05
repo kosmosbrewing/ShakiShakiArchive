@@ -2,7 +2,7 @@
 // src/pages/ProductDetail.vue
 // 상품 상세 페이지
 
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -15,7 +15,7 @@ import {
 import { useWishlistToggle } from "@/composables/useWishlist";
 import { useAuthCheck } from "@/composables/useAuthGuard";
 import { useCart } from "@/composables/useCart";
-import { useOptimizedImage } from "@/composables";
+import { useOptimizedImage, useNaverPayOrder } from "@/composables";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
 
 // 아이콘
@@ -89,6 +89,20 @@ const gallery = useImageGallery(productData.galleryImages);
 
 // 위시리스트 토글
 const wishlistToggle = useWishlistToggle(productId);
+
+// 네이버페이 주문형
+const naverPay = useNaverPayOrder();
+const naverPayInitialized = ref(false);
+const naverPayRenderTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+
+// 간편결제 버튼 표시 조건 (computed로 가독성 향상)
+const showPaymentButtons = computed(() => {
+  return (
+    !variantSelection.needsVariantSelection.value &&
+    !isOutOfStock.value &&
+    (naverPay.sdkLoaded.value || !naverPay.isEnabled.value)
+  );
+});
 
 // Alert 상태
 const showAlert = ref(false);
@@ -334,8 +348,8 @@ const handleGoToCart = () => {
   router.push("/cart");
 };
 
-// 바로 구매 (해당 상품만 주문 페이지로 이동)
-const handleBuyNow = async () => {
+// 카카오페이 구매 (주문 페이지로 이동, 카카오페이 선택)
+const handleKakaoPayBuy = async () => {
   // 1. 옵션 선택 필수 체크
   if (variantSelection.needsVariantSelection.value) {
     displayAlert(PRODUCT_MESSAGES.optionRequired);
@@ -382,7 +396,7 @@ const handleBuyNow = async () => {
       ? productData.variants.value.find((v) => v.id === vid)
       : null;
 
-    // 바로 구매 상품 정보를 세션 스토리지에 저장 (타입 명시)
+    // 바로 구매 상품 정보를 세션 스토리지에 저장
     const directPurchaseItem: DirectPurchaseData = {
       id: `direct_${Date.now()}`,
       productId: product.id,
@@ -391,7 +405,7 @@ const handleBuyNow = async () => {
       product: {
         id: product.id,
         name: product.name,
-        price: price, // 이미 검증된 가격 사용
+        price: price,
         imageUrl: product.imageUrl,
       },
       variant: selectedVariant
@@ -408,13 +422,104 @@ const handleBuyNow = async () => {
       JSON.stringify(directPurchaseItem),
     );
 
-    router.push("/order?direct=true");
+    // 카카오페이 선택 상태로 주문 페이지 이동
+    router.push("/order?direct=true&payment=kakaopay");
   });
 };
 
 // 계속 쇼핑하기
 const handleContinueShopping = () => {
   showCartConfirm.value = false;
+};
+
+// 네이버페이 SDK 로드 (설정 + 스크립트만)
+const loadNaverPaySdk = async () => {
+  try {
+    await naverPay.loadConfig();
+    if (!naverPay.isEnabled.value) return;
+    await naverPay.loadSdk();
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.error("네이버페이 SDK 로드 실패:", e);
+    }
+  }
+};
+
+// 네이버페이 버튼 렌더링 (컨테이너가 존재할 때만)
+const renderNaverPayButton = () => {
+  if (naverPayInitialized.value) return;
+  if (!naverPay.isEnabled.value || !naverPay.sdkLoaded.value) return;
+
+  // 컨테이너 존재 확인
+  const container = document.getElementById("naverpay-button-container");
+  if (!container) return;
+
+  // 컨테이너 초기화 (중복 방지)
+  container.innerHTML = "";
+
+  try {
+    naverPay.renderButton({
+      containerId: "naverpay-button-container",
+      buttonType: "A",
+      buttonColor: 1,
+      count: 2,
+      onBuy: handleNaverPayBuy,
+      onWishlist: handleNaverPayWishlist,
+    });
+    naverPayInitialized.value = true;
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.error("네이버페이 버튼 렌더링 실패:", e);
+    }
+  }
+};
+
+// 네이버페이 찜하기 핸들러
+const handleNaverPayWishlist = async () => {
+  const product = productData.product.value;
+  if (!product) return;
+
+  try {
+    await naverPay.addToWishlist(product.id);
+    displayAlert("네이버페이 찜 목록에 추가되었습니다", "success");
+  } catch (e: any) {
+    displayAlert(e.message || "찜하기에 실패했습니다");
+  }
+};
+
+// 네이버페이 구매 핸들러
+const handleNaverPayBuy = async () => {
+  // 1. 옵션 선택 필수 체크
+  if (variantSelection.needsVariantSelection.value) {
+    displayAlert(PRODUCT_MESSAGES.optionRequired);
+    return;
+  }
+
+  // 2. 재고 확인
+  if (!variantSelection.isStockAvailable.value) {
+    displayAlert(PRODUCT_MESSAGES.insufficientStock);
+    return;
+  }
+
+  // 3. 상품 데이터 존재 확인
+  const product = productData.product.value;
+  if (!product) {
+    displayAlert(PRODUCT_MESSAGES.loadFailed);
+    return;
+  }
+
+  try {
+    const response = await naverPay.registerOrder({
+      productId: product.id,
+      variantId: variantSelection.selectedVariantId.value || undefined,
+      quantity: Number(variantSelection.quantity.value) || 1,
+    });
+
+    // 네이버페이 주문서로 이동 (백엔드에서 받은 URL 사용)
+    naverPay.openNaverPayOrder(response.orderPageUrl);
+  } catch (e: any) {
+    displayAlert(e.message || "네이버페이 주문 등록에 실패했습니다");
+  }
 };
 
 // 갤러리 이미지 변경 시 로딩 상태 리셋
@@ -424,6 +529,52 @@ watch(
     mainImageLoaded.value = false;
   },
 );
+
+// 옵션 선택 시 네이버페이 버튼 렌더링
+watch(
+  () => variantSelection.needsVariantSelection.value,
+  (needsSelection) => {
+    // 옵션이 선택되면 (needsSelection이 false가 되면) 버튼 렌더링
+    if (!needsSelection && !isOutOfStock.value) {
+      // 기존 타이머 정리
+      if (naverPayRenderTimer.value) {
+        clearTimeout(naverPayRenderTimer.value);
+      }
+      // nextTick으로 DOM 업데이트 후 렌더링
+      nextTick(() => {
+        naverPayRenderTimer.value = setTimeout(renderNaverPayButton, 100);
+      });
+    }
+  },
+);
+
+// SDK 로드 완료 시 버튼 렌더링 (사이즈가 이미 선택된 경우)
+watch(
+  () => naverPay.sdkLoaded.value,
+  (loaded) => {
+    if (
+      loaded &&
+      !variantSelection.needsVariantSelection.value &&
+      !isOutOfStock.value
+    ) {
+      // 기존 타이머 정리
+      if (naverPayRenderTimer.value) {
+        clearTimeout(naverPayRenderTimer.value);
+      }
+      nextTick(() => {
+        naverPayRenderTimer.value = setTimeout(renderNaverPayButton, 100);
+      });
+    }
+  },
+);
+
+// 컴포넌트 언마운트 시 cleanup
+onUnmounted(() => {
+  if (naverPayRenderTimer.value) {
+    clearTimeout(naverPayRenderTimer.value);
+    naverPayRenderTimer.value = null;
+  }
+});
 
 // 데이터 로드
 onMounted(async () => {
@@ -446,6 +597,9 @@ onMounted(async () => {
 
   // 사이즈 정보 로드
   await sizeMeasurements.loadSizeMeasurements();
+
+  // 네이버페이 SDK 로드 (약간 딜레이 후)
+  setTimeout(loadNaverPaySdk, 200);
 });
 </script>
 
@@ -619,31 +773,105 @@ onMounted(async () => {
             </div>
              -->
             <div class="mb-6 flex flex-col gap-3">
+              <!-- 옵션 미선택 시 안내 메시지 -->
               <Button
-                v-if="!variantSelection.needsVariantSelection.value"
-                @click="handleAddToCart"
-                class="w-full text-primary hover:bg-primary/5 hover:text-primary font-medium"
+                v-if="
+                  variantSelection.needsVariantSelection.value && !isOutOfStock
+                "
+                disabled
+                class="w-full font-bold"
                 size="lg"
-                variant="outline"
+              >
+                옵션을 선택해주세요
+              </Button>
+
+              <!-- 품절 시 안내 -->
+              <Button
+                v-else-if="isOutOfStock"
+                disabled
+                class="w-full font-bold"
+                size="lg"
+              >
+                SOLD OUT
+              </Button>
+
+              <!-- 옵션 선택 완료 시: 장바구니 버튼 (애니메이션 적용) -->
+              <Button
+                v-if="
+                  !variantSelection.needsVariantSelection.value && !isOutOfStock
+                "
+                @click="handleAddToCart"
+                class="w-full bg-primary text-white hover:bg-primary/90 font-medium animate-fade-in"
+                size="lg"
               >
                 장바구니 담기
               </Button>
-              <Button
-                @click="handleBuyNow"
-                :disabled="
-                  isOutOfStock || variantSelection.needsVariantSelection.value
-                "
-                class="w-full font-bold hover:bg-primary/80"
-                size="lg"
+
+              <!-- 간편결제 버튼 (네이버페이 SDK 로드 완료 후 동시 표시) -->
+              <div
+                v-if="showPaymentButtons"
+                class="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in"
               >
-                {{
-                  isOutOfStock
-                    ? "SOLD OUT"
-                    : variantSelection.needsVariantSelection.value
-                      ? "옵션을 선택해주세요"
-                      : "바로 구매"
-                }}
-              </Button>
+                <!-- 네이버페이 SDK 버튼 (관리자 전용 테스트) -->
+                <div
+                  v-if="naverPay.isEnabled.value && authStore.isAdmin"
+                  id="naverpay-button-container"
+                  class="flex items-center justify-center pt-3 min-h-[100px]"
+                ></div>
+
+                <!-- 카카오페이 (기본 285x88px, 부모 영역에 따라 가변) -->
+                <div class="flex items-center justify-center w-full pt-3">
+                  <div
+                    class="border-t-[2px] border-[#222] bg-white w-full max-w-[285px] h-[88px] flex flex-col items-center"
+                    style="font-family: Dotum, 돋움, sans-serif"
+                  >
+                    <!-- 내부 영역 -->
+                    <div
+                      class="w-[calc(100%-8px)] h-[59px] flex items-center justify-between"
+                    >
+                      <!-- 왼쪽: 설명 -->
+                      <div class="flex flex-col shrink-0">
+                        <span class="text-[11px] font-medium text-[#191919]"
+                          ><span
+                            style="
+                              background: linear-gradient(
+                                to top,
+                                #ffeb00 2px,
+                                transparent 2px
+                              );
+                            "
+                            >kakao<span class="font-bold">pay</span></span
+                          >
+                          <p />
+                          간편하게 주문</span
+                        >
+                      </div>
+                      <!-- 오른쪽: 버튼 (PC: 182px, 모바일: 191px) -->
+                      <button
+                        @click="handleKakaoPayBuy"
+                        class="flex items-center justify-center gap-px bg-[#FFEB00] hover:bg-[#FEE500] text-[#191919] flex-1 max-w-[191px] sm:max-w-[182px] h-[37px] ml-2 px-3 rounded-[3px] transition-colors"
+                      >
+                        <img
+                          src="@/assets/kakaoSymbol.png"
+                          alt="카카오페이"
+                          class="h-5 w-auto object-contain"
+                        />
+                        <span class="text-[12px] font-semibold -translate-x-1"
+                          >결제</span
+                        >
+                      </button>
+                    </div>
+                    <!-- 하단 영역 -->
+                    <div
+                      class="w-[calc(100%-8px)] h-[28px] flex items-center border-t-[0.1px] border-[#eaeaea]"
+                    >
+                      <span class="text-[12px] text-[#888]">
+                        회원 주문가능
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Separator></Separator>
@@ -764,13 +992,13 @@ onMounted(async () => {
       <!-- 상세 이미지: 모바일 3번, 데스크탑 좌측 -->
       <div
         v-if="
-          productData.product.value.detailImages &&
+          productData.product.value?.detailImages &&
           productData.product.value.detailImages.length > 0
         "
         class="order-3 lg:order-1 space-y-6"
       >
         <div
-          v-for="(detailImg, idx) in productData.product.value.detailImages"
+          v-for="(detailImg, idx) in productData.product.value?.detailImages"
           :key="`detail-${idx}`"
           class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm relative"
           :style="{ animationDelay: `${idx * 0.1}s` }"
@@ -809,9 +1037,7 @@ onMounted(async () => {
                 <li class="flex gap-2">
                   <span
                     >결제 완료 후
-                    <strong class="text-foreground"
-                      >최대 7일 이내</strong
-                    >
+                    <strong class="text-foreground">최대 7일 이내</strong>
                     택배로 배송됩니다.</span
                   >
                 </li>
@@ -857,11 +1083,9 @@ onMounted(async () => {
                 <li class="flex gap-2">
                   <span
                     >고객 단순 변심 시
-                    <strong class="text-foreground">선불</strong>로 직접
-                    발송하시거나,
-                    <strong class="text-foreground"
-                      >결제 대금에서 왕복 배송비가 차감</strong
-                    >
+                    <strong class="text-foreground">선불로 직접 발송</strong
+                    >하시거나, 결제 대금에서
+                    <strong class="text-foreground">왕복 배송비가 차감</strong>
                     된 후 환불됩니다.</span
                   >
                 </li>
@@ -878,9 +1102,7 @@ onMounted(async () => {
                 </li>
                 <li class="flex gap-2">
                   <span
-                    >환불은 결제 수단에 따라
-                    <strong class="text-foreground">즉시~3영업일 이내</strong>
-                    완료됩니다.</span
+                    >환불은 결제 수단에 따라 즉시~3영업일 이내 완료됩니다.</span
                   >
                 </li>
                 <li class="flex gap-2">
@@ -982,5 +1204,19 @@ onMounted(async () => {
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--muted-foreground));
+}
+
+/* Vue Transition - fade */
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 </style>

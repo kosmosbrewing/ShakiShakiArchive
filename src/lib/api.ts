@@ -20,6 +20,11 @@ import type {
   NaverPaySdkConfigResponse,
   NaverPayCancelRequest,
   NaverPayCancelResponse,
+  NaverPayOrderSdkConfigResponse,
+  NaverPayOrderRegisterRequest,
+  NaverPayOrderRegisterResponse,
+  NaverPayWishlistRequest,
+  NaverPayWishlistResponse,
   KakaoPayClientInfoResponse,
   KakaoPayReadyResponse,
   ImageUploadResponse,
@@ -1209,6 +1214,37 @@ export async function readyKakaoPay(orderId: string): Promise<KakaoPayReadyRespo
   return apiRequest<KakaoPayReadyResponse>("/api/payments/kakaopay/ready", {
     method: "POST",
     body: JSON.stringify({ orderId }),
+  });
+}
+
+// ------------------------------------------------------------------
+// [6-4] 네이버페이 주문형 (NaverPay Order Type)
+// ------------------------------------------------------------------
+
+// 네이버페이 주문형 SDK 설정 조회
+export async function getNaverPayOrderSdkConfig(): Promise<NaverPayOrderSdkConfigResponse> {
+  return apiRequest<NaverPayOrderSdkConfigResponse>(
+    "/api/naverpay-order/sdk-config"
+  );
+}
+
+// 네이버페이 주문형 주문 등록
+export async function registerNaverPayOrder(
+  data: NaverPayOrderRegisterRequest
+): Promise<NaverPayOrderRegisterResponse> {
+  return apiRequest<NaverPayOrderRegisterResponse>("/api/naverpay-order/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// 네이버페이 주문형 위시리스트 등록
+export async function addNaverPayWishlist(
+  data: NaverPayWishlistRequest
+): Promise<NaverPayWishlistResponse> {
+  return apiRequest<NaverPayWishlistResponse>("/api/naverpay-order/wishlist", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 

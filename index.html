@@ -110,9 +110,22 @@
     <!--
       Performance 최적화: 결제 SDK는 결제 페이지에서 동적 로드
       - 토스페이먼츠 SDK: Order.vue에서 로드
-      - 네이버페이 SDK: Order.vue에서 로드
+      - 네이버페이 주문형 SDK: 아래에서 직접 로드 (document.write 사용으로 index.html에서 로드 필요)
       - FCP/LCP 2-3초 개선 예상
     -->
+
+    <!-- 네이버페이 주문형 SDK (document.write 사용으로 페이지 로드 시점에 포함 필요) -->
+    <!-- TODO: 프로덕션 배포 시 test-pay.naver.com → pay.naver.com 으로 변경 -->
+    <script>
+      (function() {
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var baseUrl = 'https://test-pay.naver.com/customer/js/';
+        var scriptUrl = isMobile
+          ? baseUrl + 'mobile/naverPayButton.js'
+          : baseUrl + 'naverPayButton.js';
+        document.write('<script src="' + scriptUrl + '"><\/script>');
+      })();
+    </script>
   </head>
 
   <body>
