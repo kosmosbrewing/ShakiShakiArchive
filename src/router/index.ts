@@ -25,6 +25,7 @@ import {
   OrderDetail,
   Checkout,
   PaymentCallback,
+  NaverPayBack,
 } from "@/pages/order";
 
 // Cart (장바구니)
@@ -143,6 +144,12 @@ const routes = [
     name: "CheckoutSuccess",
     component: PaymentCallback,
     meta: { title: "결제 완료" },
+  },
+  {
+    path: "/naverpay/back",
+    name: "NaverPayBack",
+    component: NaverPayBack,
+    meta: { title: "네이버페이" },
   },
 
   // 위시리스트

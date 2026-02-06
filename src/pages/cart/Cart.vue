@@ -405,9 +405,9 @@ watch(
             <CardTitle class="text-heading">바로 구매</CardTitle>
           </CardHeader>
           <CardContent class="flex flex-col gap-2 pt-2">
-            <!-- 네이버페이 SDK 버튼 (관리자 전용 테스트) -->
+            <!-- 네이버페이 SDK 버튼 (관리자 + 검수 테스트 계정) -->
             <div
-              v-if="naverPay.isEnabled.value && authStore.isAdmin"
+              v-if="naverPay.isEnabled.value && (authStore.isAdmin || authStore.user?.email === 'test@shakishakiarchive.com')"
               id="naverpay-cart-button-container"
               class="flex items-center justify-center min-h-[100px]"
             ></div>

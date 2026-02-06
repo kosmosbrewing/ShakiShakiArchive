@@ -812,9 +812,9 @@ onMounted(async () => {
                 v-if="showPaymentButtons"
                 class="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in"
               >
-                <!-- 네이버페이 SDK 버튼 (관리자 전용 테스트) -->
+                <!-- 네이버페이 SDK 버튼 (관리자 + 검수 테스트 계정) -->
                 <div
-                  v-if="naverPay.isEnabled.value && authStore.isAdmin"
+                  v-if="naverPay.isEnabled.value && (authStore.isAdmin || authStore.user?.email === 'test@shakishakiarchive.com')"
                   id="naverpay-button-container"
                   class="flex items-center justify-center pt-3 min-h-[100px]"
                 ></div>
