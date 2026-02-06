@@ -773,7 +773,7 @@ onMounted(async () => {
                       variant="outline"
                       size="sm"
                       @click="openPreviewModal(product)"
-                      class="gap-1.5 bg-blue-50 border-blue-200 text-blue-700 hover:bg-primary/80 hover:text-blue-800 text-xs"
+                      class="gap-1.5 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 text-xs"
                     >
                       <Eye class="w-3.5 h-3.5" /> 미리보기
                     </Button>
