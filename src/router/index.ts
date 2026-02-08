@@ -23,7 +23,6 @@ import {
   Order,
   OrderList,
   OrderDetail,
-  Checkout,
   PaymentCallback,
   NaverPayBack,
 } from "@/pages/order";
@@ -126,7 +125,6 @@ const routes = [
     component: OrderDetail,
     meta: { requiresAuth: true, title: "주문 상세" },
   },
-  { path: "/checkout", name: "Checkout", component: Checkout, meta: { requiresAuth: true, title: "결제하기" } },
   {
     path: "/payment/callback",
     name: "PaymentCallback",

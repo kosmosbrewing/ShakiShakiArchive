@@ -3,7 +3,7 @@
 // 상품 목록 페이지 컴포넌트 (무한 스크롤 지원)
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, type Directive } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { Heart, Search, X } from "lucide-vue-next";
@@ -228,6 +228,59 @@ watch(isLoadingMore, (newValue) => {
   }
 });
 
+// --- 뷰포트 진입 시 순차 등장 애니메이션 (IntersectionObserver 기반) ---
+let cardObserver: IntersectionObserver | null = null;
+let revealQueue: HTMLElement[] = [];
+let revealBatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 같은 시점에 뷰포트에 진입한 카드를 배치로 묶어 순차 등장
+const processRevealBatch = () => {
+  const batch = [...revealQueue];
+  revealQueue = [];
+  revealBatchTimer = null;
+
+  batch.forEach((el, i) => {
+    setTimeout(() => {
+      el.classList.add('revealed');
+    }, i * 70); // 카드 간 70ms 간격으로 순차 등장
+  });
+};
+
+const getCardObserver = (): IntersectionObserver => {
+  if (!cardObserver) {
+    cardObserver = new IntersectionObserver(
+      (entries) => {
+        let hasNew = false;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            revealQueue.push(entry.target as HTMLElement);
+            cardObserver!.unobserve(entry.target);
+            hasNew = true;
+          }
+        }
+        if (hasNew) {
+          if (revealBatchTimer) clearTimeout(revealBatchTimer);
+          // 같은 프레임에서 여러 카드가 뷰포트 진입 → 30ms 내 배치 처리
+          revealBatchTimer = setTimeout(processRevealBatch, 30);
+        }
+      },
+      { threshold: 0.05, rootMargin: '50px' }
+    );
+  }
+  return cardObserver;
+};
+
+// Vue 3 로컬 디렉티브: 'v' 접두어로 자동 등록 → 템플릿에서 v-reveal 사용
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const vReveal: Directive<HTMLElement> = {
+  mounted(el) {
+    getCardObserver().observe(el);
+  },
+  unmounted(el) {
+    cardObserver?.unobserve(el);
+  },
+};
+
 onMounted(async () => {
   if (hasCategory.value) {
     // 카테고리 페이지: 기존 composable 사용 (무한 스크롤)
@@ -249,6 +302,18 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupObserver();
+
+  // reveal 애니메이션 정리
+  if (cardObserver) {
+    cardObserver.disconnect();
+    cardObserver = null;
+  }
+  revealQueue = [];
+  if (revealBatchTimer) {
+    clearTimeout(revealBatchTimer);
+    revealBatchTimer = null;
+  }
+
   // 타이머 정리
   if (loadingDelayTimer) {
     clearTimeout(loadingDelayTimer);
@@ -314,11 +379,11 @@ onUnmounted(() => {
       <Card
         v-else
         v-for="(
-          { id, imageUrl, images, name, price, totalStock }, idx
+          { id, imageUrl, images, name, price, totalStock }
         ) in displayProducts"
         :key="id"
-        class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative mt-3"
-        :style="{ animationDelay: `${idx * 0.05}s` }"
+        v-reveal
+        class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md relative mt-3"
       >
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
           <div
@@ -418,16 +483,25 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 초기 상태: 숨김 (IntersectionObserver가 .revealed 추가 시 등장) */
 .product-card {
-  animation: slideUp 0.3s ease-out both;
+  opacity: 0;
+  transform: translateY(32px) scale(0.96);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.15s ease;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(10px);
-  }
-  to {
-    transform: translateY(0);
+.product-card.revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 </style>

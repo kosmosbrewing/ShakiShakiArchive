@@ -466,7 +466,7 @@ export async function fetchProducts(
     limit?: number;
   } = {}
 ): Promise<PaginatedProductsResponse> {
-  const { category, search, page = 1, limit = 12 } = options;
+  const { category, search, page = 1, limit = 40 } = options;
   const params = new URLSearchParams();
 
   if (category) params.append("category", category);
@@ -474,48 +474,36 @@ export async function fetchProducts(
   params.append("page", page.toString());
   params.append("limit", limit.toString());
 
-  try {
-    const response = await apiRequest<PaginatedProductsResponse | Product[]>(
-      `/api/products?${params.toString()}`,
-      { cachePolicy: 'productList' }
+  const response = await apiRequest<PaginatedProductsResponse | Product[]>(
+    `/api/products?${params.toString()}`,
+    { cachePolicy: 'productList' }
+  );
+
+  // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
+  if (Array.isArray(response)) {
+    console.warn(
+      '[api] GET /api/products 가 페이지네이션 없이 배열을 반환했습니다. ' +
+      '백엔드에서 PaginatedProductsResponse 형식으로 반환하도록 수정해 주세요.'
     );
+    const products = response;
+    const total = products.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedProducts = products.slice(start, end);
 
-    // 백엔드가 배열만 반환하는 경우 (기존 API 호환)
-    if (Array.isArray(response)) {
-      const products = response;
-      const total = products.length;
-      const start = (page - 1) * limit;
-      const end = start + limit;
-      const paginatedProducts = products.slice(start, end);
-
-      return {
-        products: paginatedProducts,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-          hasMore: end < total,
-        },
-      };
-    }
-
-    return response;
-  } catch (e) {
-    throw e;
+    return {
+      products: paginatedProducts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: end < total,
+      },
+    };
   }
-}
 
-// 전체 상품 조회 (기존 호환용)
-export async function fetchAllProducts(
-  category?: string,
-  search?: string
-): Promise<Product[]> {
-  const params = new URLSearchParams();
-  if (category) params.append("category", category);
-  if (search) params.append("search", search);
-
-  return apiRequest<Product[]>(`/api/products?${params.toString()}`, { cachePolicy: 'productList' });
+  return response;
 }
 
 // 상품 상세 조회
@@ -919,8 +907,34 @@ export async function deleteDeliveryAddress(
 // ------------------------------------------------------------------
 
 // --- 상품 관리 ---
-export async function fetchAdminProducts(): Promise<Product[]> {
-  return apiRequest<Product[]>("/api/admin/products");
+export async function fetchAdminProducts(
+  options?: { page?: number; limit?: number }
+): Promise<PaginatedProductsResponse> {
+  const { page = 1, limit = 200 } = options || {};
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  const response = await apiRequest<PaginatedProductsResponse | Product[]>(
+    `/api/admin/products?${params.toString()}`
+  );
+
+  // 하위 호환: 백엔드가 배열만 반환하는 경우
+  if (Array.isArray(response)) {
+    return {
+      products: response,
+      pagination: {
+        page,
+        limit,
+        total: response.length,
+        totalPages: Math.ceil(response.length / limit),
+        hasMore: false,
+      },
+    };
+  }
+
+  return response;
 }
 
 export async function createProduct(data: Partial<Product>): Promise<Product> {
@@ -1043,8 +1057,34 @@ export async function deleteCategory(id: string | number): Promise<void> {
 }
 
 // --- 주문 관리 ---
-export async function fetchAdminOrders(): Promise<Order[]> {
-  return apiRequest<Order[]>("/api/admin/orders");
+export async function fetchAdminOrders(
+  options?: { page?: number; limit?: number }
+): Promise<PaginatedOrdersResponse> {
+  const { page = 1, limit = 200 } = options || {};
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  const response = await apiRequest<PaginatedOrdersResponse | Order[]>(
+    `/api/admin/orders?${params.toString()}`
+  );
+
+  // 하위 호환: 백엔드가 배열만 반환하는 경우
+  if (Array.isArray(response)) {
+    return {
+      orders: response,
+      pagination: {
+        page,
+        limit,
+        total: response.length,
+        totalPages: Math.ceil(response.length / limit),
+        hasMore: false,
+      },
+    };
+  }
+
+  return response;
 }
 
 export async function updateAdminOrderStatus(

@@ -157,10 +157,10 @@ const loadData = async () => {
   loading.value = true;
   currentPage.value = 1; // 데이터 로드 시 페이지 초기화
   try {
-    const fetchedOrders = await fetchAdminOrders();
-    orders.value = fetchedOrders;
+    const response = await fetchAdminOrders();
+    orders.value = response.orders;
     // 원본 데이터를 깊은 복사로 저장 (변경 감지용)
-    originalOrders.value = JSON.parse(JSON.stringify(fetchedOrders));
+    originalOrders.value = JSON.parse(JSON.stringify(response.orders));
   } catch (error) {
     console.error(error);
   } finally {

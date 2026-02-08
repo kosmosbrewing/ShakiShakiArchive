@@ -198,32 +198,13 @@ const changePage = (page: number) => {
 const loadData = async () => {
   try {
     isLoading.value = true;
-    const [productsData, categoriesData] = await Promise.all([
+    const [productsResponse, categoriesData] = await Promise.all([
       fetchAdminProducts(),
       fetchCategories(),
     ]);
 
-    // 각 상품의 totalStock 계산 (백엔드에서 제공하지 않는 경우)
-    const productsWithStock = await Promise.all(
-      productsData.map(async (product: any) => {
-        if (product.totalStock === undefined || product.totalStock === null) {
-          try {
-            const productVariants = await fetchAdminProductVariants(product.id);
-            const totalStock = productVariants.reduce(
-              (sum: number, variant: any) => sum + (variant.stockQuantity || 0),
-              0,
-            );
-            return { ...product, totalStock };
-          } catch (error) {
-            console.error(`재고 로드 실패 (상품 ID: ${product.id}):`, error);
-            return { ...product, totalStock: 0 };
-          }
-        }
-        return product;
-      }),
-    );
-
-    products.value = productsWithStock;
+    // 백엔드에서 totalStock을 포함하여 반환하므로 N+1 variant 호출 불필요
+    products.value = productsResponse.products;
     categories.value = categoriesData;
   } catch (error) {
     console.error(error);
