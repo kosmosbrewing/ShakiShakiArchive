@@ -2,8 +2,8 @@
 // src/components/admin/ImageUploader.vue
 // 관리자용 이미지 업로드 컴포넌트
 
-import { ref, computed } from "vue";
-import { Upload, X, Image as ImageIcon } from "lucide-vue-next";
+import { ref, computed, watch } from "vue";
+import { Upload, X, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { LoadingSpinner } from "@/components/common";
 import {
   uploadProductImage,
@@ -113,6 +113,24 @@ const handleFileSelect = async (event: Event) => {
   }
 };
 
+// 다중 이미지 캐러셀 인덱스
+const carouselIndex = ref(0);
+
+// 이미지 목록 변경 시 인덱스 보정
+watch(currentImages, (imgs) => {
+  if (carouselIndex.value >= imgs.length) {
+    carouselIndex.value = Math.max(0, imgs.length - 1);
+  }
+});
+
+const prevImage = () => {
+  if (carouselIndex.value > 0) carouselIndex.value--;
+};
+
+const nextImage = () => {
+  if (carouselIndex.value < currentImages.value.length - 1) carouselIndex.value++;
+};
+
 // 이미지 제거 (URL만 제거, 실제 삭제는 하지 않음)
 const removeImage = (index: number) => {
   if (props.type === "single") {
@@ -171,21 +189,97 @@ const removeImage = (index: number) => {
       {{ errorMessage }}
     </p>
 
-    <!-- 이미지 미리보기 -->
+    <!-- 이미지 미리보기: 단일 -->
     <div
-      v-if="currentImages.length > 0"
-      class="grid gap-3"
-      :class="
-        type === 'single'
-          ? 'grid-cols-1'
-          : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
-      "
+      v-if="currentImages.length > 0 && type === 'single'"
+      class="grid grid-cols-1 gap-3"
+    >
+      <div
+        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 w-40 h-40"
+      >
+        <img
+          :src="currentImages[0]"
+          alt="대표 이미지"
+          class="w-full h-full object-cover"
+          crossorigin="anonymous"
+        />
+        <div
+          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+        >
+          <button
+            type="button"
+            @click="removeImage(0)"
+            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            title="제거"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이미지 미리보기: 다중 (캐러셀) -->
+    <div
+      v-else-if="currentImages.length > 0 && type === 'multiple'"
+      class="space-y-2"
+    >
+      <div
+        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 w-40 h-40"
+      >
+        <img
+          :src="currentImages[carouselIndex]"
+          :alt="`이미지 ${carouselIndex + 1}`"
+          class="w-full h-full object-cover"
+          crossorigin="anonymous"
+        />
+        <!-- 삭제 버튼 -->
+        <div
+          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+        >
+          <button
+            type="button"
+            @click="removeImage(carouselIndex)"
+            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            title="제거"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <!-- 좌우 네비게이션 (2장 이상일 때) -->
+        <template v-if="currentImages.length > 1">
+          <button
+            v-if="carouselIndex > 0"
+            type="button"
+            @click="prevImage"
+            class="absolute left-1 top-1/2 -translate-y-1/2 p-1 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors"
+          >
+            <ChevronLeft class="w-4 h-4" />
+          </button>
+          <button
+            v-if="carouselIndex < currentImages.length - 1"
+            type="button"
+            @click="nextImage"
+            class="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors"
+          >
+            <ChevronRight class="w-4 h-4" />
+          </button>
+        </template>
+      </div>
+      <!-- 페이지 인디케이터 -->
+      <p v-if="currentImages.length > 1" class="text-caption text-admin-muted">
+        {{ carouselIndex + 1 }} / {{ currentImages.length }}
+      </p>
+    </div>
+
+    <!-- 이미지 미리보기: 상세 이미지 (그리드 유지) -->
+    <div
+      v-else-if="currentImages.length > 0 && type === 'details'"
+      class="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
     >
       <div
         v-for="(url, index) in currentImages"
         :key="url"
-        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30"
-        :class="type === 'single' ? 'w-40 h-40' : 'aspect-square'"
+        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 aspect-square"
       >
         <img
           :src="url"
