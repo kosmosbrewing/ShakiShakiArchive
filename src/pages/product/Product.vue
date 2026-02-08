@@ -232,6 +232,7 @@ watch(isLoadingMore, (newValue) => {
 let cardObserver: IntersectionObserver | null = null;
 let revealQueue: HTMLElement[] = [];
 let revealBatchTimer: ReturnType<typeof setTimeout> | null = null;
+let initialRenderDone = false; // 초기 로드 완료 플래그
 
 // 같은 시점에 뷰포트에 진입한 카드를 배치로 묶어 순차 등장
 const processRevealBatch = () => {
@@ -239,10 +240,20 @@ const processRevealBatch = () => {
   revealQueue = [];
   revealBatchTimer = null;
 
+  if (!initialRenderDone) {
+    // 초기 렌더: 이미 뷰포트에 있는 카드는 애니메이션 없이 즉시 표시
+    batch.forEach((el) => {
+      el.classList.add('no-animate', 'revealed');
+    });
+    initialRenderDone = true;
+    return;
+  }
+
+  // 스크롤 등장: 순차 애니메이션
   batch.forEach((el, i) => {
     setTimeout(() => {
       el.classList.add('revealed');
-    }, i * 70); // 카드 간 70ms 간격으로 순차 등장
+    }, i * 70);
   });
 };
 
@@ -495,6 +506,11 @@ onUnmounted(() => {
 .product-card.revealed {
   opacity: 1;
   transform: translateY(0) scale(1);
+}
+
+/* 초기 뷰포트 내 카드: 트랜지션 없이 즉시 표시 (hover shadow는 유지) */
+.product-card.no-animate {
+  transition: box-shadow 0.15s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

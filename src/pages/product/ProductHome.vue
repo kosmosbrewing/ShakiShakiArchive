@@ -94,11 +94,10 @@ onMounted(async () => {
     <Card
       v-else
       v-for="(
-        { id, imageUrl, images, name, price, totalStock }, idx
+        { id, imageUrl, images, name, price, totalStock }
       ) in productList"
       :key="id"
-      class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
-      :style="{ animationDelay: `${idx * 0.1}s` }"
+      class="bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
     >
       <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
         <div
@@ -174,26 +173,3 @@ onMounted(async () => {
   </div>
 </template>
 
-<style scoped>
-.product-card {
-  animation: cardReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes cardReveal {
-  from {
-    opacity: 0;
-    transform: translateY(32px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .product-card {
-    animation: none;
-    opacity: 1;
-  }
-}
-</style>
