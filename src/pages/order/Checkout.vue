@@ -1,67 +1,28 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { fetchAllProducts } from "@/lib/api";
 
-import axios from "axios";
-
-// 1. 사용자가 요청한 최종 데이터 형태 (Target Interface)
+// 상품 표시용 타입
 interface productProps {
   imageUrl: string;
   name: string;
   price: string[];
 }
 
-interface ProductApiResponse {
-  id: number;
-  imageUrl: string;
-  categoryId: string;
-  name: string;
-  price: number;
-}
-
-const CATEGORY_MAP: Record<string, string> = {
-  outerwear: "7e747dbf-e9f8-49a8-a502-8a899cace813",
-  topwear: "b0040b04-9112-42ec-9ddd-4ee8c14f6151",
-  bottomwear: "2d210390-36aa-4796-af92-8d88987021f3",
-  accessories: "03eaedae-c230-42ff-a79e-2a2b67bd438d",
-};
-
-const route = useRoute(); // URL 정보를 가져오는 훅
 const productList = ref<productProps[]>([]);
 const loading = ref(false);
 
 const fetchProductData = async () => {
   loading.value = true;
 
-  // URL에서 현재 카테고리 값을 가져옴 (예: 'all', 'outerwear')
-  // URL 파라미터 안전하게 가져오기
-  const categoryParam = Array.isArray(route.params.category)
-    ? route.params.category[0]
-    : route.params.category;
-
-  const currentCategory = categoryParam
-    ? categoryParam.trim().toLowerCase()
-    : "all";
-
   try {
-    const response = await axios.get<ProductApiResponse[]>("/api/products");
-    let rawData = response.data;
+    const rawData = await fetchAllProducts();
 
-    if (currentCategory !== "all") {
-      const targetUUID = CATEGORY_MAP[currentCategory];
-
-      rawData = rawData.filter(
-        // categoryId와 currentCategory를 비교하는 부분에 사용됨
-        (item) => item.categoryId === targetUUID
-      );
-    }
-
-    // 데이터 변환 후 teamList에 할당
+    // 데이터 변환 후 productList에 할당
     productList.value = rawData.map((item) => ({
       imageUrl: item.imageUrl,
       name: item.name,
-
       price: [
         `${Number(item.price).toLocaleString("ko-KR", {
           maximumFractionDigits: 0,

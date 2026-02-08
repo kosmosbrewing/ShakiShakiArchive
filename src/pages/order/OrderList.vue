@@ -506,7 +506,7 @@ onUnmounted(() => {
                         v-if="canTrack(item.status)"
                         variant="outline"
                         size="sm"
-                        class="text-caption px-2.5 py-1"
+                        class="text-caption px-2.5 min-h-[36px]"
                         @click="handleTrackShipment(item)"
                       >
                         배송조회
@@ -515,7 +515,7 @@ onUnmounted(() => {
                         v-if="canConfirm(item.status)"
                         variant="outline"
                         size="sm"
-                        class="text-caption px-2.5 py-1"
+                        class="text-caption px-2.5 min-h-[36px]"
                         :disabled="confirmingItems.has(String(item.id))"
                         @click="handleConfirmPurchase(order.id, item.id)"
                       >

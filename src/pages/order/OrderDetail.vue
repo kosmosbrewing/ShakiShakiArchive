@@ -360,7 +360,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                           v-if="canCancel(item.status)"
                           variant="outline"
                           size="sm"
-                          class="text-caption px-2.5 py-1"
+                          class="text-caption px-2.5 min-h-[36px]"
                           @click="openCancelDialog(item)"
                         >
                           주문취소
@@ -370,7 +370,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                           v-if="canTrack(item.status)"
                           variant="outline"
                           size="sm"
-                          class="text-caption px-2.5 py-1"
+                          class="text-caption px-2.5 min-h-[36px]"
                           @click="handleTrackShipment(item)"
                         >
                           배송조회
@@ -380,7 +380,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                           v-if="canReturn(item.status)"
                           variant="outline"
                           size="sm"
-                          class="text-caption px-2.5 py-1"
+                          class="text-caption px-2.5 min-h-[36px]"
                           @click="openReturnModal(item)"
                         >
                           반품요청

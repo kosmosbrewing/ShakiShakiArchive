@@ -132,6 +132,7 @@ const handleCartClick = () => {
 };
 
 const handleFAQClick = () => {
+  closingByPopState.value = true;
   isOpen.value = false;
   router.push("/faq");
 };

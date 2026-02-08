@@ -1,6 +1,14 @@
 import type {
   User,
+  Product,
+  ProductVariant,
+  CartItem,
+  WishlistItem,
+  DeliveryAddress,
+  Category,
+  SizeMeasurement,
   Order,
+  OrderItem,
   CreateOrderRequest,
   CreateOrderResponse,
   ConfirmPaymentRequest,
@@ -14,9 +22,7 @@ import type {
   EmailVerificationType,
   AddressSearchResponse,
   KeywordSearchResponse,
-  NaverPayReserveResponse,
   NaverPayStatusResponse,
-  NaverPayClientInfoResponse,
   NaverPaySdkConfigResponse,
   NaverPayCancelRequest,
   NaverPayCancelResponse,
@@ -203,13 +209,8 @@ async function apiRequest<T>(
     // 백엔드 에러 응답 형식 지원: error.error (Rate-limit 등) 또는 error.message (일반)
     const errorMessage = error.error || error.message || `HTTP ${response.status}`;
 
-    // 401 Unauthorized는 로그인 안한 상태에서 정상 동작
-    // Lighthouse Best Practices: 콘솔 에러 방지를 위해 ApiError 사용
-    if (response.status === 401) {
-      throw new ApiError(errorMessage, response.status, error);
-    }
-
-    throw new Error(errorMessage);
+    // 모든 HTTP 에러에 ApiError 사용 (status, data 포함)
+    throw new ApiError(errorMessage, response.status, error);
   }
 
   // 204 No Content 처리 (삭제 요청 등)
@@ -250,7 +251,15 @@ export async function login(data: {
 }
 
 // 회원가입
-export async function signup(data: any): Promise<User> {
+export async function signup(data: {
+  email: string;
+  password: string;
+  userName: string;
+  phone?: string;
+  zipCode?: string;
+  address?: string;
+  detailAddress?: string;
+}): Promise<User> {
   return apiRequest<User>("/api/auth/signup", {
     method: "POST",
     body: JSON.stringify(data),
@@ -314,9 +323,9 @@ export async function updateMyInfo(data: {
   address?: string;
   detailAddress?: string;
   emailOptIn?: boolean;
-}): Promise<any> {
-  return apiRequest("/api/auth/user", {
-    method: "PUT", // 백엔드 명세에 맞게 PUT으로 변경
+}): Promise<User> {
+  return apiRequest<User>("/api/auth/user", {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 }
@@ -325,8 +334,8 @@ export async function updateMyInfo(data: {
 export async function changeMyPassword(data: {
   currentPassword: string;
   newPassword: string;
-}): Promise<any> {
-  return apiRequest("/api/auth/password", {
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/api/auth/password", {
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -336,8 +345,8 @@ export async function changeMyPassword(data: {
 export async function resetPassword(data: {
   email: string;
   newPassword: string;
-}): Promise<any> {
-  return apiRequest("/api/auth/reset-password", {
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/api/auth/reset-password", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -438,7 +447,7 @@ export async function searchKeyword(
 
 // 상품 목록 페이지네이션 응답 타입
 export interface PaginatedProductsResponse {
-  products: any[];
+  products: Product[];
   pagination: {
     page: number;
     limit: number;
@@ -466,7 +475,7 @@ export async function fetchProducts(
   params.append("limit", limit.toString());
 
   try {
-    const response = await apiRequest<PaginatedProductsResponse | any[]>(
+    const response = await apiRequest<PaginatedProductsResponse | Product[]>(
       `/api/products?${params.toString()}`,
       { cachePolicy: 'productList' }
     );
@@ -501,29 +510,29 @@ export async function fetchProducts(
 export async function fetchAllProducts(
   category?: string,
   search?: string
-): Promise<any[]> {
+): Promise<Product[]> {
   const params = new URLSearchParams();
   if (category) params.append("category", category);
   if (search) params.append("search", search);
 
-  return apiRequest(`/api/products?${params.toString()}`, { cachePolicy: 'productList' });
+  return apiRequest<Product[]>(`/api/products?${params.toString()}`, { cachePolicy: 'productList' });
 }
 
 // 상품 상세 조회
-export async function fetchProduct(id: string | number): Promise<any> {
-  return apiRequest(`/api/products/${id}`, { cachePolicy: 'productDetail' });
+export async function fetchProduct(id: string | number): Promise<Product> {
+  return apiRequest<Product>(`/api/products/${id}`, { cachePolicy: 'productDetail' });
 }
 
 // 상품 옵션(Variants) 조회
 export async function fetchProductVariants(
   productId: string | number
-): Promise<any[]> {
-  return apiRequest(`/api/products/${productId}/variants`, { cachePolicy: 'productDetail' });
+): Promise<ProductVariant[]> {
+  return apiRequest<ProductVariant[]>(`/api/products/${productId}/variants`, { cachePolicy: 'productDetail' });
 }
 
 // 카테고리 목록 조회
-export async function fetchCategories(): Promise<any[]> {
-  return apiRequest("/api/categories", { cachePolicy: 'categories' });
+export async function fetchCategories(): Promise<Category[]> {
+  return apiRequest<Category[]>("/api/categories", { cachePolicy: 'categories' });
 }
 
 // ------------------------------------------------------------------
@@ -531,16 +540,16 @@ export async function fetchCategories(): Promise<any[]> {
 // ------------------------------------------------------------------
 
 // --- 장바구니 (Cart) ---
-export async function fetchCart(): Promise<any[]> {
-  return apiRequest("/api/cart", { cachePolicy: 'noCache' });
+export async function fetchCart(): Promise<CartItem[]> {
+  return apiRequest<CartItem[]>("/api/cart", { cachePolicy: 'noCache' });
 }
 
 export async function addToCart(data: {
   productId: string | number;
   variantId?: string | number;
   quantity: number;
-}): Promise<any> {
-  return apiRequest("/api/cart", {
+}): Promise<CartItem> {
+  return apiRequest<CartItem>("/api/cart", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -549,8 +558,8 @@ export async function addToCart(data: {
 export async function updateCartItem(
   itemId: string | number,
   quantity: number
-): Promise<any> {
-  return apiRequest(`/api/cart/${itemId}`, {
+): Promise<CartItem> {
+  return apiRequest<CartItem>(`/api/cart/${itemId}`, {
     method: "PATCH",
     body: JSON.stringify({ quantity }),
   });
@@ -563,11 +572,11 @@ export async function deleteCartItem(itemId: string | number): Promise<void> {
 }
 
 // --- [신규] 위시리스트 (Wishlist) ---
-export async function fetchWishlist(): Promise<any[]> {
-  return apiRequest("/api/wishlist");
+export async function fetchWishlist(): Promise<WishlistItem[]> {
+  return apiRequest<WishlistItem[]>("/api/wishlist");
 }
 
-export async function addToWishlist(productId: string): Promise<any> {
+export async function addToWishlist(productId: string): Promise<WishlistItem> {
   return apiRequest("/api/wishlist", {
     method: "POST",
     body: JSON.stringify({ productId }),
@@ -848,7 +857,7 @@ export function cleanupOrder(orderId: number | string): boolean {
 }
 
 // --- 배송지 (Address Book) ---
-export async function fetchDeliveryAddresses(options?: { noHttpCache?: boolean }): Promise<any[]> {
+export async function fetchDeliveryAddresses(options?: { noHttpCache?: boolean }): Promise<DeliveryAddress[]> {
   const fetchOptions: RequestInit & { cachePolicy?: 'noCache' } = { cachePolicy: 'noCache' };
 
   // 브라우저 HTTP 캐시 무시 옵션 (배송지 관리 페이지용)
@@ -856,7 +865,7 @@ export async function fetchDeliveryAddresses(options?: { noHttpCache?: boolean }
     fetchOptions.cache = 'no-store';
   }
 
-  const response = await apiRequest<{ addresses: any[] } | any[]>(
+  const response = await apiRequest<{ addresses: DeliveryAddress[] } | DeliveryAddress[]>(
     "/api/user/addresses",
     fetchOptions
   );
@@ -871,8 +880,8 @@ export async function createDeliveryAddress(data: {
   detailAddress?: string;
   requestNote?: string;
   isDefault: boolean;
-}): Promise<any> {
-  return apiRequest("/api/user/addresses", {
+}): Promise<DeliveryAddress> {
+  return apiRequest<DeliveryAddress>("/api/user/addresses", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -890,8 +899,8 @@ export async function updateDeliveryAddress(
     requestNote?: string;
     isDefault?: boolean;
   }
-): Promise<any> {
-  return apiRequest(`/api/user/addresses/${addressId}`, {
+): Promise<DeliveryAddress> {
+  return apiRequest<DeliveryAddress>(`/api/user/addresses/${addressId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -910,12 +919,12 @@ export async function deleteDeliveryAddress(
 // ------------------------------------------------------------------
 
 // --- 상품 관리 ---
-export async function fetchAdminProducts(): Promise<any[]> {
-  return apiRequest("/api/admin/products");
+export async function fetchAdminProducts(): Promise<Product[]> {
+  return apiRequest<Product[]>("/api/admin/products");
 }
 
-export async function createProduct(data: any): Promise<any> {
-  return apiRequest("/api/admin/products", {
+export async function createProduct(data: Partial<Product>): Promise<Product> {
+  return apiRequest<Product>("/api/admin/products", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -923,8 +932,8 @@ export async function createProduct(data: any): Promise<any> {
 
 export async function updateProduct(
   id: string | number,
-  data: any
-): Promise<any> {
+  data: Partial<Product>
+): Promise<Product> {
   return apiRequest(`/api/admin/products/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -940,14 +949,14 @@ export async function deleteProduct(id: string | number): Promise<void> {
 // --- 옵션(Variant) 관리 ---
 export async function fetchAdminProductVariants(
   productId: string | number
-): Promise<any[]> {
-  return apiRequest(`/api/admin/products/${productId}/variants`);
+): Promise<ProductVariant[]> {
+  return apiRequest<ProductVariant[]>(`/api/admin/products/${productId}/variants`);
 }
 
 export async function createProductVariant(
   productId: string | number,
-  data: any
-): Promise<any> {
+  data: Partial<ProductVariant>
+): Promise<ProductVariant> {
   return apiRequest(`/api/admin/products/${productId}/variants`, {
     method: "POST",
     body: JSON.stringify(data),
@@ -957,9 +966,9 @@ export async function createProductVariant(
 export async function updateProductVariant(
   productId: string | number,
   variantId: string | number,
-  data: any
-): Promise<any> {
-  return apiRequest(`/api/admin/products/${productId}/variants/${variantId}`, {
+  data: Partial<ProductVariant>
+): Promise<ProductVariant> {
+  return apiRequest<ProductVariant>(`/api/admin/products/${productId}/variants/${variantId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -977,14 +986,14 @@ export async function deleteProductVariant(
 // --- 사이즈 측정 정보 조회 (공개 API) ---
 export async function fetchSizeMeasurements(
   variantId: number | string
-): Promise<any[]> {
-  return apiRequest(`/api/variants/${variantId}/measurements`, { cachePolicy: 'productDetail' });
+): Promise<SizeMeasurement[]> {
+  return apiRequest<SizeMeasurement[]>(`/api/variants/${variantId}/measurements`, { cachePolicy: 'productDetail' });
 }
 
 export async function createSizeMeasurement(
   variantId: number | string,
-  data: any
-): Promise<any> {
+  data: Partial<SizeMeasurement>
+): Promise<SizeMeasurement> {
   return apiRequest(`/api/admin/variants/${variantId}/measurements`, {
     method: "POST",
     body: JSON.stringify(data),
@@ -993,8 +1002,8 @@ export async function createSizeMeasurement(
 
 export async function updateSizeMeasurement(
   measurementId: number | string,
-  data: any
-): Promise<any> {
+  data: Partial<SizeMeasurement>
+): Promise<SizeMeasurement> {
   return apiRequest(`/api/admin/measurements/${measurementId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -1010,7 +1019,7 @@ export async function deleteSizeMeasurement(
 }
 
 // --- 카테고리 관리 ---
-export async function createCategory(data: any): Promise<any> {
+export async function createCategory(data: Partial<Category>): Promise<Category> {
   return apiRequest("/api/admin/categories", {
     method: "POST",
     body: JSON.stringify(data),
@@ -1019,9 +1028,9 @@ export async function createCategory(data: any): Promise<any> {
 
 export async function updateCategory(
   id: string | number,
-  data: any
-): Promise<any> {
-  return apiRequest(`/api/admin/categories/${id}`, {
+  data: Partial<Category>
+): Promise<Category> {
+  return apiRequest<Category>(`/api/admin/categories/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -1034,16 +1043,16 @@ export async function deleteCategory(id: string | number): Promise<void> {
 }
 
 // --- 주문 관리 ---
-export async function fetchAdminOrders(): Promise<any[]> {
-  return apiRequest("/api/admin/orders");
+export async function fetchAdminOrders(): Promise<Order[]> {
+  return apiRequest<Order[]>("/api/admin/orders");
 }
 
 export async function updateAdminOrderStatus(
   orderId: string | number,
   status: string,
   trackingNumber?: string
-): Promise<any> {
-  return apiRequest(`/api/admin/orders/${orderId}`, {
+): Promise<Order> {
+  return apiRequest<Order>(`/api/admin/orders/${orderId}`, {
     method: "PATCH",
     body: JSON.stringify({ status, trackingNumber }),
   });
@@ -1054,8 +1063,8 @@ export async function updateAdminOrderItem(
   status: string,
   trackingNumber?: string,
   courierCompany?: string
-): Promise<any> {
-  const body: any = { status };
+): Promise<OrderItem> {
+  const body: Record<string, string> = { status };
 
   if (trackingNumber !== undefined) {
     body.trackingNumber = trackingNumber;
@@ -1065,7 +1074,7 @@ export async function updateAdminOrderItem(
     body.courierCompany = courierCompany;
   }
 
-  return apiRequest(`/api/admin/order-items/${itemId}`, {
+  return apiRequest<OrderItem>(`/api/admin/order-items/${itemId}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
@@ -1151,30 +1160,11 @@ export async function getPaymentStatus(
 // [6-2] 네이버페이 (NaverPay)
 // ------------------------------------------------------------------
 
-// 네이버페이 클라이언트 정보 조회 (기존 - 하위 호환용)
-/** @deprecated getNaverPaySdkConfig()를 사용하세요 */
-export async function getNaverPayClientInfo(): Promise<NaverPayClientInfoResponse> {
-  return apiRequest<NaverPayClientInfoResponse>(
-    "/api/payments/naverpay/client-info"
-  );
-}
-
-// 네이버페이 SDK 설정 조회 (신규 - 클라이언트 SDK 직접 호출용)
+// 네이버페이 SDK 설정 조회 (클라이언트 SDK 직접 호출용)
 export async function getNaverPaySdkConfig(): Promise<NaverPaySdkConfigResponse> {
   return apiRequest<NaverPaySdkConfigResponse>(
     "/api/payments/naverpay/sdk-config"
   );
-}
-
-// 네이버페이 결제 예약 (삭제됨 - 클라이언트 SDK 직접 호출 방식으로 변경)
-/** @deprecated 서버 예약 방식에서 클라이언트 SDK 직접 호출 방식으로 변경되었습니다 */
-export async function reserveNaverPayment(
-  orderId: string
-): Promise<NaverPayReserveResponse> {
-  return apiRequest<NaverPayReserveResponse>("/api/payments/naverpay/reserve", {
-    method: "POST",
-    body: JSON.stringify({ orderId }),
-  });
 }
 
 // 네이버페이 결제 상태 조회
@@ -1251,8 +1241,8 @@ export async function addNaverPayWishlist(
 // --- 관리자 결제 관리 ---
 export async function getAdminPaymentDetail(
   orderId: number | string
-): Promise<any> {
-  return apiRequest(`/api/admin/payments/${orderId}`);
+): Promise<Order> {
+  return apiRequest<Order>(`/api/admin/payments/${orderId}`);
 }
 
 export async function adminCancelPayment(
@@ -1260,8 +1250,8 @@ export async function adminCancelPayment(
   cancelReason: string,
   cancelType: "customer_request" | "customer_request_cod" | "seller_cancel",
   orderItemId?: number
-): Promise<any> {
-  return apiRequest(`/api/admin/payments/${orderId}/cancel`, {
+): Promise<Order> {
+  return apiRequest<Order>(`/api/admin/payments/${orderId}/cancel`, {
     method: "POST",
     body: JSON.stringify({ cancelReason, cancelType, orderItemId }),
   });

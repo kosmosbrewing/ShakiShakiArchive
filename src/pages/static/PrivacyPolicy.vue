@@ -2,11 +2,17 @@
 // src/pages/static/PrivacyPolicy.vue
 // 개인정보 처리방침 페이지
 
-import { onMounted } from "vue";
+import { onMounted, onUnmounted } from "vue";
 
 onMounted(() => {
-  // 페이지 최상단으로 스크롤
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  // 페이지 최상단으로 즉시 이동 (라우팅 시 smooth 방지)
+  window.scrollTo({ top: 0, behavior: "instant" });
+  // 목차 앵커 링크 클릭 시에만 smooth 스크롤 적용
+  document.documentElement.classList.add("scroll-smooth");
+});
+
+onUnmounted(() => {
+  document.documentElement.classList.remove("scroll-smooth");
 });
 </script>
 

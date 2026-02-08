@@ -66,6 +66,12 @@ const statusLabels: Record<InquiryStatus, string> = {
   answered: "답변 완료",
 };
 
+// 모바일용 축약 레이블
+const statusLabelsShort: Record<InquiryStatus, string> = {
+  pending: "대기",
+  answered: "완료",
+};
+
 // 문의 상태별 배지 색상
 const statusVariants: Record<
   InquiryStatus,
@@ -301,7 +307,8 @@ onMounted(() => {
                   :variant="statusVariants[inquiry.status]"
                   class="text-xs font-medium"
                 >
-                  {{ statusLabels[inquiry.status] }}
+                  <span class="sm:hidden">{{ statusLabelsShort[inquiry.status] }}</span>
+                  <span class="hidden sm:inline">{{ statusLabels[inquiry.status] }}</span>
                 </Badge>
                 <Lock
                   v-if="inquiry.isPrivate"

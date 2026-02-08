@@ -20,7 +20,6 @@ const { count = 4 } = defineProps<Props>();
     v-for="idx in count"
     :key="`skeleton-${idx}`"
     class="skeleton-card bg-muted/5 flex flex-col h-full overflow-hidden border-0 shadow-sm"
-    :style="{ animationDelay: `${(idx - 1) * 0.05}s` }"
   >
     <CardHeader class="p-0 gap-0">
       <!-- 이미지 영역 스켈레톤 -->
@@ -45,17 +44,7 @@ const { count = 4 } = defineProps<Props>();
 
 <style scoped>
 .skeleton-card {
-  animation: slideUp 0.3s ease-out both;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  /* 스켈레톤은 즉시 표시 (로딩 피드백을 위해 애니메이션 없음) */
+  opacity: 1;
 }
 </style>

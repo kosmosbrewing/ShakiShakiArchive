@@ -455,7 +455,7 @@ const renderNaverPayButton = () => {
   if (!container) return;
 
   // 컨테이너 초기화 (중복 방지)
-  container.innerHTML = "";
+  container.replaceChildren();
 
   try {
     naverPay.renderButton({

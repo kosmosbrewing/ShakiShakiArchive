@@ -8,12 +8,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 앵커 링크 클릭 시 부드러운 스크롤 */
-html {
-  scroll-behavior: smooth;
-}
-
-/* [참고] 기존에 있던 .text-heading, .text-body 등의 클래스는 
+/* [참고] 기존에 있던 .text-heading, .text-body 등의 클래스는
   이제 tailwind.config.js의 theme 설정을 통해
   text-h1, text-body 등의 유틸리티 클래스로 대체됩니다.
 */
