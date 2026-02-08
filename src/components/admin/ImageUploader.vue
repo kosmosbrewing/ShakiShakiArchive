@@ -134,7 +134,7 @@ const removeImage = (index: number) => {
     <!-- 업로드 버튼 -->
     <div class="flex items-center gap-3">
       <label
-        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg cursor-pointer hover:bg-primary/80 transition-colors text-body font-medium"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg cursor-pointer hover:bg-primary/80 transition-colors text-body font-medium whitespace-nowrap shrink-0"
         :class="{ 'opacity-50 cursor-not-allowed': isUploading }"
       >
         <LoadingSpinner
@@ -161,7 +161,7 @@ const removeImage = (index: number) => {
         {{
           type === "single"
             ? "JPEG, PNG, GIF, WebP (최대 10MB)"
-            : `최대 ${maxFiles}개, JPEG, PNG, GIF, WebP (각 10MB)`
+            : `최대 ${maxFiles}개, 각 10MB`
         }}
       </span>
     </div>
