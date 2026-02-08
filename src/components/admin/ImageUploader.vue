@@ -146,7 +146,7 @@ const removeImage = (index: number) => {
           class="w-4 h-4"
         />
         <Upload v-else class="w-4 h-4" />
-        {{ isUploading ? "업로드 중..." : "이미지 선택" }}
+        {{ isUploading ? "업로드 중..." : "이미지" }}
         <input
           type="file"
           :accept="'image/jpeg,image/png,image/gif,image/webp'"

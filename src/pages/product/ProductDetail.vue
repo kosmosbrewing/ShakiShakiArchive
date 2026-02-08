@@ -801,7 +801,7 @@ onMounted(async () => {
                   !variantSelection.needsVariantSelection.value && !isOutOfStock
                 "
                 @click="handleAddToCart"
-                class="w-full bg-primary text-white hover:bg-primary/90 font-medium animate-fade-in"
+                class="w-full bg-primary text-white hover:bg-primary/90 font-bold animate-fade-in"
                 size="lg"
               >
                 장바구니 담기

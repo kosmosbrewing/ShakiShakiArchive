@@ -6,7 +6,7 @@ import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
-import { maskUserName, maskPhone, maskDetailAddress } from "@/lib/formatters";
+import { maskUserName, maskPhone, maskDetailAddress, formatDate } from "@/lib/formatters";
 import { getStatusClass as getStatusClassFromConstants } from "@/lib/constants/orderStatus";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
@@ -378,13 +378,6 @@ const handleSaveShipping = async (data: {
   }
 };
 
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-    2,
-    "0",
-  )}-${String(date.getDate()).padStart(2, "0")}`;
-};
 
 onMounted(async () => {
   if (!authStore.user) await authStore.loadUser();

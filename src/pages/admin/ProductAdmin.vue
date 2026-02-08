@@ -63,7 +63,7 @@ import {
   useProductTabs,
 } from "@/composables/useProduct";
 import { useOptimizedImage } from "@/composables";
-import { formatPrice, formatSizeValue } from "@/lib/formatters";
+import { formatPrice, formatSizeValue, formatDateTimeLocal } from "@/lib/formatters";
 import { isValidSizeMeasurement } from "@/lib/validators";
 
 const router = useRouter();
@@ -247,18 +247,6 @@ const formatDisplayDate = (isoString: string) => {
   return `${year}.${month}.${day}`;
 };
 
-// ISO 문자열을 datetime-local input 형식으로 변환 (KST 기준)
-const formatDateTimeLocal = (isoString: string) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  // 로컬 시간(KST) 기준으로 "YYYY-MM-DDTHH:mm" 형식 생성
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
 
 const openEditProductModal = (product: any) => {
   isEditMode.value = true;
@@ -936,13 +924,22 @@ onMounted(async () => {
             </div>
 
             <div class="space-y-6">
-              <!-- 대표 이미지 업로드 -->
-              <ImageUploader
-                v-model="productForm.imageUrl"
-                type="single"
-                label="대표 이미지"
-                :required="true"
-              />
+              <!-- 대표 이미지 + 추가 이미지 (2열) -->
+              <div class="grid grid-cols-2 gap-4">
+                <ImageUploader
+                  v-model="productForm.imageUrl"
+                  type="single"
+                  label="대표 이미지"
+                  :required="true"
+                />
+                <ImageUploader
+                  v-model="productForm.images"
+                  type="multiple"
+                  label="추가 이미지 (선택)"
+                  :required="false"
+                  :max-files="10"
+                />
+              </div>
 
               <!-- 상세 이미지 업로드 -->
               <ImageUploader
@@ -960,21 +957,12 @@ onMounted(async () => {
                 </Label>
                 <Textarea
                   v-model="productForm.description"
-                  rows="4"
-                  class="resize-none"
+                  rows="10"
+                  class="resize-y"
                   placeholder="상품에 대한 상세한 설명을 입력하세요"
                   required
                 />
               </div>
-
-              <!-- 추가 이미지 업로드 -->
-              <ImageUploader
-                v-model="productForm.images"
-                type="multiple"
-                label="추가 이미지 (선택)"
-                :required="false"
-                :max-files="10"
-              />
             </div>
 
             <AlertDescription v-if="errorMessage" class="animate-pulse">
@@ -1135,14 +1123,20 @@ onMounted(async () => {
                     <tr
                       v-for="variant in variants"
                       :key="variant.id"
-                      :class="{
-                        'bg-primary/5': variant.id === variantForm.id,
-                      }"
-                      class="hover:bg-muted/20 transition-colors group cursor-pointer"
+                      :class="variant.id === variantForm.id
+                        ? 'bg-primary/10'
+                        : 'hover:bg-muted/20'"
+                      class="transition-colors group cursor-pointer"
                       @click="handleEditVariant(variant)"
                     >
                       <td class="px-6 py-4 text-tiny text-admin-muted">
-                        {{ variant.sku }}
+                        <div class="flex items-center gap-2">
+                          <span
+                            v-if="variant.id === variantForm.id"
+                            class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"
+                          />
+                          {{ variant.sku }}
+                        </div>
                       </td>
                       <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
@@ -1290,11 +1284,21 @@ onMounted(async () => {
                   <tr
                     v-for="m in measurements"
                     :key="m.id"
-                    :class="{ 'bg-primary/5': m.id === measurementForm.id }"
-                    class="hover:bg-muted/20 transition-colors cursor-pointer"
+                    :class="m.id === measurementForm.id
+                      ? 'bg-primary/10'
+                      : 'hover:bg-muted/20'"
+                    class="transition-colors cursor-pointer"
                     @click="handleEditMeasurement(m)"
                   >
-                    <td class="px-6 py-4 text-caption">{{ m.totalLength }}</td>
+                    <td class="px-6 py-4 text-caption">
+                      <div class="flex items-center gap-2">
+                        <span
+                          v-if="m.id === measurementForm.id"
+                          class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"
+                        />
+                        {{ m.totalLength }}
+                      </div>
+                    </td>
                     <td class="px-6 py-4 text-caption">
                       {{ m.shoulderWidth }}
                     </td>
@@ -1720,4 +1724,5 @@ onMounted(async () => {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--muted-foreground));
 }
+
 </style>

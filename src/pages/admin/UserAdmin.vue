@@ -7,6 +7,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
+import { formatDate, formatDateTime } from "@/lib/formatters";
 
 // API
 import { fetchAdminUsers, fetchAdminUserDetail, updateUserRole } from "@/lib/api";
@@ -259,42 +260,6 @@ const goToNextPage = () => {
   }
 };
 
-// --- 날짜 포맷팅 ---
-const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return "-";
-
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";
-
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(date.getDate()).padStart(2, "0")}`;
-  } catch (error) {
-    console.error("날짜 포맷팅 오류:", error);
-    return "-";
-  }
-};
-
-const formatDateTime = (dateStr: string | null | undefined) => {
-  if (!dateStr) return "-";
-
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";
-
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(date.getDate()).padStart(2, "0")} ${String(
-      date.getHours()
-    ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-  } catch (error) {
-    console.error("날짜/시간 포맷팅 오류:", error);
-    return "-";
-  }
-};
 
 // --- 금액 포맷팅 ---
 const formatCurrency = (amount: number) => {

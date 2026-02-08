@@ -34,8 +34,8 @@ interface NaverPayButtonConfig {
   EMBED_ID?: string; // 버튼을 삽입할 요소 ID
   BUY_BUTTON_HANDLER?: () => void; // 구매 버튼 클릭 핸들러
   WISHLIST_BUTTON_HANDLER?: () => void; // 찜 버튼 클릭 핸들러 (TYPE A/B만)
-  "BUY_BUTTON_LINK_URL"?: string; // 구매 버튼 링크 (핸들러 대신 사용)
-  "WISHLIST_BUTTON_LINK_URL"?: string; // 찜 버튼 링크 (핸들러 대신 사용)
+  BUY_BUTTON_LINK_URL?: string; // 구매 버튼 링크 (핸들러 대신 사용)
+  WISHLIST_BUTTON_LINK_URL?: string; // 찜 버튼 링크 (핸들러 대신 사용)
 }
 
 // 네이버페이 주문형 SDK 설정
@@ -78,7 +78,9 @@ export function useNaverPayOrder() {
 
     // 설정이 로드되어 있어야 함
     if (!config.value) {
-      throw new Error("네이버페이 설정이 로드되지 않았습니다. loadConfig()를 먼저 호출하세요.");
+      throw new Error(
+        "네이버페이 설정이 로드되지 않았습니다. loadConfig()를 먼저 호출하세요.",
+      );
     }
 
     return new Promise<void>((resolve, reject) => {
@@ -100,7 +102,6 @@ export function useNaverPayOrder() {
       document.head.appendChild(script);
     });
   };
-
 
   // 네이버페이 버튼 렌더링
   const renderButton = (options: {
@@ -200,16 +201,23 @@ export function useNaverPayOrder() {
       // 모바일: 페이지 전환
       window.location.href = orderPageUrl;
     } else {
-      // PC: 팝업으로 호출 (720x930, 화면 중앙 배치)
-      const width = 720;
-      const height = 930;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-      window.open(
+      // PC: 팝업으로 호출 (1170x830, 브라우저 창 기준 중앙 배치)
+      const width = 1170;
+      const height = 830;
+      // 가로: 원래 방식 (브라우저 창 기준 중앙)
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      // 세로: 브라우저 창 기준 중앙
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      // Math.max(0) 미적용: 듀얼 모니터에서 음수 좌표는 보조 모니터 위치를 의미
+      const popup = window.open(
         orderPageUrl,
         "naverPayPopup",
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`,
       );
+      // 팝업 차단 시 새 탭으로 대체 (주문은 이미 백엔드에 등록된 상태)
+      if (!popup || popup.closed) {
+        window.open(orderPageUrl, "_blank");
+      }
     }
   };
 

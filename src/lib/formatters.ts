@@ -5,49 +5,78 @@ import type { PhoneParts, OrderStatus, OrderItemStatus } from "@/types/api";
 import { getStatusLabel } from "@/lib/constants/orderStatus";
 
 /**
- * 날짜 문자열을 YYYY.MM.DD 형식으로 변환
+ * KST(Asia/Seoul) 기준 날짜 구성요소 추출
+ * DB가 KST timestamp를 저장하지만 pg 드라이버가 UTC로 해석하는 문제를 방지
  */
-export function formatDate(dateStr: string): string {
+const kstFormatter = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23", // 0~23 보장 (자정 = "00", "24" 방지)
+});
+
+const kstParts = (dateStr: string | null | undefined) => {
+  if (!dateStr) return null;
   const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
+  if (isNaN(date.getTime())) return null;
+
+  const parts = kstFormatter.formatToParts(date);
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+};
+
+/**
+ * 날짜 문자열을 YYYY.MM.DD 형식으로 변환 (KST 기준)
+ */
+export function formatDate(dateStr: string | null | undefined): string {
+  const p = kstParts(dateStr);
+  if (!p) return "-";
+  return `${p.year}.${p.month}.${p.day}`;
 }
 
 /**
- * 날짜 문자열을 YYYY.MM.DD HH:mm 형식으로 변환
+ * 날짜 문자열을 YYYY.MM.DD HH:mm 형식으로 변환 (KST 기준)
  */
-export function formatDateTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}.${month}.${day} ${hours}:${minutes}`;
+export function formatDateTime(dateStr: string | null | undefined): string {
+  const p = kstParts(dateStr);
+  if (!p) return "-";
+  return `${p.year}.${p.month}.${p.day} ${p.hour}:${p.minute}`;
 }
 
 /**
- * 날짜 문자열을 한국어 형식으로 변환
+ * 날짜 문자열을 한국어 형식으로 변환 (KST 기준)
  * 예: "2024년 9월 15일 오후 8시 32분"
  */
 export function formatDateTimeWithSeconds(dateStr: string): string {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // 1~12
-  const day = date.getDate(); // 1~31
-  const hours24 = date.getHours(); // 0~23
-  const minutes = date.getMinutes(); // 0~59
+  const p = kstParts(dateStr);
+  if (!p) return "-";
 
-  // 오전/오후 구분
-  const period = hours24 < 12 ? "오전" : "오후";
+  const hourNum = parseInt(p.hour);
+  const period = hourNum < 12 ? "오전" : "오후";
+  let hours12 = hourNum % 12;
+  if (hours12 === 0) hours12 = 12;
 
-  // 12시간 형식으로 변환
-  let hours12 = hours24 % 12;
-  if (hours12 === 0) hours12 = 12; // 0시 → 12시, 12시 → 12시
+  return `${p.year}년 ${parseInt(p.month)}월 ${parseInt(p.day)}일 ${period} ${hours12}시 ${parseInt(p.minute)}분`;
+}
 
-  return `${year}년 ${month}월 ${day}일 ${period} ${hours12}시 ${minutes}분`;
+/**
+ * ISO 문자열을 datetime-local input 형식으로 변환 (KST 기준)
+ * 예: "2024-09-15T20:32"
+ */
+export function formatDateTimeLocal(dateStr: string | null | undefined): string {
+  const p = kstParts(dateStr);
+  if (!p) return "";
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
 /**
