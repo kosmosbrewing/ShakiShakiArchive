@@ -193,32 +193,9 @@ export function useNaverPayOrder() {
   };
 
   // 네이버페이 주문서 열기 (백엔드에서 반환한 URL 사용)
-  // PC: 팝업 (화면 중앙 배치), 모바일: 리다이렉트
+  // PC/모바일 모두 현재 페이지에서 이동
   const openNaverPayOrder = (orderPageUrl: string) => {
-    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    if (mobile) {
-      // 모바일: 페이지 전환
-      window.location.href = orderPageUrl;
-    } else {
-      // PC: 팝업으로 호출 (1170x830, 브라우저 창 기준 중앙 배치)
-      const width = 1170;
-      const height = 830;
-      // 가로: 원래 방식 (브라우저 창 기준 중앙)
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      // 세로: 브라우저 창 기준 중앙
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      // Math.max(0) 미적용: 듀얼 모니터에서 음수 좌표는 보조 모니터 위치를 의미
-      const popup = window.open(
-        orderPageUrl,
-        "naverPayPopup",
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`,
-      );
-      // 팝업 차단 시 새 탭으로 대체 (주문은 이미 백엔드에 등록된 상태)
-      if (!popup || popup.closed) {
-        window.open(orderPageUrl, "_blank");
-      }
-    }
+    window.location.href = orderPageUrl;
   };
 
   return {

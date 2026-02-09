@@ -228,11 +228,12 @@ watch(
   },
 );
 
-// SDK 로드 완료 시 버튼 렌더링 (컨테이너가 DOM에 나타난 후)
+// SDK 로드 완료 + 장바구니 로드 완료 시 버튼 렌더링
+// 둘 중 어느 쪽이 먼저 완료되더라도 양쪽 조건이 갖춰지면 렌더링 시도
 watch(
-  () => naverPay.sdkLoaded.value,
-  (loaded) => {
-    if (loaded && !isEmpty.value) {
+  [() => naverPay.sdkLoaded.value, isEmpty],
+  ([loaded, empty]) => {
+    if (loaded && !empty) {
       nextTick(() => {
         setTimeout(renderNaverPayButton, 100);
       });
