@@ -1,0 +1,37 @@
+# ShakiShaki Archive
+
+> ShakiShaki Archive(shakishakiarchive.com)는 빈티지 의류를 판매하는 온라인 쇼핑몰입니다. 카카오페이 간편결제를 지원하며, 한정 수량의 빈티지 아이템을 큐레이션하여 제공합니다.
+
+## Key Resources
+
+- [Home](https://shakishakiarchive.com/): 메인 페이지, 추천 상품 및 최신 입고 상품 안내
+- [Products](https://shakishakiarchive.com/product/all): 전체 상품 목록 (카테고리별 필터링 가능)
+- [Product Detail](https://shakishakiarchive.com/productDetail/{id}): 개별 상품 상세 정보 (가격, 사이즈, 상태, 이미지)
+- [FAQ](https://shakishakiarchive.com/faq): 자주 묻는 질문 (배송, 교환/반품, 결제 안내)
+- [Inquiry](https://shakishakiarchive.com/inquiry): 고객 문의 게시판
+- [Privacy Policy](https://shakishakiarchive.com/privacy): 개인정보 처리방침
+- [Terms of Service](https://shakishakiarchive.com/terms): 이용약관
+
+## Product Categories
+
+- 아우터 (Outerwear)
+- 상의 (Tops)
+- 하의 (Bottoms)
+- 기타 (Accessories)
+
+## Technical Context
+
+- **Platform**: Vue 3 SPA + Express.js REST API
+- **Payment**: KakaoPay (카카오페이 간편결제)
+- **Currency**: KRW (대한민국 원)
+- **Language**: Korean (ko-KR)
+- **Shipping**: 국내 배송 전용, 도서산간 추가 배송비 적용
+- **Product Data**: 각 상품은 고유 slug URL을 가지며, 가격/재고/사이즈 옵션/상태(컨디션) 정보 포함
+- **Image CDN**: Cloudinary (res.cloudinary.com)
+
+## Business Info
+
+- **Store Name**: ShakiShaki Archive (샤키샤키 아카이브)
+- **Specialty**: vintage clothing (빈티지 의류 직수입)
+- **Target**: 빈티지/레트로 패션에 관심 있는 20~30대
+- **Inventory**: Limited quantity per item (한정 수량 큐레이션)

@@ -1,0 +1,51 @@
+# ===========================================
+# robots.txt - ShakiShaki Archive
+# https://shakishakiarchive.com
+# ===========================================
+
+# AI 크롤러 명시적 허용 (AI 검색 노출 극대화)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: Google-Extended
+User-agent: ClaudeBot
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+
+# 기타 모든 크롤러 (Google, Naver, Bing 등 검색엔진 포함)
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+
+# 사이트맵
+Sitemap: https://shakishakiarchive.com/sitemap.xml
