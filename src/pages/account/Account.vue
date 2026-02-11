@@ -73,14 +73,14 @@ const loadAdminStats = async () => {
     ).length;
 
     // 오늘 가입한 신규 고객 건수
+    // API timestamp는 KST 값이 Z suffix로 전달되므로, UTC date 부분이 곧 KST 날짜
+    // "오늘"도 KST 기준으로 맞추기 위해 +9시간 후 UTC date 추출
     const usersResponse = await fetchAdminUsers();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const KST_OFFSET = 9 * 60 * 60 * 1000;
+    const todayKST = new Date(Date.now() + KST_OFFSET).toISOString().slice(0, 10);
 
     todayNewUsersCount.value = usersResponse.users.filter((user) => {
-      const createdAt = new Date(user.createdAt);
-      createdAt.setHours(0, 0, 0, 0);
-      return createdAt.getTime() === today.getTime();
+      return new Date(user.createdAt).toISOString().slice(0, 10) === todayKST;
     }).length;
   } catch (error) {
     console.error("관리자 통계 로드 실패:", error);

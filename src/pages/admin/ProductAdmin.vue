@@ -284,9 +284,9 @@ const handleSaveProduct = async () => {
 
     if (isEditMode.value) {
       // 수정 모드에서 updatedAt이 설정된 경우 ISO 형식으로 변환하여 전송
+      // datetime-local 값은 KST이며, 백엔드도 KST를 그대로 저장하므로 Z suffix만 붙여 전송
       if (productForm.updatedAt) {
-        const date = new Date(productForm.updatedAt);
-        // 유효한 날짜인지 확인
+        const date = new Date(productForm.updatedAt + "Z");
         if (!isNaN(date.getTime())) {
           payload.updatedAt = date.toISOString();
         }

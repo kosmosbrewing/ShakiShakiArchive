@@ -5,11 +5,12 @@ import type { PhoneParts, OrderStatus, OrderItemStatus } from "@/types/api";
 import { getStatusLabel } from "@/lib/constants/orderStatus";
 
 /**
- * KST(Asia/Seoul) 기준 날짜 구성요소 추출
- * DB가 KST timestamp를 저장하지만 pg 드라이버가 UTC로 해석하는 문제를 방지
+ * KST 날짜 구성요소 추출
+ * DB가 KST timestamp를 저장하고 pg 드라이버가 Z suffix를 붙여 UTC로 전달하므로,
+ * timeZone: "UTC"로 설정하여 이중 변환(+9h 중복)을 방지
  */
 const kstFormatter = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
+  timeZone: "UTC",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",

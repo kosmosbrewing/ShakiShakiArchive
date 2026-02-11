@@ -115,10 +115,11 @@ const statusMapping: Record<string, string[]> = {
 };
 
 // 1주일 전 날짜 계산
+// API timestamp는 KST 값이 Z suffix(UTC)로 전달되므로, 비교 기준도 KST-as-UTC로 맞춤
 const oneWeekAgo = () => {
-  const date = new Date();
-  date.setDate(date.getDate() - 7);
-  return date;
+  const KST_OFFSET = 9 * 60 * 60 * 1000;
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  return new Date(Date.now() + KST_OFFSET - SEVEN_DAYS);
 };
 
 // 필터링된 주문 목록
