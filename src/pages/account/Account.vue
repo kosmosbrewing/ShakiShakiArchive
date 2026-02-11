@@ -7,7 +7,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useOrderStats } from "@/composables/useOrders";
 import { useWishlistCount } from "@/composables/useWishlist";
-import { fetchInquiries, fetchAdminUsers } from "@/lib/api";
+import { fetchInquiries, fetchAdminUsers, fetchAdminOrders } from "@/lib/api";
 import { Separator } from "@/components/ui/separator";
 // 아이콘
 import {
@@ -42,6 +42,7 @@ const { count: wishlistCount, loadCount: loadWishlistCount } =
 // 관리자 통계
 const pendingInquiriesCount = ref(0);
 const todayNewUsersCount = ref(0);
+const adminPaymentConfirmedCount = ref(0);
 
 // 유저 이름 표시
 const userName = computed(() => {
@@ -82,6 +83,17 @@ const loadAdminStats = async () => {
     todayNewUsersCount.value = usersResponse.users.filter((user) => {
       return new Date(user.createdAt).toISOString().slice(0, 10) === todayKST;
     }).length;
+
+    // 전체 고객 결제완료 건수 (관리자 주문 API 사용)
+    const ordersResponse = await fetchAdminOrders();
+    adminPaymentConfirmedCount.value = ordersResponse.orders.reduce(
+      (count, order) =>
+        count +
+        (order.orderItems?.filter(
+          (item: any) => item.status === "payment_confirmed"
+        ).length ?? 0),
+      0
+    );
   } catch (error) {
     console.error("관리자 통계 로드 실패:", error);
   }
@@ -243,11 +255,11 @@ onMounted(async () => {
               주문/배송 관리
             </div>
             <Badge
-              v-if="orderCounts.payment_confirmed > 0"
+              v-if="adminPaymentConfirmedCount > 0"
               variant="default"
               class="ml-auto"
             >
-              {{ orderCounts.payment_confirmed }}
+              {{ adminPaymentConfirmedCount }}
             </Badge>
           </Button>
 
