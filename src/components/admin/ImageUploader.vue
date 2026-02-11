@@ -3,7 +3,7 @@
 // 관리자용 이미지 업로드 컴포넌트
 
 import { ref, computed, watch } from "vue";
-import { Upload, X, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { Upload, X, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight } from "lucide-vue-next";
 import { LoadingSpinner } from "@/components/common";
 import {
   uploadProductImage,
@@ -35,6 +35,7 @@ const emit = defineEmits<{
 const isUploading = ref(false);
 const uploadProgress = ref(0);
 const errorMessage = ref<string>("");
+const isDragging = ref(false);
 
 // 현재 이미지 목록 (배열로 변환)
 const currentImages = computed<string[]>(() => {
@@ -45,14 +46,8 @@ const currentImages = computed<string[]>(() => {
   return props.modelValue;
 });
 
-// 파일 선택 핸들러
-const handleFileSelect = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
-
-  const files = Array.from(input.files);
-
-  // 파일 수 검증
+// 파일 검증 + 업로드 공용 로직
+const processFiles = async (files: File[]) => {
   if (props.type === "single" && files.length > 1) {
     errorMessage.value = ADMIN_MESSAGES.singleFileOnly;
     return;
@@ -63,7 +58,6 @@ const handleFileSelect = async (event: Event) => {
     return;
   }
 
-  // 파일 타입 검증
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   const invalidFile = files.find((f) => !allowedTypes.includes(f.type));
   if (invalidFile) {
@@ -71,7 +65,6 @@ const handleFileSelect = async (event: Event) => {
     return;
   }
 
-  // 파일 크기 검증 (10MB)
   const maxSize = 10 * 1024 * 1024;
   const oversizedFile = files.find((f) => f.size > maxSize);
   if (oversizedFile) {
@@ -83,34 +76,41 @@ const handleFileSelect = async (event: Event) => {
   isUploading.value = true;
 
   try {
-    let uploadedUrls: string[] = [];
-
     if (props.type === "single") {
-      // 단일 이미지 업로드
       const result = await uploadProductImage(files[0]);
-      uploadedUrls = [result.image.url];
       emit("update:modelValue", result.image.url);
     } else if (props.type === "multiple") {
-      // 다중 상품 이미지 업로드
       const result = await uploadProductImages(files);
-      uploadedUrls = result.images.map((img: UploadedImage) => img.url);
-      const newUrls = [...currentImages.value, ...uploadedUrls];
-      emit("update:modelValue", newUrls);
+      const uploadedUrls = result.images.map((img: UploadedImage) => img.url);
+      emit("update:modelValue", [...currentImages.value, ...uploadedUrls]);
     } else if (props.type === "details") {
-      // 상세 이미지 업로드
       const result = await uploadProductDetailImages(files);
-      uploadedUrls = result.images.map((img: UploadedImage) => img.url);
-      const newUrls = [...currentImages.value, ...uploadedUrls];
-      emit("update:modelValue", newUrls);
+      const uploadedUrls = result.images.map((img: UploadedImage) => img.url);
+      emit("update:modelValue", [...currentImages.value, ...uploadedUrls]);
     }
   } catch (error: any) {
     errorMessage.value = error.message || ADMIN_MESSAGES.imageUploadFailed;
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
-    // 파일 입력 초기화
-    input.value = "";
   }
+};
+
+// 파일 input 선택 핸들러
+const handleFileSelect = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) return;
+  await processFiles(Array.from(input.files));
+  input.value = "";
+};
+
+// 드래그 앤 드롭 핸들러
+const handleDrop = async (event: DragEvent) => {
+  isDragging.value = false;
+  if (isUploading.value) return;
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (files.length === 0) return;
+  await processFiles(files);
 };
 
 // 다중 이미지 캐러셀 인덱스
@@ -139,6 +139,13 @@ const removeImage = (index: number) => {
     const newUrls = currentImages.value.filter((_, i) => i !== index);
     emit("update:modelValue", newUrls);
   }
+};
+
+// 상세 이미지 순서 변경 (swap)
+const moveImage = (fromIndex: number, toIndex: number) => {
+  const newUrls = [...currentImages.value];
+  [newUrls[fromIndex], newUrls[toIndex]] = [newUrls[toIndex], newUrls[fromIndex]];
+  emit("update:modelValue", newUrls);
 };
 </script>
 
@@ -271,14 +278,14 @@ const removeImage = (index: number) => {
       </p>
     </div>
 
-    <!-- 이미지 미리보기: 상세 이미지 (그리드 유지) -->
+    <!-- 이미지 미리보기: 상세 이미지 (그리드 + 순서 조정) -->
     <div
       v-else-if="currentImages.length > 0 && type === 'details'"
       class="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
     >
       <div
         v-for="(url, index) in currentImages"
-        :key="url"
+        :key="index"
         class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 aspect-square"
       >
         <img
@@ -287,9 +294,27 @@ const removeImage = (index: number) => {
           class="w-full h-full object-cover"
           crossorigin="anonymous"
         />
-        <div
-          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+        <!-- 순서 번호 뱃지 -->
+        <span
+          class="absolute top-1.5 left-1.5 bg-black/60 text-white text-xs font-semibold rounded-full w-6 h-6 flex items-center justify-center"
         >
+          {{ index + 1 }}
+        </span>
+        <!-- hover 오버레이: 이동 + 삭제 버튼 -->
+        <div
+          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+        >
+          <!-- 좌측 이동 -->
+          <button
+            v-if="index > 0"
+            type="button"
+            @click="moveImage(index, index - 1)"
+            class="p-2 bg-white/90 text-black rounded-full hover:bg-white transition-colors"
+            title="왼쪽으로 이동"
+          >
+            <ArrowLeft class="w-4 h-4" />
+          </button>
+          <!-- 삭제 -->
           <button
             type="button"
             @click="removeImage(index)"
@@ -298,17 +323,46 @@ const removeImage = (index: number) => {
           >
             <X class="w-4 h-4" />
           </button>
+          <!-- 우측 이동 -->
+          <button
+            v-if="index < currentImages.length - 1"
+            type="button"
+            @click="moveImage(index, index + 1)"
+            class="p-2 bg-white/90 text-black rounded-full hover:bg-white transition-colors"
+            title="오른쪽으로 이동"
+          >
+            <ArrowRight class="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- 비어있을 때 -->
+    <!-- 비어있을 때: 드래그 앤 드롭 영역 -->
     <div
       v-else
-      class="border-2 border-dashed border-border rounded-lg p-8 text-center text-admin-muted"
+      class="border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer"
+      :class="isDragging
+        ? 'border-primary bg-primary/5 text-primary'
+        : 'border-border text-admin-muted hover:border-primary/40'"
+      @dragover.prevent="isDragging = true"
+      @dragenter.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
+      @drop.prevent="handleDrop"
     >
-      <ImageIcon class="w-8 h-8 mx-auto mb-2 opacity-50" />
-      <p class="text-body">이미지를 업로드해주세요</p>
+      <!-- pointer-events-none: 자식 요소의 dragleave 오발생 방지 -->
+      <div class="pointer-events-none">
+        <template v-if="isUploading">
+          <LoadingSpinner variant="spinner" size="sm" :center="false" class="w-8 h-8 mx-auto mb-2" />
+          <p class="text-body">업로드 중...</p>
+        </template>
+        <template v-else>
+          <Upload v-if="isDragging" class="w-8 h-8 mx-auto mb-2" />
+          <ImageIcon v-else class="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p class="text-body">
+            {{ isDragging ? "여기에 놓으세요" : "이미지를 드래그하거나 업로드 버튼을 클릭하세요" }}
+          </p>
+        </template>
+      </div>
     </div>
   </div>
 </template>
