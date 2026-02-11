@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
 import { X, AlertTriangle, Info, FileText } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
+import { getStatusLabel } from "@/lib/constants/orderStatus";
 import type { OrderItem } from "@/types/api";
 
 // 배송비 상수
@@ -110,16 +111,6 @@ const isCancelableStatus = computed(() => {
   ];
   return cancelableStatuses.includes(props.orderItem.status);
 });
-
-// 상태 라벨
-const getStatusLabel = (status: string) => {
-  const statusMap: Record<string, string> = {
-    payment_confirmed: "결제완료",
-    preparing: "배송준비중",
-    return_received: "반품 도착",
-  };
-  return statusMap[status] || status;
-};
 
 // 최종 취소 사유 생성
 const getFinalCancelReason = () => {

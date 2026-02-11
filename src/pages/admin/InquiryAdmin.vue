@@ -105,7 +105,12 @@ const goToDetail = (inquiry: Inquiry) => {
   router.push(`/inquiry/${inquiry.id}`);
 };
 
-onMounted(() => {
+onMounted(async () => {
+  if (!authStore.user) await authStore.loadUser();
+  if (!authStore.user?.isAdmin) {
+    router.replace("/");
+    return;
+  }
   loadInquiries();
 });
 </script>

@@ -83,12 +83,7 @@ const handleVerifyPassword = async () => {
       password.value = "";
     }
   } catch (error: any) {
-    // 404 에러 처리 (백엔드 API 미구현)
-    if (error.status === 404) {
-      authError.value = "비밀번호 확인 API가 아직 구현되지 않았습니다. 백엔드 개발자에게 문의해주세요.";
-    } else {
-      authError.value = error.message || ADMIN_MESSAGES.passwordVerifyFailed;
-    }
+    authError.value = error.message || ADMIN_MESSAGES.passwordVerifyFailed;
     password.value = "";
   } finally {
     verifying.value = false;
@@ -272,7 +267,7 @@ const handleClose = () => {
                         관리자 인증 필요
                       </h4>
                       <p class="text-caption text-muted-foreground">
-                        배송지 정보는 민감한 개인정보입니다. <p/>계속하려면 현재 로그인한 계정의 비밀번호를 입력해주세요.
+                        배송지 정보는 민감한 개인정보입니다.<br />계속하려면 현재 로그인한 계정의 비밀번호를 입력해주세요.
                       </p>
                     </div>
                   </div>

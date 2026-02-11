@@ -7,7 +7,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
-import { formatDate, formatDateTime } from "@/lib/formatters";
+import { formatDate, formatDateTime, formatPrice } from "@/lib/formatters";
 
 // API
 import { fetchAdminUsers, fetchAdminUserDetail, updateUserRole } from "@/lib/api";
@@ -261,10 +261,6 @@ const goToNextPage = () => {
 };
 
 
-// --- 금액 포맷팅 ---
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
-};
 
 // --- 로그인 제공자 포맷팅 ---
 const formatProvider = (socialProvider: string | undefined | null) => {
@@ -595,7 +591,7 @@ onUnmounted(() => {
                   <span class="text-caption text-muted-foreground">
                     총 구매액 <span class="text-xs">(취소 제외)</span>:
                     <span class="font-bold text-foreground">
-                      {{ formatCurrency(userStats.totalSpent) }}
+                      {{ formatPrice(userStats.totalSpent) }}
                     </span>
                   </span>
                   <span class="text-caption text-muted-foreground">

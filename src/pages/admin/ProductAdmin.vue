@@ -63,7 +63,7 @@ import {
   useProductTabs,
 } from "@/composables/useProduct";
 import { useOptimizedImage } from "@/composables";
-import { formatPrice, formatSizeValue, formatDateTimeLocal } from "@/lib/formatters";
+import { formatPrice, formatSizeValue, formatDateTimeLocal, formatDate } from "@/lib/formatters";
 import { isValidSizeMeasurement } from "@/lib/validators";
 
 const router = useRouter();
@@ -237,15 +237,6 @@ const openCreateProductModal = () => {
   isProductModalOpen.value = true;
 };
 
-// 수정일 표시용 포맷 (KST 기준, YYYY.MM.DD)
-const formatDisplayDate = (isoString: string) => {
-  if (!isoString) return "-";
-  const date = new Date(isoString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
-};
 
 
 const openEditProductModal = (product: any) => {
@@ -694,13 +685,13 @@ onMounted(async () => {
                 </td>
                 <td class="px-6 py-4 text-center">
                   <div class="text-body text-admin">
-                    {{ Number(product.price).toLocaleString() }}원
+                    {{ formatPrice(product.price) }}
                   </div>
                   <div
                     v-if="product.originalPrice"
                     class="text-caption text-admin-muted line-through opacity-50"
                   >
-                    {{ Number(product.originalPrice).toLocaleString() }}원
+                    {{ formatPrice(product.originalPrice) }}
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
@@ -770,7 +761,7 @@ onMounted(async () => {
                 </td>
                 <td class="px-6 py-4 text-right pr-10">
                   <span class="text-caption text-admin-muted">
-                    {{ formatDisplayDate(product.updatedAt) }}
+                    {{ formatDate(product.updatedAt) }}
                   </span>
                 </td>
               </tr>

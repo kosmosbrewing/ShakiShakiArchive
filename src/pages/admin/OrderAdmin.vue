@@ -6,7 +6,7 @@ import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
-import { maskUserName, maskPhone, maskDetailAddress, formatDate } from "@/lib/formatters";
+import { maskUserName, maskPhone, maskDetailAddress, formatDate, formatPrice } from "@/lib/formatters";
 import { getStatusClass as getStatusClassFromConstants } from "@/lib/constants/orderStatus";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
@@ -549,7 +549,7 @@ onUnmounted(() => {
                 >총액</span
               >
               <span class="text-body font-semibold text-admin"
-                >{{ Number(order.totalAmount).toLocaleString() }}원</span
+                >{{ formatPrice(order.totalAmount) }}</span
               >
             </div>
           </div>
@@ -611,7 +611,7 @@ onUnmounted(() => {
                     >개
                   </div>
                   <div class="text-caption text-admin-muted mt-0.5">
-                    {{ Number(item.productPrice).toLocaleString() }}원
+                    {{ formatPrice(item.productPrice) }}
                   </div>
                 </td>
 
