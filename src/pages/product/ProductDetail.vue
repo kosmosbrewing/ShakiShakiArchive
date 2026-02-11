@@ -95,6 +95,15 @@ const naverPay = useNaverPayOrder();
 const naverPayInitialized = ref(false);
 const naverPayRenderTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
+// 네이버페이 버튼 표시 여부 (관리자 + 검수 테스트 계정만)
+const showNaverPayButton = computed(() => {
+  return (
+    naverPay.isEnabled.value &&
+    (authStore.isAdmin ||
+      authStore.user?.email === "test@shakishakiarchive.com")
+  );
+});
+
 // 간편결제 버튼 표시 조건 (computed로 가독성 향상)
 const showPaymentButtons = computed(() => {
   return (
@@ -808,69 +817,81 @@ onMounted(async () => {
               </Button>
 
               <!-- 간편결제 버튼 (네이버페이 SDK 로드 완료 후 동시 표시) -->
-              <div
-                v-if="showPaymentButtons"
-                class="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in"
-              >
-                <!-- 네이버페이 SDK 버튼 (관리자 + 검수 테스트 계정) -->
+              <div v-if="showPaymentButtons" class="animate-fade-in">
+                <!-- 네이버페이 + 카카오페이 2열 레이아웃 -->
                 <div
-                  v-if="naverPay.isEnabled.value && (authStore.isAdmin || authStore.user?.email === 'test@shakishakiarchive.com')"
-                  id="naverpay-button-container"
-                  class="flex items-center justify-center pt-3 min-h-[100px]"
-                ></div>
-
-                <!-- 카카오페이 (기본 285x88px, 부모 영역에 따라 가변) -->
-                <div class="flex items-center justify-center w-full pt-3">
+                  v-if="showNaverPayButton"
+                  class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                >
+                  <!-- 네이버페이 SDK 버튼 -->
                   <div
-                    class="border-t-[2px] border-[#222] bg-white w-full max-w-[285px] h-[88px] flex flex-col items-center"
-                    style="font-family: Dotum, 돋움, sans-serif"
-                  >
-                    <!-- 내부 영역 -->
+                    id="naverpay-button-container"
+                    class="flex items-center justify-center pt-3 min-h-[100px]"
+                  ></div>
+
+                  <!-- 카카오페이 (네이버페이 SDK 버튼과 동일 크기) -->
+                  <div class="flex items-center justify-center w-full pt-3">
                     <div
-                      class="w-[calc(100%-8px)] h-[59px] flex items-center justify-between"
+                      class="border-t-[2px] border-[#222] bg-white w-full max-w-[285px] h-[88px] flex flex-col items-center"
+                      style="font-family: Dotum, 돋움, sans-serif"
                     >
-                      <!-- 왼쪽: 설명 -->
-                      <div class="flex flex-col shrink-0">
-                        <span class="text-[11px] font-medium text-[#191919]"
-                          ><span
-                            style="
-                              background: linear-gradient(
-                                to top,
-                                #ffeb00 2px,
-                                transparent 2px
-                              );
-                            "
-                            >kakao<span class="font-bold">pay</span></span
-                          >
-                          <p />
-                          간편하게 주문</span
-                        >
-                      </div>
-                      <!-- 오른쪽: 버튼 (PC: 182px, 모바일: 191px) -->
-                      <button
-                        @click="handleKakaoPayBuy"
-                        class="flex items-center justify-center gap-px bg-[#FFEB00] hover:bg-[#FEE500] text-[#191919] flex-1 max-w-[191px] sm:max-w-[182px] h-[37px] ml-2 px-3 rounded-[3px] transition-colors"
+                      <div
+                        class="w-[calc(100%-8px)] h-[59px] flex items-center justify-between"
                       >
-                        <img
-                          src="@/assets/kakaoSymbol.png"
-                          alt="카카오페이"
-                          class="h-5 w-auto object-contain"
-                        />
-                        <span class="text-[12px] font-semibold -translate-x-1"
-                          >결제</span
+                        <div class="flex flex-col shrink-0">
+                          <span class="text-[11px] font-medium text-[#191919]"
+                            ><span
+                              style="
+                                background: linear-gradient(
+                                  to top,
+                                  #ffeb00 2px,
+                                  transparent 2px
+                                );
+                              "
+                              >kakao<span class="font-bold">pay</span></span
+                            >
+                            <p />
+                            간편하게 주문</span
+                          >
+                        </div>
+                        <button
+                          @click="handleKakaoPayBuy"
+                          class="flex items-center justify-center gap-px bg-[#FFEB00] hover:bg-[#FEE500] text-[#191919] flex-1 max-w-[191px] sm:max-w-[182px] h-[37px] ml-2 px-3 rounded-[3px] transition-colors"
                         >
-                      </button>
-                    </div>
-                    <!-- 하단 영역 -->
-                    <div
-                      class="w-[calc(100%-8px)] h-[28px] flex items-center border-t-[0.1px] border-[#eaeaea]"
-                    >
-                      <span class="text-[12px] text-[#888]">
-                        회원 주문가능
-                      </span>
+                          <img
+                            src="@/assets/kakaoSymbol.png"
+                            alt="카카오페이"
+                            class="h-5 w-auto object-contain"
+                          />
+                          <span class="text-[12px] font-semibold -translate-x-1"
+                            >결제</span
+                          >
+                        </button>
+                      </div>
+                      <div
+                        class="w-[calc(100%-8px)] h-[28px] flex items-center border-t-[0.1px] border-[#eaeaea]"
+                      >
+                        <span class="text-[12px] text-[#888]">
+                          회원 주문가능
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                <!-- 카카오페이만 표시 (장바구니 버튼과 동일 크기) -->
+                <button
+                  v-else
+                  @click="handleKakaoPayBuy"
+                  class="w-full h-10 flex items-center justify-center gap-1.5 bg-[#FFEB00] hover:bg-[#FEE500] text-[#191919] font-bold rounded-md transition-colors"
+                >
+                  <img
+                    src="@/assets/kakaoSymbol.png"
+                    alt="카카오페이"
+                    class="h-6 w-auto object-contain"
+                  />
+                  <span class="text-sm font-bold -translate-x-2">결제</span>
+                </button>
               </div>
             </div>
 

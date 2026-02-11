@@ -8,8 +8,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrderItems } from "@/composables/useOrderItems";
 import { useAddresses, useShippingForm } from "@/composables/useAddresses";
 import { useCreateOrder } from "@/composables/useOrders";
-// 🔒 Option A: useStockReservation 제거 (재고 선점 사용 안함)
-// import { useStockReservation } from "@/composables/useStockReservation";
 import { useAlert } from "@/composables/useAlert";
 import { formatPrice } from "@/lib/formatters";
 import {
@@ -57,9 +55,6 @@ import {
 } from "@/lib/validators";
 import { ORDER_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 
-// [이미지 Import] - 결제 수단 로고
-// import tossLogo from "@/assets/optimized/tossSymbol.webp";  // 토스페이먼츠 비활성화 (867KB → 40KB 최적화 완료)
-// import naverLogo from "@/assets/naverSymbol.svg";  // 네이버페이 비활성화 (결제형 → 주문형 전환 대응)
 import kakaoLogo from "@/assets/kakaoSymbol.png";
 
 const route = useRoute();
@@ -99,23 +94,9 @@ const isRemoteAreaAddress = computed(() => {
 const remoteAreaLabel = computed(() => {
   return getRemoteAreaLabel(shippingForm.form.zipCode);
 });
-// 🔒 Option A: useStockReservation 제거 (재고 선점 사용 안함)
-// const {
-//   reservationId,
-//   isReserved,
-//   isLoading: isReserving,
-//   remainingTimeFormatted,
-//   reserve: reserveStock,
-//   release: releaseStock,
-//   reset: resetReservation,
-// } = useStockReservation();
-
-// 🔒 재고 선점 제거: 빈 함수로 정의 (하위 호환성 유지)
+// 재고 선점 제거: 하위 호환성 유지용 스텁
 const reservationId = ref<string | null>(null);
-const resetReservation = () => {
-  // 재고 선점 로직 제거됨 - 아무것도 하지 않음
-  console.log("[재고 선점] 제거됨 - resetReservation 호출 무시");
-};
+const resetReservation = () => {};
 
 // 상태
 const loading = ref(false);
@@ -152,10 +133,7 @@ const validationMessage = ref("");
 // AddressForm ref
 const addressFormRef = ref<InstanceType<typeof AddressForm> | null>(null);
 
-// [결제 수단 옵션] - 로고 이미지만 표시 (한글 라벨 제거)
 const paymentMethods = [
-  // { label: "토스페이", value: "toss", icon: tossLogo },  // 비활성화 (코드 유지)
-  // { value: "naverpay", icon: naverLogo },  // 비활성화 (결제형 → 주문형 전환 대응)
   { value: "kakaopay", icon: kakaoLogo },
 ];
 
@@ -203,7 +181,7 @@ const loadData = async () => {
       shippingForm.form.saveDefault = false; // 회원 정보 모드에서는 기본 배송지 뱃지 표시 안 함
     }
   } catch (error) {
-    console.error(error);
+    showAlert("주문 정보를 불러오는 데 실패했습니다. 다시 시도해주세요.", { type: "error" });
   } finally {
     loading.value = false;
   }
@@ -251,7 +229,13 @@ const showValidationError = (
 };
 
 // 결제 처리 핸들러
+const isPaymentLocked = ref(false);
 const handlePayment = async () => {
+  // 중복 결제 방지 lock
+  if (isPaymentLocked.value) return;
+  isPaymentLocked.value = true;
+
+  try {
   // 1. 주문 상품 유효성 검사
   if (orderItems.value.length === 0) {
     showValidationError(ORDER_MESSAGES.noOrderItems);
@@ -262,12 +246,10 @@ const handlePayment = async () => {
   for (const item of orderItems.value) {
     if (!isValidPrice(item.product.price)) {
       showValidationError(ORDER_MESSAGES.invalidPrice);
-      console.error("Invalid price:", item.product.price);
       return;
     }
     if (!isValidQuantity(item.quantity)) {
       showValidationError(ORDER_MESSAGES.invalidQuantity);
-      console.error("Invalid quantity:", item.quantity);
       return;
     }
   }
@@ -285,7 +267,6 @@ const handlePayment = async () => {
     )
   ) {
     showValidationError(ORDER_MESSAGES.amountMismatch);
-    console.error("Order amount mismatch");
     return;
   }
 
@@ -326,11 +307,7 @@ const handlePayment = async () => {
     return;
   }
 
-  // 테스트 모드 여부 (일반 사용자)
-  const isTestMode = !authStore.user?.isAdmin;
-  const confirmMessage = isTestMode
-    ? `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?\n\n⚠️ 실제 결제는 이루어지지 않습니다.`
-    : `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`;
+  const confirmMessage = `${formatPrice(orderTotalAmount.value)}을\n결제하시겠습니까?`;
 
   const confirmed = await showConfirm(confirmMessage, {
     confirmText: "결제하기",
@@ -345,7 +322,6 @@ const handlePayment = async () => {
     isPaymentProcessing.value = true;
 
     // 🔒 Option A: 재고 선점 제거 - 주문 생성 시 재고 확인 및 차감
-    console.log("[결제 프로세스] 주문 생성 시작 (재고 확인 + 차감 포함)");
     const orderParams: CreateOrderRequest = {
       shippingName: shippingForm.form.recipient,
       shippingPhone: shippingForm.fullPhone.value,
@@ -361,14 +337,9 @@ const handlePayment = async () => {
     orderData = await submitOrder(orderParams);
 
     if (!orderData) {
-      console.error("[결제 프로세스] 주문 생성 실패");
       throw new Error(ORDER_MESSAGES.orderCreateFailed);
     }
 
-    console.log(
-      "[결제 프로세스] 주문 생성 성공 (재고 차감 완료):",
-      orderData.orderId,
-    );
 
     // 현재 주문 ID 저장 (결제 취소 시 주문 취소용)
     currentOrderId.value = orderData.orderId;
@@ -393,26 +364,18 @@ const handlePayment = async () => {
 
     // 에러 발생 시 정리
     if (orderData?.orderId) {
-      // 주문이 생성된 경우: 주문 삭제 (백엔드에서 재고 자동 복구)
       try {
-        console.log("[결제 프로세스] 주문 삭제:", orderData.orderId);
         await deleteOrder(orderData.orderId);
-        console.log(
-          "[결제 프로세스] 주문 삭제 성공 (백엔드에서 재고 자동 복구)",
-        );
-      } catch (deleteError) {
-        console.error("[결제 프로세스] 주문 삭제 실패:", deleteError);
-      }
+      } catch (_) { /* Cron이 자동 정리 */ }
       currentOrderId.value = null;
-
-      // 🔒 Option A: 재고 선점 제거 - 프론트엔드 상태만 정리
       resetReservation();
-      console.log("[결제 프로세스] 프론트엔드 상태 정리 완료");
     }
-    // 🔒 Option A: 재고 선점 제거 - 주문 생성 전 에러는 정리할 것이 없음
 
     isPaymentProcessing.value = false;
     isPaymentPopupOpen.value = false;
+  }
+  } finally {
+    isPaymentLocked.value = false;
   }
 };
 
@@ -469,9 +432,7 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     // 6. 🔒 주문 상태를 paying으로 변경 (결제창 오픈 직전)
     try {
       await updateOrderStatusToPaying(orderData.orderId);
-      console.log("[토스페이] 주문 상태 변경: paying");
     } catch (statusErr) {
-      console.error("[토스페이] 상태 업데이트 실패:", statusErr);
       throw new Error(ORDER_MESSAGES.paymentPrepareError);
     }
 
@@ -483,9 +444,6 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     // beforeunload 이벤트가 발생하기 전에 플래그를 설정해야 함
     if (isMobile.value) {
       localStorage.setItem("payment_confirming", "true");
-      console.log(
-        "[토스페이] 모바일 리다이렉트 전 payment_confirming 플래그 설정",
-      );
     }
 
     await payment.requestPayment({
@@ -508,17 +466,12 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
     // 7-1. 결제창 오픈 후 폴링 시작 (Phase 2: 네이버페이 수준의 능동적 감지)
     startTossPaymentMonitoring();
   } catch (err: unknown) {
-    console.error("[토스페이] 결제 오류 (상세):", err);
-    console.error("[토스페이] 에러 타입:", (err as any)?.constructor?.name);
-    console.error("[토스페이] 에러 코드:", (err as any)?.code);
-    console.error("[토스페이] 에러 메시지:", (err as any)?.message);
     isPaymentPopupOpen.value = false;
 
     // 🔒 모바일에서 에러 발생 시 플래그 정리 (리다이렉트 전 에러 시)
     // requestPayment 이전에 에러가 발생하면 리다이렉트가 안 되므로 플래그 제거 필요
     if (isMobile.value) {
       localStorage.removeItem("payment_confirming");
-      console.log("[토스페이] 에러 발생 - payment_confirming 플래그 제거");
     }
 
     // 중요: 토스페이먼츠 iframe 결제창에서 결제 완료 시 콜백 URL로 리다이렉트되면서
@@ -539,7 +492,6 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
         tossCleanupCheckInterval = null;
       }
 
-      console.log("[토스페이] 사용자 취소 - 주문 취소 API 호출");
 
       if (currentOrderId.value) {
         // 처리 중 플래그 설정 (폴링과 중복 방지)
@@ -549,13 +501,11 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
           await cancelOrder(currentOrderId.value, {
             cancelReason: "사용자가 결제를 취소했습니다.",
           });
-          console.log("[토스페이] 주문 취소 완료");
 
           // 프론트엔드 상태 정리
           currentOrderId.value = null;
           resetReservation();
         } catch (cancelErr) {
-          console.error("[토스페이] 주문 취소 실패:", cancelErr);
           // 취소 실패해도 Cron이 30분 후 자동 정리
         } finally {
           // 처리 완료 후 플래그 리셋
@@ -568,9 +518,6 @@ const processTossPayment = async (orderData: CreateOrderResponse) => {
       showAlert(ORDER_MESSAGES.paymentCancelled);
     } else {
       // iframe이 닫힌 경우는 정상 결제 진행일 수 있으므로 에러 메시지 표시하지 않음
-      console.log(
-        "[토스페이] 결제창이 닫혔습니다 - PaymentCallback에서 처리 예정",
-      );
     }
 
     // 상태 복구
@@ -594,6 +541,11 @@ const startTossPaymentMonitoring = () => {
       if (tossCleanupCheckInterval) {
         clearInterval(tossCleanupCheckInterval);
         tossCleanupCheckInterval = null;
+      }
+      if (isPaymentPopupOpen.value) {
+        isPaymentPopupOpen.value = false;
+        isPaymentProcessing.value = false;
+        showAlert("결제 응답 대기 시간이 초과되었습니다. 다시 시도해 주세요.", { type: "error" });
       }
       return;
     }
@@ -625,7 +577,6 @@ const startTossPaymentMonitoring = () => {
           clearInterval(tossCleanupCheckInterval);
           tossCleanupCheckInterval = null;
         }
-        console.log("[토스페이 폴링] 이미 처리 중 - 스킵");
         return;
       }
 
@@ -640,7 +591,6 @@ const startTossPaymentMonitoring = () => {
 
       // 즉시 취소 API 호출
       try {
-        console.log("[토스페이 폴링] 결제창 닫힘 감지 - 즉시 취소 처리");
         await cancelOrder(currentOrderId.value, {
           cancelReason: "토스페이 결제창 닫힘",
         });
@@ -648,7 +598,6 @@ const startTossPaymentMonitoring = () => {
         resetReservation();
         showAlert(ORDER_MESSAGES.paymentCancelled);
       } catch (err) {
-        console.error("[토스페이 폴링] 취소 처리 실패:", err);
       } finally {
         // 처리 완료 후 플래그 리셋
         setTimeout(() => {
@@ -709,9 +658,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 9. 🔒 주문 상태를 paying으로 변경 (결제창 오픈 직전)
     try {
       await updateOrderStatusToPaying(orderData.orderId);
-      console.log("[네이버페이] 주문 상태 변경: paying");
     } catch (statusErr) {
-      console.error("[네이버페이] 상태 업데이트 실패:", statusErr);
       throw new Error(ORDER_MESSAGES.paymentPrepareError);
     }
 
@@ -737,57 +684,44 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     };
 
     // 🔍 디버깅: SDK 설정 및 파라미터 로깅
-    console.log("=== 네이버페이 SDK 디버깅 ===");
-    console.log("1. SDK Config:", {
-      clientId: sdkConfig.clientId?.substring(0, 8) + "...",
-      chainId: sdkConfig.chainId,
-      mode: sdkConfig.mode,
-      payType: sdkConfig.payType,
-      returnUrl: sdkConfig.returnUrl,
-    });
-    console.log("2. Pay Reserve Params:", naverPayParams);
-    console.log("3. Product Items:", productItems);
-    console.log("============================");
 
     // 🔒 모바일 리다이렉트 전에 플래그 설정 (beforeunload에서 cleanup 방지)
     // 모바일은 openType: "page"로 페이지가 완전히 리다이렉트되므로
     // beforeunload 이벤트가 발생하기 전에 플래그를 설정해야 함
     if (isMobile.value) {
       localStorage.setItem("payment_confirming", "true");
-      console.log(
-        "[네이버페이] 모바일 리다이렉트 전 payment_confirming 플래그 설정",
-      );
     }
 
     naverPay.open(naverPayParams);
 
     // PC 팝업 방식: focus 이벤트 및 localStorage로 결제 결과 수신
     if (!isMobile.value) {
+      // storage 이벤트 핸들러 참조 (전방 선언 - 정리용)
+      let naverStorageHandler: ((event: StorageEvent) => void) | null = null;
+
       // 팝업 강제 종료 처리 함수 (먼저 정의)
       const handlePopupForceClosed = async () => {
-        console.log("[네이버페이] 팝업 강제 종료 처리 시작");
+        // 이벤트 리스너 정리
+        if (naverStorageHandler) {
+          window.removeEventListener("storage", naverStorageHandler);
+          naverStorageHandler = null;
+        }
 
         // 주문 취소 및 정리
         if (currentOrderId.value) {
           try {
-            console.log("[팝업 강제 종료] 주문 취소:", currentOrderId.value);
             await cancelOrder(currentOrderId.value, {
               cancelReason: "네이버페이 팝업 강제 종료",
             });
-            console.log(
-              "[팝업 강제 종료] 주문 취소 완료 (백엔드에서 재고 자동 복구)",
-            );
             currentOrderId.value = null;
             resetReservation();
           } catch (cancelError) {
-            console.error("[팝업 강제 종료] 주문 취소 실패:", cancelError);
             currentOrderId.value = null;
           }
         }
 
         // 재고 선점 상태 정리
         resetReservation();
-        console.log("[팝업 강제 종료] 재고 선점 상태 정리 완료");
 
         // 팝업 상태 종료 및 Alert
         isPaymentPopupOpen.value = false;
@@ -832,6 +766,7 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
           if (isPaymentPopupOpen.value) {
             isPaymentPopupOpen.value = false;
             isPaymentProcessing.value = false;
+            showAlert("결제 응답 대기 시간이 초과되었습니다. 다시 시도해 주세요.", { type: "error" });
           }
         }
       }, 500);
@@ -841,10 +776,15 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
         try {
           const result = JSON.parse(resultStr);
           const { type, orderId, message } = result;
-          console.log("[네이버페이] 결제 결과 수신:", { type, orderId });
 
           // 중복 처리 방지
           isProcessingPaymentResult.value = true;
+
+          // 이벤트 리스너 정리
+          if (naverStorageHandler) {
+            window.removeEventListener("storage", naverStorageHandler);
+            naverStorageHandler = null;
+          }
 
           // watcher 타이머 취소 (중복 호출 방지)
           if (paymentTimeoutId) {
@@ -883,23 +823,14 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
 
             if (orderId) {
               try {
-                console.log("[네이버페이] 주문 취소 (실패):", orderId);
                 await cancelOrder(orderId, {
                   cancelReason: "네이버페이 결제 실패",
                 });
-                console.log(
-                  "[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)",
-                );
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
-                console.error("[네이버페이] 주문 취소 실패:", cancelError);
                 currentOrderId.value = null;
               }
-            } else {
-              console.warn(
-                "[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.",
-              );
             }
 
             showAlert(message || ORDER_MESSAGES.paymentError, {
@@ -911,23 +842,14 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
 
             if (orderId) {
               try {
-                console.log("[네이버페이] 주문 취소 (사용자 취소):", orderId);
                 await cancelOrder(orderId, {
                   cancelReason: "사용자가 결제를 취소했습니다.",
                 });
-                console.log(
-                  "[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)",
-                );
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
-                console.error("[네이버페이] 주문 취소 실패:", cancelError);
                 currentOrderId.value = null;
               }
-            } else {
-              console.warn(
-                "[네이버페이] orderId가 없어서 주문을 취소할 수 없습니다.",
-              );
             }
 
             showAlert(ORDER_MESSAGES.paymentCancelled);
@@ -947,7 +869,6 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
             isProcessingPaymentResult.value = false;
           }, 1000);
         } catch (e) {
-          console.error("네이버페이 결과 파싱 오류:", e);
           isPaymentPopupOpen.value = false;
           isProcessingPaymentResult.value = false;
         }
@@ -1013,30 +934,27 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
       };
 
       // storage 이벤트 핸들러 (다른 창에서 localStorage 변경 시)
-      const handleStorageChange = async (event: StorageEvent) => {
+      naverStorageHandler = async (event: StorageEvent) => {
         if (event.key !== "naverpay_result" || !event.newValue) return;
 
-        console.log("[네이버페이] storage 이벤트로 결과 수신");
         window.removeEventListener("focus", handleWindowFocus);
         await handleNaverPayResult(event.newValue);
       };
 
       window.addEventListener("focus", handleWindowFocus);
-      window.addEventListener("storage", handleStorageChange);
+      window.addEventListener("storage", naverStorageHandler);
     }
     // 모바일은 리다이렉트되므로 별도 처리 불필요
   } catch (err: unknown) {
-    console.error("네이버페이 결제 오류", err);
     isPaymentPopupOpen.value = false;
 
     // 🔒 모바일에서 에러 발생 시 플래그 정리 (리다이렉트 전 에러 시)
     // naverPay.open() 이전에 에러가 발생하면 리다이렉트가 안 되므로 플래그 제거 필요
     if (isMobile.value) {
       localStorage.removeItem("payment_confirming");
-      console.log("[네이버페이] 에러 발생 - payment_confirming 플래그 제거");
     }
 
-    // 팝업 체크 인터벌 정리
+    // 팝업 체크 인터벌 정리 (storage 리스너는 if 블록 스코프 내에서 자체 정리됨)
     if (popupCheckInterval) {
       clearInterval(popupCheckInterval);
       popupCheckInterval = null;
@@ -1048,20 +966,14 @@ const processNaverPayment = async (orderData: CreateOrderResponse) => {
     // 🔒 Security First: 에러 발생 시 주문 취소 API 호출 (재고는 백엔드가 복구)
     if (orderData.orderId) {
       try {
-        console.log(
-          "[네이버페이] 주문 취소 API 호출 (오류):",
-          orderData.orderId,
-        );
         await cancelOrder(orderData.orderId, {
           cancelReason: "네이버페이 결제 호출 오류",
         });
-        console.log("[네이버페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
 
         // 프론트엔드 상태 정리
         currentOrderId.value = null;
         resetReservation();
       } catch (cancelError) {
-        console.error("[네이버페이] 주문 취소 실패:", cancelError);
         // 취소 실패해도 Cron이 30분 후 자동 정리
         currentOrderId.value = null;
       }
@@ -1092,29 +1004,24 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
     // 2. 주문 상태를 paying으로 변경 (결제창 오픈 직전)
     try {
       await updateOrderStatusToPaying(orderData.orderId);
-      console.log("[카카오페이] 주문 상태 변경: paying");
     } catch (statusErr) {
-      console.error("[카카오페이] 상태 업데이트 실패:", statusErr);
       throw new Error(ORDER_MESSAGES.paymentPrepareError);
     }
 
     // 3. 카카오페이 결제 준비 API 호출
     const readyResult = await readyKakaoPay(orderData.orderId);
-    console.log("[카카오페이] 결제 준비 완료:", readyResult.tid);
 
     // 4. PC/모바일 분기
     if (isMobile.value) {
       // ========== 모바일: 리다이렉트 방식 ==========
       localStorage.setItem("payment_confirming", "true");
       localStorage.setItem("kakaopay_current_order", orderData.orderId);
-      console.log("[카카오페이] 모바일 리다이렉트 전 플래그 설정");
 
       window.location.replace(readyResult.next_redirect_mobile_url);
     } else {
       // ========== PC: 팝업 방식 (네이버페이와 동일) ==========
       localStorage.setItem("kakaopay_popup", "true");
       localStorage.setItem("kakaopay_current_order", orderData.orderId);
-      console.log("[카카오페이] PC 팝업 플래그 설정");
 
       // 팝업 창 열기
       const popupWidth = 500;
@@ -1132,29 +1039,18 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
         throw new Error("팝업이 차단되었습니다. 팝업 차단을 해제해주세요.");
       }
 
-      console.log("[카카오페이] 팝업 열림");
 
       // 팝업 강제 종료 처리 함수
       const handlePopupForceClosed = async () => {
-        console.log("[카카오페이] 팝업 강제 종료 처리 시작");
 
         if (currentOrderId.value) {
           try {
-            console.log(
-              "[카카오페이 팝업 강제 종료] 주문 취소:",
-              currentOrderId.value,
-            );
             await cancelOrder(currentOrderId.value, {
               cancelReason: "카카오페이 팝업 강제 종료",
             });
-            console.log("[카카오페이 팝업 강제 종료] 주문 취소 완료");
             currentOrderId.value = null;
             resetReservation();
           } catch (cancelError) {
-            console.error(
-              "[카카오페이 팝업 강제 종료] 주문 취소 실패:",
-              cancelError,
-            );
             currentOrderId.value = null;
           }
         }
@@ -1172,7 +1068,6 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
         try {
           const result = JSON.parse(resultStr);
           const { type, orderId, message } = result;
-          console.log("[카카오페이] 결제 결과 수신:", { type, orderId });
 
           isProcessingPaymentResult.value = true;
 
@@ -1206,14 +1101,12 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
 
             if (orderId) {
               try {
-                console.log("[카카오페이] 주문 취소 (실패):", orderId);
                 await cancelOrder(orderId, {
                   cancelReason: "카카오페이 결제 실패",
                 });
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
-                console.error("[카카오페이] 주문 취소 실패:", cancelError);
                 currentOrderId.value = null;
               }
             }
@@ -1226,14 +1119,12 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
 
             if (orderId) {
               try {
-                console.log("[카카오페이] 주문 취소 (사용자 취소):", orderId);
                 await cancelOrder(orderId, {
                   cancelReason: "사용자가 결제를 취소했습니다.",
                 });
                 currentOrderId.value = null;
                 resetReservation();
               } catch (cancelError) {
-                console.error("[카카오페이] 주문 취소 실패:", cancelError);
                 currentOrderId.value = null;
               }
             }
@@ -1253,7 +1144,6 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
             isProcessingPaymentResult.value = false;
           }, 1000);
         } catch (e) {
-          console.error("카카오페이 결과 파싱 오류:", e);
           isPaymentPopupOpen.value = false;
           isProcessingPaymentResult.value = false;
         }
@@ -1303,6 +1193,7 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
           if (isPaymentPopupOpen.value) {
             isPaymentPopupOpen.value = false;
             isPaymentProcessing.value = false;
+            showAlert("결제 응답 대기 시간이 초과되었습니다. 다시 시도해 주세요.", { type: "error" });
           }
         }
       }, 500);
@@ -1350,7 +1241,6 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
       const handleStorageChange = async (event: StorageEvent) => {
         if (event.key !== "kakaopay_result" || !event.newValue) return;
 
-        console.log("[카카오페이] storage 이벤트로 결과 수신");
         window.removeEventListener("focus", handleWindowFocus);
         window.removeEventListener("storage", handleStorageChange);
         await handleKakaoPayResult(event.newValue);
@@ -1360,7 +1250,6 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
       window.addEventListener("storage", handleStorageChange);
     }
   } catch (err: unknown) {
-    console.error("[카카오페이] 결제 오류:", err);
 
     // 플래그 정리
     localStorage.removeItem("payment_confirming");
@@ -1370,15 +1259,12 @@ const processKakaoPayment = async (orderData: CreateOrderResponse) => {
     // 주문 취소 (에러 발생 시)
     if (orderData.orderId) {
       try {
-        console.log("[카카오페이] 주문 취소:", orderData.orderId);
         await cancelOrder(orderData.orderId, {
           cancelReason: "카카오페이 결제 오류",
         });
-        console.log("[카카오페이] 주문 취소 완료 (백엔드에서 재고 자동 복구)");
         currentOrderId.value = null;
         resetReservation();
       } catch (cancelError) {
-        console.error("[카카오페이] 주문 취소 실패:", cancelError);
         currentOrderId.value = null;
       }
     }
@@ -1409,65 +1295,36 @@ const saveDefaultAddressIfNeeded = async () => {
         isDefault: true,
       });
     } catch (e) {
-      console.error("배송지 저장 실패 (결제는 성공함)", e);
     }
   }
 };
 
 // [Phase 2] visibilitychange 이벤트 핸들러 (모바일/백그라운드 전환 감지)
 const handleVisibilityChange = () => {
-  console.log(
-    "[visibilitychange] 이벤트 발생 - visibilityState:",
-    document.visibilityState,
-  );
 
   // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
   if (localStorage.getItem("payment_confirming") === "true") {
-    console.log("[visibilitychange] 결제 승인 진행 중 - cleanup 취소");
     return;
   }
 
   // 페이지가 숨겨지고(hidden) 주문이 생성되었으면 cleanup API 호출
   if (document.visibilityState === "hidden" && currentOrderId.value) {
-    console.log(
-      "[visibilitychange] 페이지 숨김 감지 - cleanup 시도:",
-      currentOrderId.value,
-    );
-    const result = cleanupOrder(currentOrderId.value);
-    console.log("[visibilitychange] cleanup 호출 결과:", result);
-  } else {
-    console.log(
-      "[visibilitychange] cleanup 조건 미충족 - currentOrderId:",
-      currentOrderId.value,
-    );
+    cleanupOrder(currentOrderId.value);
   }
 };
 
 // 페이지 이탈 시 정리 (브라우저 종료, 탭 닫기 등)
 const handleBeforeUnload = () => {
-  console.log(
-    "[beforeunload] 이벤트 발생 - currentOrderId:",
-    currentOrderId.value,
-  );
 
   // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
   if (localStorage.getItem("payment_confirming") === "true") {
-    console.log("[페이지 이탈] 결제 승인 진행 중 - cleanup 취소");
     return;
   }
 
   // 주문이 생성되었으면 cleanup API 호출 (sendBeacon으로 보장)
   if (currentOrderId.value) {
-    console.log(
-      "[페이지 이탈] 주문 정리 (브라우저 강제 종료 대응):",
-      currentOrderId.value,
-    );
     // sendBeacon으로 paying 상태 주문의 재고 즉시 복구
-    const sent = cleanupOrder(currentOrderId.value);
-    console.log(
-      "[페이지 이탈] cleanup 요청 전송:",
-      sent ? "성공" : "실패 (Cron이 처리)",
-    );
+    cleanupOrder(currentOrderId.value);
   }
   // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
   // 주문 생성 전에는 재고가 차감되지 않으므로 정리할 필요 없음
@@ -1475,19 +1332,15 @@ const handleBeforeUnload = () => {
 
 // [긴급 추가] Page Lifecycle API - freeze 이벤트 (가장 신뢰성 있음)
 const handlePageFreeze = () => {
-  console.log("[freeze] 이벤트 발생 - 브라우저가 페이지 동결 준비");
 
   // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음
   if (localStorage.getItem("payment_confirming") === "true") {
-    console.log("[freeze] 결제 승인 진행 중 - cleanup 취소");
     return;
   }
 
   // 주문이 생성되었으면 cleanup API 호출
   if (currentOrderId.value) {
-    console.log("[freeze] 주문 정리 시도:", currentOrderId.value);
-    const result = cleanupOrder(currentOrderId.value);
-    console.log("[freeze] cleanup 호출 결과:", result);
+    cleanupOrder(currentOrderId.value);
   }
 };
 
@@ -1495,13 +1348,11 @@ const handlePageFreeze = () => {
 const handlePopState = () => {
   // 🔒 결제 승인 진행 중이면 cleanup 호출하지 않음 (토스페이먼츠 충돌 방지)
   if (localStorage.getItem("payment_confirming") === "true") {
-    console.log("[뒤로가기] 결제 승인 진행 중 - cleanup 취소");
     return;
   }
 
   // 주문이 생성되었으면 cleanup API 호출
   if (currentOrderId.value) {
-    console.log("[뒤로가기] 주문 정리:", currentOrderId.value);
     cleanupOrder(currentOrderId.value);
   }
   // 🔒 Option A: 재고 선점 제거 - 재고 선점 해제 로직 불필요
@@ -1523,7 +1374,6 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
 
       // 결제 승인이 진행 중이면 주문 삭제하지 않음 (localStorage 확인)
       if (localStorage.getItem("payment_confirming") === "true") {
-        console.log("[팝업 종료] 결제 승인 진행 중 - 주문 삭제 취소");
         return;
       }
 
@@ -1533,16 +1383,9 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
         // 🔒 Security First: 주문 삭제/취소하지 않음
         // paying 상태의 주문은 백엔드 Cron이 30분 후 자동 정리
         // 프론트엔드는 재고에 관여하지 않음
-        console.log(
-          "[팝업 종료] 주문 자동 정리는 백엔드 Cron이 처리합니다 (30분 후)",
-        );
 
         // 프론트엔드 상태만 정리
         if (currentOrderId.value) {
-          console.log(
-            "[팝업 종료] 프론트엔드 상태 정리:",
-            currentOrderId.value,
-          );
           currentOrderId.value = null;
         }
 
@@ -1562,63 +1405,10 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
   }
 });
 
-// Performance 최적화: 결제 SDK 동적 로딩
-const sdkLoaded = ref({
-  toss: false,
-  naver: false,
-});
-
-const loadPaymentSDKs = async () => {
-  try {
-    // 토스페이먼츠 SDK 로드
-    if (!window.TossPayments && !sdkLoaded.value.toss) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://js.tosspayments.com/v2/standard";
-        script.async = true;
-        script.onload = () => {
-          sdkLoaded.value.toss = true;
-          console.log("[SDK] 토스페이먼츠 로드 완료");
-          resolve(true);
-        };
-        script.onerror = () => {
-          console.error("[SDK] 토스페이먼츠 로드 실패");
-          reject(new Error("토스페이먼츠 SDK 로드 실패"));
-        };
-        document.head.appendChild(script);
-      });
-    }
-
-    // 네이버페이 SDK 로드
-    if (!window.Naver && !sdkLoaded.value.naver) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://nsp.pay.naver.com/sdk/js/naverpay.min.js";
-        script.async = true;
-        script.onload = () => {
-          sdkLoaded.value.naver = true;
-          console.log("[SDK] 네이버페이 로드 완료");
-          resolve(true);
-        };
-        script.onerror = () => {
-          console.error("[SDK] 네이버페이 로드 실패");
-          reject(new Error("네이버페이 SDK 로드 실패"));
-        };
-        document.head.appendChild(script);
-      });
-    }
-
-    console.log("[SDK] 결제 SDK 로딩 완료");
-  } catch (error) {
-    console.error("[SDK] 결제 SDK 로딩 중 오류:", error);
-    // SDK 로드 실패해도 페이지는 정상 표시 (결제 시도 시 에러 처리)
-  }
-};
+// 비활성 결제 SDK (토스/네이버) 로드 제거됨 - 현재 카카오페이만 사용
+// 카카오페이는 팝업/리다이렉트 방식이므로 SDK 사전 로드 불필요
 
 onMounted(async () => {
-  // Performance 최적화: 결제 SDK 동적 로딩
-  await loadPaymentSDKs();
-
   // 사용자 정보 로드
   if (!authStore.user) {
     await authStore.loadUser();
@@ -1642,9 +1432,6 @@ onMounted(async () => {
   window.addEventListener("pagehide", handleBeforeUnload); // 모바일/탭 닫기
   window.addEventListener("popstate", handlePopState);
 
-  console.log(
-    "[Order.vue] 이벤트 리스너 등록 완료 - visibilitychange, freeze, beforeunload, pagehide, popstate",
-  );
 });
 
 // 페이지 이탈 시 바로 구매 세션 정리
@@ -1656,7 +1443,6 @@ onUnmounted(() => {
   window.removeEventListener("pagehide", handleBeforeUnload);
   window.removeEventListener("popstate", handlePopState);
 
-  console.log("[Order.vue] 이벤트 리스너 제거 완료");
 
   // 타이머 정리
   if (paymentTimeoutId) {
@@ -1685,17 +1471,9 @@ onUnmounted(() => {
   if (currentOrderId.value) {
     // 🔒 Security First: 주문 삭제하지 않음
     // Cron이 30분 후 자동 정리 (유령 주문 방지)
-    console.log(
-      "[언마운트] 주문 자동 정리는 백엔드 Cron이 처리합니다:",
-      currentOrderId.value,
-    );
   } else if (reservationId.value) {
     // 🔒 Security First: 재고 해제도 백엔드가 처리
     // 재고 선점 TTL 만료 또는 Cron이 자동 해제
-    console.log(
-      "[언마운트] 재고 선점 자동 해제는 백엔드가 처리합니다:",
-      reservationId.value,
-    );
   }
 
   // 결제 완료 콜백으로 이동하는 경우는 정리하지 않음
@@ -1707,16 +1485,6 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
-    <!-- 테스트 모드 배너 (일반 사용자) -->
-    <div
-      v-if="!authStore.user?.isAdmin"
-      class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center"
-    >
-      <p class="text-amber-800 font-medium">
-        ⚠️ 테스트 페이지입니다. 실제 결제는 이루어지지 않습니다.
-      </p>
-    </div>
-
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">주문 하기</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">
