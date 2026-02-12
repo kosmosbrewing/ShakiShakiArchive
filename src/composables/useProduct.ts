@@ -3,7 +3,7 @@
 
 import { ref, computed, onMounted, watch, type Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { fetchProduct, fetchProducts, fetchProductVariants, fetchSizeMeasurements } from "@/lib/api";
+import { fetchProduct, fetchProducts, fetchProductVariants, fetchSizeMeasurements, ApiError } from "@/lib/api";
 import type { Product, ProductVariant, SizeMeasurement } from "@/types/api";
 import { useAlert } from "./useAlert";
 
@@ -59,10 +59,17 @@ export function useProduct(productId?: string | number) {
       variants.value = await fetchProductVariants(String(pid));
     } catch (e) {
       const { showAlert } = useAlert();
-      error.value = "상품 정보를 불러올 수 없습니다.";
       console.error("상품 로드 실패:", e);
-      showAlert("상품 정보를 불러올 수 없습니다.", { type: "error" });
-      router.go(-1);
+
+      // Rate-limit(429)은 일시적 에러 → 뒤로가기 대신 재시도 유도
+      if (e instanceof ApiError && e.status === 429) {
+        error.value = "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.";
+        showAlert("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", { type: "error" });
+      } else {
+        error.value = "상품 정보를 불러올 수 없습니다.";
+        showAlert("상품 정보를 불러올 수 없습니다.", { type: "error" });
+        router.go(-1);
+      }
     } finally {
       loading.value = false;
     }

@@ -110,7 +110,7 @@ const handleLogout = async () => {
 };
 
 const handleInstagram = () => {
-  window.open("https://www.instagram.com", "_blank");
+  window.open("https://www.instagram.com/shakishaki_archive?igsh=MXg2ZDM2amswbWdzeQ%3D%3D&utm_source=qr", "_blank");
 };
 
 const goHome = () => {
