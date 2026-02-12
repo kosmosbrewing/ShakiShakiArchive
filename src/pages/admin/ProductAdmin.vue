@@ -44,6 +44,7 @@ import {
   Check,
   PlusCircle,
   Eye,
+  Search,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { ImageUploader } from "@/components/admin";
@@ -166,6 +167,11 @@ const measurementFields: { id: keyof MeasurementForm; label: string }[] = [
   //{ id: "displayOrder", label: "출력순서" },
 ];
 
+// --- 검색 & 필터 ---
+const searchQuery = ref("");
+const stockFilter = ref<"all" | "inStock" | "outOfStock">("all");
+const saleFilter = ref<"all" | "available" | "unavailable">("all");
+
 // --- 정렬 상태 ---
 const sortOrder = ref<"asc" | "desc">("desc"); // 기본: 최신순
 
@@ -174,9 +180,44 @@ const toggleSortOrder = () => {
   currentPage.value = 1; // 정렬 변경 시 첫 페이지로 이동
 };
 
+// 검색어/필터 변경 시 첫 페이지로 이동
+watch([searchQuery, stockFilter, saleFilter], () => {
+  currentPage.value = 1;
+});
+
 // --- Computed ---
+const filteredProducts = computed(() => {
+  let result = products.value;
+
+  // 검색어 필터
+  const q = searchQuery.value.trim().toLowerCase();
+  if (q) {
+    result = result.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(q) ||
+        p.slug?.toLowerCase().includes(q),
+    );
+  }
+
+  // 재고 필터
+  if (stockFilter.value === "inStock") {
+    result = result.filter((p) => (p.totalStock ?? 0) > 0);
+  } else if (stockFilter.value === "outOfStock") {
+    result = result.filter((p) => p.totalStock !== undefined && p.totalStock === 0);
+  }
+
+  // 판매 상태 필터
+  if (saleFilter.value === "available") {
+    result = result.filter((p) => p.isAvailable);
+  } else if (saleFilter.value === "unavailable") {
+    result = result.filter((p) => !p.isAvailable);
+  }
+
+  return result;
+});
+
 const sortedProducts = computed(() => {
-  return [...products.value].sort((a, b) => {
+  return [...filteredProducts.value].sort((a, b) => {
     const dateA = new Date(a.updatedAt || 0).getTime();
     const dateB = new Date(b.updatedAt || 0).getTime();
     return sortOrder.value === "desc" ? dateB - dateA : dateA - dateB;
@@ -606,11 +647,15 @@ onMounted(async () => {
       <div>
         <h3 class="text-heading text-admin tracking-wider">상품 관리</h3>
         <p class="text-body text-admin-muted mt-1 mb-3">
-          총
-          <span class="text-body text-admin font-bold">{{
-            products.length
-          }}</span
-          >개 상품
+          <template v-if="searchQuery.trim() || stockFilter !== 'all' || saleFilter !== 'all'">
+            검색 결과
+            <span class="text-body text-admin font-bold">{{ filteredProducts.length }}</span>개
+            <span class="text-caption text-admin-muted">/ 전체 {{ products.length }}개</span>
+          </template>
+          <template v-else>
+            총
+            <span class="text-body text-admin font-bold">{{ products.length }}</span>개 상품
+          </template>
         </p>
       </div>
       <Button
@@ -621,7 +666,54 @@ onMounted(async () => {
         새 상품 등록
       </Button>
     </div>
-    <Separator class="mb-6"></Separator>
+    <Separator class="mb-4"></Separator>
+
+    <!-- 검색 & 필터 -->
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="relative">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          type="text"
+          placeholder="상품명 또는 슬러그로 검색"
+          class="pl-9 w-64"
+        />
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <Button
+          v-for="opt in [
+            { value: 'all', label: '전체 재고' },
+            { value: 'inStock', label: '재고 있음' },
+            { value: 'outOfStock', label: '재고 없음' },
+          ]"
+          :key="opt.value"
+          size="sm"
+          :variant="stockFilter === opt.value ? 'default' : 'outline'"
+          @click="stockFilter = opt.value as typeof stockFilter"
+          class="text-xs"
+        >
+          {{ opt.label }}
+        </Button>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <Button
+          v-for="opt in [
+            { value: 'all', label: '전체 상태' },
+            { value: 'available', label: '판매중' },
+            { value: 'unavailable', label: '미판매' },
+          ]"
+          :key="opt.value"
+          size="sm"
+          :variant="saleFilter === opt.value ? 'default' : 'outline'"
+          @click="saleFilter = opt.value as typeof saleFilter"
+          class="text-xs"
+        >
+          {{ opt.label }}
+        </Button>
+      </div>
+    </div>
     <LoadingSpinner v-if="isLoading" />
 
     <Card v-else class="overflow-hidden border-none shadow-lg">
