@@ -669,7 +669,8 @@ onMounted(async () => {
     <Separator class="mb-4"></Separator>
 
     <!-- 검색 & 필터 -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <!-- 왼쪽: 검색 -->
       <div class="relative">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -680,38 +681,41 @@ onMounted(async () => {
         />
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <Button
-          v-for="opt in [
-            { value: 'all', label: '전체 재고' },
-            { value: 'inStock', label: '재고 있음' },
-            { value: 'outOfStock', label: '재고 없음' },
-          ]"
-          :key="opt.value"
-          size="sm"
-          :variant="stockFilter === opt.value ? 'default' : 'outline'"
-          @click="stockFilter = opt.value as typeof stockFilter"
-          class="text-xs"
-        >
-          {{ opt.label }}
-        </Button>
-      </div>
+      <!-- 오른쪽: 필터 버튼 -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-1.5">
+          <Button
+            v-for="opt in [
+              { value: 'all', label: '전체 재고' },
+              { value: 'inStock', label: '재고 있음' },
+              { value: 'outOfStock', label: '재고 없음' },
+            ]"
+            :key="opt.value"
+            size="sm"
+            :variant="stockFilter === opt.value ? 'default' : 'outline'"
+            @click="stockFilter = opt.value as typeof stockFilter"
+            class="text-xs"
+          >
+            {{ opt.label }}
+          </Button>
+        </div>
 
-      <div class="flex items-center gap-1.5">
-        <Button
-          v-for="opt in [
-            { value: 'all', label: '전체 상태' },
-            { value: 'available', label: '판매중' },
-            { value: 'unavailable', label: '미판매' },
-          ]"
-          :key="opt.value"
-          size="sm"
-          :variant="saleFilter === opt.value ? 'default' : 'outline'"
-          @click="saleFilter = opt.value as typeof saleFilter"
-          class="text-xs"
-        >
-          {{ opt.label }}
-        </Button>
+        <div class="flex items-center gap-1.5">
+          <Button
+            v-for="opt in [
+              { value: 'all', label: '전체 상태' },
+              { value: 'available', label: '판매중' },
+              { value: 'unavailable', label: '미판매' },
+            ]"
+            :key="opt.value"
+            size="sm"
+            :variant="saleFilter === opt.value ? 'default' : 'outline'"
+            @click="saleFilter = opt.value as typeof saleFilter"
+            class="text-xs"
+          >
+            {{ opt.label }}
+          </Button>
+        </div>
       </div>
     </div>
     <LoadingSpinner v-if="isLoading" />
