@@ -199,11 +199,11 @@ const filteredProducts = computed(() => {
     );
   }
 
-  // 재고 필터
+  // 재고 필터 (totalStock은 DB SUM 결과로 문자열 "0"일 수 있음)
   if (stockFilter.value === "inStock") {
-    result = result.filter((p) => (p.totalStock ?? 0) > 0);
+    result = result.filter((p) => Number(p.totalStock ?? 0) > 0);
   } else if (stockFilter.value === "outOfStock") {
-    result = result.filter((p) => p.totalStock !== undefined && p.totalStock === 0);
+    result = result.filter((p) => p.totalStock != null && Number(p.totalStock) === 0);
   }
 
   // 판매 상태 필터
