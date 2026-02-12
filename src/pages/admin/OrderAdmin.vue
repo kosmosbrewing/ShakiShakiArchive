@@ -63,6 +63,16 @@ const loadingMore = ref(false);
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
+// 자주 사용하는 상태 빠른 필터
+const quickFilters = [
+  { value: "all", label: "전체" },
+  { value: "payment_confirmed", label: "결제완료" },
+  { value: "preparing", label: "배송준비중" },
+  { value: "shipped", label: "배송중" },
+  { value: "return_requested", label: "반품요청" },
+  { value: "return_received", label: "검수대기" },
+];
+
 // 상태 옵션 (백엔드 상태값 기준으로 통일)
 const statusOptions = [
   { value: "pending_payment", label: "입금대기" },
@@ -406,60 +416,67 @@ onUnmounted(() => {
     </div>
     <Separator class="mb-6"></Separator>
 
-    <!-- 필터 -->
-    <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex gap-3">
+    <!-- 빠른 필터 버튼 -->
+    <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
+      <!-- 왼쪽: 전체상태 드롭다운 + 건수 -->
+      <div class="flex items-center gap-2">
         <Select v-model="selectedStatus">
-          <SelectTrigger class="w-[160px] sm:w-[180px]">
-            <SelectValue placeholder="주문 상태" />
+          <SelectTrigger class="w-[140px] h-8 text-xs">
+            <SelectValue placeholder="전체 상태" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
-            <SelectItem value="pending_payment">입금대기</SelectItem>
-            <SelectItem value="paying">결제진행중</SelectItem>
-            <SelectItem value="cancelled">주문중단</SelectItem>
-            <SelectItem value="payment_confirmed">결제완료</SelectItem>
-            <SelectItem value="preparing">배송준비중</SelectItem>
-            <SelectItem value="shipped">배송중</SelectItem>
-            <SelectItem value="delivered">배송완료</SelectItem>
-            <SelectItem value="purchase_confirmed">구매확정</SelectItem>
-            <SelectItem value="refunded">주문취소</SelectItem>
-            <SelectItem value="partial_refunded">부분환불</SelectItem>
-            <SelectItem value="return_requested">반품요청</SelectItem>
-            <SelectItem value="return_in_transit">반품배송중</SelectItem>
-            <SelectItem value="return_received">검수대기</SelectItem>
+            <SelectItem
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </SelectItem>
           </SelectContent>
         </Select>
-
-        <span class="text-body text-muted-foreground self-center ml-2">
-          필터 결과:
-          <span class="font-bold text-foreground">{{
-            filteredOrders.length
-          }}</span
-          >건
+        <span class="text-body text-muted-foreground">
+          <span class="font-bold text-foreground">{{ filteredOrders.length }}</span>건
         </span>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap">
-        <span
-          v-for="status in statusCounts"
-          :key="status.label"
-          class="text-caption self-center"
-          :class="
-            status.emphasized
-              ? 'text-muted-foreground'
-              : 'text-muted-foreground'
-          "
+      <!-- 오른쪽: 자주 쓰는 상태 버튼 -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <Button
+          v-for="opt in quickFilters"
+          :key="opt.value"
+          size="sm"
+          :variant="selectedStatus === opt.value ? 'default' : 'outline'"
+          @click="selectedStatus = opt.value"
+          class="text-xs gap-1.5"
         >
-          {{ status.label }}:
+          {{ opt.label }}
           <span
+            v-if="opt.value !== 'all' && getStatusCount(opt.value) > 0"
             class="font-bold"
-            :class="status.emphasized ? 'text-primary' : 'text-foreground'"
+            :class="selectedStatus === opt.value ? 'text-primary-foreground' : 'text-primary'"
           >
-            {{ status.count }} </span
-          >건
-        </span>
+            {{ getStatusCount(opt.value) }}
+          </span>
+        </Button>
       </div>
+    </div>
+
+    <!-- 상태별 현황 요약 (우측 정렬) -->
+    <div class="mb-6 flex items-center justify-end gap-3 flex-wrap">
+      <span
+        v-for="status in statusCounts"
+        :key="status.label"
+        class="text-caption text-muted-foreground"
+      >
+        {{ status.label }}:
+        <span
+          class="font-bold"
+          :class="status.emphasized ? 'text-primary' : 'text-foreground'"
+        >
+          {{ status.count }}
+        </span>건
+      </span>
     </div>
 
     <LoadingSpinner v-if="loading" />
