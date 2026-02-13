@@ -64,7 +64,12 @@ import {
   useProductTabs,
 } from "@/composables/useProduct";
 import { useOptimizedImage } from "@/composables";
-import { formatPrice, formatSizeValue, formatDateTimeLocal, formatDate } from "@/lib/formatters";
+import {
+  formatPrice,
+  formatSizeValue,
+  formatDateTimeLocal,
+  formatDate,
+} from "@/lib/formatters";
 import { isValidSizeMeasurement } from "@/lib/validators";
 
 const router = useRouter();
@@ -106,7 +111,7 @@ const initialProductForm = {
   id: "",
   name: "",
   slug: "",
-  description: "",
+  description: `model size : 167cm/48kg\n\ncondition :  S (Mint)\n\n• 내용 입력\n• 내용 입력\n• 내용 입력\n\n[Comment] 내용 입력\n 내용 입력`,
   price: 0,
   originalPrice: 0,
   stockQuantity: 0,
@@ -194,8 +199,7 @@ const filteredProducts = computed(() => {
   if (q) {
     result = result.filter(
       (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.slug?.toLowerCase().includes(q),
+        p.name?.toLowerCase().includes(q) || p.slug?.toLowerCase().includes(q),
     );
   }
 
@@ -203,7 +207,9 @@ const filteredProducts = computed(() => {
   if (stockFilter.value === "inStock") {
     result = result.filter((p) => Number(p.totalStock ?? 0) > 0);
   } else if (stockFilter.value === "outOfStock") {
-    result = result.filter((p) => p.totalStock != null && Number(p.totalStock) === 0);
+    result = result.filter(
+      (p) => p.totalStock != null && Number(p.totalStock) === 0,
+    );
   }
 
   // 판매 상태 필터
@@ -277,8 +283,6 @@ const openCreateProductModal = () => {
   errorMessage.value = "";
   isProductModalOpen.value = true;
 };
-
-
 
 const openEditProductModal = (product: any) => {
   isEditMode.value = true;
@@ -430,9 +434,15 @@ const handleSaveVariant = async () => {
     isEditMode.value = false;
   } catch (error: any) {
     console.error(error);
-    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message || "알 수 없는 오류"), {
-      type: "error",
-    });
+    showAlert(
+      ADMIN_MESSAGES.saveFailed.replace(
+        "{message}",
+        error.message || "알 수 없는 오류",
+      ),
+      {
+        type: "error",
+      },
+    );
   }
 };
 
@@ -558,7 +568,9 @@ const handleSaveMeasurement = async () => {
     Object.assign(measurementForm, initialMeasurementForm);
     isMeasurementEditMode.value = false;
   } catch (error: any) {
-    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), { type: "error" });
+    showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message), {
+      type: "error",
+    });
   }
 };
 
@@ -647,14 +659,28 @@ onMounted(async () => {
       <div>
         <h3 class="text-heading text-admin tracking-wider">상품 관리</h3>
         <p class="text-body text-admin-muted mt-1 mb-3">
-          <template v-if="searchQuery.trim() || stockFilter !== 'all' || saleFilter !== 'all'">
+          <template
+            v-if="
+              searchQuery.trim() ||
+              stockFilter !== 'all' ||
+              saleFilter !== 'all'
+            "
+          >
             검색 결과
-            <span class="text-body text-admin font-bold">{{ filteredProducts.length }}</span>개
-            <span class="text-caption text-admin-muted">/ 전체 {{ products.length }}개</span>
+            <span class="text-body text-admin font-bold">{{
+              filteredProducts.length
+            }}</span
+            >개
+            <span class="text-caption text-admin-muted"
+              >/ 전체 {{ products.length }}개</span
+            >
           </template>
           <template v-else>
             총
-            <span class="text-body text-admin font-bold">{{ products.length }}</span>개 상품
+            <span class="text-body text-admin font-bold">{{
+              products.length
+            }}</span
+            >개 상품
           </template>
         </p>
       </div>
@@ -672,7 +698,9 @@ onMounted(async () => {
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <!-- 왼쪽: 검색 -->
       <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search
+          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+        />
         <Input
           v-model="searchQuery"
           type="text"
@@ -1210,9 +1238,11 @@ onMounted(async () => {
                     <tr
                       v-for="variant in variants"
                       :key="variant.id"
-                      :class="variant.id === variantForm.id
-                        ? 'bg-primary/10'
-                        : 'hover:bg-muted/20'"
+                      :class="
+                        variant.id === variantForm.id
+                          ? 'bg-primary/10'
+                          : 'hover:bg-muted/20'
+                      "
                       class="transition-colors group cursor-pointer"
                       @click="handleEditVariant(variant)"
                     >
@@ -1371,9 +1401,11 @@ onMounted(async () => {
                   <tr
                     v-for="m in measurements"
                     :key="m.id"
-                    :class="m.id === measurementForm.id
-                      ? 'bg-primary/10'
-                      : 'hover:bg-muted/20'"
+                    :class="
+                      m.id === measurementForm.id
+                        ? 'bg-primary/10'
+                        : 'hover:bg-muted/20'
+                    "
                     class="transition-colors cursor-pointer"
                     @click="handleEditMeasurement(m)"
                   >
@@ -1811,5 +1843,4 @@ onMounted(async () => {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--muted-foreground));
 }
-
 </style>
