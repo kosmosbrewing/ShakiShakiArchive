@@ -182,11 +182,11 @@ onMounted(async () => {
             </div>
           </CardHeader>
           <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
-            <div>
+            <div class="space-y-3">
               <p class="text-caption font-semibold">방문자 기간별 그래프 (Google Analytics)</p>
-              <div v-for="item in visitorChartData" :key="item.label" class="mt-2 space-y-3">
-                <div class="mb-1 flex min-h-12 items-center justify-between text-caption text-admin-muted">
-                  <span class="text-admin">{{ item.label }}</span>
+              <div v-for="item in visitorChartData" :key="item.label">
+                <div class="mb-1 flex h-12 min-h-0 items-center justify-between gap-2 text-caption text-admin-muted">
+                  <span class="truncate text-admin min-w-0">{{ item.label }}</span>
                   <span class="font-semibold text-admin">
                     {{ formatNumber(item.value) }}
                   </span>
@@ -216,8 +216,8 @@ onMounted(async () => {
             <div v-if="topViewedChartData.length" class="space-y-3">
               <p class="text-caption font-semibold">상위 20개 상품 조회수</p>
               <div v-for="item in topViewedChartData" :key="item.id">
-                <div class="mb-1 flex min-h-12 items-center justify-between gap-2 text-caption">
-                  <div class="min-w-0 flex items-center gap-2">
+                <div class="mb-1 flex h-12 min-h-0 items-center justify-between gap-2 text-caption">
+                  <div class="min-w-0 flex flex-1 items-center gap-2">
                     <div class="h-12 w-12 rounded-md bg-muted border border-border overflow-hidden flex-shrink-0">
                       <img
                         v-if="item.imageUrl"
@@ -226,7 +226,9 @@ onMounted(async () => {
                         crossorigin="anonymous"
                       />
                     </div>
-                    <span class="truncate text-admin" :title="item.label">{{ item.label }}</span>
+                    <span class="truncate text-admin min-w-0 flex-1" :title="item.label">
+                      {{ item.label }}
+                    </span>
                   </div>
                   <span class="font-semibold text-admin text-caption">{{ formatNumber(item.value) }}</span>
                 </div>

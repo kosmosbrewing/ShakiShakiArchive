@@ -444,23 +444,27 @@ onUnmounted(() => {
 
       <!-- 오른쪽: 자주 쓰는 상태 버튼 -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <Button
-          v-for="opt in quickFilters"
-          :key="opt.value"
-          size="sm"
-          :variant="selectedStatus === opt.value ? 'default' : 'outline'"
-          @click="selectedStatus = opt.value"
-          class="text-xs gap-1.5"
-        >
-          {{ opt.label }}
-          <span
-            v-if="opt.value !== 'all' && getStatusCount(opt.value) > 0"
-            class="font-bold"
-            :class="selectedStatus === opt.value ? 'text-primary-foreground' : 'text-primary'"
+          <Button
+            v-for="opt in quickFilters"
+            :key="opt.value"
+            size="sm"
+            variant="outline"
+            :class="
+              selectedStatus === opt.value
+                ? 'bg-transparent border-transparent outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ring-2 ring-ring ring-offset-2 ring-offset-background text-admin-muted hover:bg-transparent active:bg-transparent'
+                : 'bg-transparent text-admin-muted hover:bg-transparent hover:border-border/80 hover:text-admin-muted active:bg-transparent'
+            "
+            @click="selectedStatus = opt.value"
+            class="text-xs gap-1.5"
           >
-            {{ getStatusCount(opt.value) }}
-          </span>
-        </Button>
+            {{ opt.label }}
+            <span
+              v-if="opt.value !== 'all' && getStatusCount(opt.value) > 0"
+              class="font-bold text-admin"
+            >
+              {{ getStatusCount(opt.value) }}
+            </span>
+          </Button>
       </div>
     </div>
 

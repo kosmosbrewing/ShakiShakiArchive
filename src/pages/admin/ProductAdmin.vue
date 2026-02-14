@@ -761,7 +761,12 @@ onMounted(async () => {
             ]"
             :key="opt.value"
             size="sm"
-            :variant="stockFilter === opt.value ? 'default' : 'outline'"
+            variant="outline"
+            :class="
+              stockFilter === opt.value
+                ? 'bg-transparent border-transparent outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ring-2 ring-ring ring-offset-2 ring-offset-background text-admin-muted hover:bg-transparent active:bg-transparent'
+                : 'bg-transparent text-admin-muted hover:bg-transparent hover:border-border/80 hover:text-admin-muted active:bg-transparent'
+            "
             @click="stockFilter = opt.value as typeof stockFilter"
             class="text-xs"
           >
@@ -778,7 +783,12 @@ onMounted(async () => {
             ]"
             :key="opt.value"
             size="sm"
-            :variant="saleFilter === opt.value ? 'default' : 'outline'"
+            variant="outline"
+            :class="
+              saleFilter === opt.value
+                ? 'bg-transparent border-transparent outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ring-2 ring-ring ring-offset-2 ring-offset-background text-admin-muted hover:bg-transparent active:bg-transparent'
+                : 'bg-transparent text-admin-muted hover:bg-transparent hover:border-border/80 hover:text-admin-muted active:bg-transparent'
+            "
             @click="saleFilter = opt.value as typeof saleFilter"
             class="text-xs"
           >
