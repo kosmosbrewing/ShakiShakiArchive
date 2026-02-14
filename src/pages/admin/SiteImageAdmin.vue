@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
+import { AdminNavigationTabs } from "@/components/admin";
 import {
   Trash2,
   Edit3,
@@ -369,7 +370,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto py-24 sm:py-16">
+  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
     <div class="flex justify-between items-end">
       <div>
         <h3 class="text-heading text-admin tracking-wider">

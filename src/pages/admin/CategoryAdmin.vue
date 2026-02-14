@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
+import { AdminNavigationTabs } from "@/components/admin";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -152,7 +153,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-24 sm:py-16">
+  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
     <div class="flex justify-between items-end">
       <div>
         <h3 class="text-heading text-admin tracking-wider">카테고리 관리</h3>

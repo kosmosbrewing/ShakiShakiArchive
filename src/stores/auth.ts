@@ -1,7 +1,14 @@
 // src/stores/auth.ts
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { fetchCurrentUser, login, logout, signup, addToCart } from "@/lib/api";
+import {
+  fetchCurrentUser,
+  login,
+  logout,
+  signup,
+  addToCart,
+  ApiError,
+} from "@/lib/api";
 import { apiCache } from "@/lib/apiCache";
 import type { User } from "@/types/api";
 
@@ -86,7 +93,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 유저 정보 로드 (앱 초기화 시 실행됨)
   // 🔒 Rate Limit 방지: 이미 로그인된 상태면 API 호출 스킵 (로그아웃 전까지 메모리 유지)
-  async function loadUser(forceRefresh = false) {
+  async function loadUser(
+    forceRefresh = false,
+    options: { throwOnError?: boolean } = {},
+  ) {
+    const { throwOnError = false } = options;
+
     // 이미 유저 정보가 있고 강제 새로고침이 아니면 스킵
     if (user.value && !forceRefresh) {
       console.log("[Auth] 유저 정보 캐시 사용 (API 호출 스킵)");
@@ -105,10 +117,22 @@ export const useAuthStore = defineStore("auth", () => {
       if (currentUser) {
         await migrateGuestCart();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // 401 Unauthorized는 정상 동작 (로그인 안한 상태)
-      // ApiError로 처리되므로 Lighthouse 콘솔 에러 없음
-      user.value = null;
+      if (err instanceof ApiError && err.status === 401) {
+        user.value = null;
+        return;
+      }
+
+      // 네트워크/서버 오류는 인증 실패와 구분
+      error.value =
+        err instanceof Error ? err.message : "유저 정보 로드에 실패했습니다.";
+
+      if (throwOnError) {
+        throw err;
+      }
+
+      console.error("[Auth] 유저 정보 로드 실패:", err);
     } finally {
       isLoading.value = false;
     }

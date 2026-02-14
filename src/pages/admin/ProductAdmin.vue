@@ -47,7 +47,7 @@ import {
   Search,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
-import { ImageUploader } from "@/components/admin";
+import { AdminNavigationTabs, ImageUploader } from "@/components/admin";
 import { Alert } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common";
 import {
@@ -228,6 +228,28 @@ const sortedProducts = computed(() => {
     const dateB = new Date(b.updatedAt || 0).getTime();
     return sortOrder.value === "desc" ? dateB - dateA : dateA - dateB;
   });
+});
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const totalProductAmount = computed(() => {
+  return products.value.reduce((sum, product) => {
+    return sum + toNumber(product.price);
+  }, 0);
+});
+
+const soldOutProductSalesAmount = computed(() => {
+  return products.value
+    .filter(
+      (product) =>
+        product.totalStock != null && Number(product.totalStock) === 0,
+    )
+    .reduce((sum, product) => {
+      return sum + toNumber(product.price);
+    }, 0);
 });
 
 const totalPages = computed(() =>
@@ -654,35 +676,54 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto py-24 sm:py-16">
-    <div class="flex justify-between items-end">
-      <div>
+  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
+    <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-end">
+      <div class="min-w-0">
         <h3 class="text-heading text-admin tracking-wider">상품 관리</h3>
-        <p class="text-body text-admin-muted mt-1 mb-3">
-          <template
-            v-if="
-              searchQuery.trim() ||
-              stockFilter !== 'all' ||
-              saleFilter !== 'all'
-            "
-          >
-            검색 결과
-            <span class="text-body text-admin font-bold">{{
-              filteredProducts.length
-            }}</span
-            >개
-            <span class="text-caption text-admin-muted"
-              >/ 전체 {{ products.length }}개</span
+        <div
+          class="mt-1 mb-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm lg:flex-nowrap lg:whitespace-nowrap"
+        >
+          <p class="text-body text-admin-muted">
+            <template
+              v-if="
+                searchQuery.trim() ||
+                stockFilter !== 'all' ||
+                saleFilter !== 'all'
+              "
             >
-          </template>
-          <template v-else>
-            총
-            <span class="text-body text-admin font-bold">{{
-              products.length
-            }}</span
-            >개 상품
-          </template>
-        </p>
+              검색 결과
+              <span class="text-body text-admin font-bold">{{
+                filteredProducts.length
+              }}</span
+              >개
+              <span class="text-caption text-admin-muted"
+                >/ 전체 {{ products.length }}개</span
+              >
+            </template>
+            <template v-else>
+              총
+              <span class="text-body text-admin font-bold">{{
+                products.length
+              }}</span
+              >개 상품
+            </template>
+          </p>
+          <span class="text-caption text-admin-muted">|</span>
+          <p class="text-caption text-admin-muted">
+            총 상품 금액
+            <span class="font-bold text-admin">{{
+              formatPrice(totalProductAmount)
+            }}</span>
+          </p>
+          <span class="text-caption text-admin-muted">|</span>
+          <p class="text-caption text-admin-muted">
+            품절 상품 금액
+            <span class="font-bold text-admin">{{
+              formatPrice(soldOutProductSalesAmount)
+            }}</span>
+          </p>
+        </div>
       </div>
       <Button
         @click="openCreateProductModal"
@@ -751,16 +792,22 @@ onMounted(async () => {
     <Card v-else class="overflow-hidden border-none shadow-lg">
       <CardContent class="p-0">
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[1000px]">
+          <table class="w-full text-left border-collapse min-w-[1160px]">
             <thead
               class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
             >
               <tr>
                 <th class="px-6 py-5">이미지</th>
                 <th class="px-6 py-5 w-1/3">상품명 / 슬러그</th>
-                <th class="px-6 py-5 text-center">판매가</th>
-                <th class="px-6 py-5 text-center">재고</th>
-                <th class="px-6 py-5 text-center">상태</th>
+                <th class="px-6 py-5 text-center whitespace-nowrap w-28">
+                  판매가
+                </th>
+                <th class="px-6 py-5 text-center whitespace-nowrap w-20">
+                  재고
+                </th>
+                <th class="px-6 py-5 text-center whitespace-nowrap w-24">
+                  상태
+                </th>
                 <th class="px-6 py-5 text-center">관리 도구</th>
                 <th class="px-6 py-5 text-center">작업</th>
                 <th class="px-6 py-5 text-right pr-10">
@@ -807,7 +854,7 @@ onMounted(async () => {
                     {{ product.slug }}
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-6 py-4 text-center whitespace-nowrap">
                   <div class="text-body text-admin">
                     {{ formatPrice(product.price) }}
                   </div>
@@ -818,12 +865,12 @@ onMounted(async () => {
                     {{ formatPrice(product.originalPrice) }}
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-6 py-4 text-center whitespace-nowrap">
                   <div class="text-body text-admin">
                     {{ product.totalStock ?? "-" }}개
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-6 py-4 text-center whitespace-nowrap">
                   <span
                     :class="
                       product.isAvailable

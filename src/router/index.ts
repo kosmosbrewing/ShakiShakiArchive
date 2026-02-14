@@ -257,10 +257,13 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
   // 로그인이 필요한 페이지인 경우, 먼저 유저 정보 로드
   if (!authStore.user && (to.meta.requiresAuth || to.meta.requiresAdmin)) {
     try {
-      await authStore.loadUser();
+      await authStore.loadUser(false, { throwOnError: true });
     } catch (error) {
       console.error("유저 정보 로드 실패:", error);
-      return next("/login");
+      showAlert("사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", {
+        type: "error",
+      });
+      return next(false);
     }
   }
 

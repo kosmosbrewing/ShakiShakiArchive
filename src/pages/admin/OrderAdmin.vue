@@ -8,6 +8,7 @@ import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/li
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress, formatDate, formatPrice } from "@/lib/formatters";
 import { getStatusClass as getStatusClassFromConstants } from "@/lib/constants/orderStatus";
+import { AdminNavigationTabs } from "@/components/admin";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
 // UI 컴포넌트 및 아이콘
@@ -410,6 +411,7 @@ onUnmounted(() => {
 
 <template>
   <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
     <!-- 헤더 -->
     <div class="mb-6">
       <h3 class="text-heading text-admin tracking-wider">주문/배송 관리</h3>

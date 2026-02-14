@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/common";
+import { AdminNavigationTabs } from "@/components/admin";
 import {
   Users,
   Search,
@@ -310,6 +311,7 @@ onUnmounted(() => {
 
 <template>
   <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
     <!-- 헤더 -->
     <div class="flex justify-between items-end">
       <div>

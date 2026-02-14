@@ -11,6 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 
 // 공통 컴포넌트
 import { LoadingSpinner, EmptyState } from "@/components/common";
+import { AdminNavigationTabs } from "@/components/admin";
 
 // Shadcn UI 컴포넌트
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +118,7 @@ onMounted(async () => {
 
 <template>
   <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+    <AdminNavigationTabs />
     <!-- 헤더 -->
     <div class="mb-6">
       <h3 class="text-heading text-admin tracking-wider">문의 관리</h3>
