@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import { RefreshCw, Users, Eye } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { fetchAdminAnalyticsOverview } from "@/lib/api";
-import { formatPrice } from "@/lib/formatters";
 import type { AdminAnalyticsOverviewResponse } from "@/types/api";
 import { AdminNavigationTabs } from "@/components/admin";
 import { LoadingSpinner } from "@/components/common";
@@ -14,7 +13,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -54,10 +52,11 @@ const maxVisitorValue = computed(() =>
 );
 
 const topViewedChartData = computed(() =>
-  topViewedProducts.value.slice(0, 8).map((product) => ({
+  topViewedProducts.value.slice(0, 20).map((product) => ({
     id: product.id,
     label: product.name,
     value: Number(product.viewCount ?? 0),
+    imageUrl: product.imageUrl || "",
   })),
 );
 
@@ -68,10 +67,12 @@ const maxTopViewedValue = computed(() =>
 const gaStatusText = computed(() => {
   const visitors = overview.value?.visitors;
   if (!visitors) return "-";
-  if (!visitors.configured) return "GA4 미설정";
+  if (!visitors.configured) return "GA4 환경 변수가 설정되지 않았습니다.";
   if (visitors.source === "unavailable") return "GA4 조회 실패";
   return "GA4 연동 정상";
 });
+
+const shouldShowGaStatus = computed(() => gaStatusText.value !== "GA4 연동 정상");
 
 const generatedAtText = computed(() => {
   if (!overview.value?.generatedAt) return "-";
@@ -87,9 +88,6 @@ const getBarWidth = (value: number, max: number): string => {
   if (value <= 0) return "0%";
   return `${Math.max(4, Math.round((value / max) * 100))}%`;
 };
-
-const getStockStatusText = (stock: number): string =>
-  stock <= 0 ? "품절" : "재고 있음";
 
 const loadAnalytics = async () => {
   isLoading.value = true;
@@ -170,51 +168,29 @@ onMounted(async () => {
 
       <div class="grid gap-3 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle class="text-body flex items-center gap-2">
+          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0">
+            <h3 class="text-body text-admin flex items-center gap-2">
               <Users class="w-4 h-4" />
-              방문자 통계 상태
-            </CardTitle>
+              방문자 통계
+            </h3>
           </CardHeader>
-          <CardContent class="space-y-1 text-caption text-admin-muted">
-            <p>상태: <span class="font-semibold text-admin">{{ gaStatusText }}</span></p>
-            <p v-if="overview.visitors.note">{{ overview.visitors.note }}</p>
-            <p>집계 시각: {{ generatedAtText }}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-body flex items-center gap-2">
-              <Eye class="w-4 h-4" />
-              상품 조회 통계
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-1 text-caption text-admin-muted">
-            <p>
-              누적 상품 조회수:
-              <span class="font-semibold text-admin">
-                {{ formatNumber(overview.productViews.totalViewCount) }}
-              </span>
-            </p>
-            <p>상위 조회 상품은 아래 표에서 확인 가능합니다.</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div class="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-body">방문자 기간별 그래프</CardTitle>
-            <CardDescription class="text-caption text-admin-muted">
-              GA4 activeUsers 기준
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="space-y-4">
-              <div v-for="item in visitorChartData" :key="item.label">
-                <div class="mb-1 flex items-center justify-between text-caption text-admin-muted">
-                  <span>{{ item.label }}</span>
+          <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
+            <div class="space-y-1">
+              <div class="flex items-center gap-3">
+                <p v-if="shouldShowGaStatus" class="text-caption text-admin-muted">
+                  상태 :
+                  <span class="font-semibold text-admin">{{ gaStatusText }}</span>
+                </p>
+                <p class="ml-auto text-caption text-admin-muted">
+                  집계 시각: {{ generatedAtText }}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p class="text-caption font-semibold">방문자 기간별 그래프 (Google Analytics)</p>
+              <div v-for="item in visitorChartData" :key="item.label" class="mt-2 space-y-3">
+                <div class="mb-1 flex min-h-12 items-center justify-between text-caption text-admin-muted">
+                  <span class="text-admin">{{ item.label }}</span>
                   <span class="font-semibold text-admin">
                     {{ formatNumber(item.value) }}
                   </span>
@@ -231,18 +207,32 @@ onMounted(async () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle class="text-body">조회수 TOP 그래프</CardTitle>
-            <CardDescription class="text-caption text-admin-muted">
-              상위 8개 상품 조회수 비중
-            </CardDescription>
+          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0">
+            <h3 class="text-body text-admin flex items-center gap-2">
+              <Eye class="w-4 h-4" />
+              상품 조회 통계
+            </h3>
+            <p class="text-body text-admin text-right whitespace-nowrap">
+              누적 상품 조회수 {{ formatNumber(overview.productViews.totalViewCount) }}
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
             <div v-if="topViewedChartData.length" class="space-y-3">
+              <p class="text-caption font-semibold">상위 20개 상품 조회수</p>
               <div v-for="item in topViewedChartData" :key="item.id">
-                <div class="mb-1 flex items-center justify-between gap-2 text-caption text-admin-muted">
-                  <span class="truncate" :title="item.label">{{ item.label }}</span>
-                  <span class="font-semibold text-admin">{{ formatNumber(item.value) }}</span>
+                <div class="mb-1 flex min-h-12 items-center justify-between gap-2 text-caption">
+                  <div class="min-w-0 flex items-center gap-2">
+                    <div class="h-12 w-12 rounded-md bg-muted border border-border overflow-hidden flex-shrink-0">
+                      <img
+                        v-if="item.imageUrl"
+                        :src="item.imageUrl"
+                        class="h-full w-full object-cover"
+                        crossorigin="anonymous"
+                      />
+                    </div>
+                    <span class="truncate text-admin" :title="item.label">{{ item.label }}</span>
+                  </div>
+                  <span class="font-semibold text-admin text-caption">{{ formatNumber(item.value) }}</span>
                 </div>
                 <div class="h-2 rounded-full bg-muted">
                   <div
@@ -252,66 +242,10 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
-            <p v-else class="text-caption text-admin-muted">
-              조회수 데이터가 없습니다.
-            </p>
+            <p v-else class="text-caption">조회수 데이터가 없습니다.</p>
           </CardContent>
         </Card>
       </div>
-
-      <Card class="overflow-hidden border-none shadow-lg">
-        <CardHeader class="pb-0">
-          <CardTitle class="text-body">조회수 상위 상품 TOP 10</CardTitle>
-        </CardHeader>
-        <CardContent class="p-0 overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[920px]">
-            <thead
-              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
-            >
-              <tr>
-                <th class="px-6 py-4">상품명</th>
-                <th class="px-6 py-4 text-right">조회수</th>
-                <th class="px-6 py-4 text-right">판매가</th>
-                <th class="px-6 py-4 text-center">재고</th>
-                <th class="px-6 py-4 text-center">상태</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <tr
-                v-for="product in topViewedProducts"
-                :key="product.id"
-                class="hover:bg-muted/30 transition-colors"
-              >
-                <td class="px-6 py-4">
-                  <div class="text-body text-admin font-semibold">
-                    {{ product.name }}
-                  </div>
-                  <div class="text-caption text-admin-muted font-mono">
-                    {{ product.slug }}
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-right text-body text-admin">
-                  {{ formatNumber(product.viewCount ?? 0) }}
-                </td>
-                <td class="px-6 py-4 text-right text-body text-admin">
-                  {{ formatPrice(product.price) }}
-                </td>
-                <td class="px-6 py-4 text-center text-body text-admin">
-                  {{ formatNumber(product.totalStock) }}
-                </td>
-                <td class="px-6 py-4 text-center text-caption text-admin-muted">
-                  {{ getStockStatusText(product.totalStock) }}
-                </td>
-              </tr>
-              <tr v-if="topViewedProducts.length === 0">
-                <td colspan="5" class="px-6 py-16 text-center text-admin-muted">
-                  조회수 데이터가 없습니다.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
     </div>
   </div>
 </template>

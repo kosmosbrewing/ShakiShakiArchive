@@ -651,10 +651,16 @@ onMounted(async () => {
   <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
     <!-- 에러 상태: 로딩 완료 후 상품 데이터가 없는 경우 (Rate-limit 등) -->
     <div
-      v-if="!productData.loading.value && productData.error.value && !productData.product.value"
+      v-if="
+        !productData.loading.value &&
+        productData.error.value &&
+        !productData.product.value
+      "
       class="flex flex-col items-center justify-center py-20 gap-4"
     >
-      <p class="text-body text-muted-foreground">{{ productData.error.value }}</p>
+      <p class="text-body text-muted-foreground">
+        {{ productData.error.value }}
+      </p>
       <Button variant="outline" @click="productData.loadProduct(productId)">
         다시 시도
       </Button>
