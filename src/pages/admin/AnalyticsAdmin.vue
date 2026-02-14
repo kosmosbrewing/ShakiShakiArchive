@@ -173,19 +173,15 @@ onMounted(async () => {
               <Users class="w-4 h-4" />
               방문자 통계
             </h3>
+            <div class="text-right text-caption text-admin-muted">
+              <p v-if="shouldShowGaStatus" class="text-caption text-admin-muted">
+                상태 :
+                <span class="font-semibold text-admin">{{ gaStatusText }}</span>
+              </p>
+              <p>집계 시각: {{ generatedAtText }}</p>
+            </div>
           </CardHeader>
           <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
-            <div class="space-y-1">
-              <div class="flex items-center gap-3">
-                <p v-if="shouldShowGaStatus" class="text-caption text-admin-muted">
-                  상태 :
-                  <span class="font-semibold text-admin">{{ gaStatusText }}</span>
-                </p>
-                <p class="ml-auto text-caption text-admin-muted">
-                  집계 시각: {{ generatedAtText }}
-                </p>
-              </div>
-            </div>
             <div>
               <p class="text-caption font-semibold">방문자 기간별 그래프 (Google Analytics)</p>
               <div v-for="item in visitorChartData" :key="item.label" class="mt-2 space-y-3">
