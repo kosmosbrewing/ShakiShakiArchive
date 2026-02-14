@@ -67,6 +67,7 @@ import type {
   UpdateReturnTrackingRequest,
   UpdateReturnTrackingResponse,
   Return,
+  AdminAnalyticsOverviewResponse,
 } from "@/types/api";
 import { apiCache, cachePolicies, NEVER_CACHE_PATTERNS } from "./apiCache";
 
@@ -511,6 +512,22 @@ export async function fetchProduct(id: string | number): Promise<Product> {
   return apiRequest<Product>(`/api/products/${id}`, { cachePolicy: 'productDetail' });
 }
 
+// 상품 조회수 기록 (fire-and-forget 용도)
+export async function recordProductView(
+  productId: string | number
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/api/products/${productId}/view`, {
+      method: "POST",
+      credentials: "include",
+      keepalive: true,
+    });
+    return response.status === 204;
+  } catch {
+    return false;
+  }
+}
+
 // 상품 옵션(Variants) 조회
 export async function fetchProductVariants(
   productId: string | number
@@ -935,6 +952,13 @@ export async function fetchAdminProducts(
   }
 
   return response;
+}
+
+// 관리자 통계 개요 조회
+export async function fetchAdminAnalyticsOverview(): Promise<AdminAnalyticsOverviewResponse> {
+  return apiRequest<AdminAnalyticsOverviewResponse>("/api/admin/analytics/overview", {
+    cachePolicy: "noCache",
+  });
 }
 
 export async function createProduct(data: Partial<Product>): Promise<Product> {
@@ -1708,4 +1732,3 @@ export async function fetchShippingConstants(): Promise<ShippingConstants> {
 export async function fetchValidationConstants(): Promise<ValidationConstants> {
   return apiRequest<ValidationConstants>("/api/constants/validation", { cachePolicy: 'constants' });
 }
-

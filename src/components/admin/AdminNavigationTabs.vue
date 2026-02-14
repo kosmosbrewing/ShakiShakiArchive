@@ -12,6 +12,7 @@ const adminTabs = [
   { label: "사이트 이미지 관리", to: "/admin/site-images" },
   { label: "문의 관리", to: "/admin/inquiries" },
   { label: "회원 관리", to: "/admin/users" },
+  { label: "통계 관리", to: "/admin/analytics" },
 ] as const;
 
 const isActiveTab = (path: string) => route.path === path;

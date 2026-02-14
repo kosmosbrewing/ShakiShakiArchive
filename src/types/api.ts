@@ -52,6 +52,7 @@ export interface User {
 export interface Product {
   id: string; // UUID
   name: string;
+  slug?: string;
   price: string;
   originalPrice?: string;
   description?: string;
@@ -60,6 +61,7 @@ export interface Product {
   detailImages?: string[];
   isAvailable: boolean;
   categoryId?: number;
+  viewCount?: number;
   totalStock?: number; // 모든 variants의 재고 합계
   createdAt: string;
   updatedAt: string;
@@ -793,6 +795,31 @@ export interface Pagination {
   hasMore: boolean;
 }
 
+export interface AdminVisitorStats {
+  source: "ga4" | "unavailable";
+  configured: boolean;
+  today: number | null;
+  yesterday: number | null;
+  last7Days: number | null;
+  last30Days: number | null;
+  note?: string;
+}
+
+export interface AdminProductViewStat extends Product {
+  totalStock: number;
+}
+
+export interface AdminProductViewStats {
+  totalViewCount: number;
+  topViewedProducts: AdminProductViewStat[];
+}
+
+export interface AdminAnalyticsOverviewResponse {
+  visitors: AdminVisitorStats;
+  productViews: AdminProductViewStats;
+  generatedAt: string;
+}
+
 // 회원 목록 조회 파라미터
 export interface AdminUserListParams {
   page?: number;
@@ -951,4 +978,3 @@ export interface Return {
   createdAt: string;
   updatedAt?: string;
 }
-

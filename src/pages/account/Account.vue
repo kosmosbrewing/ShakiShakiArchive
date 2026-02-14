@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Image,
   MessageCircle,
+  BarChart3,
 } from "lucide-vue-next";
 
 // Shadcn UI 컴포넌트
@@ -119,6 +120,7 @@ const goToProductAdmin = () => router.push("/admin/products");
 const goToOrderAdmin = () => router.push("/admin/orders");
 const goToSiteImageAdmin = () => router.push("/admin/site-images");
 const goToUserAdmin = () => router.push("/admin/users");
+const goToAnalyticsAdmin = () => router.push("/admin/analytics");
 
 // 메뉴 아이템 정의
 const menuItems = [
@@ -318,6 +320,19 @@ onMounted(async () => {
             >
               {{ todayNewUsersCount }}
             </Badge>
+          </Button>
+
+          <Button
+            variant="outline"
+            @click="goToAnalyticsAdmin"
+            class="h-12 justify-start gap-3"
+          >
+            <div
+              class="w-8 h-8 rounded bg-emerald-600 flex items-center justify-center"
+            >
+              <BarChart3 class="w-4 h-4 text-white" />
+            </div>
+            통계 관리
           </Button>
         </div>
       </CardContent>

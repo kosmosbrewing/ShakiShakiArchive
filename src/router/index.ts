@@ -5,6 +5,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
+import { trackPageView } from "@/lib/analytics";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
@@ -50,6 +51,7 @@ import {
   OrderAdmin,
   SiteImageAdmin,
   UserAdmin,
+  AnalyticsAdmin,
 } from "@/pages/admin";
 
 // Static (정적 페이지)
@@ -212,6 +214,12 @@ const routes = [
     component: UserAdmin,
     meta: { requiresAuth: true, requiresAdmin: true, title: "[ADMIN] 회원 관리" },
   },
+  {
+    path: "/admin/analytics",
+    name: "AnalyticsAdmin",
+    component: AnalyticsAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true, title: "[ADMIN] 통계 관리" },
+  },
 
   // 정적 페이지
   {
@@ -257,12 +265,16 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
   // 로그인이 필요한 페이지인 경우, 먼저 유저 정보 로드
   if (!authStore.user && (to.meta.requiresAuth || to.meta.requiresAdmin)) {
     try {
-      await authStore.loadUser(false, { throwOnError: true });
+      await authStore.loadUser({ throwOnError: true });
     } catch (error) {
       console.error("유저 정보 로드 실패:", error);
-      showAlert("사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", {
-        type: "error",
-      });
+      const isNetworkError = error instanceof TypeError;
+      showAlert(
+        isNetworkError
+          ? "서버 연결 실패. 네트워크 상태를 확인 후 다시 시도해주세요."
+          : "사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+        { type: "error" },
+      );
       return next(false);
     }
   }
@@ -281,6 +293,10 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
 
   // 3. 통과
   next();
+});
+
+router.afterEach((to) => {
+  trackPageView(to.fullPath);
 });
 
 export default router;

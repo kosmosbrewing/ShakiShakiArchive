@@ -94,10 +94,20 @@ export const useAuthStore = defineStore("auth", () => {
   // 유저 정보 로드 (앱 초기화 시 실행됨)
   // 🔒 Rate Limit 방지: 이미 로그인된 상태면 API 호출 스킵 (로그아웃 전까지 메모리 유지)
   async function loadUser(
-    forceRefresh = false,
+    forceRefreshOrOptions:
+      | boolean
+      | { forceRefresh?: boolean; throwOnError?: boolean } = false,
     options: { throwOnError?: boolean } = {},
   ) {
-    const { throwOnError = false } = options;
+    const forceRefresh =
+      typeof forceRefreshOrOptions === "boolean"
+        ? forceRefreshOrOptions
+        : (forceRefreshOrOptions.forceRefresh ?? false);
+
+    const throwOnError =
+      typeof forceRefreshOrOptions === "boolean"
+        ? (options.throwOnError ?? false)
+        : (forceRefreshOrOptions.throwOnError ?? false);
 
     // 이미 유저 정보가 있고 강제 새로고침이 아니면 스킵
     if (user.value && !forceRefresh) {

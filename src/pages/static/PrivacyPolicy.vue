@@ -92,7 +92,12 @@ onUnmounted(() => {
               <h3 class="font-semibold mb-2">자동 수집 정보</h3>
               <ul class="list-disc pl-6 space-y-1 text-caption">
                 <li>수집 항목: IP 주소, 쿠키, 서비스 이용 기록</li>
-                <li>목적: 로그인 유지, 서비스 개선</li>
+                <li>목적: 로그인 유지, 서비스 개선, 방문 통계 분석</li>
+                <li>
+                  분석 도구: Google Analytics 4(GA4)를 통해 방문 페이지, 접속
+                  시간대, 기기/브라우저 정보를 익명 통계 형태로 처리할 수
+                  있습니다.
+                </li>
               </ul>
             </div>
           </div>
@@ -136,6 +141,18 @@ onUnmounted(() => {
               <li><strong>제공 목적:</strong> 상품 배송</li>
               <li><strong>제공 항목:</strong> 수령인명, 주소, 연락처</li>
               <li><strong>보유 기간:</strong> 배송 완료 후 즉시 파기</li>
+            </ul>
+          </div>
+
+          <div class="bg-muted/20 rounded-lg p-5">
+            <ul class="space-y-1 text-caption">
+              <li><strong>제공받는 자:</strong> Google LLC (Google Analytics 4)</li>
+              <li><strong>제공 목적:</strong> 사이트 이용 통계 분석 및 서비스 개선</li>
+              <li>
+                <strong>제공 항목:</strong> 방문 페이지, 접속 시간, 브라우저/기기
+                정보, IP 기반 지역 정보(익명/비식별 통계)
+              </li>
+              <li><strong>보유 기간:</strong> Google Analytics 정책에 따름</li>
             </ul>
           </div>
 

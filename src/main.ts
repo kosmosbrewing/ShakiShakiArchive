@@ -5,6 +5,7 @@ import router from "./router";
 import "./assets/index.css";
 import axios from "axios";
 import { useConstantsStore } from "./stores/constants";
+import { initAnalytics } from "./lib/analytics";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 axios.defaults.baseURL = API_BASE;
@@ -37,6 +38,9 @@ async function bootstrap() {
   // Pinia를 먼저 등록해야 스토어 사용 가능
   app.use(pinia);
   app.use(router);
+
+  // GA4 초기화 (환경변수 설정 시에만 동작)
+  initAnalytics();
 
   // 공통 상수 로드 (앱 마운트 전 대기)
   const constantsStore = useConstantsStore();

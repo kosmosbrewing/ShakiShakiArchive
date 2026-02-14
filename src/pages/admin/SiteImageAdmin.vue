@@ -5,6 +5,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useSiteImageStore } from "@/stores/siteImage";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
@@ -43,6 +44,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const siteImageStore = useSiteImageStore();
 const { showAlert, showDestructiveConfirm } = useAlert();
 
 // 상태
@@ -109,6 +111,7 @@ const loadData = async (showLoading = true) => {
   try {
     if (showLoading) isLoading.value = true;
     siteImages.value = await fetchAdminSiteImages();
+    siteImageStore.syncFromAdminImages(siteImages.value);
   } catch (error) {
     console.error(error);
   } finally {
@@ -218,11 +221,13 @@ const handleSave = async () => {
       // 로컬 상태 업데이트
       const idx = siteImages.value.findIndex((img) => img.id === form.value.id);
       if (idx !== -1 && image) siteImages.value[idx] = image;
+      siteImageStore.syncFromAdminImages(siteImages.value);
       showAlert(ADMIN_MESSAGES.siteImageUpdateSuccess);
     } else {
       const { image } = await createSiteImage(payload);
       // 로컬 상태에 추가
       if (image) siteImages.value.push(image);
+      siteImageStore.syncFromAdminImages(siteImages.value);
       showAlert(ADMIN_MESSAGES.siteImageCreateSuccess);
     }
 
@@ -241,14 +246,17 @@ const handleDelete = async (id: number) => {
 
   // 낙관적 업데이트: UI에서 먼저 제거
   const deletedIndex = siteImages.value.findIndex((img) => img.id === id);
+  if (deletedIndex === -1) return;
   const deletedImage = siteImages.value[deletedIndex];
   siteImages.value.splice(deletedIndex, 1);
+  siteImageStore.syncFromAdminImages(siteImages.value);
 
   try {
     await deleteSiteImage(id);
   } catch (e: any) {
     // 실패 시 복원
     siteImages.value.splice(deletedIndex, 0, deletedImage);
+    siteImageStore.syncFromAdminImages(siteImages.value);
     showAlert(e.message, { type: "error" });
   }
 };
@@ -261,12 +269,14 @@ const toggleActive = async (image: SiteImage) => {
   const newValue = !targetImage.isActive;
   // 낙관적 업데이트: UI 먼저 변경
   targetImage.isActive = newValue;
+  siteImageStore.syncFromAdminImages(siteImages.value);
 
   try {
     await updateSiteImage(image.id, { isActive: newValue });
   } catch (e: any) {
     // 실패 시 롤백
     targetImage.isActive = !newValue;
+    siteImageStore.syncFromAdminImages(siteImages.value);
     showAlert(e.message, { type: "error" });
   }
 };
@@ -289,10 +299,12 @@ const moveUp = async (index: number) => {
 
   try {
     await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
+    siteImageStore.syncFromAdminImages(siteImages.value);
   } catch (e: any) {
     // 실패 시 롤백
     images[index].displayOrder = images[index - 1].displayOrder;
     images[index - 1].displayOrder = prevOrder;
+    siteImageStore.syncFromAdminImages(siteImages.value);
     showAlert(e.message, { type: "error" });
   }
 };
@@ -315,10 +327,12 @@ const moveDown = async (index: number) => {
 
   try {
     await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
+    siteImageStore.syncFromAdminImages(siteImages.value);
   } catch (e: any) {
     // 실패 시 롤백
     images[index + 1].displayOrder = images[index].displayOrder;
     images[index].displayOrder = currentOrder;
+    siteImageStore.syncFromAdminImages(siteImages.value);
     showAlert(e.message, { type: "error" });
   }
 };

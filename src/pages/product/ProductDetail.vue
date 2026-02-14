@@ -5,6 +5,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { recordProductView } from "@/lib/api";
 import {
   useProduct,
   useVariantSelection,
@@ -67,6 +68,35 @@ const { detail } = useOptimizedImage();
 
 // 상품 ID (UUID)
 const productId = computed(() => String(route.params.id));
+
+const getViewSessionKey = (id: string) => `product_view_recorded:${id}`;
+
+const hasRecordedViewInSession = (id: string): boolean => {
+  try {
+    return sessionStorage.getItem(getViewSessionKey(id)) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const markViewRecordedInSession = (id: string) => {
+  try {
+    sessionStorage.setItem(getViewSessionKey(id), "1");
+  } catch {
+    // sessionStorage가 막힌 환경에서는 조용히 무시
+  }
+};
+
+const trackProductView = async (id: string) => {
+  if (!isValidUUID(id) || hasRecordedViewInSession(id)) {
+    return;
+  }
+
+  const success = await recordProductView(id);
+  if (success) {
+    markViewRecordedInSession(id);
+  }
+};
 
 // variant 선택
 const variantSelection = useVariantSelection(productData.variants);
@@ -588,6 +618,11 @@ onUnmounted(() => {
 // 데이터 로드
 onMounted(async () => {
   await productData.loadProduct(String(productId.value));
+  const loadedProduct = productData.product.value;
+
+  if (loadedProduct?.id) {
+    void trackProductView(loadedProduct.id);
+  }
 
   // 페이지 타이틀 업데이트 (상품명으로)
   if (productData.product.value?.name) {

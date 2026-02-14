@@ -32,7 +32,18 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}) {
 
     // 사용자 정보가 없으면 로드 시도
     if (loadUser && !authStore.user) {
-      await authStore.loadUser();
+      try {
+        await authStore.loadUser({ throwOnError: true });
+      } catch (error) {
+        const isNetworkError = error instanceof TypeError;
+        showAlert(
+          isNetworkError
+            ? "서버 연결 실패. 네트워크 상태를 확인 후 다시 시도해주세요."
+            : "사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+          { type: "error" },
+        );
+        return false;
+      }
     }
 
     // 여전히 인증되지 않았으면 리다이렉트

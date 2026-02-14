@@ -96,6 +96,23 @@ export const useSiteImageStore = defineStore("siteImage", () => {
     apiCache.invalidate('/api/site-images'); // HTTP 캐시도 무효화
   }
 
+  // 관리자 페이지에서 받은 데이터로 공개 영역 상태를 즉시 동기화
+  // 관리자 응답에는 비활성 이미지도 포함되므로 active만 필터링한다.
+  function syncFromAdminImages(images: SiteImage[]) {
+    const activeImages = images.filter((img) => img.isActive);
+
+    heroImages.value = activeImages
+      .filter((img) => img.type === "hero")
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    marqueeImages.value = activeImages
+      .filter((img) => img.type === "marquee")
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    lastFetchedAt.value = Date.now();
+    apiCache.invalidate('/api/site-images');
+  }
+
   return {
     // 상태
     heroImages,
@@ -113,5 +130,6 @@ export const useSiteImageStore = defineStore("siteImage", () => {
     loadHeroImages,
     loadMarqueeImages,
     invalidateCache,
+    syncFromAdminImages,
   };
 });
