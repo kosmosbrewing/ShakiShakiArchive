@@ -109,8 +109,37 @@ const handleLogout = async () => {
   router.push("/");
 };
 
+const INSTAGRAM_USERNAME = "shakishaki_archive";
+const INSTAGRAM_WEB_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/`;
+const INSTAGRAM_APP_URL = `instagram://user?username=${INSTAGRAM_USERNAME}`;
+const isMobileDevice = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
 const handleInstagram = () => {
-  window.open("https://www.instagram.com/shakishaki_archive?igsh=MXg2ZDM2amswbWdzeQ%3D%3D&utm_source=qr", "_blank");
+  if (isOpen.value) {
+    closingByPopState.value = true;
+    isOpen.value = false;
+  }
+
+  if (isMobileDevice()) {
+    const fallbackTimer = window.setTimeout(() => {
+      window.location.href = INSTAGRAM_WEB_URL;
+    }, 1200);
+
+    const clearFallback = () => window.clearTimeout(fallbackTimer);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        clearFallback();
+      }
+    }, { once: true });
+
+    window.location.href = INSTAGRAM_APP_URL;
+    return;
+  }
+
+  window.open(INSTAGRAM_WEB_URL, "_blank", "noopener,noreferrer");
 };
 
 const goHome = () => {
@@ -215,7 +244,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
-                aria-label="Instagram 공식 계정 (새 창에서 열림)"
+                aria-label="Instagram 공식 계정 열기"
                 @click="handleInstagram"
               >
                 INSTAGRAM
@@ -372,7 +401,7 @@ onUnmounted(() => {
           variant="ghost"
           size="icon"
           class="hover:bg-transparent hover:scale-110 transition-transform"
-          aria-label="Instagram 공식 계정 (새 창에서 열림)"
+          aria-label="Instagram 공식 계정 열기"
           @click="handleInstagram"
         >
           <img
