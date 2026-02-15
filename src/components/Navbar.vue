@@ -124,16 +124,43 @@ const handleInstagram = () => {
   }
 
   if (isMobileDevice()) {
-    const fallbackTimer = window.setTimeout(() => {
-      window.location.href = INSTAGRAM_WEB_URL;
-    }, 1200);
+    const cleanupCallbacks: Array<() => void> = [];
+    let fallbackTimer: number | null = null;
+    let isCleanedUp = false;
+    const clearFallback = () => {
+      if (isCleanedUp) return;
+      isCleanedUp = true;
 
-    const clearFallback = () => window.clearTimeout(fallbackTimer);
-    document.addEventListener("visibilitychange", () => {
+      if (fallbackTimer !== null) {
+        window.clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+      cleanupCallbacks.forEach((cleanup) => cleanup());
+    };
+
+    const handlePageHidden = () => {
       if (document.hidden) {
         clearFallback();
       }
-    }, { once: true });
+    };
+    const handlePageHide = () => clearFallback();
+    const handleBlur = () => clearFallback();
+
+    document.addEventListener("visibilitychange", handlePageHidden);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("blur", handleBlur);
+    cleanupCallbacks.push(() =>
+      document.removeEventListener("visibilitychange", handlePageHidden)
+    );
+    cleanupCallbacks.push(() =>
+      window.removeEventListener("pagehide", handlePageHide)
+    );
+    cleanupCallbacks.push(() => window.removeEventListener("blur", handleBlur));
+
+    fallbackTimer = window.setTimeout(() => {
+      clearFallback();
+      window.location.href = INSTAGRAM_WEB_URL;
+    }, 1800);
 
     window.location.href = INSTAGRAM_APP_URL;
     return;
