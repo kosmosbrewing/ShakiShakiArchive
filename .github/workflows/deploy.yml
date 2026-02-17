@@ -42,6 +42,7 @@ jobs:
         run: npm run build:full
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
 
       # 5. AWS 자격 증명 설정
       - name: Configure AWS credentials
