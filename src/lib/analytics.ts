@@ -15,11 +15,13 @@ export function initAnalytics() {
   }
 
   window.dataLayer = window.dataLayer || [];
-  window.gtag =
-    window.gtag ||
-    ((...args: unknown[]) => {
-      window.dataLayer.push(args);
-    });
+
+  // Google 표준: function 키워드 + arguments 사용 필수
+  // arrow function + rest params는 Array를 push → gtag.js가 커맨드로 인식하지 못함
+  window.gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments);
+  };
 
   const script = document.createElement("script");
   script.async = true;
