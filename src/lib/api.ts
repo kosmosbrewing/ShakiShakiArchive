@@ -1347,21 +1347,25 @@ async function uploadFile<T>(endpoint: string, formData: FormData): Promise<T> {
 
 // 단일 상품 이미지 업로드
 export async function uploadProductImage(
-  file: File
+  file: File,
+  productSlug?: string
 ): Promise<ImageUploadResponse> {
   const formData = new FormData();
   formData.append("image", file);
+  if (productSlug) formData.append("productSlug", productSlug);
   return uploadFile<ImageUploadResponse>("/api/admin/images/product", formData);
 }
 
 // 여러 상품 이미지 업로드 (최대 10개)
 export async function uploadProductImages(
-  files: File[]
+  files: File[],
+  productSlug?: string
 ): Promise<ImagesUploadResponse> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
   });
+  if (productSlug) formData.append("productSlug", productSlug);
   return uploadFile<ImagesUploadResponse>(
     "/api/admin/images/products",
     formData
@@ -1370,12 +1374,14 @@ export async function uploadProductImages(
 
 // 상품 상세 이미지 업로드 (최대 10개)
 export async function uploadProductDetailImages(
-  files: File[]
+  files: File[],
+  productSlug?: string
 ): Promise<ImagesUploadResponse> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
   });
+  if (productSlug) formData.append("productSlug", productSlug);
   return uploadFile<ImagesUploadResponse>(
     "/api/admin/images/product-details",
     formData

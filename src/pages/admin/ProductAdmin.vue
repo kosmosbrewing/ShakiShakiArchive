@@ -1103,6 +1103,7 @@ onMounted(async () => {
                   type="single"
                   label="대표 이미지"
                   :required="true"
+                  :product-slug="productForm.slug"
                 />
                 <ImageUploader
                   v-model="productForm.images"
@@ -1110,6 +1111,7 @@ onMounted(async () => {
                   label="추가 이미지 (선택)"
                   :required="false"
                   :max-files="10"
+                  :product-slug="productForm.slug"
                 />
               </div>
 
@@ -1120,6 +1122,7 @@ onMounted(async () => {
                 label="상세 이미지"
                 :required="true"
                 :max-files="10"
+                :product-slug="productForm.slug"
               />
 
               <!-- 상품 설명 -->

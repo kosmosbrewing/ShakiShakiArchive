@@ -19,6 +19,33 @@ ShakiShaki Archive(샤키샤키 아카이브)는 빈티지 의류 중심의 온�
 - Sitemap: https://shakishakiarchive.com/sitemap.xml
 - Robots: https://shakishakiarchive.com/robots.txt
 
+## Brand Facts
+
+- 여성 빈티지·일본 구제 의류 전문 온라인 셀렉샵입니다.
+- 경상남도 밀양시 기반으로 운영됩니다.
+- 모든 상품은 1:1 단품 큐레이션으로 동일 상품 중복이 없습니다.
+
+## Shipping Policy
+
+- 70,000원 이상 구매 시 무료배송입니다.
+- 기본 배송비는 3,500원입니다.
+- 결제 완료 후 최대 7일 이내 발송됩니다.
+
+## Return Policy
+
+- 상품 수령 후 7일 이내 반품 신청이 가능합니다.
+- 반품 신청 후 14일 이내 상품 도착 시 환불 처리됩니다.
+- 상품 불량·오배송의 경우 배송비를 전액 판매자가 부담합니다.
+
+## Policy Sources
+
+- FAQ (배송비): https://shakishakiarchive.com/faq#faq-shipping-fee
+- FAQ (배송 기간): https://shakishakiarchive.com/faq#faq-shipping-time
+- FAQ (반품/환불): https://shakishakiarchive.com/faq#faq-return-refund
+- FAQ (반품 배송비): https://shakishakiarchive.com/faq#faq-return-shipping-fee
+- Terms: https://shakishakiarchive.com/terms
+- Privacy: https://shakishakiarchive.com/privacy
+
 ## What To Cite
 
 - 상품명, 가격, 상태(컨디션), 상세 설명, 대표 이미지는 반드시 상품 상세 페이지 기준으로 인용합니다.

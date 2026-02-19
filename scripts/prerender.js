@@ -42,7 +42,7 @@ function generateMetaTags(seoData) {
 
   const og = seoData.openGraph;
 
-  return `
+  const ogTags = `
     <!-- Prerendered 메타 태그 -->
     <title>${escapeHtml(og.title)}</title>
     <meta name="description" content="${escapeHtml(og.description)}">
@@ -75,6 +75,29 @@ function generateMetaTags(seoData) {
         : ""
     }
   `.trim();
+
+  // JSON-LD 구조화 데이터 주입 (단일 객체 또는 배열 모두 처리)
+  // seoData.jsonLd가 없으면 ogTags만 반환
+  const jsonLdList = Array.isArray(seoData.jsonLd)
+    ? seoData.jsonLd
+    : seoData.jsonLd
+      ? [seoData.jsonLd]
+      : [];
+
+  if (jsonLdList.length === 0) return ogTags;
+
+  const jsonLdTags = jsonLdList
+    .map((ld) => {
+      // </script> 이스케이프: 데이터에 해당 문자열이 포함되면 script 태그가 조기 종료될 수 있음
+      // <\/ 는 JSON 파서가 동일하게 처리하므로 의미 변경 없음
+      const json = JSON.stringify(ld, null, 2)
+        .replace(/\n/g, "\n    ")
+        .replace(/<\//g, "<\\/");
+      return `<script type="application/ld+json">\n    ${json}\n    </script>`;
+    })
+    .join("\n    ");
+
+  return `${ogTags}\n\n    <!-- JSON-LD 구조화 데이터 (리치 스니펫) -->\n    ${jsonLdTags}`;
 }
 
 /**
@@ -88,15 +111,115 @@ function getTodayDateStr() {
  * HTML에 메타 태그 주입
  */
 function injectMetaTags(html, metaTags) {
-  // <!-- 기본 제목 --> 부터 <!-- 토스페이먼츠 SDK --> 전까지 교체
-  const headRegex = /(<!-- 기본 제목 -->[\s\S]*?)(<!-- 토스페이먼츠 SDK -->)/;
+  // 기존 <title> 태그 제거: prerendered title이 문서 내 유일한 title이 되도록
+  // [\s\S]*? 사용으로 멀티라인 title도 안전하게 처리
+  const htmlWithoutTitle = html.replace(/<title>[\s\S]*?<\/title>/, "");
 
-  if (headRegex.test(html)) {
-    return html.replace(headRegex, `${metaTags}\n\n    $2`);
+  // <!-- 기본 제목 --> 단독 앵커 사용: 이 마커는 SEO 주입 위치를 명시하기 위해 존재
+  // 두 번째 앵커 없이 단독으로 사용하여 다른 주석 변경에 영향받지 않음
+  const ANCHOR = "<!-- 기본 제목 -->";
+  if (htmlWithoutTitle.includes(ANCHOR)) {
+    return htmlWithoutTitle.replace(ANCHOR, `${ANCHOR}\n    ${metaTags}`);
   }
 
   // Fallback: </head> 직전에 삽입
-  return html.replace("</head>", `${metaTags}\n  </head>`);
+  return htmlWithoutTitle.replace("</head>", `  ${metaTags}\n  </head>`);
+}
+
+/**
+ * FAQ JSON-LD 엔트리 추출
+ */
+function extractFaqEntries(seoData) {
+  const jsonLdList = Array.isArray(seoData?.jsonLd)
+    ? seoData.jsonLd
+    : seoData?.jsonLd
+      ? [seoData.jsonLd]
+      : [];
+
+  const faqPage = jsonLdList.find((node) => node?.["@type"] === "FAQPage");
+  const entities = Array.isArray(faqPage?.mainEntity) ? faqPage.mainEntity : [];
+
+  return entities
+    .map((item) => ({
+      question: String(item?.name || "").trim(),
+      answer: String(item?.acceptedAnswer?.text || "").trim(),
+    }))
+    .filter((item) => item.question && item.answer);
+}
+
+/**
+ * FAQ 본문 HTML 생성 (JS 미실행 크롤러용 정적 콘텐츠)
+ */
+function generateFaqBodyHtml(seoData) {
+  const faqEntries = extractFaqEntries(seoData);
+  if (faqEntries.length === 0) return "";
+
+  // 인덱스 기반 ID 배열: FAQ.vue의 FAQ_ANCHORS, seo.ts의 FAQ_ENTRIES와 순서 동기화
+  // 질문 텍스트가 아닌 순서로 매핑하므로 질문 문구 변경 시에도 앵커 ID가 유지됨
+  const FAQ_ANCHOR_IDS = [
+    "faq-shipping-fee",
+    "faq-shipping-time",
+    "faq-return-refund",
+    "faq-return-shipping-fee",
+    "faq-address-change",
+    "faq-refund-time",
+  ];
+
+  const itemsHtml = faqEntries
+    .map((item, index) => {
+      const id = FAQ_ANCHOR_IDS[index] || `faq-item-${String(index + 1)}`;
+      const answerHtml = escapeHtml(item.answer).replace(/\n/g, "<br>");
+
+      return `
+        <article id="${escapeHtml(id)}" class="border-b border-border py-4">
+          <h4 class="text-body font-semibold mb-2">${escapeHtml(item.question)}</h4>
+          <p class="text-body text-muted-foreground whitespace-pre-line">${answerHtml}</p>
+        </article>
+      `.trim();
+    })
+    .join("\n");
+
+  return `
+    <main class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
+      <section class="mb-16" aria-labelledby="faq-title">
+        <div class="text-center mb-8">
+          <h2 id="faq-title" class="text-heading text-primary mb-2 tracking-wider">FAQ</h2>
+          <h3 class="text-heading">자주 묻는 질문</h3>
+        </div>
+
+        <div class="w-full">
+          ${itemsHtml}
+        </div>
+
+        <p class="text-center pt-4 text-muted-foreground">
+          찾으시는 답변이 없으신가요?
+          <a href="/inquiry" class="text-primary hover:underline font-medium">문의 내역 보기</a>
+        </p>
+      </section>
+    </main>
+  `.trim();
+}
+
+/**
+ * FAQ 페이지 body(#app)에 정적 FAQ 콘텐츠 주입
+ */
+function injectFaqBodyHtml(html, seoData) {
+  const faqBodyHtml = generateFaqBodyHtml(seoData);
+  if (!faqBodyHtml) {
+    console.warn("   ⚠️  FAQ 본문 생성 실패: mainEntity가 비어 있습니다.");
+    return html;
+  }
+
+  const APP_CONTAINER_REGEX = /<div\s+id=["']app["'][^>]*>\s*<\/div>/i;
+  if (!APP_CONTAINER_REGEX.test(html)) {
+    console.warn("   ⚠️  FAQ 본문 주입 실패: #app 컨테이너를 찾지 못했습니다.");
+    return html;
+  }
+
+  return html.replace(
+    APP_CONTAINER_REGEX,
+    `<div id="app">${faqBodyHtml}</div>`
+  );
 }
 
 /**
@@ -147,6 +270,30 @@ async function prerenderHome(template) {
 
   // index.html 덮어쓰기
   saveHtmlFile("index.html", html);
+  return { attempted: 1, generated: 1, failed: [] };
+}
+
+/**
+ * 1-1. FAQ 페이지 Prerender
+ */
+async function prerenderFaq(template) {
+  console.log("\n📄 FAQ 페이지 Prerendering...");
+
+  const seoData = await fetchSeoData("/api/seo/faq");
+  if (!seoData) {
+    throw new Error("FAQ SEO 데이터 로드 실패: /api/seo/faq");
+  }
+  const faqEntries = extractFaqEntries(seoData);
+  if (faqEntries.length === 0) {
+    throw new Error(
+      "FAQ prerender 실패: /api/seo/faq 응답의 FAQPage.mainEntity가 비어 있습니다."
+    );
+  }
+
+  const metaTags = generateMetaTags(seoData);
+  const htmlWithMeta = injectMetaTags(template, metaTags);
+  const faqHtml = injectFaqBodyHtml(htmlWithMeta, seoData);
+  saveHtmlFile("faq.html", faqHtml);
   return { attempted: 1, generated: 1, failed: [] };
 }
 
@@ -263,6 +410,7 @@ async function generateSitemap() {
     // 정적 페이지
     const staticPages = [
       { loc: `${SITE_URL}/`,        changefreq: "daily",   priority: "1.0", lastmod: today },
+      { loc: `${SITE_URL}/faq`,     changefreq: "monthly", priority: "0.6", lastmod: today },
       { loc: `${SITE_URL}/product/all`, changefreq: "daily", priority: "0.9", lastmod: today },
     ];
 
@@ -408,6 +556,7 @@ async function prerender() {
   try {
     const runStats = {
       home: { attempted: 0, generated: 0, failed: [] },
+      faq: { attempted: 0, generated: 0, failed: [] },
       categories: { attempted: 0, generated: 0, failed: [] },
       products: { attempted: 0, generated: 0, failed: [] },
       sitemap: { generated: false, failed: [] },
@@ -416,6 +565,9 @@ async function prerender() {
 
     // 1. 홈페이지
     runStats.home = await prerenderHome(template);
+
+    // 1-1. FAQ
+    runStats.faq = await prerenderFaq(template);
 
     // 2. 카테고리별
     runStats.categories = await prerenderCategories(template);
@@ -437,11 +589,13 @@ async function prerender() {
     console.log("\n✨ Prerendering 완료!\n");
     console.log("📦 생성된 파일:");
     console.log("   - index.html (홈)");
+    console.log("   - faq.html (FAQ)");
     console.log("   - product/{category}.html (카테고리별)");
     console.log("   - productDetail/{id}.html (상품별)");
     console.log("   - sitemap.xml\n");
     console.log("📊 Prerender 요약:");
     console.log(`   - 홈: ${runStats.home.generated}/${runStats.home.attempted} (${toRate(runStats.home.generated, runStats.home.attempted)}%)`);
+    console.log(`   - FAQ: ${runStats.faq.generated}/${runStats.faq.attempted} (${toRate(runStats.faq.generated, runStats.faq.attempted)}%)`);
     console.log(`   - 카테고리: ${runStats.categories.generated}/${runStats.categories.attempted} (${toRate(runStats.categories.generated, runStats.categories.attempted)}%)`);
     console.log(`   - 상품 상세: ${runStats.products.generated}/${runStats.products.attempted} (${toRate(runStats.products.generated, runStats.products.attempted)}%)`);
     console.log(`   - sitemap.xml: ${runStats.sitemap.generated ? "성공" : "실패"}`);
@@ -449,6 +603,9 @@ async function prerender() {
 
     if (runStats.categories.failed.length > 0) {
       console.warn(`   ⚠️  카테고리 실패 목록 (${runStats.categories.failed.length}): ${runStats.categories.failed.join(", ")}`);
+    }
+    if (runStats.faq.failed.length > 0) {
+      console.warn(`   ⚠️  FAQ 실패 목록 (${runStats.faq.failed.length}): ${runStats.faq.failed.join(", ")}`);
     }
     if (runStats.products.failed.length > 0) {
       console.warn(`   ⚠️  상품 상세 실패 목록 (${runStats.products.failed.length}): ${runStats.products.failed.join(", ")}`);

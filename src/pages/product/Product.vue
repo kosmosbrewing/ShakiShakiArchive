@@ -416,11 +416,11 @@ onUnmounted(() => {
               "
               draggable="false"
             />
-            <!-- 호버 이미지 -->
+            <!-- 호버 이미지 (장식용 → alt="" 적용) -->
             <img
               v-if="images && images.length > 0"
               v-bind="getProductImageAttrs(images[0])"
-              :alt="`${name} - 호버`"
+              alt=""
               class="w-full aspect-square object-cover size-full transition-opacity duration-300"
               :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
               draggable="false"

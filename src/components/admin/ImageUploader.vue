@@ -19,12 +19,14 @@ interface Props {
   label?: string;
   required?: boolean;
   maxFiles?: number;
+  productSlug?: string; // Cloudinary public_id 슬러그 기반 생성용 (SEO)
 }
 
 const props = withDefaults(defineProps<Props>(), {
   label: "이미지",
   required: false,
   maxFiles: 10,
+  productSlug: "",
 });
 
 const emit = defineEmits<{
@@ -76,15 +78,17 @@ const processFiles = async (files: File[]) => {
   isUploading.value = true;
 
   try {
+    // productSlug가 있으면 Cloudinary public_id를 slug 기반으로 생성
+    const slug = props.productSlug || undefined;
     if (props.type === "single") {
-      const result = await uploadProductImage(files[0]);
+      const result = await uploadProductImage(files[0], slug);
       emit("update:modelValue", result.image.url);
     } else if (props.type === "multiple") {
-      const result = await uploadProductImages(files);
+      const result = await uploadProductImages(files, slug);
       const uploadedUrls = result.images.map((img: UploadedImage) => img.url);
       emit("update:modelValue", [...currentImages.value, ...uploadedUrls]);
     } else if (props.type === "details") {
-      const result = await uploadProductDetailImages(files);
+      const result = await uploadProductDetailImages(files, slug);
       const uploadedUrls = result.images.map((img: UploadedImage) => img.url);
       emit("update:modelValue", [...currentImages.value, ...uploadedUrls]);
     }

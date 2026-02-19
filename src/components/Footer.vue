@@ -22,8 +22,8 @@ import { Card, CardContent } from "@/components/ui/card";
             </a>
           </div>
 
-          <!-- 회사 정보 영역 -->
-          <div class="md:col-span-3 pb-4">
+          <!-- 회사 정보 영역 (data-nosnippet: 구글이 스니펫으로 사용하지 않도록 차단) -->
+          <div class="md:col-span-3 pb-4" data-nosnippet>
             <div class="space-y-1">
               <p class="text-caption text-muted-foreground">
                 샤키샤키 아카이브&ensp;|&ensp;대표 손유진

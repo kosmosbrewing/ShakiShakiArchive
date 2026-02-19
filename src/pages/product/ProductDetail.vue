@@ -696,7 +696,7 @@ onMounted(async () => {
               decoding="async"
               crossorigin="anonymous"
               draggable="false"
-              alt="Product Main Image"
+              :alt="productData.product.value?.name ?? 'Product Image'"
               @load="handleMainImageLoad"
             />
 
@@ -1096,7 +1096,7 @@ onMounted(async () => {
             decoding="async"
             crossorigin="anonymous"
             draggable="false"
-            :alt="`상품 상세 이미지 ${idx + 1}`"
+            :alt="`${productData.product.value?.name} 상세 이미지 ${idx + 1}`"
             @load="handleDetailImageLoad(idx)"
           />
         </div>

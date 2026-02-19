@@ -4,6 +4,12 @@
 function handler(event) {
   var request = event.request;
   var uri = request.uri;
+  var normalizedUri = uri;
+
+  // 트레일링 슬래시 정규화 (/faq/ -> /faq)
+  if (normalizedUri.length > 1 && normalizedUri.endsWith('/')) {
+    normalizedUri = normalizedUri.slice(0, -1);
+  }
 
   // 이미 .html 확장자가 있으면 그대로 반환
   if (uri.endsWith('.html')) {
@@ -32,15 +38,21 @@ function handler(event) {
     return request;
   }
 
-  // 상품 상세 페이지: /productDetail/123 -> /productDetail/123.html
-  if (uri.match(/^\/productDetail\/[^/]+$/)) {
-    request.uri = uri + '.html';
+  // 상품 상세 페이지: /productDetail/123(/) -> /productDetail/123.html
+  if (normalizedUri.match(/^\/productDetail\/[^/]+$/)) {
+    request.uri = normalizedUri + '.html';
     return request;
   }
 
-  // 상품 목록/카테고리 페이지: /product/all -> /product/all.html
-  if (uri.match(/^\/product\/[^/]+$/)) {
-    request.uri = uri + '.html';
+  // 상품 목록/카테고리 페이지: /product/all(/) -> /product/all.html
+  if (normalizedUri.match(/^\/product\/[^/]+$/)) {
+    request.uri = normalizedUri + '.html';
+    return request;
+  }
+
+  // FAQ 페이지: /faq(/) -> /faq.html
+  if (normalizedUri === '/faq') {
+    request.uri = '/faq.html';
     return request;
   }
 
