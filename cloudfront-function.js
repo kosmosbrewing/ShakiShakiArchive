@@ -20,6 +20,12 @@ function handler(event) {
     return request;
   }
 
+  // 정적 파일 확장자 (.txt, .xml, .ico 등)는 SPA fallback 없이 직접 반환
+  // robots.txt, sitemap.xml이 index.html로 rewrite되는 것을 방지
+  if (uri.match(/\.(txt|xml|ico|webmanifest|json)$/i)) {
+    return request;
+  }
+
   // 루트 경로
   if (uri === '/' || uri === '') {
     request.uri = '/index.html';
