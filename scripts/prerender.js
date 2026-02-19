@@ -46,6 +46,7 @@ function generateMetaTags(seoData) {
     <!-- Prerendered 메타 태그 -->
     <title>${escapeHtml(og.title)}</title>
     <meta name="description" content="${escapeHtml(og.description)}">
+    ${og.url ? `<link rel="canonical" href="${escapeHtml(og.url)}">` : ""}
 
     <!-- OpenGraph (카카오톡, 페이스북) -->
     <meta property="og:title" content="${escapeHtml(og.title)}">
@@ -74,6 +75,13 @@ function generateMetaTags(seoData) {
         : ""
     }
   `.trim();
+}
+
+/**
+ * YYYY-MM-DD 날짜 문자열 생성
+ */
+function getTodayDateStr() {
+  return new Date().toISOString().split("T")[0];
 }
 
 /**
@@ -130,13 +138,16 @@ async function prerenderHome(template) {
   console.log("\n📄 홈페이지 Prerendering...");
 
   const seoData = await fetchSeoData("/api/seo/home");
-  if (!seoData) return;
+  if (!seoData) {
+    return { attempted: 1, generated: 0, failed: ["home"] };
+  }
 
   const metaTags = generateMetaTags(seoData);
   const html = injectMetaTags(template, metaTags);
 
   // index.html 덮어쓰기
   saveHtmlFile("index.html", html);
+  return { attempted: 1, generated: 1, failed: [] };
 }
 
 /**
@@ -144,6 +155,7 @@ async function prerenderHome(template) {
  */
 async function prerenderCategories(template) {
   console.log("\n📄 카테고리 페이지 Prerendering...");
+  const stats = { attempted: 0, generated: 0, failed: [] };
 
   try {
     // 백엔드에서 카테고리 목록 가져오기
@@ -153,10 +165,12 @@ async function prerenderCategories(template) {
     console.log(`   📦 카테고리 ${categories.length}개 발견`);
 
     for (const category of categories) {
+      stats.attempted++;
       // 모든 카테고리를 백엔드 API에서 가져오기
       const seoData = await fetchSeoData(`/api/seo/categories/${category.slug}`);
       if (!seoData) {
         console.warn(`   ⚠️  SEO 데이터 없음, 스킵: ${category.slug}`);
+        stats.failed.push(category.slug);
         continue;
       }
 
@@ -164,10 +178,14 @@ async function prerenderCategories(template) {
       const html = injectMetaTags(template, metaTags);
 
       saveHtmlFile(`product/${category.slug}.html`, html);
+      stats.generated++;
     }
   } catch (error) {
     console.error("   ❌ 카테고리 로드 실패:", error.message);
+    stats.failed.push(`load-error:${error.message}`);
   }
+
+  return stats;
 }
 
 /**
@@ -181,6 +199,41 @@ function extractProducts(data) {
 }
 
 /**
+ * API 응답에서 카테고리 배열 추출
+ */
+function extractCategories(data) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.categories)) return data.categories;
+  return [];
+}
+
+/**
+ * 전체 상품 목록 페이지네이션으로 수집
+ * 백엔드 기본 limit=40, 최대 limit=100 → 상품이 41개 이상이면 여러 페이지 순회
+ */
+async function fetchAllProducts() {
+  const all = [];
+  let page = 1;
+  const limit = 100; // 백엔드 허용 최대값
+
+  while (true) {
+    const { data } = await axios.get(
+      `${BACKEND_API}/api/products?page=${page}&limit=${limit}`
+    );
+    const batch = extractProducts(data);
+    all.push(...batch);
+
+    // hasMore가 false이거나 pagination 정보가 없으면 종료
+    const hasMore = data?.pagination?.hasMore;
+    if (!hasMore || batch.length === 0) break;
+    page++;
+  }
+
+  console.log(`   📦 전체 상품 ${all.length}개 수집 완료 (${page}페이지)`);
+  return all;
+}
+
+/**
  * 3. sitemap.xml 정적 파일 생성
  * - /api/products (id 포함) + /api/categories 데이터 사용
  * - URL 형식: /productDetail/{uuid}, /product/{slug}
@@ -189,13 +242,12 @@ async function generateSitemap() {
   console.log("\n🗺️  sitemap.xml 생성 중...");
 
   try {
-    const [productsRes, categoriesRes] = await Promise.all([
-      axios.get(`${BACKEND_API}/api/products`),
+    const [products, categoriesRes] = await Promise.all([
+      fetchAllProducts(),
       axios.get(`${BACKEND_API}/api/categories`),
     ]);
 
-    const products = extractProducts(productsRes.data);
-    const categories = Array.isArray(categoriesRes.data) ? categoriesRes.data : [];
+    const categories = extractCategories(categoriesRes.data);
 
     // XML 특수문자 이스케이프 (sitemap URL용)
     const escapeXml = (str) => String(str || "").replace(/&/g, "&amp;").replace(/'/g, "&apos;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -206,41 +258,49 @@ async function generateSitemap() {
       catch { return new Date().toISOString().split("T")[0]; }
     };
 
-    const today = toDateStr(new Date().toISOString());
+    const today = getTodayDateStr();
 
     // 정적 페이지
     const staticPages = [
       { loc: `${SITE_URL}/`,        changefreq: "daily",   priority: "1.0", lastmod: today },
-      { loc: `${SITE_URL}/faq`,     changefreq: "monthly", priority: "0.5", lastmod: today },
-      { loc: `${SITE_URL}/privacy`, changefreq: "yearly",  priority: "0.3", lastmod: today },
-      { loc: `${SITE_URL}/terms`,   changefreq: "yearly",  priority: "0.3", lastmod: today },
+      { loc: `${SITE_URL}/product/all`, changefreq: "daily", priority: "0.9", lastmod: today },
     ];
 
     // 카테고리 페이지
-    const categoryPages = categories.map((c) => ({
-      loc: `${SITE_URL}/product/${escapeXml(c.slug)}`,
-      changefreq: "daily",
-      priority: "0.8",
-      lastmod: today,
-    }));
+    const categoryPages = categories
+      .filter((c) => c && c.slug)
+      .map((c) => ({
+        loc: `${SITE_URL}/product/${c.slug}`,
+        changefreq: "weekly",
+        priority: "0.8",
+        lastmod: today,
+      }));
 
-    // 상품 상세 페이지 (UUID 기반 — 라우터 /productDetail/:id 와 일치)
+    // 상품 상세 페이지 (slug 기반 — 라우터 /productDetail/:slug 와 일치)
+    // slug가 없는 상품은 uuid fallback
     const productPages = products
       .filter((p) => p.id && p.isAvailable !== false)
       .map((p) => ({
-        loc: `${SITE_URL}/productDetail/${escapeXml(p.id)}`,
+        loc: `${SITE_URL}/productDetail/${p.slug || p.id}`,
         changefreq: "weekly",
         priority: "0.9",
         lastmod: toDateStr(p.updatedAt || p.createdAt),
+        imageUrl: p.imageUrl || "",
       }));
 
     const allPages = [...staticPages, ...categoryPages, ...productPages];
 
     const xmlLines = [
       '<?xml version="1.0" encoding="UTF-8"?>',
-      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+      '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
       ...allPages.map(
-        (p) => `  <url>\n    <loc>${p.loc}</loc>\n    <lastmod>${p.lastmod}</lastmod>\n    <changefreq>${p.changefreq}</changefreq>\n    <priority>${p.priority}</priority>\n  </url>`
+        (p) => {
+          const imageTag = p.imageUrl
+            ? `\n    <image:image>\n      <image:loc>${escapeXml(p.imageUrl)}</image:loc>\n    </image:image>`
+            : "";
+          return `  <url>\n    <loc>${escapeXml(p.loc)}</loc>\n    <lastmod>${escapeXml(p.lastmod)}</lastmod>\n    <changefreq>${escapeXml(p.changefreq)}</changefreq>\n    <priority>${escapeXml(p.priority)}</priority>${imageTag}\n  </url>`;
+        }
       ),
       "</urlset>",
     ];
@@ -249,8 +309,10 @@ async function generateSitemap() {
     fs.writeFileSync(sitemapPath, xmlLines.join("\n"), "utf-8");
     console.log(`   ✅ 생성: sitemap.xml (총 ${allPages.length}개 URL)`);
     console.log(`      정적: ${staticPages.length}, 카테고리: ${categoryPages.length}, 상품: ${productPages.length}`);
+    return { generated: true, failed: [] };
   } catch (error) {
     console.error("   ❌ sitemap.xml 생성 실패:", error.message);
+    return { generated: false, failed: [error.message] };
   }
 }
 
@@ -259,13 +321,11 @@ async function generateSitemap() {
  */
 async function prerenderProducts(template) {
   console.log("\n📄 상품 상세 페이지 Prerendering...");
+  const stats = { attempted: 0, generated: 0, failed: [] };
 
   try {
-    // 백엔드에서 전체 상품 목록 가져오기
-    // 실서버 응답: { products: [...], total: N } 형태이므로 extractProducts로 파싱
-    const { data: rawData } = await axios.get(`${BACKEND_API}/api/products`);
-    const products = extractProducts(rawData);
-    console.log(`   📦 상품 ${products.length}개 발견`);
+    // 백엔드에서 전체 상품 목록 가져오기 (페이지네이션으로 전체 수집)
+    const products = await fetchAllProducts();
 
     // 상품이 너무 많으면 경고
     if (products.length > 100) {
@@ -275,17 +335,55 @@ async function prerenderProducts(template) {
     }
 
     for (const product of products) {
+      stats.attempted++;
       const seoData = await fetchSeoData(`/api/seo/products/${product.id}`);
-      if (!seoData) continue;
+      if (!seoData) {
+        stats.failed.push(product.slug || product.id);
+        continue;
+      }
 
       const metaTags = generateMetaTags(seoData);
       const html = injectMetaTags(template, metaTags);
 
-      saveHtmlFile(`productDetail/${product.id}.html`, html);
+      // slug가 있으면 slug 기반 경로 사용 (SEO URL), 없으면 uuid fallback
+      const fileKey = product.slug || product.id;
+      saveHtmlFile(`productDetail/${fileKey}.html`, html);
+      stats.generated++;
     }
   } catch (error) {
     console.error("   ❌ 상품 목록 로드 실패:", error.message);
+    stats.failed.push(`load-error:${error.message}`);
   }
+
+  return stats;
+}
+
+/**
+ * 5. llms.txt Last-Updated 자동 갱신 (dist 기준)
+ */
+function updateLlmsLastUpdated() {
+  const llmsPath = path.join(DIST_DIR, "llms.txt");
+  if (!fs.existsSync(llmsPath)) {
+    console.warn("   ⚠️  llms.txt 파일이 없어 Last-Updated 갱신을 건너뜁니다.");
+    return { updated: false, failed: ["llms.txt not found"] };
+  }
+
+  const today = getTodayDateStr();
+  const content = fs.readFileSync(llmsPath, "utf-8");
+
+  let updatedContent = content;
+  if (/^Last-Updated:\s*.+$/m.test(content)) {
+    updatedContent = content.replace(/^Last-Updated:\s*.+$/m, `Last-Updated: ${today}`);
+  } else {
+    updatedContent = content.replace(
+      /^# .+$/m,
+      (header) => `${header}\n\nLast-Updated: ${today}`
+    );
+  }
+
+  fs.writeFileSync(llmsPath, updatedContent, "utf-8");
+  console.log(`   ✅ llms.txt Last-Updated 갱신: ${today}`);
+  return { updated: true, failed: [] };
 }
 
 /**
@@ -308,17 +406,33 @@ async function prerender() {
   console.log("✅ 템플릿 로드 완료");
 
   try {
+    const runStats = {
+      home: { attempted: 0, generated: 0, failed: [] },
+      categories: { attempted: 0, generated: 0, failed: [] },
+      products: { attempted: 0, generated: 0, failed: [] },
+      sitemap: { generated: false, failed: [] },
+      llms: { updated: false, failed: [] },
+    };
+
     // 1. 홈페이지
-    await prerenderHome(template);
+    runStats.home = await prerenderHome(template);
 
     // 2. 카테고리별
-    await prerenderCategories(template);
+    runStats.categories = await prerenderCategories(template);
 
     // 3. 상품 상세
-    await prerenderProducts(template);
+    runStats.products = await prerenderProducts(template);
 
     // 4. sitemap.xml 생성 (HTML prerender 완료 후 실행)
-    await generateSitemap();
+    runStats.sitemap = await generateSitemap();
+
+    // 5. llms.txt Last-Updated 자동 갱신
+    runStats.llms = updateLlmsLastUpdated();
+
+    const toRate = (generated, attempted) => {
+      if (!attempted) return "0.0";
+      return ((generated / attempted) * 100).toFixed(1);
+    };
 
     console.log("\n✨ Prerendering 완료!\n");
     console.log("📦 생성된 파일:");
@@ -326,6 +440,25 @@ async function prerender() {
     console.log("   - product/{category}.html (카테고리별)");
     console.log("   - productDetail/{id}.html (상품별)");
     console.log("   - sitemap.xml\n");
+    console.log("📊 Prerender 요약:");
+    console.log(`   - 홈: ${runStats.home.generated}/${runStats.home.attempted} (${toRate(runStats.home.generated, runStats.home.attempted)}%)`);
+    console.log(`   - 카테고리: ${runStats.categories.generated}/${runStats.categories.attempted} (${toRate(runStats.categories.generated, runStats.categories.attempted)}%)`);
+    console.log(`   - 상품 상세: ${runStats.products.generated}/${runStats.products.attempted} (${toRate(runStats.products.generated, runStats.products.attempted)}%)`);
+    console.log(`   - sitemap.xml: ${runStats.sitemap.generated ? "성공" : "실패"}`);
+    console.log(`   - llms.txt 날짜 갱신: ${runStats.llms.updated ? "성공" : "실패"}`);
+
+    if (runStats.categories.failed.length > 0) {
+      console.warn(`   ⚠️  카테고리 실패 목록 (${runStats.categories.failed.length}): ${runStats.categories.failed.join(", ")}`);
+    }
+    if (runStats.products.failed.length > 0) {
+      console.warn(`   ⚠️  상품 상세 실패 목록 (${runStats.products.failed.length}): ${runStats.products.failed.join(", ")}`);
+    }
+    if (runStats.sitemap.failed.length > 0) {
+      console.warn(`   ⚠️  sitemap 실패 원인: ${runStats.sitemap.failed.join(", ")}`);
+    }
+    if (runStats.llms.failed.length > 0) {
+      console.warn(`   ⚠️  llms 갱신 실패 원인: ${runStats.llms.failed.join(", ")}`);
+    }
   } catch (error) {
     console.error("\n❌ Prerendering 실패:", error);
     process.exit(1);

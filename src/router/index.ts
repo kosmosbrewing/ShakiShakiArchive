@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
 import { trackPageView } from "@/lib/analytics";
+import { fetchProduct } from "@/lib/api";
 
 // 홈/공용 컴포넌트
 import Home from "@/components/Home.vue";
@@ -99,7 +100,7 @@ const routes = [
   // 상품 관련
   { path: "/product/:category", name: "Product", component: Product, meta: { title: "상품 목록" } },
   {
-    path: "/productDetail/:id",
+    path: "/productDetail/:slug",
     name: "ProductDetail",
     component: ProductDetail,
     meta: { title: "상품 상세" },
@@ -256,11 +257,36 @@ const router = createRouter({
 router.beforeEach(async (to: any, _from: any, next: any) => {
   const authStore = useAuthStore();
   const { showAlert } = useAlert();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   // 0. 페이지 타이틀 업데이트
   const defaultTitle = "샤키샤키 아카이브(ShakiShaki Archive)";
   const pageTitle = to.meta.title || defaultTitle;
   document.title = pageTitle === defaultTitle ? pageTitle : `${pageTitle} | ${defaultTitle}`;
+
+  // 0-1. 상품 상세 URL canonical 유지: UUID 진입 시 slug URL로 교체
+  if (to.name === "ProductDetail") {
+    const routeSlug = String(to.params.slug || "");
+    if (uuidRegex.test(routeSlug)) {
+      try {
+        const product = await fetchProduct(routeSlug);
+        const canonicalSlug = product?.slug;
+        if (canonicalSlug && canonicalSlug !== routeSlug) {
+          return next({
+            name: "ProductDetail",
+            params: { slug: canonicalSlug },
+            query: to.query,
+            hash: to.hash,
+            replace: true,
+          });
+        }
+      } catch (error) {
+        // 상세 페이지 컴포넌트에서 404/에러를 처리하도록 여기서는 통과
+        console.warn("상품 canonical URL 확인 실패:", error);
+      }
+    }
+  }
 
   // 로그인이 필요한 페이지인 경우, 먼저 유저 정보 로드
   if (!authStore.user && (to.meta.requiresAuth || to.meta.requiresAdmin)) {

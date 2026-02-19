@@ -73,6 +73,21 @@ jobs:
             --cache-control "max-age=300, stale-while-revalidate=86400" \
             --delete
 
+      # 7-1. SEO/LLM 텍스트 파일 Content-Type + charset 명시
+      - name: Set UTF-8 metadata for SEO files
+        run: |
+          aws s3 cp dist/robots.txt s3://${{ secrets.AWS_S3_BUCKET_NAME }}/robots.txt \
+            --content-type "text/plain; charset=utf-8" \
+            --cache-control "max-age=300, stale-while-revalidate=86400"
+
+          aws s3 cp dist/llms.txt s3://${{ secrets.AWS_S3_BUCKET_NAME }}/llms.txt \
+            --content-type "text/plain; charset=utf-8" \
+            --cache-control "max-age=300, stale-while-revalidate=86400"
+
+          aws s3 cp dist/sitemap.xml s3://${{ secrets.AWS_S3_BUCKET_NAME }}/sitemap.xml \
+            --content-type "application/xml; charset=utf-8" \
+            --cache-control "max-age=300, stale-while-revalidate=86400"
+
       # 8. 무효화 전략 판단 및 실행
       - name: Determine invalidation strategy
         id: invalidation
@@ -98,7 +113,7 @@ jobs:
           echo "📄 HTML 캐시 무효화 중..."
           INVALIDATION_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/product/*" "/productDetail/*" "/sitemap.xml" "/robots.txt" \
+            --paths "/index.html" "/product/*" "/productDetail/*" "/sitemap.xml" "/robots.txt" "/llms.txt" \
             --query 'Invalidation.Id' \
             --output text)
 

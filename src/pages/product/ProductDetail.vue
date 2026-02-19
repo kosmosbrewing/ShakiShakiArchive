@@ -66,8 +66,11 @@ const { requireAuth } = useAuthCheck();
 const { addItem } = useCart();
 const { detail } = useOptimizedImage();
 
-// 상품 ID (UUID)
-const productId = computed(() => String(route.params.id));
+// 라우트 파라미터 (slug 또는 UUID — 백엔드가 자동 감지)
+const routeSlug = computed(() => String(route.params.slug));
+
+// 실제 UUID: 상품 로드 완료 후 확정 (wishlist 등 UUID 필수 API에 사용)
+const productUUID = computed(() => productData.product.value?.id ?? "");
 
 const getViewSessionKey = (id: string) => `product_view_recorded:${id}`;
 
@@ -117,8 +120,8 @@ const { activeTab, setTab } = useProductTabs();
 // 갤러리 관리
 const gallery = useImageGallery(productData.galleryImages);
 
-// 위시리스트 토글
-const wishlistToggle = useWishlistToggle(productId);
+// 위시리스트 토글 (UUID 기반 — 상품 로드 후 productUUID가 채워진 뒤 checkStatus 호출됨)
+const wishlistToggle = useWishlistToggle(productUUID);
 
 // 네이버페이 주문형
 const naverPay = useNaverPayOrder();
@@ -617,7 +620,7 @@ onUnmounted(() => {
 
 // 데이터 로드
 onMounted(async () => {
-  await productData.loadProduct(String(productId.value));
+  await productData.loadProduct(routeSlug.value);
   const loadedProduct = productData.product.value;
 
   if (loadedProduct?.id) {
@@ -661,7 +664,7 @@ onMounted(async () => {
       <p class="text-body text-muted-foreground">
         {{ productData.error.value }}
       </p>
-      <Button variant="outline" @click="productData.loadProduct(productId)">
+      <Button variant="outline" @click="productData.loadProduct(routeSlug)">
         다시 시도
       </Button>
     </div>

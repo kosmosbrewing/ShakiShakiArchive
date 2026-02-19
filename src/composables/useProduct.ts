@@ -45,7 +45,7 @@ export function useProduct(productId?: string | number) {
 
   // 상품 데이터 로드
   const loadProduct = async (id?: string | number) => {
-    const pid = id || productId || (route.params.id as string);
+    const pid = id || productId || (route.params.slug as string);
     if (!pid) {
       error.value = "상품 ID가 필요합니다";
       return;
@@ -55,8 +55,10 @@ export function useProduct(productId?: string | number) {
     error.value = null;
 
     try {
+      // slug 또는 UUID로 상품 조회 (백엔드가 자동 감지)
       product.value = await fetchProduct(String(pid));
-      variants.value = await fetchProductVariants(String(pid));
+      // variants는 반드시 UUID로 조회 (slug 미지원) → 위에서 resolve된 product.id 사용
+      variants.value = await fetchProductVariants(product.value.id);
     } catch (e) {
       const { showAlert } = useAlert();
       console.error("상품 로드 실패:", e);
@@ -351,7 +353,8 @@ export function useImageGallery(galleryImages: Ref<string[]>) {
  */
 export function useProductDetail() {
   const route = useRoute();
-  const productId = computed(() => route.params.id as string);
+  // 라우트 파라미터는 slug (SEO URL 기반); UUID도 그대로 동작 (백엔드 자동 감지)
+  const productId = computed(() => route.params.slug as string);
 
   const productData = useProduct();
   const variantSelection = useVariantSelection(productData.variants);
@@ -406,6 +409,7 @@ export function useProductDetail() {
 // 상품 목록 아이템 인터페이스
 export interface ProductListItem {
   id: string;
+  slug?: string; // SEO URL용 슬러그 (없으면 id fallback)
   imageUrl: string;
   images?: string[]; // 추가 이미지 목록 (호버용)
   name: string;
@@ -475,6 +479,7 @@ export function useProductList() {
 
     return {
       id: item.id,
+      slug: item.slug,
       imageUrl: item.imageUrl,
       images: item.images ?? [],
       name: item.name,

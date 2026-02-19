@@ -241,9 +241,9 @@ const goBack = () => {
   router.back();
 };
 
-// 상품 상세로 이동
-const goToProduct = (productId: string) => {
-  router.push(`/productDetail/${productId}`);
+// 상품 상세로 이동 (slug 우선, fallback: id)
+const goToProduct = (slug: string | undefined | null, id: string) => {
+  router.push(`/productDetail/${slug || id}`);
 };
 
 onMounted(() => {
@@ -353,7 +353,7 @@ onMounted(() => {
           <div
             v-if="inquiry.product"
             class="flex items-center gap-3 p-3 sm:p-4 bg-muted/30 border border-border/50 rounded-lg mb-5 cursor-pointer hover:bg-muted/50 hover:border-primary/20 transition-all duration-200"
-            @click="goToProduct(inquiry.product.id)"
+            @click="goToProduct(inquiry.product.slug, inquiry.product.id)"
           >
             <img
               v-if="safeProductImageUrl"

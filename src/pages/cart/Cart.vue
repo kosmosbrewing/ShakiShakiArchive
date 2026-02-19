@@ -309,6 +309,7 @@ watch(
               <ProductThumbnail
                 :image-url="item.product?.imageUrl"
                 :product-id="item.productId"
+                :product-slug="item.product?.slug"
                 :class="[isOutOfStock(item) ? 'opacity-50' : '']"
               />
 
@@ -319,7 +320,7 @@ watch(
                       'text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2',
                       isOutOfStock(item) ? 'opacity-60' : '',
                     ]"
-                    @click="router.push(`/productDetail/${item.productId}`)"
+                    @click="router.push(`/productDetail/${item.product?.slug || item.productId}`)"
                   >
                     {{ item.product?.name }}
                   </h3>

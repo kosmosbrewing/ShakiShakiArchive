@@ -189,8 +189,9 @@ const toggleWishlist = async (event: Event, productId: string) => {
   }
 };
 
-const goToDetail = (id: string) => {
-  router.push(`/productDetail/${id}`);
+// slug가 있으면 slug로 이동 (SEO URL), 없으면 id fallback
+const goToDetail = (slug: string | undefined, id: string) => {
+  router.push(`/productDetail/${slug || id}`);
 };
 
 // 디바운스된 검색 함수 (300ms 후 API 호출)
@@ -390,7 +391,7 @@ onUnmounted(() => {
       <Card
         v-else
         v-for="(
-          { id, imageUrl, images, name, price, totalStock }
+          { id, slug, imageUrl, images, name, price, totalStock }
         ) in displayProducts"
         :key="id"
         v-reveal
@@ -399,7 +400,7 @@ onUnmounted(() => {
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
           <div
             class="aspect-square cursor-pointer relative"
-            @click="goToDetail(id)"
+            @click="goToDetail(slug, id)"
             @mouseenter="hoveredProductId = id"
             @mouseleave="hoveredProductId = null"
           >
@@ -453,7 +454,7 @@ onUnmounted(() => {
           <!-- 상품명 -->
           <CardContent
             class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
-            @click="goToDetail(id)"
+            @click="goToDetail(slug, id)"
           >
             <span
               class="text-caption text-foreground leading-snug line-clamp-2"

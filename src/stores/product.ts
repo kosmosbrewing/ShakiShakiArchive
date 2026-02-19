@@ -7,6 +7,7 @@ import { fetchProducts } from "@/lib/api";
 
 interface ProductItem {
   id: string;
+  slug?: string; // SEO URL용 슬러그 (없으면 id fallback)
   imageUrl: string;
   images?: string[];
   name: string;
@@ -62,6 +63,7 @@ export const useProductStore = defineStore("product", () => {
 
     return {
       id: item.id,
+      slug: item.slug,
       imageUrl: item.imageUrl,
       images: item.images ?? [],
       name: item.name,

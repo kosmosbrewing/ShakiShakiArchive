@@ -33,9 +33,9 @@ const { card } = useOptimizedImage();
 // 호버 상태 관리 (이미지 전환용)
 const hoveredProductId = ref<string | null>(null);
 
-// 상품 상세 페이지로 이동
-const goToDetail = (productId: string) => {
-  router.push(`/productDetail/${productId}`);
+// 상품 상세 페이지로 이동 (slug 우선, fallback: id)
+const goToDetail = (slug: string | undefined | null, id: string) => {
+  router.push(`/productDetail/${slug || id}`);
 };
 
 // 아이템 삭제
@@ -87,7 +87,7 @@ onMounted(() => {
         <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
           <div
             class="aspect-square cursor-pointer relative"
-            @click="goToDetail(item.productId)"
+            @click="goToDetail(item.product?.slug, item.productId)"
             @mouseenter="hoveredProductId = item.productId"
             @mouseleave="hoveredProductId = null"
           >
@@ -148,7 +148,7 @@ onMounted(() => {
           <!-- 상품명 -->
           <CardContent
             class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
-            @click="goToDetail(item.productId)"
+            @click="goToDetail(item.product?.slug, item.productId)"
           >
             <span
               class="text-caption text-foreground leading-snug line-clamp-2"

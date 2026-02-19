@@ -8,6 +8,7 @@ import { useOptimizedImage } from "@/composables";
 interface Props {
   imageUrl?: string;
   productId?: number | string;
+  productSlug?: string; // SEO URL용 슬러그 (있으면 우선 사용)
   size?: "sm" | "md" | "lg";
   clickable?: boolean;
 }
@@ -15,6 +16,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   imageUrl: "",
   productId: "",
+  productSlug: "",
   size: "md",
   clickable: true,
 });
@@ -22,10 +24,11 @@ const props = withDefaults(defineProps<Props>(), {
 const router = useRouter();
 const { thumbnail } = useOptimizedImage();
 
-// 클릭 시 상품 상세 페이지로 이동
+// 클릭 시 상품 상세 페이지로 이동 (slug 우선, fallback: id)
 const handleClick = () => {
-  if (props.clickable && props.productId) {
-    router.push(`/productDetail/${props.productId}`);
+  const target = props.productSlug || props.productId;
+  if (props.clickable && target) {
+    router.push(`/productDetail/${target}`);
   }
 };
 

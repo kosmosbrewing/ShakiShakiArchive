@@ -670,6 +670,7 @@ export interface InquiryUser {
 // 문의 관련 상품 정보
 export interface InquiryProduct {
   id: string;
+  slug?: string; // SEO URL용 슬러그 (없으면 id fallback)
   name: string;
   price?: string;
   imageUrl?: string;

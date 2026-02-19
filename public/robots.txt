@@ -3,13 +3,133 @@
 # https://shakishakiarchive.com
 # ===========================================
 
-# AI 크롤러 명시적 허용 (AI 검색 노출 극대화)
+# AI 크롤러 명시적 허용 (개별 블록)
 User-agent: GPTBot
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: CCBot
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /naverpay/
+Disallow: /order
+Disallow: /orderlist
+Disallow: /orderdetail
+Disallow: /account
+Disallow: /modify
+Disallow: /addresslist
+Disallow: /my-inquiries
+Disallow: /inquiry/create
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+
 User-agent: Meta-ExternalAgent
 Allow: /
 Disallow: /admin
@@ -27,6 +147,9 @@ Disallow: /inquiry/create
 Disallow: /cart
 Disallow: /wishlist
 Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
 
 # 기타 모든 크롤러 (Google, Naver, Bing 등 검색엔진 포함)
 User-agent: *
@@ -46,6 +169,9 @@ Disallow: /inquiry/create
 Disallow: /cart
 Disallow: /wishlist
 Disallow: /oauth/callback
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
 
 # 사이트맵
 Sitemap: https://shakishakiarchive.com/sitemap.xml

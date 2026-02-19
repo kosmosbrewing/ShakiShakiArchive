@@ -63,8 +63,9 @@ const toggleWishlist = async (event: Event, productId: string) => {
   }
 };
 
-const goToDetail = (id: string) => {
-  router.push(`/productDetail/${id}`);
+// slug가 있으면 slug로 이동 (SEO URL), 없으면 id fallback
+const goToDetail = (slug: string | undefined, id: string) => {
+  router.push(`/productDetail/${slug || id}`);
 };
 
 onMounted(async () => {
@@ -94,7 +95,7 @@ onMounted(async () => {
     <Card
       v-else
       v-for="(
-        { id, imageUrl, images, name, price, totalStock }
+        { id, slug, imageUrl, images, name, price, totalStock }
       ) in productList"
       :key="id"
       class="bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md transition-shadow relative"
@@ -102,7 +103,7 @@ onMounted(async () => {
       <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
         <div
           class="aspect-square cursor-pointer relative"
-          @click="goToDetail(id)"
+          @click="goToDetail(slug, id)"
           @mouseenter="hoveredProductId = id"
           @mouseleave="hoveredProductId = null"
         >
@@ -156,7 +157,7 @@ onMounted(async () => {
         <!-- 상품명 -->
         <CardContent
           class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
-          @click="goToDetail(id)"
+          @click="goToDetail(slug, id)"
         >
           <span class="text-caption text-foreground leading-snug line-clamp-2">
             {{ name }}

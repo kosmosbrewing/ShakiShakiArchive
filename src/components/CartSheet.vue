@@ -97,12 +97,12 @@ const closeSheet = () => {
   emit("update:open", false);
 };
 
-// 상품 상세 페이지로 이동
-const goToProductDetail = (productId: number | string) => {
+// 상품 상세 페이지로 이동 (slug 우선, fallback: id)
+const goToProductDetail = (slug: string | undefined | null, id: number | string) => {
   // 라우터 네비게이션 시 history.back() 방지
   closingByPopState.value = true;
   emit("update:open", false);
-  router.push(`/productDetail/${productId}`);
+  router.push(`/productDetail/${slug || id}`);
 };
 
 // 장바구니 페이지로 이동
@@ -256,8 +256,9 @@ const handleTouchEnd = () => {
                 <ProductThumbnail
                   :image-url="item.product?.imageUrl"
                   :product-id="item.productId"
+                  :product-slug="item.product?.slug"
                   :class="[isOutOfStock(item) ? 'opacity-50' : '']"
-                  @click="goToProductDetail(item.productId)"
+                  @click="goToProductDetail(item.product?.slug, item.productId)"
                 />
 
                 <!-- 상품 정보 -->
@@ -268,7 +269,7 @@ const handleTouchEnd = () => {
                         'text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2',
                         isOutOfStock(item) ? 'opacity-60' : '',
                       ]"
-                      @click="goToProductDetail(item.productId)"
+                      @click="goToProductDetail(item.product?.slug, item.productId)"
                     >
                       {{ item.product?.name }}
                     </h3>

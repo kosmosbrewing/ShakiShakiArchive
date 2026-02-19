@@ -327,6 +327,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                 <ProductThumbnail
                   :image-url="item.product?.imageUrl"
                   :product-id="item.productId"
+                  :product-slug="item.product?.slug"
                 />
 
                 <div class="flex-1 flex flex-col justify-between min-h-[100px]">
@@ -334,7 +335,7 @@ const getPaymentProviderLabel = (provider: string): string => {
                     <div class="flex justify-between items-start mb-1 gap-2">
                       <h3
                         class="text-body font-medium text-foreground cursor-pointer hover:underline line-clamp-2"
-                        @click="router.push(`/productDetail/${item.productId}`)"
+                        @click="router.push(`/productDetail/${item.product?.slug || item.productId}`)"
                       >
                         {{ item.productName }}
                       </h3>
