@@ -239,7 +239,7 @@ const handleKakaoShare = () => {
 
     const currentUrl = window.location.href;
 
-    // 카카오 공유 OG 이미지: 800x800 (commerce 타입 정사각형 권장)
+    // 카카오 공유 OG 이미지: 800x800 (feed 타입 정사각형)
     const kakaoImageUrl = optimizeUrl(product.imageUrl, {
       width: 800,
       height: 800,
@@ -248,27 +248,14 @@ const handleKakaoShare = () => {
       quality: "auto:good",
     });
 
-    // description: 상품 설명(80자 제한) + 가격 조합
+    // description: 상품 설명(80자 제한) · 가격 조합
+    // commerce 타입은 description을 렌더링하지 않으므로 feed 타입 유지
     const kakaoDescription = [
       product.description?.trim().slice(0, 80),
       formatPrice(product.price),
     ]
       .filter(Boolean)
       .join(" · ");
-
-    // commerce: 할인가 존재 여부에 따라 원가·할인율 동적 구성
-    const price = Number(product.price);
-    const originalPrice = product.originalPrice
-      ? Number(product.originalPrice)
-      : null;
-    const kakaoCommerce =
-      originalPrice && originalPrice > price
-        ? {
-            regularPrice: originalPrice,
-            discountPrice: price,
-            discountRate: Math.round((1 - price / originalPrice) * 100),
-          }
-        : { regularPrice: price };
 
     // social: viewCount가 있을 때만 포함 (카카오 SDK 지원 필드)
     const kakaoSocial =
@@ -277,7 +264,7 @@ const handleKakaoShare = () => {
         : undefined;
 
     window.Kakao.Share.sendDefault({
-      objectType: "commerce",
+      objectType: "feed",
       content: {
         title: product.name,
         description: kakaoDescription,
@@ -289,7 +276,6 @@ const handleKakaoShare = () => {
           webUrl: currentUrl,
         },
       },
-      commerce: kakaoCommerce,
       ...(kakaoSocial ? { social: kakaoSocial } : {}),
       buttons: [
         {
