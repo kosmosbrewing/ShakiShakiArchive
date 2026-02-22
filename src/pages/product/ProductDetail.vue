@@ -1345,14 +1345,14 @@ onMounted(async () => {
     <Transition name="share-fade">
       <div
         v-if="isShareModalOpen"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-[2px]"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px]"
         role="dialog"
         aria-modal="true"
         aria-label="공유하기"
         @click.self="isShareModalOpen = false"
       >
         <!-- 모달 패널 -->
-        <div class="share-panel bg-background border border-border rounded-t-2xl sm:rounded-2xl w-full sm:w-[320px] shadow-2xl overflow-hidden">
+        <div class="share-panel bg-background border border-border rounded-2xl w-full max-w-[320px] shadow-2xl overflow-hidden">
 
           <!-- 헤더 -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1397,8 +1397,6 @@ onMounted(async () => {
             </button>
           </div>
 
-          <!-- 모바일 하단 안전 영역 여백 -->
-          <div class="h-safe-bottom sm:hidden pb-2" />
         </div>
       </div>
     </Transition>
