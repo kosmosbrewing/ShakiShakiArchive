@@ -21,6 +21,8 @@ const OPTIMIZATION_CONFIG = {
   },
   // 100KB 이상만 변환 (작은 파일은 변환 효과 적음)
   minFileSize: 100 * 1024,
+  // 파일 크기와 무관하게 항상 변환할 파일 목록
+  alwaysConvert: ["favicon.png"],
 };
 
 // 변환할 이미지 타겟
@@ -29,11 +31,13 @@ const TARGET_IMAGES = [
   "tossSymbol.png",
   "marquee01.png",
   "logo01.png",
+  "logo01-1.png",
   "logo02.png",
   "logo03.png",
   "logo01-2.png",
   "logo02-2.png",
   "logo03-2.png",
+  "favicon.png",
 ];
 
 async function ensureDir(dir) {
@@ -59,10 +63,14 @@ function formatBytes(bytes) {
 
 async function optimizeImage(inputPath, outputPath) {
   const originalSize = await getFileSize(inputPath);
+  const fileName = basename(inputPath);
 
-  // 100KB 미만은 스킵
-  if (originalSize < OPTIMIZATION_CONFIG.minFileSize) {
-    console.log(`⏭️  Skipped (too small): ${basename(inputPath)}`);
+  // alwaysConvert 목록에 없는 파일은 100KB 미만 스킵
+  if (
+    !OPTIMIZATION_CONFIG.alwaysConvert.includes(fileName) &&
+    originalSize < OPTIMIZATION_CONFIG.minFileSize
+  ) {
+    console.log(`⏭️  Skipped (too small): ${fileName}`);
     return null;
   }
 

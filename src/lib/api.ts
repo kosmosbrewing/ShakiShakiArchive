@@ -1453,7 +1453,15 @@ export async function fetchAdminSiteImages(): Promise<SiteImage[]> {
 
 // 이미지 상세 조회
 export async function fetchAdminSiteImage(id: number): Promise<SiteImage> {
-  return apiRequest<SiteImage>(`/api/admin/site-images/${id}`);
+  const response = await apiRequest<SiteImage | { image?: SiteImage }>(
+    `/api/admin/site-images/${id}`
+  );
+
+  if ("image" in response && response.image) {
+    return response.image;
+  }
+
+  return response as SiteImage;
 }
 
 // 이미지 추가

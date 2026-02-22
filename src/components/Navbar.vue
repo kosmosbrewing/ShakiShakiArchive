@@ -336,7 +336,7 @@ onUnmounted(() => {
         @click="goHome"
       >
         <img
-          src="@/assets/optimized/logo01.webp"
+          src="@/assets/optimized/logo01-1.webp"
           alt="샤키샤키 아카이브"
           class="w-auto max-h-[38px] min-h-[24px] max-w-[65vw]"
           style="height: clamp(24px, 7vw, 38px)"
@@ -416,7 +416,7 @@ onUnmounted(() => {
         @click="goHome"
       >
         <img
-          src="@/assets/optimized/logo01.webp"
+          src="@/assets/optimized/logo01-1.webp"
           alt="샤키샤키 아카이브"
           class="h-10 w-auto min-w-[120px] object-contain hover:opacity-80 transition-opacity"
           draggable="false"

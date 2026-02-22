@@ -10,6 +10,7 @@ import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
   fetchAdminSiteImages,
+  fetchAdminSiteImage,
   createSiteImage,
   updateSiteImage,
   deleteSiteImage,
@@ -52,6 +53,7 @@ const siteImages = ref<SiteImage[]>([]);
 const isLoading = ref(false);
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
+const isEditModalLoading = ref(false);
 const isUploading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
@@ -134,6 +136,7 @@ const openCreateModal = () => {
     return;
   }
   isEditMode.value = false;
+  isEditModalLoading.value = false;
   // email 탭에서는 이미지 추가 불가 (canAddMore에서 이미 false 처리됨)
   const imageType = activeTab.value === "email" ? "hero" : activeTab.value;
   form.value = {
@@ -146,8 +149,12 @@ const openCreateModal = () => {
 };
 
 // 모달 열기 (수정)
-const openEditModal = (image: SiteImage) => {
+const openEditModal = async (image: SiteImage) => {
   isEditMode.value = true;
+  isEditModalLoading.value = true;
+  isModalOpen.value = true;
+
+  // 로딩 중에도 이전 이미지가 보이도록 목록 데이터로 우선 세팅
   form.value = {
     id: image.id,
     type: image.type,
@@ -157,7 +164,25 @@ const openEditModal = (image: SiteImage) => {
     isActive: image.isActive,
   };
   errorMessage.value = "";
-  isModalOpen.value = true;
+
+  try {
+    const latestImage = await fetchAdminSiteImage(image.id);
+    form.value = {
+      id: latestImage.id,
+      type: latestImage.type,
+      imageUrl: latestImage.imageUrl || image.imageUrl,
+      linkUrl: latestImage.linkUrl || "",
+      displayOrder: latestImage.displayOrder,
+      isActive: latestImage.isActive,
+    };
+  } catch (error: any) {
+    console.error(error);
+    errorMessage.value =
+      error.message ||
+      "DB에 저장된 최신 이미지 URL을 불러오지 못해 목록 데이터를 사용합니다.";
+  } finally {
+    isEditModalLoading.value = false;
+  }
 };
 
 // 이미지 업로드
@@ -609,6 +634,7 @@ onMounted(async () => {
                       size="icon"
                       @click="openEditModal(image)"
                       class="text-muted-foreground hover:text-primary"
+                      :disabled="isEditModalLoading"
                     >
                       <Edit3 class="w-4 h-4" />
                     </Button>
@@ -658,7 +684,7 @@ onMounted(async () => {
               variant="ghost"
               size="icon"
               @click="isModalOpen = false"
-              :disabled="isSaving || isUploading"
+              :disabled="isSaving || isUploading || isEditModalLoading"
               class="mb-2"
             >
               <X class="w-5 h-5" />
@@ -666,7 +692,17 @@ onMounted(async () => {
           </div>
           <Separator></Separator>
 
-          <form @submit.prevent="handleSave" class="space-y-6 mt-6">
+          <div
+            v-if="isEditMode && isEditModalLoading"
+            class="py-12 text-center space-y-3"
+          >
+            <LoadingSpinner />
+            <p class="text-caption text-admin-muted">
+              DB에 저장된 이미지 정보를 불러오는 중입니다.
+            </p>
+          </div>
+
+          <form v-else @submit.prevent="handleSave" class="space-y-6 mt-6">
             <!-- 타입 표시 -->
             <div class="space-y-2">
               <Label class="text-admin">타입</Label>
@@ -685,7 +721,7 @@ onMounted(async () => {
                 <label
                   class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg transition-colors text-body font-medium"
                   :class="
-                    isUploading
+                    isUploading || isEditModalLoading
                       ? 'opacity-50 cursor-not-allowed pointer-events-none'
                       : 'cursor-pointer hover:bg-primary/80'
                   "
@@ -704,7 +740,7 @@ onMounted(async () => {
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
                     class="hidden"
-                    :disabled="isUploading"
+                    :disabled="isUploading || isEditModalLoading"
                     @change="handleFileSelect"
                   />
                 </label>
@@ -740,6 +776,20 @@ onMounted(async () => {
                 <ImageIcon class="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p class="text-body">이미지를 업로드해주세요</p>
               </div>
+            </div>
+
+            <!-- 이미지 URL -->
+            <div class="space-y-2">
+              <Label class="text-admin">이미지 URL</Label>
+              <Input
+                v-model="form.imageUrl"
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                :disabled="isUploading || isSaving || isEditModalLoading"
+              />
+              <p class="text-caption text-admin-muted">
+                수정 모달에서는 DB에 저장된 URL을 자동으로 불러옵니다.
+              </p>
             </div>
 
             <!-- 링크 URL -->
@@ -782,13 +832,13 @@ onMounted(async () => {
                 variant="outline"
                 class="font-medium"
                 @click="isModalOpen = false"
-                :disabled="isSaving || isUploading"
+                :disabled="isSaving || isUploading || isEditModalLoading"
               >
                 취소
               </Button>
               <Button
                 type="submit"
-                :disabled="isSaving || isUploading || !form.imageUrl"
+                :disabled="isSaving || isUploading || isEditModalLoading || !form.imageUrl"
                 class="gap-2 bg-primary hover:bg-primary/80 text-white font-semibold"
               >
                 <LoadingSpinner
