@@ -16,8 +16,6 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 
 // 장바구니 Sheet 컴포넌트
@@ -327,7 +325,7 @@ onUnmounted(() => {
         />
       </button>
 
-      <div class="flex items-center justify-end gap-2.5 z-10">
+      <div class="flex items-center justify-end gap-[clamp(0.375rem,2vw,0.75rem)] z-10">
         <Button
           variant="ghost"
           size="icon"
