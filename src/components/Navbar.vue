@@ -220,7 +220,7 @@ onUnmounted(() => {
       'w-11/12 max-w-screen-2xl top-5 mx-auto sticky z-40 shadow-light border-zinc-200 rounded-2xl flex items-center px-4 p-3 lg:p-4 bg-card shadow-md transition-all duration-300': true,
     }"
     :style="{
-      backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.9)',
+      backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.3)',
     }"
   >
     <!-- Mobile -->
@@ -241,36 +241,19 @@ onUnmounted(() => {
             class="flex flex-col rounded-tr-2xl rounded-br-2xl bg-card"
             @open-auto-focus="(event) => event.preventDefault()"
           >
-            <SheetHeader class="mb-4 text-left pl-1">
-              <SheetTitle
-                as="button"
-                type="button"
-                class="flex items-center cursor-pointer bg-transparent border-0 p-0"
-                aria-label="홈으로 이동"
-                @click="goHome"
-              >
-                <img
-                  src="@/assets/optimized/logo03.webp"
-                  alt="샤키샤키 아카이브"
-                  class="h-7 w-auto ml-1 mt-10 object-contain"
-                  draggable="false"
-                />
-              </SheetTitle>
-            </SheetHeader>
-
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5 mt-12">
               <RouterLink
                 v-for="route in categoryRoutes"
                 :key="route.label"
                 :to="route.path"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 pl-3"
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 pl-3"
                 @click="closingByPopState = true; isOpen = false"
               >
                 {{ route.label }}
               </RouterLink>
               <button
                 type="button"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 text-left pl-3"
                 aria-label="Instagram 공식 계정 열기"
                 @click="handleInstagram"
               >
@@ -279,7 +262,7 @@ onUnmounted(() => {
 
               <button
                 type="button"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-3 text-left pl-3"
+                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 text-left pl-3"
                 aria-label="자주 묻는 질문"
                 @click="handleFAQClick"
               >
@@ -344,7 +327,7 @@ onUnmounted(() => {
         />
       </button>
 
-      <div class="flex items-center justify-end gap-1.5 z-10">
+      <div class="flex items-center justify-end gap-2.5 z-10">
         <Button
           variant="ghost"
           size="icon"

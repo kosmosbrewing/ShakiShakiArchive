@@ -486,7 +486,7 @@ onUnmounted(() => {
       </div>
       <div
         v-else-if="!hasMoreData && displayProducts.length > 0"
-        class="text-body text-muted-foreground"
+        class="text-caption text-muted-foreground"
       >
         모든 상품을 불러왔습니다
       </div>

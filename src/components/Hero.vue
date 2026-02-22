@@ -210,13 +210,13 @@ onUnmounted(() => {
 
 <template>
   <section class="w-11/12 max-w-screen-2xl mx-auto pt-8 sm:pt-16">
-    <div class="grid grid-cols-1 lg:grid-cols-2 mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-2 mx-auto lg:items-stretch">
       <!-- Hero 이미지 슬라이더 영역 -->
-      <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8">
+      <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8 lg:h-full">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
           <!-- CLS 방지: Hero 이미지 비율(1:1)에 맞춤 -->
-          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 1 / 1" />
+          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 4 / 5" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
             <Skeleton class="w-2.5 h-2.5 rounded-full" />
@@ -236,7 +236,7 @@ onUnmounted(() => {
         <!-- 실제 콘텐츠: 이미지 있을 때 -->
         <div
           v-else
-          class="relative group w-full"
+          class="relative group w-full lg:flex-1 lg:flex lg:flex-col"
           @mouseenter="stopAutoPlay"
           @mouseleave="startAutoPlay"
           @touchstart="handleTouchStart"
@@ -244,17 +244,18 @@ onUnmounted(() => {
           @touchend="handleTouchEnd"
         >
           <!-- 슬라이더 이미지 -->
-          <div class="overflow-hidden rounded-2xl shadow-lg relative">
+          <div class="overflow-hidden rounded-2xl shadow-lg relative lg:flex-1">
             <!-- 모든 이미지를 쌓아두고 부드러운 전환 효과 -->
             <img
               v-for="(image, index) in heroImageList"
               :key="index"
               v-bind="getHeroAttrs(image.url, index === 0)"
               alt="ShakiShaki Archive"
-              class="object-contain w-full transition-all duration-700 ease-out"
-              style="aspect-ratio: 1 / 1"
+              class="object-cover w-full transition-all duration-700 ease-out"
               :class="[
-                index === 0 ? 'relative' : 'absolute inset-0',
+                index === 0
+                  ? 'relative aspect-[4/5] lg:absolute lg:inset-0 lg:h-full lg:aspect-auto'
+                  : 'absolute inset-0 lg:h-full',
                 getSlideClass(index),
                 { 'cursor-pointer': image.linkUrl },
               ]"
