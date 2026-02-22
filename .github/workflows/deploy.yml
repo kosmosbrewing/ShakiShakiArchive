@@ -43,6 +43,7 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
+          VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
 
       # 5. AWS 자격 증명 설정
       - name: Configure AWS credentials

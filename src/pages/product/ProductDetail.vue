@@ -20,7 +20,7 @@ import { useOptimizedImage, useNaverPayOrder } from "@/composables";
 import { formatPrice, formatSizeValue } from "@/lib/formatters";
 
 // 아이콘
-import { Heart, Share2, Check } from "lucide-vue-next";
+import { Heart, Share2, Check, X } from "lucide-vue-next";
 
 // 공통 컴포넌트
 import {
@@ -64,7 +64,7 @@ const authStore = useAuthStore();
 const productData = useProduct();
 const { requireAuth } = useAuthCheck();
 const { addItem } = useCart();
-const { detail } = useOptimizedImage();
+const { detail, optimizeUrl } = useOptimizedImage();
 
 // 라우트 파라미터 (slug 또는 UUID — 백엔드가 자동 감지)
 const routeSlug = computed(() => String(route.params.slug));
@@ -158,6 +158,18 @@ const displayAlert = (message: string, type: AlertType = "error") => {
   showAlert.value = true;
 };
 
+// 카카오 SDK 전역 타입
+declare global {
+  interface Window {
+    Kakao: any;
+  }
+}
+
+const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY as string;
+
+// 공유 모달 상태
+const isShareModalOpen = ref(false);
+
 // 링크 복사 상태
 const isCopied = ref(false);
 
@@ -174,15 +186,113 @@ const handleDetailImageLoad = (index: number) => {
   detailImagesLoaded.value[index] = true;
 };
 
+// 공유 모달 자동 닫기 타이머
+let shareModalTimer: ReturnType<typeof setTimeout> | null = null;
+
+const clearShareTimer = () => {
+  if (shareModalTimer) {
+    clearTimeout(shareModalTimer);
+    shareModalTimer = null;
+  }
+};
+
+// 공유 모달 열기
+const handleShareOpen = () => {
+  isShareModalOpen.value = true;
+};
+
+// 모달 열릴 때 3초 후 자동 닫기, 닫힐 때 타이머 초기화
+watch(isShareModalOpen, (open) => {
+  if (open) {
+    clearShareTimer();
+    shareModalTimer = setTimeout(() => {
+      isShareModalOpen.value = false;
+    }, 3000);
+  } else {
+    clearShareTimer();
+  }
+});
+
+// 카카오톡 공유
+const handleKakaoShare = () => {
+  const product = productData.product.value;
+
+  // 앱키 미설정 시 링크 복사로 fallback
+  if (!KAKAO_APP_KEY) {
+    handleCopyLink();
+    return;
+  }
+
+  // SDK 미로드 시 (defer 로딩 중 or 네트워크 오류)
+  if (!window.Kakao) {
+    displayAlert("카카오 공유를 사용할 수 없습니다. 링크를 복사해 공유해주세요.");
+    return;
+  }
+
+  if (!product) return;
+
+  try {
+    // 초기화 (lazy init — 중복 초기화 방지)
+    if (!window.Kakao.isInitialized()) {
+      window.Kakao.init(KAKAO_APP_KEY);
+    }
+
+    const currentUrl = window.location.href;
+
+    // 카카오 공유 OG 이미지: 800x400 (카카오 권장 비율 2:1, imageWidth/imageHeight 함께 명시)
+    const kakaoImageUrl = optimizeUrl(product.imageUrl, {
+      width: 800,
+      height: 400,
+      crop: "fill",
+      format: "auto",
+      quality: "auto:good",
+    });
+
+    window.Kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: product.name,
+        description: formatPrice(product.price),
+        imageUrl: kakaoImageUrl,
+        imageWidth: 800,
+        imageHeight: 400,
+        link: {
+          mobileWebUrl: currentUrl,
+          webUrl: currentUrl,
+        },
+      },
+      buttons: [
+        {
+          title: "상품 보러가기",
+          link: {
+            mobileWebUrl: currentUrl,
+            webUrl: currentUrl,
+          },
+        },
+      ],
+    });
+
+    isShareModalOpen.value = false;
+  } catch (error) {
+    console.error("카카오 공유 실패:", error);
+    displayAlert("카카오 공유에 실패했습니다. 링크를 복사해 공유해주세요.");
+  }
+};
+
 // 링크 복사 핸들러
 const handleCopyLink = async () => {
   try {
     const url = window.location.href;
     await navigator.clipboard.writeText(url);
     isCopied.value = true;
-    displayAlert(PRODUCT_MESSAGES.linkCopySuccess, "success");
 
-    // 3초 후 아이콘 원래대로
+    // 복사 완료 피드백을 1.5초 보여준 후 모달 닫기 (즉시 닫으면 피드백 못 봄)
+    clearShareTimer();
+    shareModalTimer = setTimeout(() => {
+      isShareModalOpen.value = false;
+    }, 1500);
+
+    // 3초 후 아이콘 원래대로 (모달이 닫혀도 상태 정리)
     setTimeout(() => {
       isCopied.value = false;
     }, 3000);
@@ -616,6 +726,7 @@ onUnmounted(() => {
     clearTimeout(naverPayRenderTimer.value);
     naverPayRenderTimer.value = null;
   }
+  clearShareTimer();
 });
 
 // 데이터 로드
@@ -702,20 +813,13 @@ onMounted(async () => {
 
             <!-- 모바일 액션 버튼들 -->
             <div class="absolute bottom-3 right-3 z-10 flex gap-2 lg:hidden">
-              <!-- 링크 복사 버튼 -->
+              <!-- 공유 버튼 -->
               <button
-                @click.stop="handleCopyLink"
+                @click.stop="handleShareOpen"
                 class="p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md"
-                title="링크 복사"
+                title="공유하기"
               >
-                <Share2
-                  v-if="!isCopied"
-                  class="w-5 h-5 text-muted-foreground transition-colors duration-200"
-                />
-                <Check
-                  v-else
-                  class="w-5 h-5 text-primary transition-colors duration-200"
-                />
+                <Share2 class="w-5 h-5 text-muted-foreground transition-colors duration-200" />
               </button>
 
               <!-- 위시리스트 버튼 -->
@@ -762,20 +866,13 @@ onMounted(async () => {
 
               <!-- 데스크톱 액션 버튼들 -->
               <div class="hidden lg:flex gap-2 shrink-0 lg:-translate-y-3">
-                <!-- 링크 복사 버튼 -->
+                <!-- 공유 버튼 -->
                 <button
-                  @click="handleCopyLink"
+                  @click="handleShareOpen"
                   class="flex items-center justify-center p-2 rounded-full bg-background border border-border hover:bg-accent transition-all"
-                  title="링크 복사"
+                  title="공유하기"
                 >
-                  <Share2
-                    v-if="!isCopied"
-                    class="w-5 h-5 text-muted-foreground hover:text-primary transition-colors duration-200"
-                  />
-                  <Check
-                    v-else
-                    class="w-5 h-5 text-primary transition-colors duration-200"
-                  />
+                  <Share2 class="w-5 h-5 text-muted-foreground hover:text-primary transition-colors duration-200" />
                 </button>
 
                 <!-- 위시리스트 버튼 -->
@@ -1226,9 +1323,95 @@ onMounted(async () => {
       @close="handleCancelDuplicate"
     />
   </div>
+
+  <!-- 공유 모달 -->
+  <Teleport to="body">
+    <Transition name="share-fade">
+      <div
+        v-if="isShareModalOpen"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-[2px]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="공유하기"
+        @click.self="isShareModalOpen = false"
+      >
+        <!-- 모달 패널 -->
+        <div class="share-panel bg-background border border-border rounded-t-2xl sm:rounded-2xl w-full sm:w-[320px] shadow-2xl overflow-hidden">
+
+          <!-- 헤더 -->
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+            <h3 class="text-body font-semibold text-foreground">공유하기</h3>
+            <button
+              @click="isShareModalOpen = false"
+              class="p-1 rounded-full hover:bg-accent transition-colors"
+              aria-label="닫기"
+            >
+              <X class="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+
+          <!-- 공유 버튼 목록 -->
+          <div class="p-4 flex flex-col gap-2.5">
+            <!-- 카카오톡 공유 -->
+            <button
+              @click="handleKakaoShare"
+              class="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-[#FEE500] hover:bg-[#FDD800] transition-colors"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="#191919" class="w-5 h-5 shrink-0">
+                <path d="M12 3C6.477 3 2 6.597 2 11.07c0 2.884 1.745 5.418 4.373 6.924-.193.726-.697 2.632-.798 3.043-.126.508.188.502.395.365.163-.108 2.576-1.744 3.62-2.449.688.097 1.393.147 2.41.147 5.523 0 10-3.597 10-8.03C22 6.597 17.523 3 12 3z"/>
+              </svg>
+              <span class="text-body font-semibold text-[#191919]">카카오톡으로 공유</span>
+            </button>
+
+            <!-- 링크 복사 -->
+            <button
+              @click="handleCopyLink"
+              class="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-accent transition-colors"
+            >
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <Check v-if="isCopied" class="w-4 h-4 text-primary" />
+                <Share2 v-else class="w-4 h-4 text-muted-foreground" />
+              </div>
+              <span
+                class="text-body font-medium transition-colors"
+                :class="isCopied ? 'text-primary' : 'text-foreground'"
+              >
+                {{ isCopied ? "복사 완료!" : "링크 복사" }}
+              </span>
+            </button>
+          </div>
+
+          <!-- 모바일 하단 안전 영역 여백 -->
+          <div class="h-safe-bottom sm:hidden pb-2" />
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
+/* 공유 모달 오버레이 페이드 */
+.share-fade-enter-active { transition: opacity 0.2s ease; }
+.share-fade-leave-active  { transition: opacity 0.15s ease; }
+.share-fade-enter-from,
+.share-fade-leave-to      { opacity: 0; }
+
+/* 모달 패널 슬라이드업 (모바일: 아래서 위로, 데스크탑: 줌인) */
+.share-fade-enter-active .share-panel {
+  animation: sharePanelIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.share-fade-leave-active .share-panel {
+  animation: sharePanelOut 0.15s ease-in both;
+}
+@keyframes sharePanelIn {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes sharePanelOut {
+  from { transform: translateY(0);   opacity: 1; }
+  to   { transform: translateY(8px); opacity: 0; }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
