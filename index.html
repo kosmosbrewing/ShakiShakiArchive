@@ -1,38 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/webp" href="./src/assets/optimized/favicon.webp" />
+    <link
+      rel="icon"
+      type="image/webp"
+      href="./src/assets/optimized/favicon.webp"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>샤키샤키 아카이브(ShakiShaki Archive)</title>
 
     <!-- DNS Prefetch: DNS 조회 미리 수행 (50-300ms 절약) -->
-    <link rel="dns-prefetch" href="https://res.cloudinary.com">
-    <link rel="dns-prefetch" href="https://js.tosspayments.com">
-    <link rel="dns-prefetch" href="https://nsp.pay.naver.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+    <link rel="dns-prefetch" href="https://js.tosspayments.com" />
+    <link rel="dns-prefetch" href="https://nsp.pay.naver.com" />
 
     <!-- Preconnect: TCP/TLS 핸드셰이크 미리 수행 (100-500ms 절약) -->
-    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-    <link rel="preconnect" href="https://js.tosspayments.com" crossorigin>
-    <link rel="preconnect" href="https://nsp.pay.naver.com" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+    <link rel="preconnect" href="https://js.tosspayments.com" crossorigin />
+    <link rel="preconnect" href="https://nsp.pay.naver.com" crossorigin />
 
     <!-- Critical CSS Inline: LCP 최적화 (폰트 + CSS 변수 + 기본 스타일) -->
     <style>
       /* 1. Pretendard 폰트 - 즉시 사용 가능 */
       @font-face {
-        font-family: 'Pretendard';
+        font-family: "Pretendard";
         font-weight: 400;
         font-style: normal;
         font-display: optional;
-        src: url('/fonts/Pretendard-Regular.subset.woff2') format('woff2');
+        src: url("/fonts/Pretendard-Regular.subset.woff2") format("woff2");
         unicode-range: U+AC00-D7A3, U+0020-007E;
       }
       @font-face {
-        font-family: 'Pretendard';
+        font-family: "Pretendard";
         font-weight: 600;
         font-style: normal;
         font-display: optional;
-        src: url('/fonts/Pretendard-SemiBold.subset.woff2') format('woff2');
+        src: url("/fonts/Pretendard-SemiBold.subset.woff2") format("woff2");
         unicode-range: U+AC00-D7A3, U+0020-007E;
       }
 
@@ -63,11 +67,19 @@
       }
 
       /* 3. 기본 스타일 - 즉시 렌더링 */
-      html { scroll-behavior: auto; }
+      html {
+        scroll-behavior: auto;
+      }
       body {
         background: hsl(var(--background));
         color: hsl(var(--foreground));
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family:
+          "Pretendard",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
@@ -82,16 +94,18 @@
       as="font"
       type="font/woff2"
       href="/fonts/Pretendard-Regular.subset.woff2"
-      crossorigin>
+      crossorigin
+    />
     <!-- SemiBold는 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
 
     <!-- Preload: 첫 번째 Hero 이미지 우선 로드 (LCP 최적화) -->
-    <!-- Cloudinary 최적화: f_auto,q_auto:good,w_1280,c_fill (실제 렌더링과 동일) -->
+    <!-- Cloudinary 최적화: f_auto,q_auto:good,w_1280,c_fill (실제 렌더링과 동일), 메인화면 변경 시 수정 필요 -->
     <link
       rel="preload"
       as="image"
       href="https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_1280,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg"
-      fetchpriority="high">
+      fetchpriority="high"
+    />
 
     <!-- 기본 제목 -->
     <!--
@@ -115,20 +129,22 @@
     -->
 
     <!-- 카카오 JS SDK (공유하기) -->
-    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.7/kakao.min.js"
+    <script
+      src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.7/kakao.min.js"
       integrity="sha384-tJkjbtDbvoxO+diRuDtwRO9JXR7pjWnfjfRn5ePUpl7e7RJCxKCwwnfqUAdXh53p"
       crossorigin="anonymous"
-      defer></script>
+      defer
+    ></script>
 
     <!-- 네이버페이 주문형 SDK (document.write 사용으로 페이지 로드 시점에 포함 필요) -->
     <!-- TODO: 프로덕션 배포 시 test-pay.naver.com → pay.naver.com 으로 변경 -->
     <script>
-      (function() {
+      (function () {
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        var baseUrl = 'https://test-pay.naver.com/customer/js/';
+        var baseUrl = "https://test-pay.naver.com/customer/js/";
         var scriptUrl = isMobile
-          ? baseUrl + 'mobile/naverPayButton.js'
-          : baseUrl + 'naverPayButton.js';
+          ? baseUrl + "mobile/naverPayButton.js"
+          : baseUrl + "naverPayButton.js";
         document.write('<script src="' + scriptUrl + '"><\/script>');
       })();
     </script>
