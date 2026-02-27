@@ -215,7 +215,7 @@ onUnmounted(() => {
       <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8 lg:h-full">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
-          <!-- CLS 방지: Hero 이미지 비율(1:1)에 맞춤 -->
+          <!-- CLS 방지: Hero 이미지 비율(4:5)에 맞춤 -->
           <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 4 / 5" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
@@ -243,19 +243,16 @@ onUnmounted(() => {
           @touchmove="handleTouchMove"
           @touchend="handleTouchEnd"
         >
-          <!-- 슬라이더 이미지 -->
-          <div class="overflow-hidden rounded-2xl shadow-lg relative lg:flex-1">
+          <!-- 슬라이더 이미지: 컨테이너에 aspect-ratio 적용 → 모든 슬라이드 동일 렌더링 보장 -->
+          <div class="overflow-hidden rounded-2xl shadow-lg relative aspect-[4/5] lg:aspect-auto lg:flex-1">
             <!-- 모든 이미지를 쌓아두고 부드러운 전환 효과 -->
             <img
               v-for="(image, index) in heroImageList"
               :key="index"
               v-bind="getHeroAttrs(image.url, index === 0)"
               alt="ShakiShaki Archive"
-              class="object-cover w-full transition-all duration-700 ease-out"
+              class="absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out"
               :class="[
-                index === 0
-                  ? 'relative aspect-[4/5] lg:absolute lg:inset-0 lg:h-full lg:aspect-auto'
-                  : 'absolute inset-0 lg:h-full',
                 getSlideClass(index),
                 { 'cursor-pointer': image.linkUrl },
               ]"
