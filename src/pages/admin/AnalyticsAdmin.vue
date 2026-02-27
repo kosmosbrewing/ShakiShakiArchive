@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { RefreshCw, Users, Eye } from "lucide-vue-next";
+import { RefreshCw, Users, Eye, ShoppingBag, Banknote } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
-import { fetchAdminAnalyticsOverview } from "@/lib/api";
+import { fetchAdminAnalyticsOverview, fetchAdminOrders } from "@/lib/api";
 import type { AdminAnalyticsOverviewResponse } from "@/types/api";
+import { formatPrice } from "@/lib/formatters";
 import { AdminNavigationTabs } from "@/components/admin";
 import { LoadingSpinner } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,19 @@ import { Separator } from "@/components/ui/separator";
 const router = useRouter();
 const authStore = useAuthStore();
 
-const isLoading = ref(false);
+const isLoading = ref(true);
 const errorMessage = ref("");
 const overview = ref<AdminAnalyticsOverviewResponse | null>(null);
+const businessMetrics = ref({
+  todayOrders: 0,
+  last7DaysOrders: 0,
+  last30DaysOrders: 0,
+  totalOrders: 0,
+  todaySales: 0,
+  last7DaysSales: 0,
+  last30DaysSales: 0,
+  totalSales: 0,
+});
 
 const topViewedProducts = computed(
   () => overview.value?.productViews.topViewedProducts ?? [],
@@ -64,6 +75,20 @@ const maxTopViewedValue = computed(() =>
   Math.max(1, ...topViewedChartData.value.map((item) => item.value)),
 );
 
+const orderCards = computed(() => [
+  { label: "오늘 주문", value: businessMetrics.value.todayOrders },
+  { label: "7일 주문", value: businessMetrics.value.last7DaysOrders },
+  { label: "30일 주문", value: businessMetrics.value.last30DaysOrders },
+  { label: "전체 주문", value: businessMetrics.value.totalOrders },
+]);
+
+const salesCards = computed(() => [
+  { label: "오늘 매출", value: formatPrice(businessMetrics.value.todaySales) },
+  { label: "7일 매출", value: formatPrice(businessMetrics.value.last7DaysSales) },
+  { label: "30일 매출", value: formatPrice(businessMetrics.value.last30DaysSales) },
+  { label: "누적 매출", value: formatPrice(businessMetrics.value.totalSales) },
+]);
+
 const gaStatusText = computed(() => {
   const visitors = overview.value?.visitors;
   if (!visitors) return "-";
@@ -89,11 +114,99 @@ const getBarWidth = (value: number, max: number): string => {
   return `${Math.max(4, Math.round((value / max) * 100))}%`;
 };
 
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const startOfToday = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+const fetchAllAdminOrders = async (): Promise<any[]> => {
+  const limit = 200;
+  let page = 1;
+  const allOrders: any[] = [];
+
+  // 페이지네이션 기반으로 전체 주문을 수집한다.
+  while (page <= 100) {
+    const response = await fetchAdminOrders({ page, limit });
+    const currentOrders = response.orders || [];
+    allOrders.push(...currentOrders);
+
+    const totalPages = response.pagination?.totalPages ?? page;
+    const hasMore =
+      typeof response.pagination?.hasMore === "boolean"
+        ? response.pagination.hasMore
+        : page < totalPages;
+
+    if (!hasMore || currentOrders.length === 0) break;
+    page += 1;
+  }
+
+  return allOrders;
+};
+
+const calculateBusinessMetrics = (orders: any[]) => {
+  const now = new Date();
+  const todayStart = startOfToday();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const result = {
+    todayOrders: 0,
+    last7DaysOrders: 0,
+    last30DaysOrders: 0,
+    totalOrders: 0,
+    todaySales: 0,
+    last7DaysSales: 0,
+    last30DaysSales: 0,
+    totalSales: 0,
+  };
+
+  for (const order of orders) {
+    const paidAt = order.paidAt ? new Date(order.paidAt) : null;
+    if (!paidAt || Number.isNaN(paidAt.getTime())) continue;
+
+    const totalAmount = toNumber(order.totalAmount);
+    const refundedAmount = toNumber(order.refundedAmount || 0);
+    const netAmount = Math.max(0, totalAmount - refundedAmount);
+
+    result.totalOrders += 1;
+    result.totalSales += netAmount;
+
+    if (paidAt >= todayStart) {
+      result.todayOrders += 1;
+      result.todaySales += netAmount;
+    }
+    if (paidAt >= sevenDaysAgo) {
+      result.last7DaysOrders += 1;
+      result.last7DaysSales += netAmount;
+    }
+    if (paidAt >= thirtyDaysAgo) {
+      result.last30DaysOrders += 1;
+      result.last30DaysSales += netAmount;
+    }
+  }
+
+  businessMetrics.value = result;
+};
+
 const loadAnalytics = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    overview.value = await fetchAdminAnalyticsOverview();
+    const [overviewData, allOrders] = await Promise.all([
+      fetchAdminAnalyticsOverview(),
+      fetchAllAdminOrders(),
+    ]);
+    overview.value = overviewData;
+    calculateBusinessMetrics(allOrders);
   } catch (error) {
     const message =
       error instanceof Error
@@ -140,9 +253,9 @@ onMounted(async () => {
     </div>
     <Separator class="mb-6" />
 
-    <LoadingSpinner v-if="isLoading" />
+    <LoadingSpinner v-if="isLoading && !overview" />
 
-    <div v-else-if="errorMessage" class="space-y-4">
+    <div v-else-if="errorMessage && !overview" class="space-y-4">
       <Card class="border-destructive/30">
         <CardContent class="py-6 text-body text-admin">
           {{ errorMessage }}
@@ -151,6 +264,23 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="overview" class="space-y-6">
+      <Card
+        v-if="isLoading"
+        class="border-border bg-muted/20 shadow-none"
+      >
+        <CardContent class="py-3 text-caption text-admin-muted">
+          통계 데이터 업데이트 중...
+        </CardContent>
+      </Card>
+      <Card
+        v-else-if="errorMessage"
+        class="border-destructive/30 shadow-none"
+      >
+        <CardContent class="py-3 text-caption text-admin">
+          {{ errorMessage }}
+        </CardContent>
+      </Card>
+
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card v-for="card in visitorCards" :key="card.label">
           <CardHeader class="pb-2">
@@ -162,6 +292,66 @@ onMounted(async () => {
             <p class="text-2xl font-bold text-admin tracking-tight">
               {{ formatNumber(card.value) }}
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="grid gap-3 lg:grid-cols-2">
+        <Card>
+          <CardHeader class="flex flex-row items-center justify-between gap-3 space-y-0">
+            <h3 class="text-body text-admin flex items-center gap-2">
+              <ShoppingBag class="w-4 h-4" />
+              주문 지표
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-2 gap-3">
+              <Card
+                v-for="card in orderCards"
+                :key="card.label"
+                class="shadow-none"
+              >
+                <CardHeader class="pb-2">
+                  <CardDescription class="text-caption text-admin-muted">
+                    {{ card.label }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p class="text-2xl font-bold text-admin tracking-tight">
+                    {{ formatNumber(card.value) }}건
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader class="flex flex-row items-center justify-between gap-3 space-y-0">
+            <h3 class="text-body text-admin flex items-center gap-2">
+              <Banknote class="w-4 h-4" />
+              매출 지표
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-2 gap-3">
+              <Card
+                v-for="card in salesCards"
+                :key="card.label"
+                class="shadow-none"
+              >
+                <CardHeader class="pb-2">
+                  <CardDescription class="text-caption text-admin-muted">
+                    {{ card.label }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p class="text-2xl font-bold text-admin tracking-tight">
+                    {{ card.value }}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </CardContent>
         </Card>
       </div>

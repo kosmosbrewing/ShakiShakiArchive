@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -15,6 +15,7 @@ import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -27,10 +28,15 @@ import {
   ShoppingBag,
   User,
   Calendar,
+  CalendarDays,
   MapPin,
   Image as ImageIcon,
   Truck,
   XCircle,
+  Search,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -39,8 +45,22 @@ const { showAlert, showConfirm } = useAlert();
 
 const orders = ref<any[]>([]);
 const originalOrders = ref<any[]>([]); // 원본 데이터 저장 (변경 감지용)
-const loading = ref(false);
+const loading = ref(true);
+const hasLoadedOnce = ref(false);
 const selectedStatus = ref<string>("all");
+const searchInput = ref("");
+const searchQuery = ref("");
+const startDate = ref("");
+const endDate = ref("");
+const draftStartDate = ref("");
+const draftEndDate = ref("");
+const isDatePanelOpen = ref(false);
+const datePanelRef = ref<HTMLElement | null>(null);
+const calendarModalRef = ref<HTMLElement | null>(null);
+const isCalendarModalOpen = ref(false);
+const dateSelectionTarget = ref<"start" | "end">("start");
+const datePickerMonth = ref<Date>(new Date());
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
 // 배송 정보 모달 상태
 const shippingModalOpen = ref(false);
@@ -93,12 +113,39 @@ const statusOptions = [
 
 // 필터링된 주문 목록 (전체)
 const filteredOrders = computed(() => {
-  if (selectedStatus.value === "all") {
-    return orders.value;
+  let result = orders.value;
+
+  if (selectedStatus.value !== "all") {
+    result = result.filter((order) =>
+      order.orderItems.some((item: any) => item.status === selectedStatus.value),
+    );
   }
-  return orders.value.filter((order) =>
-    order.orderItems.some((item: any) => item.status === selectedStatus.value),
-  );
+
+  const q = searchQuery.value.trim().toLowerCase();
+  if (q) {
+    result = result.filter((order) => {
+      const orderNumber = String(order.externalOrderId || order.id || "").toLowerCase();
+      const userName = String(order.shippingName || "").toLowerCase();
+      return orderNumber.includes(q) || userName.includes(q);
+    });
+  }
+
+  const hasStart = Boolean(startDate.value);
+  const hasEnd = Boolean(endDate.value);
+  if (hasStart || hasEnd) {
+    const start = hasStart ? new Date(`${startDate.value}T00:00:00`) : null;
+    const end = hasEnd ? new Date(`${endDate.value}T23:59:59.999`) : null;
+
+    result = result.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      if (Number.isNaN(orderDate.getTime())) return false;
+      if (start && orderDate < start) return false;
+      if (end && orderDate > end) return false;
+      return true;
+    });
+  }
+
+  return result;
 });
 
 // 화면에 표시할 주문 목록 (무한 스크롤)
@@ -168,7 +215,7 @@ const loadData = async () => {
   loading.value = true;
   currentPage.value = 1; // 데이터 로드 시 페이지 초기화
   try {
-    const response = await fetchAdminOrders();
+    const response = await fetchAdminOrders({ page: 1, limit: 1000 });
     orders.value = response.orders;
     // 원본 데이터를 깊은 복사로 저장 (변경 감지용)
     originalOrders.value = JSON.parse(JSON.stringify(response.orders));
@@ -176,6 +223,7 @@ const loadData = async () => {
     console.error(error);
   } finally {
     loading.value = false;
+    hasLoadedOnce.value = true;
   }
 };
 
@@ -227,13 +275,264 @@ watch(loadMoreTrigger, (newEl) => {
   }
 });
 
-// 필터 변경 시 페이지 초기화 및 스크롤 최상단 이동
-watch(selectedStatus, async () => {
-  currentPage.value = 1;
-  // DOM 업데이트 후 스크롤을 맨 위로 즉시 이동
-  await nextTick();
-  window.scrollTo({ top: 0 });
+watch(searchInput, (value) => {
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    searchQuery.value = value;
+  }, 350);
 });
+
+// 필터/검색 변경 시 페이지만 초기화 (강제 스크롤 제거)
+watch([selectedStatus, searchQuery], () => {
+  currentPage.value = 1;
+});
+
+watch([startDate, endDate], () => {
+  // 날짜 필터 적용 시에는 화면 점프를 방지하기 위해 페이지만 초기화
+  currentPage.value = 1;
+});
+
+const clearFilters = () => {
+  selectedStatus.value = "all";
+  searchInput.value = "";
+  searchQuery.value = "";
+  startDate.value = "";
+  endDate.value = "";
+  draftStartDate.value = "";
+  draftEndDate.value = "";
+  dateSelectionTarget.value = "start";
+  isCalendarModalOpen.value = false;
+  isDatePanelOpen.value = false;
+};
+
+const openTrackingPage = (item: any) => {
+  const trackingNumber = String(item?.trackingNumber || "").trim();
+  if (!trackingNumber) return;
+
+  // OrderList와 동일 기준: 네이버 통합 택배조회(택배사 + 운송장번호)
+  const courier = String(item?.courierCompany || "택배");
+  const trackingUrl = `https://search.naver.com/search.naver?query=${encodeURIComponent(courier)}+${encodeURIComponent(trackingNumber)}`;
+  window.open(trackingUrl, "_blank");
+};
+
+const toDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateInput = (value: string): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+const normalizeDate = (date: Date): Date => {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const dayLabels = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+const toDateLabel = (value: string): string => {
+  if (!value) return "";
+  return value.replace(/-/g, ".");
+};
+
+const dateRangeLabel = computed(() => {
+  if (!startDate.value && !endDate.value) return "기간 선택";
+  if (startDate.value && endDate.value) {
+    return `${toDateLabel(startDate.value)} ~ ${toDateLabel(endDate.value)}`;
+  }
+  if (startDate.value) return `${toDateLabel(startDate.value)} 이후`;
+  return `${toDateLabel(endDate.value)} 이전`;
+});
+
+const calendarMonthLabel = computed(() => {
+  const date = datePickerMonth.value;
+  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월`;
+});
+
+const syncCalendarMonthFromTarget = () => {
+  const selectedDate =
+    dateSelectionTarget.value === "start"
+      ? parseDateInput(draftStartDate.value)
+      : parseDateInput(draftEndDate.value);
+  const fallbackDate =
+    parseDateInput(draftStartDate.value) ||
+    parseDateInput(draftEndDate.value) ||
+    new Date();
+  const base = selectedDate || fallbackDate;
+  datePickerMonth.value = new Date(base.getFullYear(), base.getMonth(), 1);
+};
+
+const calendarDays = computed(() => {
+  const monthBase = datePickerMonth.value;
+  const year = monthBase.getFullYear();
+  const month = monthBase.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+
+  const today = normalizeDate(new Date()).getTime();
+  const startSelected = parseDateInput(draftStartDate.value);
+  const endSelected = parseDateInput(draftEndDate.value);
+  const startTime = startSelected ? normalizeDate(startSelected).getTime() : null;
+  const endTime = endSelected ? normalizeDate(endSelected).getTime() : null;
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const cellDate = new Date(year, month, 1 - startOffset + index);
+    const normalized = normalizeDate(cellDate);
+    const cellTime = normalized.getTime();
+    const iso = toDateInputValue(normalized);
+
+    const isCurrentMonth = cellDate.getMonth() === month;
+    const isToday = cellTime === today;
+    const isStart = startTime === cellTime;
+    const isEnd = endTime === cellTime;
+    const isInRange =
+      startTime != null &&
+      endTime != null &&
+      cellTime > startTime &&
+      cellTime < endTime;
+
+    let isDisabled = false;
+    if (dateSelectionTarget.value === "start" && endTime != null) {
+      isDisabled = cellTime > endTime;
+    } else if (dateSelectionTarget.value === "end" && startTime != null) {
+      isDisabled = cellTime < startTime;
+    }
+
+    return {
+      iso,
+      day: cellDate.getDate(),
+      isCurrentMonth,
+      isToday,
+      isStart,
+      isEnd,
+      isInRange,
+      isDisabled,
+    };
+  });
+});
+
+const goPrevMonth = () => {
+  datePickerMonth.value = new Date(
+    datePickerMonth.value.getFullYear(),
+    datePickerMonth.value.getMonth() - 1,
+    1,
+  );
+};
+
+const goNextMonth = () => {
+  datePickerMonth.value = new Date(
+    datePickerMonth.value.getFullYear(),
+    datePickerMonth.value.getMonth() + 1,
+    1,
+  );
+};
+
+const handleCalendarDateSelect = (iso: string) => {
+  if (dateSelectionTarget.value === "start") {
+    draftStartDate.value = iso;
+    if (draftEndDate.value && iso > draftEndDate.value) {
+      draftEndDate.value = iso;
+    }
+    dateSelectionTarget.value = "end";
+  } else {
+    draftEndDate.value = iso;
+    if (draftStartDate.value && iso < draftStartDate.value) {
+      draftStartDate.value = iso;
+    }
+  }
+};
+
+const closeDatePanel = () => {
+  draftStartDate.value = startDate.value;
+  draftEndDate.value = endDate.value;
+  isCalendarModalOpen.value = false;
+  isDatePanelOpen.value = false;
+};
+
+const toggleDatePanel = () => {
+  isDatePanelOpen.value = !isDatePanelOpen.value;
+  if (isDatePanelOpen.value) {
+    draftStartDate.value = startDate.value;
+    draftEndDate.value = endDate.value;
+    syncCalendarMonthFromTarget();
+  } else {
+    isCalendarModalOpen.value = false;
+  }
+};
+
+const openCalendarModal = (target: "start" | "end") => {
+  dateSelectionTarget.value = target;
+  syncCalendarMonthFromTarget();
+  isCalendarModalOpen.value = true;
+};
+
+const closeCalendarModal = () => {
+  isCalendarModalOpen.value = false;
+};
+
+const applyDatePreset = (
+  preset: "today" | "last7days" | "last30days" | "thisMonth",
+) => {
+  const today = new Date();
+  const end = new Date(today);
+  let start = new Date(today);
+
+  if (preset === "last7days") {
+    start.setDate(today.getDate() - 6);
+  } else if (preset === "last30days") {
+    start.setDate(today.getDate() - 29);
+  } else if (preset === "thisMonth") {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  draftStartDate.value = toDateInputValue(start);
+  draftEndDate.value = toDateInputValue(end);
+  syncCalendarMonthFromTarget();
+};
+
+const clearDateRange = () => {
+  draftStartDate.value = "";
+  draftEndDate.value = "";
+  dateSelectionTarget.value = "start";
+  syncCalendarMonthFromTarget();
+  isCalendarModalOpen.value = false;
+};
+
+const applyDateRange = () => {
+  startDate.value = draftStartDate.value;
+  endDate.value = draftEndDate.value;
+  closeDatePanel();
+};
+
+const handleGlobalPointerDown = (event: MouseEvent) => {
+  if (!isDatePanelOpen.value) return;
+  const target = event.target as Node | null;
+  if (isCalendarModalOpen.value) {
+    if (calendarModalRef.value && target && calendarModalRef.value.contains(target)) {
+      return;
+    }
+    // 모달 오버레이 클릭은 @click.self에서 처리한다.
+    return;
+  }
+  if (datePanelRef.value && target && !datePanelRef.value.contains(target)) {
+    closeDatePanel();
+  }
+};
+
+const handleGlobalKeydown = (event: KeyboardEvent) => {
+  if (event.key === "Escape") {
+    if (isCalendarModalOpen.value) {
+      closeCalendarModal();
+      return;
+    }
+    closeDatePanel();
+  }
+};
 
 // 배송 정보 모달 열기
 const openShippingModal = (item: any, order: any) => {
@@ -397,6 +696,8 @@ onMounted(async () => {
     return;
   }
   await loadData();
+  window.addEventListener("mousedown", handleGlobalPointerDown);
+  window.addEventListener("keydown", handleGlobalKeydown);
 
   // DOM이 준비된 후 옵저버 설정
   if (loadMoreTrigger.value) {
@@ -406,6 +707,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupObserver();
+  window.removeEventListener("mousedown", handleGlobalPointerDown);
+  window.removeEventListener("keydown", handleGlobalKeydown);
+  if (searchDebounce) {
+    clearTimeout(searchDebounce);
+    searchDebounce = null;
+  }
 });
 </script>
 
@@ -468,6 +775,205 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- 검색 / 기간 필터 -->
+    <div class="mb-6 rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+      <div class="flex flex-wrap items-start gap-3">
+        <div class="relative w-full lg:max-w-sm">
+          <Search
+            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+          />
+          <Input
+            v-model="searchInput"
+            type="text"
+            name="order-search"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="주문번호/주문자명 검색"
+            class="pl-9 bg-background"
+          />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div ref="datePanelRef" class="relative">
+            <Button
+              size="sm"
+              variant="outline"
+              class="gap-2 min-w-[230px] justify-start bg-background"
+              @click="toggleDatePanel"
+            >
+              <CalendarDays class="w-4 h-4 text-admin-muted" />
+              <span class="truncate">{{ dateRangeLabel }}</span>
+            </Button>
+
+            <div
+              v-if="isDatePanelOpen"
+              class="absolute left-0 top-full mt-1 z-30 w-[min(92vw,380px)] rounded-xl border border-border bg-background shadow-xl p-4"
+            >
+              <div class="mb-3">
+                <div class="flex items-center justify-between">
+                  <p class="text-body font-semibold text-admin">기간 선택</p>
+                  <Button size="sm" variant="ghost" @click="closeDatePanel">닫기</Button>
+                </div>
+                <p class="text-caption text-admin-muted mt-0.5">
+                  빠른 기간 또는 직접 날짜를 선택하세요.
+                </p>
+              </div>
+
+              <div class="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <button
+                  type="button"
+                  @click="openCalendarModal('start')"
+                  class="rounded-lg border border-border px-3 py-2 text-left transition-colors bg-muted/20 hover:bg-muted/35"
+                >
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-admin-muted">시작일</p>
+                  <p class="text-caption font-semibold mt-0.5 text-admin">
+                    {{ draftStartDate || "YYYY-MM-DD" }}
+                  </p>
+                </button>
+                <span class="text-caption text-muted-foreground text-center">~</span>
+                <button
+                  type="button"
+                  @click="openCalendarModal('end')"
+                  class="rounded-lg border border-border px-3 py-2 text-left transition-colors bg-muted/20 hover:bg-muted/35"
+                >
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-admin-muted">종료일</p>
+                  <p class="text-caption font-semibold mt-0.5 text-admin">
+                    {{ draftEndDate || "YYYY-MM-DD" }}
+                  </p>
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  class="text-xs"
+                  @click="applyDatePreset('today')"
+                >
+                  오늘
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  class="text-xs"
+                  @click="applyDatePreset('last7days')"
+                >
+                  최근 7일
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  class="text-xs"
+                  @click="applyDatePreset('last30days')"
+                >
+                  최근 30일
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  class="text-xs"
+                  @click="applyDatePreset('thisMonth')"
+                >
+                  이번 달
+                </Button>
+              </div>
+
+              <div class="mt-4 flex justify-between">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="text-caption text-admin-muted"
+                  @click="clearDateRange"
+                >
+                  날짜 초기화
+                </Button>
+                <Button size="sm" @click="applyDateRange">적용</Button>
+              </div>
+            </div>
+
+            <div
+              v-if="isDatePanelOpen && isCalendarModalOpen"
+              class="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] flex items-center justify-center p-4"
+              @click.self="closeCalendarModal"
+            >
+              <div
+                ref="calendarModalRef"
+                class="w-full max-w-sm rounded-2xl border border-border bg-background shadow-2xl p-4"
+              >
+                <div class="mb-3 flex items-center justify-between">
+                  <p class="text-body font-semibold text-admin">
+                    {{ dateSelectionTarget === "start" ? "시작일 선택" : "종료일 선택" }}
+                  </p>
+                  <Button size="sm" variant="ghost" @click="closeCalendarModal">닫기</Button>
+                </div>
+
+                <div class="rounded-lg border border-border bg-muted/10 p-2">
+                  <div class="mb-2 flex items-center justify-between">
+                    <Button size="icon" variant="ghost" class="h-8 w-8" @click="goPrevMonth">
+                      <ChevronLeft class="w-4 h-4" />
+                    </Button>
+                    <p class="text-caption font-semibold text-admin">{{ calendarMonthLabel }}</p>
+                    <Button size="icon" variant="ghost" class="h-8 w-8" @click="goNextMonth">
+                      <ChevronRight class="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div class="grid grid-cols-7 gap-1 mb-1">
+                    <span
+                      v-for="day in dayLabels"
+                      :key="day"
+                      class="h-7 flex items-center justify-center text-[11px] text-admin-muted font-semibold"
+                    >
+                      {{ day }}
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-7 gap-1">
+                    <button
+                      v-for="cell in calendarDays"
+                      :key="cell.iso"
+                      type="button"
+                      :disabled="cell.isDisabled"
+                      @click="handleCalendarDateSelect(cell.iso)"
+                      :class="[
+                        'h-9 rounded-md text-caption font-medium transition-colors',
+                        cell.isCurrentMonth
+                          ? 'text-admin'
+                          : 'text-admin-muted/45',
+                        cell.isInRange
+                          ? 'bg-primary/10'
+                          : 'hover:bg-muted/60',
+                        cell.isStart || cell.isEnd
+                          ? 'bg-primary text-white hover:bg-primary'
+                          : '',
+                        cell.isToday && !(cell.isStart || cell.isEnd)
+                          ? 'ring-1 ring-primary/60'
+                          : '',
+                        cell.isDisabled
+                          ? 'opacity-30 cursor-not-allowed hover:bg-transparent'
+                          : '',
+                      ]"
+                    >
+                      {{ cell.day }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mt-4 flex justify-end">
+                  <Button size="sm" @click="closeCalendarModal">선택 완료</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Button size="sm" variant="outline" @click="clearFilters">
+            필터 초기화
+          </Button>
+        </div>
+      </div>
+    </div>
+
     <!-- 상태별 현황 요약 (우측 정렬) -->
     <div class="mb-6 flex items-center justify-end gap-3 flex-wrap">
       <span
@@ -485,14 +991,22 @@ onUnmounted(() => {
       </span>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <LoadingSpinner v-if="loading && !hasLoadedOnce" />
 
-    <div v-else class="space-y-10">
-      <Card
-        v-for="order in displayedOrders"
-        :key="order.id"
-        class="overflow-hidden border-none shadow-lg group"
+    <div v-else class="space-y-4">
+      <div
+        v-if="loading && hasLoadedOnce"
+        class="rounded-lg border border-border bg-muted/20 px-4 py-2 text-caption text-admin-muted"
       >
+        주문 목록 업데이트 중...
+      </div>
+
+      <div v-if="filteredOrders.length > 0" class="space-y-10">
+        <Card
+          v-for="order in displayedOrders"
+          :key="order.id"
+          class="overflow-hidden border-none shadow-lg group"
+        >
         <CardHeader
           class="bg-muted/30 px-6 py-5 border-b border-border transition-colors group-hover:bg-muted/50"
         >
@@ -590,7 +1104,7 @@ onUnmounted(() => {
                 <th class="px-8 py-4 text-center">상태 정보</th>
                 <th class="px-8 py-4 text-center">배송 정보</th>
                 <th class="px-8 py-4 text-center">상태 관리</th>
-                <th class="px-8 py-4 text-center">취소 관리</th>
+                <th class="px-8 py-4 text-center whitespace-nowrap w-[120px]">취소 관리</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -658,23 +1172,34 @@ onUnmounted(() => {
                 </td>
 
                 <td class="px-8 py-5 text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    @click="openShippingModal(item, order)"
-                    class="gap-2"
-                  >
-                    <Truck class="w-4 h-4" />
-                    <span
-                      v-if="item.trackingNumber"
-                      class="font-mono text-caption"
+                  <div class="flex flex-col items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      @click="openShippingModal(item, order)"
+                      class="gap-2"
                     >
-                      배송정보
-                    </span>
-                    <span v-else class="text-muted-foreground text-caption">
-                      미등록
-                    </span>
-                  </Button>
+                      <Truck class="w-4 h-4" />
+                      <span
+                        v-if="item.trackingNumber"
+                        class="font-mono text-caption"
+                      >
+                        배송정보
+                      </span>
+                      <span v-else class="text-muted-foreground text-caption">
+                        미등록
+                      </span>
+                    </Button>
+                    <button
+                      v-if="item.trackingNumber"
+                      type="button"
+                      @click="openTrackingPage(item)"
+                      class="inline-flex items-center gap-1 text-caption text-primary hover:underline font-mono"
+                    >
+                      {{ item.trackingNumber }}
+                      <ExternalLink class="w-3 h-3" />
+                    </button>
+                  </div>
                 </td>
 
                 <td class="px-8 py-5 text-center">
@@ -690,54 +1215,58 @@ onUnmounted(() => {
                 </td>
 
                 <td class="px-8 py-5 text-center">
-                  <Button
-                    v-if="isCancelable(item.status)"
-                    variant="outline"
-                    size="sm"
-                    @click="openCancelModal(item, order)"
-                    class="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <XCircle class="w-4 h-4" />
-                    <span class="text-caption">취소</span>
-                  </Button>
-                  <span
-                    v-else
-                    class="text-caption text-muted-foreground"
-                  >
-                    -
-                  </span>
+                  <div class="flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      :disabled="!isCancelable(item.status)"
+                      @click="openCancelModal(item, order)"
+                      :class="[
+                        'w-[92px] justify-center gap-1.5',
+                        isCancelable(item.status)
+                          ? 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
+                          : 'text-muted-foreground border-border opacity-60 cursor-not-allowed',
+                      ]"
+                    >
+                      <XCircle class="w-4 h-4" />
+                      <span class="text-caption">
+                        {{ isCancelable(item.status) ? "취소" : "취소불가" }}
+                      </span>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </CardContent>
-      </Card>
+        </Card>
 
-      <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
-      <div ref="loadMoreTrigger" class="py-8 flex justify-center">
-        <div
-          v-if="loadingMore"
-          class="flex items-center gap-2 text-muted-foreground"
-        >
-          <LoadingSpinner
-            variant="dots"
-            size="md"
-            color="muted"
-            :center="false"
-          />
-          <span class="text-body">주문 내역을 불러오는 중...</span>
-        </div>
-        <div
-          v-else-if="!hasMore && displayedOrders.length > 0"
-          class="text-body text-muted-foreground"
-        >
-          모든 주문을 불러왔습니다
+        <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
+        <div ref="loadMoreTrigger" class="py-8 flex justify-center">
+          <div
+            v-if="loadingMore"
+            class="flex items-center gap-2 text-muted-foreground"
+          >
+            <LoadingSpinner
+              variant="dots"
+              size="md"
+              color="muted"
+              :center="false"
+            />
+            <span class="text-body">주문 내역을 불러오는 중...</span>
+          </div>
+          <div
+            v-else-if="!hasMore && displayedOrders.length > 0"
+            class="text-body text-muted-foreground"
+          >
+            모든 주문을 불러왔습니다
+          </div>
         </div>
       </div>
     </div>
 
     <div
-      v-if="filteredOrders.length === 0 && !loading"
+      v-if="filteredOrders.length === 0 && hasLoadedOnce"
       class="text-center py-32 border-2 border-dashed border-border rounded-2xl bg-muted/10"
     >
       <ShoppingBag class="w-12 h-12 mx-auto mb-4 opacity-10 text-admin" />

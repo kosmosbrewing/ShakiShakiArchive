@@ -51,7 +51,7 @@ const authStore = useAuthStore();
 const { showAlert, showConfirm } = useAlert();
 
 const users = ref<User[]>([]);
-const loading = ref(false);
+const loading = ref(true);
 const searchQuery = ref("");
 const searchInput = ref(""); // 입력 필드용
 
@@ -245,8 +245,6 @@ const handleRoleUpdate = async (grantAdmin: boolean) => {
 const changePage = (page: number) => {
   pagination.value.page = page;
   loadData();
-  // 스크롤은 라우터가 아닌 페이지 내 페이지네이션이므로 제거하여 즉시 전환
-  window.scrollTo({ top: 0 });
 };
 
 const goToPrevPage = () => {
@@ -358,11 +356,18 @@ onUnmounted(() => {
       </Badge>
     </div>
 
-    <!-- 로딩 스피너 -->
-    <LoadingSpinner v-if="loading" />
+    <!-- 초기 로딩 스피너 -->
+    <LoadingSpinner v-if="loading && users.length === 0" />
 
     <!-- 회원 목록 테이블 -->
     <Card v-else class="overflow-hidden border-none shadow-lg">
+      <div
+        v-if="loading && users.length > 0"
+        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted flex items-center gap-2"
+      >
+        <Loader2 class="w-3.5 h-3.5 animate-spin" />
+        회원 목록 업데이트 중...
+      </div>
       <CardContent class="p-0 overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-[1000px]">
           <thead

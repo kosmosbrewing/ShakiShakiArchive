@@ -275,6 +275,16 @@ const handleClose = () => {
 
 
                 <div class="w-full max-w-sm space-y-3">
+                  <!-- 브라우저 자동완성 오동작 방지용 username 필드 -->
+                  <input
+                    type="text"
+                    name="username"
+                    autocomplete="username"
+                    tabindex="-1"
+                    class="absolute opacity-0 pointer-events-none h-0 w-0"
+                    aria-hidden="true"
+                  />
+
                   <div class="space-y-2">
                     <Label for="admin-password" class="text-body font-medium">
                       비밀번호
@@ -284,6 +294,8 @@ const handleClose = () => {
                       ref="passwordInput"
                       v-model="password"
                       type="password"
+                      name="current-password"
+                      autocomplete="current-password"
                       placeholder="비밀번호를 입력하세요"
                       :disabled="verifying"
                       @keydown="handlePasswordKeydown"

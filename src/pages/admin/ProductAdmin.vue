@@ -45,6 +45,7 @@ import {
   PlusCircle,
   Eye,
   Search,
+  Copy,
 } from "lucide-vue-next";
 import { Separator } from "@/components/ui/separator";
 import { AdminNavigationTabs, ImageUploader } from "@/components/admin";
@@ -82,7 +83,8 @@ const categories = ref<any[]>([]);
 const variants = ref<any[]>([]);
 const measurements = ref<any[]>([]);
 
-const isLoading = ref(false);
+const isLoading = ref(true);
+const hasLoadedOnce = ref(false);
 const isProductModalOpen = ref(false);
 const isVariantModalOpen = ref(false);
 const isSizeManagerOpen = ref(false); // [변경] 사이즈 관리 모달 상태 독립
@@ -90,6 +92,7 @@ const isPreviewModalOpen = ref(false); // 미리보기 모달 상태
 const isEditMode = ref(false);
 const isMeasurementEditMode = ref(false);
 const errorMessage = ref("");
+const duplicatingProductId = ref<string | null>(null);
 
 // 페이지네이션
 const currentPage = ref(1);
@@ -176,6 +179,7 @@ const measurementFields: { id: keyof MeasurementForm; label: string }[] = [
 const searchQuery = ref("");
 const stockFilter = ref<"all" | "inStock" | "outOfStock">("all");
 const saleFilter = ref<"all" | "available" | "unavailable">("all");
+const selectedCategoryId = ref<string>("all");
 
 // --- 정렬 상태 ---
 const sortOrder = ref<"asc" | "desc">("desc"); // 기본: 최신순
@@ -186,7 +190,7 @@ const toggleSortOrder = () => {
 };
 
 // 검색어/필터 변경 시 첫 페이지로 이동
-watch([searchQuery, stockFilter, saleFilter], () => {
+watch([searchQuery, stockFilter, saleFilter, selectedCategoryId], () => {
   currentPage.value = 1;
 });
 
@@ -217,6 +221,13 @@ const filteredProducts = computed(() => {
     result = result.filter((p) => p.isAvailable);
   } else if (saleFilter.value === "unavailable") {
     result = result.filter((p) => !p.isAvailable);
+  }
+
+  // 카테고리 필터
+  if (selectedCategoryId.value !== "all") {
+    result = result.filter(
+      (p) => String(p.categoryId ?? "") === selectedCategoryId.value,
+    );
   }
 
   return result;
@@ -279,6 +290,7 @@ const loadData = async () => {
     console.error(error);
   } finally {
     isLoading.value = false;
+    hasLoadedOnce.value = true;
   }
 };
 
@@ -404,6 +416,121 @@ const handleConfirmDelete = async () => {
 
 const handleDeleteProduct = (id: string) => {
   openDeleteConfirm("product", id, "정말 삭제하시겠습니까?");
+};
+
+const slugify = (value: string): string => {
+  const slug = (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug || `product-${Date.now()}`;
+};
+
+const buildDuplicateName = (originalName: string): string => {
+  const base = `${originalName} 복제본`;
+  const existingNames = new Set(products.value.map((p) => String(p.name || "")));
+  if (!existingNames.has(base)) return base;
+
+  let index = 2;
+  let candidate = `${base} ${index}`;
+  while (existingNames.has(candidate)) {
+    index += 1;
+    candidate = `${base} ${index}`;
+  }
+  return candidate;
+};
+
+const buildDuplicateSlug = (originalSlug: string): string => {
+  const base = `${slugify(originalSlug)}-copy`;
+  const existingSlugs = new Set(products.value.map((p) => String(p.slug || "")));
+  if (!existingSlugs.has(base)) return base;
+
+  let index = 2;
+  let candidate = `${base}-${index}`;
+  while (existingSlugs.has(candidate)) {
+    index += 1;
+    candidate = `${base}-${index}`;
+  }
+  return candidate;
+};
+
+const handleDuplicateProduct = async (product: any) => {
+  duplicatingProductId.value = product.id;
+  try {
+    const duplicatedName = buildDuplicateName(String(product.name || "상품"));
+    const duplicatedSlug = buildDuplicateSlug(
+      String(product.slug || product.name || "product"),
+    );
+
+    const duplicatePayload: Record<string, any> = {
+      name: duplicatedName,
+      slug: duplicatedSlug,
+      description: product.description || "",
+      price: String(product.price || 0),
+      originalPrice: product.originalPrice ? String(product.originalPrice) : null,
+      stockQuantity: product.stockQuantity || 0,
+      categoryId: Number(product.categoryId),
+      imageUrl: product.imageUrl || "",
+      images: product.images || [],
+      detailImages: product.detailImages || [],
+      // 복제본은 검수 후 노출하도록 기본 비활성화로 생성
+      isAvailable: false,
+    };
+
+    const createdProduct = await createProduct(duplicatePayload);
+
+    const sourceVariants = await fetchAdminProductVariants(product.id);
+    let copiedVariantCount = 0;
+
+    for (let index = 0; index < sourceVariants.length; index += 1) {
+      const variant = sourceVariants[index];
+      const variantPayload: Record<string, any> = {
+        size: variant.size,
+        color: variant.color,
+        sku: `${((variant as any).sku || `${duplicatedSlug}-${variant.size || "opt"}`)
+          .replace(/\s+/g, "-")
+          .toUpperCase()}-COPY-${index + 1}`,
+        stockQuantity: Number(variant.stockQuantity || 0),
+        isAvailable: Boolean(variant.isAvailable),
+      };
+      const newVariant = await createProductVariant(createdProduct.id, variantPayload);
+      copiedVariantCount += 1;
+
+      const sourceMeasurements = await fetchSizeMeasurements(variant.id);
+      for (const measurement of sourceMeasurements) {
+        const rawPayload: Record<string, any> = {
+          totalLength: measurement.totalLength || undefined,
+          shoulderWidth: measurement.shoulderWidth || undefined,
+          chestSection: measurement.chestSection || undefined,
+          sleeveLength: measurement.sleeveLength || undefined,
+          waistSection: measurement.waistSection || undefined,
+          hipSection: measurement.hipSection || undefined,
+          thighSection: measurement.thighSection || undefined,
+          displayOrder: (measurement as any).displayOrder ?? 0,
+        };
+        const payload = Object.fromEntries(
+          Object.entries(rawPayload).filter(
+            ([, value]) => value !== undefined && value !== null,
+          ),
+        ) as Record<string, string | number>;
+        await createSizeMeasurement(newVariant.id, payload);
+      }
+    }
+
+    await loadData();
+    showAlert(
+      copiedVariantCount > 0
+        ? `상품이 복제되었습니다. 옵션 ${copiedVariantCount}개를 함께 복제했으며 판매는 비활성화 상태입니다.`
+        : "상품이 복제되었으며 판매는 비활성화 상태입니다.",
+    );
+  } catch (error: any) {
+    showAlert(error.message || "상품 복제에 실패했습니다.", { type: "error" });
+  } finally {
+    duplicatingProductId.value = null;
+  }
 };
 
 // --- [모달 2] 변종(옵션) 관리 로직 ---
@@ -689,7 +816,8 @@ onMounted(async () => {
               v-if="
                 searchQuery.trim() ||
                 stockFilter !== 'all' ||
-                saleFilter !== 'all'
+                saleFilter !== 'all' ||
+                selectedCategoryId !== 'all'
               "
             >
               검색 결과
@@ -752,6 +880,24 @@ onMounted(async () => {
 
       <!-- 오른쪽: 필터 버튼 -->
       <div class="flex items-center gap-3 flex-wrap">
+        <div class="min-w-[180px]">
+          <Select v-model="selectedCategoryId">
+            <SelectTrigger class="h-8">
+              <SelectValue placeholder="카테고리" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 카테고리</SelectItem>
+              <SelectItem
+                v-for="cat in categories"
+                :key="cat.id"
+                :value="String(cat.id)"
+              >
+                {{ cat.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div class="flex items-center gap-1.5">
           <Button
             v-for="opt in [
@@ -797,9 +943,15 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-    <LoadingSpinner v-if="isLoading" />
+    <LoadingSpinner v-if="isLoading && !hasLoadedOnce" />
 
     <Card v-else class="overflow-hidden border-none shadow-lg">
+      <div
+        v-if="isLoading && hasLoadedOnce"
+        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted"
+      >
+        상품 목록 업데이트 중...
+      </div>
       <CardContent class="p-0">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse min-w-[1160px]">
@@ -929,6 +1081,15 @@ onMounted(async () => {
                       class="text-muted-foreground hover:text-primary"
                     >
                       <Edit3 class="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      :disabled="duplicatingProductId === product.id"
+                      @click="handleDuplicateProduct(product)"
+                      class="text-muted-foreground hover:text-primary"
+                    >
+                      <Copy class="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"

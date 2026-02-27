@@ -39,6 +39,7 @@ const authStore = useAuthStore();
 // 상태
 const inquiries = ref<Inquiry[]>([]);
 const loading = ref(true);
+const hasLoadedOnce = ref(false);
 const selectedType = ref<string>("all");
 const selectedStatus = ref<string>("all");
 
@@ -93,6 +94,7 @@ const loadInquiries = async () => {
     console.error("문의 목록 로드 실패:", error);
   } finally {
     loading.value = false;
+    hasLoadedOnce.value = true;
   }
 };
 
@@ -166,24 +168,32 @@ onMounted(async () => {
       </span>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <LoadingSpinner v-if="loading && !hasLoadedOnce" />
 
-    <EmptyState
-      v-else-if="inquiries.length === 0"
-      header="문의 관리"
-      message="필터 조건에 해당하는 문의가 없습니다."
-    />
+    <div v-else class="space-y-3">
+      <div
+        v-if="loading && hasLoadedOnce"
+        class="rounded-lg border border-border bg-muted/20 px-4 py-2 text-caption text-admin-muted"
+      >
+        문의 목록 업데이트 중...
+      </div>
 
-    <!-- 문의 목록 -->
-    <div
-      v-else
-      class="bg-background border border-border rounded-xl overflow-hidden shadow-sm"
-    >
-      <Table>
-        <TableHeader>
-          <TableRow
-            class="bg-muted/30 hover:bg-muted/30 border-b border-border"
-          >
+      <EmptyState
+        v-if="inquiries.length === 0"
+        header="문의 관리"
+        message="필터 조건에 해당하는 문의가 없습니다."
+      />
+
+      <!-- 문의 목록 -->
+      <div
+        v-else
+        class="bg-background border border-border rounded-xl overflow-hidden shadow-sm"
+      >
+        <Table>
+          <TableHeader>
+            <TableRow
+              class="bg-muted/30 hover:bg-muted/30 border-b border-border"
+            >
             <!-- 번호 (항상 표시) -->
             <TableHead
               class="w-[60px] sm:w-[80px] text-center font-semibold text-foreground"
@@ -212,15 +222,15 @@ onMounted(async () => {
             >
               상태
             </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="(inquiry, index) in inquiries"
-            :key="inquiry.id"
-            class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
-            @click="goToDetail(inquiry)"
-          >
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow
+              v-for="(inquiry, index) in inquiries"
+              :key="inquiry.id"
+              class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
+              @click="goToDetail(inquiry)"
+            >
             <!-- 번호 (항상 표시) -->
             <TableCell class="text-center">
               <span
@@ -337,9 +347,10 @@ onMounted(async () => {
                 {{ statusLabels[inquiry.status] }}
               </Badge>
             </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   </div>
 </template>

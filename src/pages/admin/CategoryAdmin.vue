@@ -29,7 +29,8 @@ const authStore = useAuthStore();
 const { showAlert } = useAlert();
 
 const categories = ref<any[]>([]);
-const isLoading = ref(false);
+const isLoading = ref(true);
+const hasLoadedOnce = ref(false);
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
 const errorMessage = ref("");
@@ -62,6 +63,7 @@ const loadData = async () => {
     console.error("데이터 로딩 실패:", error);
   } finally {
     isLoading.value = false;
+    hasLoadedOnce.value = true;
   }
 };
 
@@ -172,9 +174,15 @@ onMounted(async () => {
     </div>
     <Separator class="mb-6"></Separator>
 
-    <LoadingSpinner v-if="isLoading" />
+    <LoadingSpinner v-if="isLoading && !hasLoadedOnce" />
 
     <Card v-else class="overflow-hidden border-none shadow-md">
+      <div
+        v-if="isLoading && hasLoadedOnce"
+        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted"
+      >
+        카테고리 목록 업데이트 중...
+      </div>
       <CardContent class="p-0">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">

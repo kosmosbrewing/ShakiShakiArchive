@@ -50,7 +50,7 @@ const { showAlert, showDestructiveConfirm } = useAlert();
 
 // 상태
 const siteImages = ref<SiteImage[]>([]);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
 const isEditModalLoading = ref(false);
