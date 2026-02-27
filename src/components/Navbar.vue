@@ -317,15 +317,15 @@ onUnmounted(() => {
         @click="goHome"
       >
         <img
-          src="@/assets/optimized/logo01-1.webp"
+          src="@/assets/optimized/logo01-2.webp"
           alt="샤키샤키 아카이브"
-          class="w-auto max-h-[38px] min-h-[24px] max-w-[65vw]"
-          style="height: clamp(24px, 7vw, 38px)"
+          class="w-auto max-h-[52px] min-h-[36px] max-w-[65vw]"
+          style="height: clamp(40px, 11vw, 52px)"
           draggable="false"
         />
       </button>
 
-      <div class="flex items-center justify-end gap-[clamp(0.375rem,2vw,0.75rem)] z-10">
+      <div class="flex items-center justify-end gap-2 z-10">
         <Button
           variant="ghost"
           size="icon"
