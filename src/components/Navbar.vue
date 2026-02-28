@@ -234,7 +234,7 @@ onUnmounted(() => {
                 :src="menuIcon"
                 alt=""
                 aria-hidden="true"
-                class="w-6 h-6 object-contain"
+                class="w-7 h-7 object-contain"
                 draggable="false"
               />
             </button>
@@ -335,7 +335,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-6 w-6 hover:bg-transparent p-0"
+          class="h-7 w-7 hover:bg-transparent p-0"
           :aria-label="isAuthenticated ? '내 계정' : '로그인'"
           @click="handleAccountClick"
         >
@@ -351,7 +351,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-6 w-6 relative hover:bg-transparent overflow-visible p-0"
+          class="h-7 w-7 relative hover:bg-transparent overflow-visible p-0"
           :aria-label="`장바구니${cartItemCount > 0 ? ` (${cartItemCount}개 상품)` : ''}`"
           @click="handleCartClick"
         >
@@ -422,7 +422,7 @@ onUnmounted(() => {
             :src="instagramIcon"
             alt=""
             aria-hidden="true"
-            class="w-7 h-7 object-contain"
+            class="w-6 h-6 object-contain"
             draggable="false"
           />
         </Button>
@@ -438,7 +438,7 @@ onUnmounted(() => {
             :src="accountIcon"
             alt=""
             aria-hidden="true"
-            class="w-7 h-7 object-contain"
+            class="w-6 h-6 object-contain"
             draggable="false"
           />
         </Button>
@@ -454,7 +454,7 @@ onUnmounted(() => {
             :src="faqIcon"
             alt=""
             aria-hidden="true"
-            class="w-7 h-7 object-contain"
+            class="w-6 h-6 object-contain"
             draggable="false"
           />
         </Button>
@@ -471,7 +471,7 @@ onUnmounted(() => {
               :src="cartIcon"
               alt=""
               aria-hidden="true"
-              class="w-7 h-7 object-contain"
+              class="w-6 h-6 object-contain"
               draggable="false"
             />
             <span
@@ -496,7 +496,7 @@ onUnmounted(() => {
               :src="logoutIcon"
               alt=""
               aria-hidden="true"
-              class="w-7 h-7 object-contain"
+              class="w-6 h-6 object-contain"
               draggable="false"
             />
           </Button>
@@ -515,7 +515,7 @@ onUnmounted(() => {
                 :src="loginIcon"
                 alt=""
                 aria-hidden="true"
-                class="w-7 h-7 object-contain"
+                class="w-6 h-6 object-contain"
                 draggable="false"
               />
             </RouterLink>
