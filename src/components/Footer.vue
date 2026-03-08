@@ -11,7 +11,9 @@ import { Card, CardContent } from "@/components/ui/card";
       <CardContent class="p-6 sm:p-10">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
           <!-- 로고 영역 -->
-          <div class="md:col-span-1 flex flex-col items-center">
+          <div
+            class="md:col-span-1 flex flex-col items-center md:self-stretch md:justify-center lg:-translate-y-[10%]"
+          >
             <a href="/" class="inline-block">
               <img
                 src="@/assets/optimized/logo01-2.webp"
