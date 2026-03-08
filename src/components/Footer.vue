@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
           <!-- 로고 영역 -->
           <div
-            class="md:col-span-1 flex flex-col items-center md:self-stretch md:justify-center lg:-translate-y-[10%]"
+            class="md:col-span-1 flex flex-col items-center md:self-stretch md:justify-center lg:-translate-y-[20%]"
           >
             <a href="/" class="inline-block">
               <img
