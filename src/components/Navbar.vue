@@ -107,8 +107,8 @@ const handleLogout = async () => {
   router.push("/");
 };
 
-const INSTAGRAM_USERNAME = "shakishaki_archive";
-const INSTAGRAM_WEB_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/`;
+const INSTAGRAM_USERNAME = "shaki.arc";
+const INSTAGRAM_WEB_URL = "https://www.instagram.com/shaki.arc?igsh=cWl3MHpkZHY1aHZ2&utm_source=qr";
 const INSTAGRAM_APP_URL = `instagram://user?username=${INSTAGRAM_USERNAME}`;
 const isMobileDevice = () =>
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(

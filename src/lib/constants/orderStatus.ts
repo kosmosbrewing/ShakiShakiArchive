@@ -29,12 +29,12 @@ export const ORDER_STATUS_STYLES: Record<
     label: "결제완료",
   },
   preparing: { bg: "bg-primary/10", text: "text-primary", label: "배송준비중" },
-  shipped: { bg: "bg-primary", text: "text-white", label: "배송중" },
+  shipped: { bg: "bg-primary/10", text: "text-primary", label: "배송중" },
 
-  // 완료 (Success) - Green
+  // 완료 (Success) - 배송완료도 정상 흐름 뱃지 스타일 통일
   delivered: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-600",
+    bg: "bg-primary/10",
+    text: "text-primary",
     label: "배송완료",
   },
   purchase_confirmed: {
@@ -81,4 +81,41 @@ export function getStatusClass(status: OrderStatus | OrderItemStatus): string {
 export function getStatusLabel(status: OrderStatus | OrderItemStatus): string {
   const style = ORDER_STATUS_STYLES[status];
   return style?.label || status;
+}
+
+// 스테퍼에 표시할 정상 배송 흐름 상태
+// purchase_confirmed(구매확정)은 배송 완료 후 최종 상태이므로 스테퍼 불필요
+const NORMAL_FLOW_STATUSES: (OrderStatus | OrderItemStatus)[] = [
+  "payment_confirmed",
+  "preparing",
+  "shipped",
+  "delivered",
+];
+
+/**
+ * 스테퍼를 보여줄 정상 흐름 상태인지 확인
+ * 취소/환불/반품 등 비정상 상태에서는 false
+ */
+export function isNormalFlowStatus(status: OrderStatus | OrderItemStatus): boolean {
+  return NORMAL_FLOW_STATUSES.includes(status);
+}
+
+/**
+ * 주문 상태 → 스텝 인덱스(0~3) 변환
+ * 0: 결제완료, 1: 배송준비중, 2: 배송중, 3: 배송완료
+ */
+export function getStepIndex(status: OrderStatus | OrderItemStatus): number {
+  switch (status) {
+    case "payment_confirmed":
+      return 0;
+    case "preparing":
+      return 1;
+    case "shipped":
+      return 2;
+    case "delivered":
+    case "purchase_confirmed":
+      return 3;
+    default:
+      return -1;
+  }
 }

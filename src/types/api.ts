@@ -894,8 +894,8 @@ export const COURIER_COMPANIES: Record<string, string> = {
   lotte: "롯데택배",
   logen: "로젠택배",
   epost: "우체국택배",
-  gs25: "GS25",
-  cvsnet: "CU",
+  gs25: "GS25편의점택배",
+  cvsnet: "CU편의점택배",
 };
 
 // ------------------------------------------------------------------

@@ -7,7 +7,7 @@ import { ADMIN_MESSAGES } from "@/lib/messages";
 import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress, formatDate, formatPrice } from "@/lib/formatters";
-import { getStatusClass as getStatusClassFromConstants } from "@/lib/constants/orderStatus";
+import { getStatusClass as getStatusClassFromConstants, isNormalFlowStatus, getStepIndex } from "@/lib/constants/orderStatus";
 import { AdminNavigationTabs } from "@/components/admin";
 import ShippingInfoModal from "@/components/admin/ShippingInfoModal.vue";
 import AdminCancelOrderModal from "@/components/admin/AdminCancelOrderModal.vue";
@@ -1098,13 +1098,13 @@ onUnmounted(() => {
               class="bg-white border-l border-r text-caption font-bold text-admin-muted uppercase tracking-tight shadow-sm shadow-light"
             >
               <tr>
-                <th class="px-8 py-4 w-24">이미지</th>
-                <th class="px-8 py-4 w-1/4">상품명 / 옵션</th>
-                <th class="px-8 py-4 text-center">수량/금액</th>
-                <th class="px-8 py-4 text-center">상태 정보</th>
-                <th class="px-8 py-4 text-center">배송 정보</th>
-                <th class="px-8 py-4 text-center">상태 관리</th>
-                <th class="px-8 py-4 text-center whitespace-nowrap w-[120px]">취소 관리</th>
+                <th class="px-5 py-3 w-24">이미지</th>
+                <th class="px-5 py-3 w-1/4">상품명 / 옵션</th>
+                <th class="px-5 py-3 text-center">수량/금액</th>
+                <th class="px-5 py-3 text-center">상태 정보</th>
+                <th class="px-5 py-3 text-center">배송 정보</th>
+                <th class="px-5 py-3 text-center">상태 관리</th>
+                <th class="px-5 py-3 text-center whitespace-nowrap w-[120px]">취소 관리</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -1113,7 +1113,7 @@ onUnmounted(() => {
                 :key="item.id"
                 class="hover:bg-muted/10 transition-colors"
               >
-                <td class="px-8 py-5">
+                <td class="px-5 py-3.5">
                   <div
                     class="h-14 w-14 bg-muted rounded-xl overflow-hidden border border-border shadow-sm"
                   >
@@ -1131,7 +1131,7 @@ onUnmounted(() => {
                     </div>
                   </div>
                 </td>
-                <td class="px-8 py-5">
+                <td class="px-5 py-3.5">
                   <div class="text-body text-admin">
                     {{ item.productName }}
                   </div>
@@ -1142,7 +1142,7 @@ onUnmounted(() => {
                   </div>
                 </td>
 
-                <td class="px-8 py-5 text-center">
+                <td class="px-5 py-3.5 text-center">
                   <div class="text-body text-admin">
                     <span class="text-admin">{{ item.quantity }}</span
                     >개
@@ -1152,7 +1152,7 @@ onUnmounted(() => {
                   </div>
                 </td>
 
-                <td class="px-8 py-5 text-center">
+                <td class="px-5 py-3.5 text-center">
                   <select
                     v-model="item.status"
                     :class="[
@@ -1169,9 +1169,21 @@ onUnmounted(() => {
                       {{ opt.label }}
                     </option>
                   </select>
+                  <!-- 정상 흐름 상태일 때 미니 프로그레스바 -->
+                  <div
+                    v-if="isNormalFlowStatus(item.status)"
+                    class="flex gap-1 mt-2 mx-auto w-28"
+                  >
+                    <div
+                      v-for="step in 4"
+                      :key="step"
+                      class="flex-1 h-1 rounded-full transition-colors"
+                      :class="step - 1 <= getStepIndex(item.status) ? 'bg-primary' : 'bg-muted'"
+                    />
+                  </div>
                 </td>
 
-                <td class="px-8 py-5 text-center">
+                <td class="px-5 py-3.5 text-center">
                   <div class="flex flex-col items-center gap-2">
                     <Button
                       variant="outline"
@@ -1202,7 +1214,7 @@ onUnmounted(() => {
                   </div>
                 </td>
 
-                <td class="px-8 py-5 text-center">
+                <td class="px-5 py-3.5 text-center">
                   <Button
                     size="sm"
                     @click="handleSaveItemStatus(item)"
@@ -1214,7 +1226,7 @@ onUnmounted(() => {
                   </Button>
                 </td>
 
-                <td class="px-8 py-5 text-center">
+                <td class="px-5 py-3.5 text-center">
                   <div class="flex justify-center">
                     <Button
                       variant="outline"

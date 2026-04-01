@@ -12,6 +12,7 @@ import {
   isReturnable,
   sortOrderItems,
 } from "@/lib/constants/order";
+import { isNormalFlowStatus } from "@/lib/constants/orderStatus";
 import { partialCancelOrder, createReturn, fetchOrder } from "@/lib/api";
 
 // 공통 컴포넌트
@@ -22,8 +23,8 @@ import {
   CancelOrderDialog,
 } from "@/components/common";
 
-// 주문 관련 모달 컴포넌트
-import { ReturnRequestModal } from "@/components/order";
+// 주문 관련 컴포넌트
+import { ReturnRequestModal, OrderProgressStepper } from "@/components/order";
 
 // UI 컴포넌트
 import { Button } from "@/components/ui/button";
@@ -321,6 +322,12 @@ const getPaymentProviderLabel = (provider: string): string => {
               <OrderStatusBadge
                 :status="item.status"
                 class="shadow-sm self-start"
+              />
+
+              <!-- 정상 흐름일 때 진행 스테퍼 표시 -->
+              <OrderProgressStepper
+                v-if="isNormalFlowStatus(item.status)"
+                :status="item.status"
               />
 
               <div class="flex flex-col sm:flex-row gap-6">
