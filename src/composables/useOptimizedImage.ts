@@ -127,8 +127,10 @@ export function useOptimizedImage() {
    * Hero 배너용 반응형 속성 (srcset/sizes 포함)
    */
   const getHeroAttrs = (url: string, isFirst: boolean = false) => {
-    const heroWidths = [640, 960, 1280, 1920];
-    const heroSizes = "(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 600px";
+    // 모바일 LCP 최적화: 1024 추가로 DPR 2.625 모바일(992px 필요)에서 1280 대신 1024 선택
+    const heroWidths = [640, 828, 1024, 1280, 1920];
+    // sizes 정밀화: 모바일은 w-11/12(91.67vw), 태블릿 80vw, 데스크탑 600px
+    const heroSizes = "(max-width: 640px) 91.67vw, (max-width: 1024px) 80vw, 600px";
 
     if (!isCloudinaryUrl(url)) {
       return {
@@ -140,10 +142,10 @@ export function useOptimizedImage() {
       };
     }
 
-    // 모바일 LCP 최적화: src 폴백을 w_640으로 (srcset 지원 브라우저는 sizes에 따라 적절한 크기 선택)
+    // 모바일 LCP 최적화: q_auto:eco (시각적 차이 미미, 파일 30-40% 절감)
     return {
-      src: optimizeImageUrl(url, { width: 640, quality: "auto:good", format: "auto", crop: "fill" }),
-      srcset: generateSrcSet(url, heroWidths, { quality: "auto:good", format: "auto", crop: "fill" }),
+      src: optimizeImageUrl(url, { width: 640, quality: "auto:eco", format: "auto", crop: "fill" }),
+      srcset: generateSrcSet(url, heroWidths, { quality: "auto:eco", format: "auto", crop: "fill" }),
       sizes: heroSizes,
       loading: isFirst ? ("eager" as const) : ("lazy" as const),
       decoding: "async" as const,

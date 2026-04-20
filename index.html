@@ -100,16 +100,17 @@
     <!-- SemiBold는 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
 
     <!-- Preload: 첫 번째 Hero 이미지 반응형 로드 (LCP 최적화) -->
-    <!-- imagesrcset/imagesizes로 모바일은 w_640(~80KB), 태블릿 w_960, 데스크탑 w_1280 선택 -->
+    <!-- q_auto:eco + 정밀 breakpoint로 모바일 279KB→~60KB 절감, 메인화면 변경 시 수정 필요 -->
     <link
       rel="preload"
       as="image"
       imagesrcset="
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_640,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 640w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_960,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 960w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_1280,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1280w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:good,w_1920,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1920w"
-      imagesizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 600px"
+        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_640,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 640w,
+        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_828,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 828w,
+        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1024,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1024w,
+        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1280,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1280w,
+        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1920,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1920w"
+      imagesizes="(max-width: 640px) 91.67vw, (max-width: 1024px) 80vw, 600px"
       fetchpriority="high"
     />
 
