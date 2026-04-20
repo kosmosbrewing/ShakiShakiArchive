@@ -140,8 +140,9 @@ export function useOptimizedImage() {
       };
     }
 
+    // 모바일 LCP 최적화: src 폴백을 w_640으로 (srcset 지원 브라우저는 sizes에 따라 적절한 크기 선택)
     return {
-      src: optimizeImageUrl(url, { width: 1280, quality: "auto:good", format: "auto", crop: "fill" }),
+      src: optimizeImageUrl(url, { width: 640, quality: "auto:good", format: "auto", crop: "fill" }),
       srcset: generateSrcSet(url, heroWidths, { quality: "auto:good", format: "auto", crop: "fill" }),
       sizes: heroSizes,
       loading: isFirst ? ("eager" as const) : ("lazy" as const),
