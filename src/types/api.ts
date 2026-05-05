@@ -48,6 +48,20 @@ export interface User {
   updatedAt: string;
 }
 
+export interface Admin2FARequiredResponse {
+  requiresAdmin2FA: true;
+  challengeId: string;
+  expiresInSeconds: number;
+  devCode?: string;
+}
+
+export type LoginResponse = User | Admin2FARequiredResponse;
+
+export interface VerifyAdmin2FARequest {
+  challengeId: string;
+  code: string;
+}
+
 // 상품 정보
 export interface Product {
   id: string; // UUID

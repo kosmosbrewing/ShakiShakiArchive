@@ -1,5 +1,7 @@
 import type {
   User,
+  LoginResponse,
+  VerifyAdmin2FARequest,
   Product,
   ProductVariant,
   CartItem,
@@ -244,8 +246,15 @@ async function apiRequest<T>(
 export async function login(data: {
   email: string;
   password: string;
-}): Promise<User> {
-  return apiRequest<User>("/api/auth/login", {
+}): Promise<LoginResponse> {
+  return apiRequest<LoginResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function verifyAdminLogin2FA(data: VerifyAdmin2FARequest): Promise<User> {
+  return apiRequest<User>("/api/auth/admin-2fa/verify", {
     method: "POST",
     body: JSON.stringify(data),
   });

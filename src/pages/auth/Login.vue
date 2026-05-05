@@ -8,7 +8,7 @@ import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Alert,
   AlertDescription,
@@ -17,6 +17,7 @@ import {
 import { AUTH_MESSAGES, ERROR_MESSAGES } from "@/lib/messages";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { LoadingSpinner } from "@/components/common";
+import { ShieldCheck, X } from "lucide-vue-next";
 
 // ⚠️ 참고: 실제 서비스에서는 id보다 'email'이나 'username'을 사용하는 것이 일반적입니다.
 interface loginProps {
@@ -42,6 +43,12 @@ const isProcessingAuth = ref<boolean>(false); // OAuth 결과 처리 중 (전체
 const showAlert = ref<boolean>(false); // Alert 모달 표시 상태
 const alertMessage = ref<string>(""); // Alert 메시지
 const alertType = ref<AlertType>("success"); // Alert 타입 (success/error)
+const requiresAdmin2FA = ref<boolean>(false);
+const admin2faCode = ref<string>("");
+const admin2faChallengeId = ref<string>("");
+const admin2faExpiresInSeconds = ref<number>(0);
+const admin2faDevCode = ref<string>("");
+const isClosingAdmin2FA = ref<boolean>(false);
 
 // ------------------------------------------------------------------
 // [Security First] 클라이언트 사이드 검증 함수
@@ -186,7 +193,24 @@ const handleSubmit = async () => {
 
   try {
     // 5. axios POST 요청 실행
-    await apiClient.post("/api/auth/login", payload);
+    const response = await apiClient.post("/api/auth/login", payload);
+
+    if (response.data?.requiresAdmin2FA) {
+      isLoading.value = false;
+      requiresAdmin2FA.value = true;
+      admin2faChallengeId.value = response.data.challengeId;
+      admin2faExpiresInSeconds.value = response.data.expiresInSeconds || 300;
+      admin2faDevCode.value =
+        import.meta.env.DEV && response.data.devCode ? response.data.devCode : "";
+      admin2faCode.value = "";
+      loginForm.password = "";
+
+      nextTick(() => {
+        const codeEl = document.getElementById("admin-2fa-code") as HTMLInputElement;
+        codeEl?.focus();
+      });
+      return;
+    }
 
     // 6. 성공 시 처리
     isLoading.value = false;
@@ -256,6 +280,89 @@ const handleSubmit = async () => {
     showAlert.value = true;
 
     console.error("로그인 실패:", loginError.value, error);
+  }
+};
+
+const resetAdmin2FA = () => {
+  requiresAdmin2FA.value = false;
+  admin2faCode.value = "";
+  admin2faChallengeId.value = "";
+  admin2faExpiresInSeconds.value = 0;
+  admin2faDevCode.value = "";
+  isClosingAdmin2FA.value = false;
+  loginError.value = null;
+  invalidInputForm.value = false;
+};
+
+const closeAdmin2FA = async () => {
+  if (isLoading.value || isClosingAdmin2FA.value) return;
+
+  isClosingAdmin2FA.value = true;
+
+  try {
+    await apiClient.post("/api/auth/logout");
+  } catch (error) {
+    console.warn("관리자 2차 인증 취소 세션 정리 실패:", error);
+  } finally {
+    resetAdmin2FA();
+  }
+};
+
+const handleAdmin2FACodeInput = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  admin2faCode.value = input.value.replace(/\D/g, "").slice(0, 4);
+};
+
+const handleAdmin2FAVerify = async () => {
+  if (isLoading.value) return;
+
+  invalidInputForm.value = false;
+  loginError.value = null;
+
+  if (!admin2faChallengeId.value || !/^\d{4}$/.test(admin2faCode.value)) {
+    invalidInputForm.value = true;
+    loginError.value = "텔레그램으로 받은 4자리 인증번호를 입력해주세요.";
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    await apiClient.post("/api/auth/admin-2fa/verify", {
+      challengeId: admin2faChallengeId.value,
+      code: admin2faCode.value,
+    });
+
+    isLoading.value = false;
+    isAuthenticated.value = true;
+    isProcessingAuth.value = true;
+
+    await authStore.loadUser({ forceRefresh: true, throwOnError: true });
+
+    const userName = authStore.user?.userName || "회원";
+    authStore.setWelcomeMessage(`반가워요, ${userName}님!`);
+
+    router.replace("/");
+  } catch (error: any) {
+    isLoading.value = false;
+    isProcessingAuth.value = false;
+    invalidInputForm.value = true;
+    admin2faCode.value = "";
+
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      loginError.value = AUTH_MESSAGES.tooManyAttempts;
+    } else if (axios.isAxiosError(error) && (error.response?.status ?? 0) >= 500) {
+      loginError.value = ERROR_MESSAGES.serverError;
+    } else if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
+      loginError.value = ERROR_MESSAGES.timeout;
+    } else {
+      loginError.value = "인증번호가 올바르지 않거나 만료되었습니다. 다시 로그인해주세요.";
+    }
+
+    nextTick(() => {
+      const codeEl = document.getElementById("admin-2fa-code") as HTMLInputElement;
+      codeEl?.focus();
+    });
   }
 };
 
@@ -466,142 +573,142 @@ const handleKakaoLogin = () => {
     <Card class="w-full mx-auto">
       <CardContent>
         <form @submit.prevent="handleSubmit" class="grid gap-4 mt-4 mb-2">
-          <div class="flex flex-col w-full gap-1.5 pt-10">
-            <Input
-              id="user-id"
-              name="username"
-              type="text"
-              autocomplete="username"
-              placeholder="이메일"
-              v-model="loginForm.id"
-              :disabled="isLoading"
-              @keydown.enter.prevent="handleEmailEnter"
-            />
-          </div>
-
-          <div class="flex flex-col w-full gap-1.5">
-            <Input
-              id="user-password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="비밀번호"
-              v-model="loginForm.password"
-              :disabled="isLoading"
-              @keydown.enter.prevent="handlePasswordEnter"
-            />
-          </div>
-
-          <!-- 오류 상세 메시지 -->
-          <AlertDescription v-if="invalidInputForm && loginError" class="mt-1">
-            {{ loginError }}
-          </AlertDescription>
-
-          <Button
-            id="login-button"
-            class="w-full mt-1 font-medium h-11 hover:bg-primary/80"
-            type="submit"
-            :disabled="isLoading"
-          >
-            <LoadingSpinner
-              v-if="isLoading"
-              variant="spinner"
-              size="sm"
-              color="white"
-              :center="false"
-              class="mr-2"
-            />
-            <span class="text-base tracking-tight">
-              {{ isLoading ? "로그인 중..." : "로그인" }}
-            </span>
-          </Button>
-
-          <div class="relative my-1">
-            <div class="absolute inset-0 flex items-center">
-              <Separator></Separator>
+            <div class="flex flex-col w-full gap-1.5 pt-10">
+              <Input
+                id="user-id"
+                name="username"
+                type="text"
+                autocomplete="username"
+                placeholder="이메일"
+                v-model="loginForm.id"
+                :disabled="isLoading"
+                @keydown.enter.prevent="handleEmailEnter"
+              />
             </div>
-            <div class="relative flex justify-center text-xs uppercase">
-              <span
-                class="bg-background px-2 text-caption text-muted-foreground"
-                >또는</span
-              >
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            :class="[
-              'w-full h-11',
-              'bg-[#03A94D] hover:bg-[#03A94D]/90 font-medium',
-            ]"
-            :disabled="isLoading || isNaverLoading || isKakaoLoading"
-            @click="handleNaverLogin"
-          >
-            <LoadingSpinner
-              v-if="isNaverLoading"
-              variant="spinner"
-              size="sm"
-              color="white"
-              :center="false"
-            />
 
-            <template v-else>
-              <div class="inline-flex items-center leading-none text-white">
-                <svg
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  class="w-4 h-4 block"
-                  preserveAspectRatio="xMinYMid meet"
-                >
-                  <path
-                    d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
-                  />
-                </svg>
+            <div class="flex flex-col w-full gap-1.5">
+              <Input
+                id="user-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="비밀번호"
+                v-model="loginForm.password"
+                :disabled="isLoading"
+                @keydown.enter.prevent="handlePasswordEnter"
+              />
+            </div>
+
+            <!-- 오류 상세 메시지 -->
+            <AlertDescription v-if="invalidInputForm && loginError" class="mt-1">
+              {{ loginError }}
+            </AlertDescription>
+
+            <Button
+              id="login-button"
+              class="w-full mt-1 font-medium h-11 hover:bg-primary/80"
+              type="submit"
+              :disabled="isLoading"
+            >
+              <LoadingSpinner
+                v-if="isLoading"
+                variant="spinner"
+                size="sm"
+                color="white"
+                :center="false"
+                class="mr-2"
+              />
+              <span class="text-base tracking-tight">
+                {{ isLoading ? "로그인 중..." : "로그인" }}
+              </span>
+            </Button>
+
+            <div class="relative my-1">
+              <div class="absolute inset-0 flex items-center">
+                <Separator></Separator>
+              </div>
+              <div class="relative flex justify-center text-xs uppercase">
                 <span
-                  class="text-base font-medium tracking-tight ml-2 text-white"
-                  >네이버 로그인</span
+                  class="bg-background px-2 text-caption text-muted-foreground"
+                  >또는</span
                 >
               </div>
-            </template>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            :class="[
-              'w-full h-11',
-              'bg-[#FEE500] hover:bg-[#FEE500]/90 font-medium border-[#FEE500]',
-            ]"
-            :disabled="isLoading || isNaverLoading || isKakaoLoading"
-            @click="handleKakaoLogin"
-          >
-            <LoadingSpinner
-              v-if="isKakaoLoading"
-              variant="spinner"
-              size="sm"
-              color="foreground"
-              :center="false"
-            />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              :class="[
+                'w-full h-11',
+                'bg-[#03A94D] hover:bg-[#03A94D]/90 font-medium',
+              ]"
+              :disabled="isLoading || isNaverLoading || isKakaoLoading"
+              @click="handleNaverLogin"
+            >
+              <LoadingSpinner
+                v-if="isNaverLoading"
+                variant="spinner"
+                size="sm"
+                color="white"
+                :center="false"
+              />
 
-            <template v-else>
-              <div class="inline-flex items-center leading-none text-[#191919]">
-                <svg
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  class="w-5 h-5 block"
-                >
-                  <path
-                    d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
-                  />
-                </svg>
-                <span
-                  class="text-base font-medium tracking-tight ml-2 text-[#191919]"
-                  >카카오 로그인</span
-                >
-              </div>
-            </template>
-          </Button>
+              <template v-else>
+                <div class="inline-flex items-center leading-none text-white">
+                  <svg
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    class="w-4 h-4 block"
+                    preserveAspectRatio="xMinYMid meet"
+                  >
+                    <path
+                      d="M12.9286 20H20V0H12.9286V9.42857L7.07143 0H0V20H7.07143V10.5714L12.9286 20Z"
+                    />
+                  </svg>
+                  <span
+                    class="text-base font-medium tracking-tight ml-2 text-white"
+                    >네이버 로그인</span
+                  >
+                </div>
+              </template>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              :class="[
+                'w-full h-11',
+                'bg-[#FEE500] hover:bg-[#FEE500]/90 font-medium border-[#FEE500]',
+              ]"
+              :disabled="isLoading || isNaverLoading || isKakaoLoading"
+              @click="handleKakaoLogin"
+            >
+              <LoadingSpinner
+                v-if="isKakaoLoading"
+                variant="spinner"
+                size="sm"
+                color="foreground"
+                :center="false"
+              />
+
+              <template v-else>
+                <div class="inline-flex items-center leading-none text-[#191919]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    class="w-5 h-5 block"
+                  >
+                    <path
+                      d="M12 3C6.48 3 2 6.58 2 11c0 2.85 1.89 5.35 4.72 6.77-.15.53-.96 3.43-1 3.58 0 .08.03.16.09.21.07.05.15.06.22.03.3-.08 3.5-2.31 4.04-2.68.61.09 1.25.14 1.93.14 5.52 0 10-3.58 10-8S17.52 3 12 3z"
+                    />
+                  </svg>
+                  <span
+                    class="text-base font-medium tracking-tight ml-2 text-[#191919]"
+                    >카카오 로그인</span
+                  >
+                </div>
+              </template>
+            </Button>
         </form>
       </CardContent>
     </Card>
@@ -620,6 +727,105 @@ const handleKakaoLogin = () => {
         >가입하기</router-link
       >
     </p>
+
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="requiresAdmin2FA"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div
+            class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            @click="closeAdmin2FA"
+          />
+
+          <Card class="relative z-10 w-full max-w-md shadow-xl">
+            <CardHeader class="pb-4">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-primary/10 rounded-full">
+                    <ShieldCheck class="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle class="text-heading">관리자 2차 인증</CardTitle>
+                    <p class="text-body text-muted-foreground mt-1">
+                      텔레그램으로 받은 4자리 인증번호를 입력해주세요
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8 -mr-2 -mt-2"
+                  :disabled="isLoading || isClosingAdmin2FA"
+                  @click="closeAdmin2FA"
+                >
+                  <X class="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <form class="grid gap-4" @submit.prevent="handleAdmin2FAVerify">
+                <Input
+                  id="admin-2fa-code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  placeholder="인증번호 4자리"
+                  :model-value="admin2faCode"
+                  :disabled="isLoading"
+                  maxlength="4"
+                  class="text-center text-lg tracking-widest"
+                  @input="handleAdmin2FACodeInput"
+                  @keydown.enter.prevent="handleAdmin2FAVerify"
+                />
+
+                <div class="space-y-1">
+                  <p class="text-xs text-muted-foreground">
+                    인증번호는 {{ Math.round(admin2faExpiresInSeconds / 60) }}분 동안 유효합니다.
+                  </p>
+                  <p v-if="admin2faDevCode" class="text-xs text-muted-foreground">
+                    개발 인증번호: {{ admin2faDevCode }}
+                  </p>
+                </div>
+
+                <AlertDescription v-if="invalidInputForm && loginError">
+                  {{ loginError }}
+                </AlertDescription>
+
+                <div class="flex justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    class="font-medium"
+                    :disabled="isLoading || isClosingAdmin2FA"
+                    @click="closeAdmin2FA"
+                  >
+                    {{ isClosingAdmin2FA ? "취소 중..." : "취소" }}
+                  </Button>
+                  <Button
+                    type="submit"
+                    class="font-semibold"
+                    :disabled="isLoading || admin2faCode.length !== 4"
+                  >
+                    <LoadingSpinner
+                      v-if="isLoading"
+                      variant="spinner"
+                      size="sm"
+                      color="white"
+                      :center="false"
+                      class="mr-2"
+                    />
+                    {{ isLoading ? "확인 중..." : "인증 확인" }}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Alert 모달 (성공/오류) -->
     <Alert

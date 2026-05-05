@@ -154,11 +154,16 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       // 1. 로그인 수행
       const loggedInUser = await login(data);
+      if ("requiresAdmin2FA" in loggedInUser) {
+        return loggedInUser;
+      }
+
       user.value = loggedInUser;
       console.log("✅ 로그인 성공:", loggedInUser.email);
 
       // 2. 장바구니 병합 실행
       await migrateGuestCart();
+      return loggedInUser;
     } catch (err: any) {
       console.error("로그인 프로세스 실패:", err);
       error.value = err.message;
