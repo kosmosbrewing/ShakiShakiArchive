@@ -137,6 +137,10 @@ const showNaverPayButton = computed(() => {
   );
 });
 
+const canLoadNaverPaySdk = computed(() => {
+  return authStore.isAdmin || authStore.user?.email === "test@shakishakiarchive.com";
+});
+
 // 간편결제 버튼 표시 조건 (computed로 가독성 향상)
 const showPaymentButtons = computed(() => {
   return (
@@ -602,6 +606,8 @@ const handleContinueShopping = () => {
 
 // 네이버페이 SDK 로드 (설정 + 스크립트만)
 const loadNaverPaySdk = async () => {
+  if (!canLoadNaverPaySdk.value) return;
+
   try {
     await naverPay.loadConfig();
     if (!naverPay.isEnabled.value) return;
@@ -1296,7 +1302,7 @@ onMounted(async () => {
                 </li>
                 <li class="flex gap-2">
                   <span
-                    >정확한 환불 일정은 결제 수단(네이버/카카오)에 따라 상이할
+                    >정확한 환불 일정은 결제 수단 및 카드사 정책에 따라 상이할
                     수 있습니다.</span
                   >
                 </li>

@@ -46,6 +46,20 @@ import { Card, CardContent } from "@/components/ui/card";
 
             <!-- 저작권 및 정책 링크 -->
             <div class="mt-2 border-t border-border/70">
+              <nav
+                class="flex flex-wrap gap-x-3 gap-y-1 text-caption text-muted-foreground pt-4"
+                aria-label="고객지원 링크"
+              >
+                <router-link to="/faq#faq-shipping-fee" class="hover:text-primary transition-colors">
+                  배송 안내
+                </router-link>
+                <router-link to="/faq#faq-return-refund" class="hover:text-primary transition-colors">
+                  교환/반품/환불
+                </router-link>
+                <router-link to="/inquiry" class="hover:text-primary transition-colors">
+                  문의하기
+                </router-link>
+              </nav>
               <p class="text-caption text-muted-foreground pt-4">
                 Copyright @ 샤키샤키 아카이브&ensp;|&ensp;<router-link
                   to="/privacy"

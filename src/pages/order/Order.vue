@@ -1419,10 +1419,10 @@ onMounted(async () => {
 
   loadData();
 
-  // 결제 수단 쿼리 파라미터 처리 (예: ?payment=kakaopay)
+  // 현재 운영 결제 수단만 쿼리 파라미터로 허용
   const paymentParam = route.query.payment as string;
-  if (paymentParam && ["toss", "naverpay", "kakaopay"].includes(paymentParam)) {
-    paymentProvider.value = paymentParam as "toss" | "naverpay" | "kakaopay";
+  if (paymentParam === "kakaopay") {
+    paymentProvider.value = "kakaopay";
   }
 
   // 페이지 이탈 감지 이벤트 등록 (비정상 종료 대응)

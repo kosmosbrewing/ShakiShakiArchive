@@ -361,7 +361,6 @@ onUnmounted(() => {
           <div class="bg-muted/20 rounded-lg p-5">
             <ul class="list-disc pl-6 space-y-2">
               <li>카카오페이</li>
-              <li>네이버페이</li>
             </ul>
           </div>
         </div>

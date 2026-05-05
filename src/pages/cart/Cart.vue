@@ -42,6 +42,10 @@ const showPaymentButtons = computed(() => {
   );
 });
 
+const canLoadNaverPaySdk = computed(() => {
+  return authStore.isAdmin || authStore.user?.email === "test@shakishakiarchive.com";
+});
+
 // [삭제] 인증 체크 로직 제거 (이제 누구나 접근 가능)
 // useAuthGuard();
 
@@ -104,6 +108,8 @@ const isOutOfStock = (item: any) => {
 
 // 네이버페이 SDK 로드 (설정 + 스크립트만)
 const loadNaverPaySdk = async () => {
+  if (!canLoadNaverPaySdk.value) return;
+
   try {
     await naverPay.loadConfig();
     if (!naverPay.isEnabled.value) return;
