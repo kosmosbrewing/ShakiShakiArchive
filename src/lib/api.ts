@@ -1134,16 +1134,16 @@ export async function updateAdminOrderStatus(
 export async function updateAdminOrderItem(
   itemId: number | string,
   status: string,
-  trackingNumber?: string,
-  courierCompany?: string
+  trackingNumber?: string | null,
+  courierCompany?: string | null
 ): Promise<OrderItem> {
   const body: Record<string, string> = { status };
 
-  if (trackingNumber !== undefined) {
+  if (trackingNumber != null) {
     body.trackingNumber = trackingNumber;
   }
 
-  if (courierCompany !== undefined) {
+  if (courierCompany != null) {
     body.courierCompany = courierCompany;
   }
 

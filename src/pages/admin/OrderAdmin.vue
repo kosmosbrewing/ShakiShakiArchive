@@ -608,7 +608,15 @@ const handleAdminCancel = async (data: {
 
 // 주문 아이템 상태 저장
 const handleSaveItemStatus = async (item: any) => {
-  const confirmed = await showConfirm(`상태를 저장하시겠습니까?`, {
+  const hasTrackingNumber = Boolean(String(item.trackingNumber || "").trim());
+  const confirmMessage =
+    item.status === "preparing"
+      ? hasTrackingNumber
+        ? "운송장 번호가 등록되어 있습니다.\n저장하면 상품 상태가 배송중으로 변경됩니다."
+        : "상품을 배송준비중 상태로 저장합니다.\n운송장 번호는 나중에 등록할 수 있습니다."
+      : "상태를 저장하시겠습니까?";
+
+  const confirmed = await showConfirm(confirmMessage, {
     confirmText: "저장",
     cancelText: "취소",
   });
@@ -624,7 +632,11 @@ const handleSaveItemStatus = async (item: any) => {
       item.courierCompany,
     );
 
-    showAlert(ADMIN_MESSAGES.orderStatusSaveSuccess);
+    showAlert(
+      item.status === "preparing" && hasTrackingNumber
+        ? "운송장 번호가 확인되어\n배송중 상태로 저장되었습니다."
+        : ADMIN_MESSAGES.orderStatusSaveSuccess,
+    );
 
     // 원본 데이터 업데이트
     const originalOrder = originalOrders.value.find((o) =>
@@ -635,7 +647,10 @@ const handleSaveItemStatus = async (item: any) => {
         (oi: any) => oi.id === item.id,
       );
       if (originalItem) {
-        originalItem.status = item.status;
+        originalItem.status =
+          item.status === "preparing" && hasTrackingNumber
+            ? "shipped"
+            : item.status;
       }
     }
   } catch (error: any) {
@@ -652,10 +667,19 @@ const handleSaveShipping = async (data: {
 }) => {
   if (!selectedOrderItem.value) return;
 
-  const confirmed = await showConfirm(`배송 정보를 저장하시겠습니까?`, {
+  const willAutoShip =
+    selectedOrderItem.value.status === "preparing" &&
+    Boolean(data.trackingNumber?.trim());
+
+  const confirmed = await showConfirm(
+    willAutoShip
+      ? "운송장 번호가 입력되었습니다.\n저장하면 상품 상태가 배송중으로 변경됩니다."
+      : "배송 정보를 저장합니다.\n운송장 번호는 나중에 다시 수정할 수 있습니다.",
+    {
     confirmText: "저장",
     cancelText: "취소",
-  });
+    },
+  );
   if (!confirmed) return;
 
   savingShipping.value = true;
@@ -678,7 +702,11 @@ const handleSaveShipping = async (data: {
       data.courierCompany,
     );
 
-    showAlert(ADMIN_MESSAGES.shippingInfoSaveSuccess);
+    showAlert(
+      willAutoShip
+        ? "배송 정보가 저장되었고\n상품 상태가 배송중으로 변경되었습니다."
+        : ADMIN_MESSAGES.shippingInfoSaveSuccess,
+    );
     closeShippingModal();
     await loadData();
   } catch (error: any) {
