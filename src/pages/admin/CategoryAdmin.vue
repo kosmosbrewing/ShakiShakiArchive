@@ -1,6 +1,6 @@
 // src/pages/admin/CategoryAdmin.vue
 <script setup lang="ts">
-import { ref, onMounted, reactive } from "vue";
+import { ref, onMounted, reactive, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
@@ -34,6 +34,7 @@ const hasLoadedOnce = ref(false);
 const isModalOpen = ref(false);
 const isEditMode = ref(false);
 const errorMessage = ref("");
+const isSlugManuallyEdited = ref(false);
 
 // 삭제 확인 다이얼로그 상태
 const showDeleteConfirm = ref(false);
@@ -49,6 +50,21 @@ const initialFormState = {
 };
 
 const formData = reactive({ ...initialFormState });
+
+const normalizeSlug = (value: string): string =>
+  (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const shouldKeepSlugManual = (category: any): boolean => {
+  const currentSlug = normalizeSlug(category.slug || "");
+  const generatedSlug = normalizeSlug(category.name || "");
+  return Boolean(currentSlug && generatedSlug && currentSlug !== generatedSlug);
+};
 
 const loadData = async () => {
   try {
@@ -69,6 +85,7 @@ const loadData = async () => {
 
 const openCreateModal = () => {
   isEditMode.value = false;
+  isSlugManuallyEdited.value = false;
   Object.assign(formData, initialFormState);
   errorMessage.value = "";
   isModalOpen.value = true;
@@ -76,10 +93,11 @@ const openCreateModal = () => {
 
 const openEditModal = (category: any) => {
   isEditMode.value = true;
+  isSlugManuallyEdited.value = shouldKeepSlugManual(category);
   Object.assign(formData, {
     ...category,
     categoryId: category.id || category.categoryId || "",
-    slug: category.slug || "",
+    slug: normalizeSlug(category.slug || ""),
   });
   errorMessage.value = "";
   isModalOpen.value = true;
@@ -98,6 +116,25 @@ const handleIdBlur = () => {
   }
 };
 
+const handleSlugInput = (e: Event) => {
+  isSlugManuallyEdited.value = true;
+  const target = e.target as HTMLInputElement;
+  const slug = normalizeSlug(target.value);
+  formData.slug = slug;
+  target.value = slug;
+};
+
+watch(
+  () => formData.name,
+  (name) => {
+    if (!isModalOpen.value || isSlugManuallyEdited.value) return;
+    const generatedSlug = normalizeSlug(name);
+    if (generatedSlug) {
+      formData.slug = generatedSlug;
+    }
+  }
+);
+
 const handleSave = async () => {
   try {
     errorMessage.value = "";
@@ -108,9 +145,7 @@ const handleSave = async () => {
     const payload = {
       id: Number(formData.categoryId),
       name: formData.name,
-      slug: formData.slug
-        ? formData.slug.trim()
-        : formData.categoryId.toString(),
+      slug: normalizeSlug(formData.slug) || formData.categoryId.toString(),
       description: formData.description,
       imageUrl: formData.imageUrl,
     };
@@ -125,7 +160,11 @@ const handleSave = async () => {
     isModalOpen.value = false;
     await loadData();
   } catch (error: any) {
-    errorMessage.value = error.message || ADMIN_MESSAGES.categoryCreateFailed;
+    errorMessage.value =
+      error.message ||
+      (isEditMode.value
+        ? ADMIN_MESSAGES.categoryUpdateFailed
+        : ADMIN_MESSAGES.categoryCreateFailed);
   }
 };
 
@@ -326,6 +365,7 @@ onMounted(async () => {
                 </Label>
                 <Input
                   v-model="formData.slug"
+                  @input="handleSlugInput"
                   type="text"
                   placeholder="outerwear"
                 />
@@ -335,7 +375,7 @@ onMounted(async () => {
                 class="col-span-2 text-caption text-admin-muted mt-1 px-1 leading-relaxed"
               >
                 * ID는 고유 숫자여야 하며, Slug는 미입력 시 ID와 동일하게
-                저장됩니다.
+                저장됩니다. Slug 변경 시 URL도 바뀌며, 직접 접속/검색 반영은 다음 배포 후 완료됩니다.
               </p>
             </div>
 
