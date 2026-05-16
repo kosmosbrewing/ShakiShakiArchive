@@ -117,6 +117,14 @@ const sizeMeasurements = useSizeMeasurements(productData.variants);
 // 탭 관리
 const { activeTab, setTab } = useProductTabs();
 
+const hasVisibleSizeInfo = computed(() => sizeMeasurements.hasSizeData.value);
+
+watch(hasVisibleSizeInfo, (hasSizeInfo) => {
+  if (!hasSizeInfo && activeTab.value === "size") {
+    setTab("description");
+  }
+});
+
 // 갤러리 관리
 const gallery = useImageGallery(productData.galleryImages);
 
@@ -1089,6 +1097,7 @@ onMounted(async () => {
                   />
                 </button>
                 <button
+                  v-if="hasVisibleSizeInfo"
                   @click="setTab('size')"
                   :class="[
                     'flex-1 py-3 text-body font-semibold uppercase tracking-wide relative',
@@ -1117,8 +1126,12 @@ onMounted(async () => {
                   </p>
                 </div>
 
-                <div v-show="activeTab === 'size'" class="animate-fade-in">
-                  <div v-if="sizeMeasurements.hasSizeData.value">
+                <div
+                  v-if="hasVisibleSizeInfo"
+                  v-show="activeTab === 'size'"
+                  class="animate-fade-in"
+                >
+                  <div>
                     <div class="overflow-x-auto">
                       <Table class="table-fixed">
                         <TableHeader>
@@ -1171,12 +1184,6 @@ onMounted(async () => {
                       * 단위: cm / 측정 방법에 따라 오차가 있을 수 있습니다.
                     </p>
                   </div>
-                  <p
-                    v-else
-                    class="py-10 text-center text-muted-foreground text-body"
-                  >
-                    등록된 상세 사이즈 정보가 없습니다.
-                  </p>
                 </div>
               </div>
             </div>
