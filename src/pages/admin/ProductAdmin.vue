@@ -9,7 +9,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  fetchCategories,
+  fetchAdminCategories,
   fetchAdminProductVariants,
   createProductVariant,
   updateProductVariant,
@@ -280,7 +280,7 @@ const loadData = async () => {
     isLoading.value = true;
     const [productsResponse, categoriesData] = await Promise.all([
       fetchAdminProducts(),
-      fetchCategories(),
+      fetchAdminCategories(),
     ]);
 
     // 백엔드에서 totalStock을 포함하여 반환하므로 N+1 variant 호출 불필요

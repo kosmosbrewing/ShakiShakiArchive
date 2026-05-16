@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
 import {
-  fetchCategories,
+  fetchAdminCategories,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -69,7 +69,7 @@ const shouldKeepSlugManual = (category: any): boolean => {
 const loadData = async () => {
   try {
     isLoading.value = true;
-    const data = await fetchCategories();
+    const data = await fetchAdminCategories();
     categories.value = data.sort((a: any, b: any) => {
       const idA = a.id ?? Number.MAX_SAFE_INTEGER;
       const idB = b.id ?? Number.MAX_SAFE_INTEGER;

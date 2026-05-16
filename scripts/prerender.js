@@ -15,6 +15,7 @@ const BACKEND_API = process.env.VITE_API_URL || "http://localhost:8080";
 const SITE_URL = "https://shakishakiarchive.com";
 const DIST_DIR = path.join(__dirname, "../dist");
 const INDEX_PATH = path.join(DIST_DIR, "index.html");
+const POLICY_LASTMOD = "2026-01-27";
 
 /**
  * XSS 방지를 위한 HTML 이스케이프
@@ -225,6 +226,7 @@ function injectFaqBodyHtml(html, seoData) {
 const STATIC_POLICY_PAGES = {
   terms: {
     title: "이용약관",
+    lastmod: POLICY_LASTMOD,
     description:
       "샤키샤키 아카이브의 서비스 이용, 주문, 결제, 배송, 환불 및 청약철회 기준을 안내합니다.",
     body: `
@@ -276,6 +278,7 @@ const STATIC_POLICY_PAGES = {
   },
   privacy: {
     title: "개인정보 처리방침",
+    lastmod: POLICY_LASTMOD,
     description:
       "샤키샤키 아카이브의 개인정보 수집, 이용, 보관, 제3자 제공 및 개인정보 보호책임자 정보를 안내합니다.",
     body: `
@@ -516,6 +519,29 @@ function extractCategories(data) {
   return [];
 }
 
+function toSitemapDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().split("T")[0];
+}
+
+function getProductLastmod(product) {
+  return toSitemapDate(product?.updatedAt || product?.createdAt);
+}
+
+function getLatestProductLastmod(products) {
+  const latestTime = products.reduce((latest, product) => {
+    const value = product?.updatedAt || product?.createdAt;
+    if (!value) return latest;
+    const time = new Date(value).getTime();
+    if (Number.isNaN(time)) return latest;
+    return Math.max(latest, time);
+  }, 0);
+
+  return latestTime > 0 ? toSitemapDate(latestTime) : null;
+}
+
 /**
  * 전체 상품 목록 페이지네이션으로 수집
  * 백엔드 기본 limit=40, 최대 limit=100 → 상품이 41개 이상이면 여러 페이지 순회
@@ -545,7 +571,9 @@ async function fetchAllProducts() {
 /**
  * 3. sitemap.xml 정적 파일 생성
  * - /api/products (id 포함) + /api/categories 데이터 사용
- * - URL 형식: /productDetail/{uuid}, /product/{slug}
+ * - URL 형식: /productDetail/{slug}, /product/{slug}
+ * - Google이 무시하는 priority/changefreq는 제외
+ * - lastmod는 신뢰 가능한 변경일이 있는 URL에만 포함
  */
 async function generateSitemap() {
   console.log("\n🗺️  sitemap.xml 생성 중...");
@@ -561,21 +589,25 @@ async function generateSitemap() {
     // XML 특수문자 이스케이프 (sitemap URL용)
     const escapeXml = (str) => String(str || "").replace(/&/g, "&amp;").replace(/'/g, "&apos;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    // ISO 날짜를 YYYY-MM-DD 형식으로 변환
-    const toDateStr = (iso) => {
-      try { return new Date(iso).toISOString().split("T")[0]; }
-      catch { return new Date().toISOString().split("T")[0]; }
-    };
+    const visibleProducts = products.filter((p) => p.id && p.isAvailable !== false);
+    const allProductsLastmod = getLatestProductLastmod(visibleProducts);
 
-    const today = getTodayDateStr();
+    const productsByCategoryId = visibleProducts.reduce((map, product) => {
+      const categoryId = product.categoryId;
+      if (categoryId === null || categoryId === undefined) return map;
+      const key = String(categoryId);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(product);
+      return map;
+    }, new Map());
 
     // 정적 페이지
     const staticPages = [
-      { loc: `${SITE_URL}/`,        changefreq: "daily",   priority: "1.0", lastmod: today },
-      { loc: `${SITE_URL}/faq`,     changefreq: "monthly", priority: "0.6", lastmod: today },
-      { loc: `${SITE_URL}/terms`,   changefreq: "yearly",  priority: "0.4", lastmod: today },
-      { loc: `${SITE_URL}/privacy`, changefreq: "yearly",  priority: "0.4", lastmod: today },
-      { loc: `${SITE_URL}/product/all`, changefreq: "daily", priority: "0.9", lastmod: today },
+      { loc: `${SITE_URL}/` },
+      { loc: `${SITE_URL}/faq` },
+      { loc: `${SITE_URL}/terms`, lastmod: STATIC_POLICY_PAGES.terms.lastmod },
+      { loc: `${SITE_URL}/privacy`, lastmod: STATIC_POLICY_PAGES.privacy.lastmod },
+      { loc: `${SITE_URL}/product/all`, lastmod: allProductsLastmod },
     ];
 
     // 카테고리 페이지
@@ -583,22 +615,16 @@ async function generateSitemap() {
       .filter((c) => c && c.slug)
       .map((c) => ({
         loc: `${SITE_URL}/product/${c.slug}`,
-        changefreq: "weekly",
-        priority: "0.8",
-        lastmod: today,
+        lastmod: getLatestProductLastmod(productsByCategoryId.get(String(c.id)) || []),
       }));
 
     // 상품 상세 페이지 (slug 기반 — 라우터 /productDetail/:slug 와 일치)
     // slug가 없는 상품은 uuid fallback
-    const productPages = products
-      .filter((p) => p.id && p.isAvailable !== false)
-      .map((p) => ({
-        loc: `${SITE_URL}/productDetail/${p.slug || p.id}`,
-        changefreq: "weekly",
-        priority: "0.9",
-        lastmod: toDateStr(p.updatedAt || p.createdAt),
-        imageUrl: p.imageUrl || "",
-      }));
+    const productPages = visibleProducts.map((p) => ({
+      loc: `${SITE_URL}/productDetail/${p.slug || p.id}`,
+      lastmod: getProductLastmod(p),
+      imageUrl: p.imageUrl || "",
+    }));
 
     const allPages = [...staticPages, ...categoryPages, ...productPages];
 
@@ -608,10 +634,13 @@ async function generateSitemap() {
       '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
       ...allPages.map(
         (p) => {
+          const lastmodTag = p.lastmod
+            ? `\n    <lastmod>${escapeXml(p.lastmod)}</lastmod>`
+            : "";
           const imageTag = p.imageUrl
             ? `\n    <image:image>\n      <image:loc>${escapeXml(p.imageUrl)}</image:loc>\n    </image:image>`
             : "";
-          return `  <url>\n    <loc>${escapeXml(p.loc)}</loc>\n    <lastmod>${escapeXml(p.lastmod)}</lastmod>\n    <changefreq>${escapeXml(p.changefreq)}</changefreq>\n    <priority>${escapeXml(p.priority)}</priority>${imageTag}\n  </url>`;
+          return `  <url>\n    <loc>${escapeXml(p.loc)}</loc>${lastmodTag}${imageTag}\n  </url>`;
         }
       ),
       "</urlset>",
@@ -624,7 +653,7 @@ async function generateSitemap() {
     return { generated: true, failed: [] };
   } catch (error) {
     console.error("   ❌ sitemap.xml 생성 실패:", error.message);
-    return { generated: false, failed: [error.message] };
+    throw error;
   }
 }
 

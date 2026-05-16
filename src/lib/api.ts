@@ -1073,6 +1073,12 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
   });
 }
 
+export async function fetchAdminCategories(): Promise<Category[]> {
+  return apiRequest<Category[]>("/api/admin/categories", {
+    cachePolicy: "noCache",
+  });
+}
+
 export async function updateCategory(
   id: string | number,
   data: Partial<Category>
