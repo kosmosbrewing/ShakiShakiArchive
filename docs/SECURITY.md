@@ -355,28 +355,44 @@ export async function createOrder(userId, items) {
 
 #### 1. Content Security Policy (CSP)
 
-```html
-<!-- public/index.html -->
-<meta http-equiv="Content-Security-Policy"
-      content="
-        default-src 'self';
-        script-src 'self' https://cdn.jsdelivr.net https://js.tosspayments.com;
-        style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-        img-src 'self' data: https://*.amazonaws.com;
-        connect-src 'self' https://api.shakishaki.com https://api.tosspayments.com;
-        font-src 'self' https://cdn.jsdelivr.net;
-        object-src 'none';
-        base-uri 'self';
-        form-action 'self';
-        frame-ancestors 'none';
-        upgrade-insecure-requests;
-      ">
+운영 안정성을 위해 즉시 enforce하지 않고 CloudFront 응답 헤더의
+`Content-Security-Policy-Report-Only`로 먼저 수집한다.
+
+```http
+Content-Security-Policy-Report-Only:
+  default-src 'self';
+  script-src 'self' 'unsafe-inline'
+    https://t1.kakaocdn.net
+    https://t1.daumcdn.net
+    https://www.googletagmanager.com
+    https://js.tosspayments.com
+    https://pay.naver.com
+    https://test-pay.naver.com;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob: https://res.cloudinary.com https:;
+  font-src 'self' data: https:;
+  connect-src 'self'
+    https://shakishakiarchive.com
+    https://www.google-analytics.com
+    https://analytics.google.com;
+  frame-src 'self'
+    https://*.tosspayments.com
+    https://*.kakaopay.com
+    https://*.naver.com;
+  object-src 'none';
+  base-uri 'self';
+  frame-ancestors 'none';
+  upgrade-insecure-requests;
 ```
 
-**효과**:
-- XSS 공격 벡터 80% 차단
-- 인라인 스크립트 실행 차단
-- 외부 도메인 접근 제한
+실제 CloudFront 헤더 값은 줄바꿈 없이 한 줄로 등록한다. API를 별도
+서브도메인으로 운영하는 경우 해당 origin을 `connect-src`에 추가한다.
+
+**적용 순서**:
+- CloudFront Response Headers Policy 또는 콘솔에서 report-only 헤더만 추가
+- 최소 1주간 브라우저 콘솔/수집 로그에서 위반 도메인 확인
+- 결제, 주소 검색, GA4, Cloudinary 이미지, 카카오 공유 회귀 확인
+- 위반 도메인 정리 후 별도 배포에서 enforce 전환 검토
 
 #### 2. Security Headers
 
