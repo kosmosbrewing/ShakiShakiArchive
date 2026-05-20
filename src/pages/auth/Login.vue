@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, nextTick } from "vue";
+import { ref, reactive, computed, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { getNaverLoginUrl, getKakaoLoginUrl } from "@/lib/api";
@@ -48,7 +48,24 @@ const admin2faCode = ref<string>("");
 const admin2faChallengeId = ref<string>("");
 const admin2faExpiresInSeconds = ref<number>(0);
 const admin2faDevCode = ref<string>("");
+const admin2faFallbackAvailable = ref<boolean>(false);
 const isClosingAdmin2FA = ref<boolean>(false);
+
+const admin2faCodeMaxLength = computed(() =>
+  admin2faFallbackAvailable.value ? 6 : 4
+);
+const admin2faCodeReady = computed(() => {
+  const pattern = admin2faFallbackAvailable.value ? /^\d{6}$/ : /^\d{4}$/;
+  return pattern.test(admin2faCode.value);
+});
+const admin2faDescription = computed(() =>
+  admin2faFallbackAvailable.value
+    ? "텔레그램 연결이 지연되고 있어 임시 접속 코드 6자리를 입력해주세요"
+    : "텔레그램으로 받은 4자리 인증번호를 입력해주세요"
+);
+const admin2faPlaceholder = computed(() =>
+  admin2faFallbackAvailable.value ? "임시 접속 코드 6자리" : "인증번호 4자리"
+);
 
 // ------------------------------------------------------------------
 // [Security First] 클라이언트 사이드 검증 함수
@@ -200,6 +217,7 @@ const handleSubmit = async () => {
       requiresAdmin2FA.value = true;
       admin2faChallengeId.value = response.data.challengeId;
       admin2faExpiresInSeconds.value = response.data.expiresInSeconds || 300;
+      admin2faFallbackAvailable.value = !!response.data.admin2faFallbackAvailable;
       admin2faDevCode.value =
         import.meta.env.DEV && response.data.devCode ? response.data.devCode : "";
       admin2faCode.value = "";
@@ -289,6 +307,7 @@ const resetAdmin2FA = () => {
   admin2faChallengeId.value = "";
   admin2faExpiresInSeconds.value = 0;
   admin2faDevCode.value = "";
+  admin2faFallbackAvailable.value = false;
   isClosingAdmin2FA.value = false;
   loginError.value = null;
   invalidInputForm.value = false;
@@ -310,7 +329,9 @@ const closeAdmin2FA = async () => {
 
 const handleAdmin2FACodeInput = (event: Event) => {
   const input = event.target as HTMLInputElement;
-  admin2faCode.value = input.value.replace(/\D/g, "").slice(0, 4);
+  admin2faCode.value = input.value
+    .replace(/\D/g, "")
+    .slice(0, admin2faCodeMaxLength.value);
 };
 
 const handleAdmin2FAVerify = async () => {
@@ -319,9 +340,11 @@ const handleAdmin2FAVerify = async () => {
   invalidInputForm.value = false;
   loginError.value = null;
 
-  if (!admin2faChallengeId.value || !/^\d{4}$/.test(admin2faCode.value)) {
+  if (!admin2faChallengeId.value || !admin2faCodeReady.value) {
     invalidInputForm.value = true;
-    loginError.value = "텔레그램으로 받은 4자리 인증번호를 입력해주세요.";
+    loginError.value = admin2faFallbackAvailable.value
+      ? "임시 접속 코드 6자리를 입력해주세요."
+      : "텔레그램으로 받은 4자리 인증번호를 입력해주세요.";
     return;
   }
 
@@ -749,7 +772,7 @@ const handleKakaoLogin = () => {
                   <div>
                     <CardTitle class="text-heading">관리자 2차 인증</CardTitle>
                     <p class="text-body text-muted-foreground mt-1">
-                      텔레그램으로 받은 4자리 인증번호를 입력해주세요
+                      {{ admin2faDescription }}
                     </p>
                   </div>
                 </div>
@@ -772,10 +795,10 @@ const handleKakaoLogin = () => {
                   type="text"
                   inputmode="numeric"
                   autocomplete="one-time-code"
-                  placeholder="인증번호 4자리"
+                  :placeholder="admin2faPlaceholder"
                   :model-value="admin2faCode"
                   :disabled="isLoading"
-                  maxlength="4"
+                  :maxlength="admin2faCodeMaxLength"
                   class="text-center text-lg tracking-widest"
                   @input="handleAdmin2FACodeInput"
                   @keydown.enter.prevent="handleAdmin2FAVerify"
@@ -783,7 +806,8 @@ const handleKakaoLogin = () => {
 
                 <div class="space-y-1">
                   <p class="text-xs text-muted-foreground">
-                    인증번호는 {{ Math.round(admin2faExpiresInSeconds / 60) }}분 동안 유효합니다.
+                    {{ admin2faFallbackAvailable ? "임시 접속 코드" : "인증번호" }}는
+                    {{ Math.round(admin2faExpiresInSeconds / 60) }}분 동안 유효합니다.
                   </p>
                   <p v-if="admin2faDevCode" class="text-xs text-muted-foreground">
                     개발 인증번호: {{ admin2faDevCode }}
@@ -807,7 +831,7 @@ const handleKakaoLogin = () => {
                   <Button
                     type="submit"
                     class="font-semibold"
-                    :disabled="isLoading || admin2faCode.length !== 4"
+                    :disabled="isLoading || !admin2faCodeReady"
                   >
                     <LoadingSpinner
                       v-if="isLoading"
