@@ -196,7 +196,7 @@ const closePopup = () => {
   />
 
   <!-- 에러 상태: 카드로 표시 -->
-  <section v-else class="max-w-md mx-auto items-center justify-center py-24 sm:py-16">
+  <section v-else class="max-w-md mx-auto items-center justify-center pt-8 pb-12 sm:pt-12 sm:pb-16">
     <Card class="w-11/12 bg-muted/5 dark:bg-card mx-auto">
       <CardContent class="flex flex-col items-center justify-center py-12">
         <XCircle class="w-12 h-12 text-destructive mx-auto mb-4" />

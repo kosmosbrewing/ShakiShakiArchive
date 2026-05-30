@@ -472,15 +472,17 @@ export async function fetchProducts(
   options: {
     category?: string;
     search?: string;
+    soldOut?: boolean;
     page?: number;
     limit?: number;
   } = {}
 ): Promise<PaginatedProductsResponse> {
-  const { category, search, page = 1, limit = 40 } = options;
+  const { category, search, soldOut, page = 1, limit = 40 } = options;
   const params = new URLSearchParams();
 
   if (category) params.append("category", category);
   if (search) params.append("search", search);
+  if (soldOut) params.append("soldOut", "true");
   params.append("page", page.toString());
   params.append("limit", limit.toString());
 
@@ -1424,7 +1426,7 @@ export async function deleteImages(
 }
 
 // ------------------------------------------------------------------
-// [8] 사이트 이미지 (Hero, Marquee) - Public API
+// [8] 사이트 이미지 (Main, Hero, Marquee, Journal) - Public API
 // ------------------------------------------------------------------
 
 // 활성화된 전체 사이트 이미지 조회
@@ -1445,10 +1447,37 @@ export async function fetchHeroImages(): Promise<SiteImage[]> {
   return response.images || [];
 }
 
+// 메인 데스크톱 이미지만 조회
+export async function fetchMainDesktopImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images/main-desktop",
+    { cachePolicy: 'siteImages' }
+  );
+  return response.images || [];
+}
+
+// 메인 모바일 이미지만 조회
+export async function fetchMainMobileImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images/main-mobile",
+    { cachePolicy: 'siteImages' }
+  );
+  return response.images || [];
+}
+
 // Marquee 이미지만 조회
 export async function fetchMarqueeImages(): Promise<SiteImage[]> {
   const response = await apiRequest<{ images: SiteImage[] }>(
     "/api/site-images/marquee",
+    { cachePolicy: 'siteImages' }
+  );
+  return response.images || [];
+}
+
+// Journal 이미지만 조회
+export async function fetchJournalImages(): Promise<SiteImage[]> {
+  const response = await apiRequest<{ images: SiteImage[] }>(
+    "/api/site-images/journal",
     { cachePolicy: 'siteImages' }
   );
   return response.images || [];
@@ -1528,7 +1557,7 @@ export async function reorderSiteImages(
   );
 }
 
-// 사이트 이미지 업로드 (Hero/Marquee용)
+// 사이트 이미지 업로드 (Main/Hero/Marquee/Journal용)
 export async function uploadSiteImage(
   file: File,
   type: SiteImageType

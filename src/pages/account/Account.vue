@@ -177,7 +177,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-2xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 제목 -->
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">마이페이지</h3>
@@ -185,11 +185,11 @@ onMounted(async () => {
     </div>
 
     <!-- 사용자 인사 -->
-    <Card class="mb-6">
-      <CardContent class="py-6">
+    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+      <CardContent class="px-4 py-5 sm:px-5 sm:py-6">
         <div class="flex items-center gap-4">
           <div
-            class="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center"
+            class="w-14 h-14 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center"
           >
             <User class="w-7 h-7 text-primary" />
           </div>
@@ -209,14 +209,17 @@ onMounted(async () => {
     </Card>
 
     <!-- 관리자 메뉴 -->
-    <Card v-if="authStore.user?.isAdmin" class="mb-6">
-      <CardHeader class="pb-2">
+    <Card
+      v-if="authStore.user?.isAdmin"
+      class="mb-6 rounded-[3px] border-primary/10 bg-background/80"
+    >
+      <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading flex items-center gap-2">
           관리자 메뉴
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+      <CardContent class="px-4 pb-4 sm:px-5 sm:pb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
             variant="outline"
             @click="goToCategoryAdmin"
@@ -339,20 +342,20 @@ onMounted(async () => {
     </Card>
 
     <!-- 주문 현황 -->
-    <Card class="mb-6">
-      <CardHeader class="pb-2">
+    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+      <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading flex items-center gap-2">
           주문 현황
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent class="px-4 pb-4 sm:px-5 sm:pb-5">
         <div class="grid grid-cols-4 gap-2">
           <button
             @click="goToOrderList('payment_confirmed')"
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+            class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
             >
               <CheckCircle class="w-5 h-5 text-primary" />
             </div>
@@ -364,10 +367,10 @@ onMounted(async () => {
 
           <button
             @click="goToOrderList('preparing')"
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+            class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
             >
               <Settings class="w-5 h-5 text-primary" />
             </div>
@@ -379,10 +382,10 @@ onMounted(async () => {
 
           <button
             @click="goToOrderList('shipped')"
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+            class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
             >
               <Truck class="w-5 h-5 text-primary" />
             </div>
@@ -394,10 +397,10 @@ onMounted(async () => {
 
           <button
             @click="goToOrderList('delivered')"
-            class="flex flex-col items-center py-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+            class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
             >
               <Package class="w-5 h-5 text-primary" />
             </div>
@@ -411,17 +414,17 @@ onMounted(async () => {
     </Card>
 
     <!-- 메뉴 목록 -->
-    <Card class="mb-6">
-      <CardHeader class="pb-2">
+    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+      <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading">나의 쇼핑</CardTitle>
       </CardHeader>
       <CardContent class="p-0">
-        <div class="divide-y divide-border">
+        <div class="divide-y divide-border/70">
           <button
             v-for="item in menuItems"
             :key="item.label"
             @click="item.action"
-            class="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
+            class="w-full flex items-center justify-between p-4 hover:bg-primary/[0.03] transition-colors text-left"
           >
             <div class="flex items-center gap-4 pl-2">
               <div>

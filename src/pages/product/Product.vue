@@ -2,24 +2,22 @@
 // src/pages/product/Product.vue
 // 상품 목록 페이지 컴포넌트 (무한 스크롤 지원)
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ref, computed, onMounted, onUnmounted, watch, type Directive } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import { Heart, Search, X } from "lucide-vue-next";
+import { Search, X } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useProductStore } from "@/stores/product";
+import { useCategoryStore } from "@/stores/category";
 import { useAlert } from "@/composables/useAlert";
 import { useProductList } from "@/composables/useProduct";
 import {
   ProductCardSkeleton,
+  ProductGridCard,
   EmptyState,
   LoadingSpinner,
 } from "@/components/common";
-import { formatPrice } from "@/lib/formatters";
-import { Separator } from "@/components/ui/separator";
-import { useOptimizedImage } from "@/composables";
 import { Input } from "@/components/ui/input";
 import { useDebounceFn } from "@vueuse/core";
 
@@ -28,8 +26,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 const wishlistStore = useWishlistStore();
 const productStore = useProductStore();
+const categoryStore = useCategoryStore();
 const { showAlert, showConfirm } = useAlert();
-const { getResponsiveAttrs } = useOptimizedImage();
 
 // 스토어에서 홈페이지용 데이터 가져오기
 const {
@@ -39,27 +37,30 @@ const {
   loadingMore: storeLoadingMore,
   hasMore: storeHasMore,
 } = storeToRefs(productStore);
-
-// 상품 카드 반응형 이미지 속성 (srcset 포함)
-const getProductImageAttrs = (url: string) => {
-  return getResponsiveAttrs(url, {
-    widths: [320, 480, 640], // 모바일~태블릿 대응
-    sizes: "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw", // 반응형 그리드
-  });
-};
+const { categoryRoutes } = storeToRefs(categoryStore);
 
 // 카테고리 파라미터가 있는지 확인 (라우트에서 사용될 때)
 const hasCategory = computed(() => !!route.params.category);
+const activeCategory = computed(() => {
+  const categoryParam = Array.isArray(route.params.category)
+    ? route.params.category[0]
+    : route.params.category;
+
+  return categoryParam || "all";
+});
+
+const hideSoldOutProducts = <T extends { totalStock?: number }>(items: T[]): T[] =>
+  items.filter((item) => item.totalStock === undefined || Number(item.totalStock) > 0);
 
 // 화면에 표시할 상품 목록
 // - 홈페이지: 스토어의 remainingProducts (5번 이후, ProductHome과 데이터 공유)
 // - 카테고리 페이지: useProductList의 전체 목록 (무한 스크롤)
 const displayProducts = computed(() => {
   if (hasCategory.value) {
-    return productList.value;
+    return hideSoldOutProducts(productList.value);
   }
   // 홈페이지: 스토어의 remainingProducts 사용 (ProductHome과 동일 데이터 소스)
-  return remainingProducts.value;
+  return hideSoldOutProducts(remainingProducts.value);
 });
 
 // 로딩 상태 (홈페이지: 스토어, 카테고리 페이지: composable)
@@ -107,9 +108,6 @@ const { productIdSet: wishlistSet } = storeToRefs(wishlistStore);
 // 무한 스크롤을 위한 옵저버 타겟 ref
 const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
-
-// 호버 상태 관리 (이미지 전환용)
-const hoveredProductId = ref<string | null>(null);
 
 // 스켈레톤 노출 지연 (150ms)
 const showLoadingSpinner = ref(false);
@@ -167,9 +165,7 @@ watch(loadMoreTrigger, (newEl) => {
 });
 
 // 위시리스트 추가/삭제 토글 (스토어 활용)
-const toggleWishlist = async (event: Event, productId: string) => {
-  event.stopPropagation();
-
+const toggleWishlist = async (productId: string) => {
   if (!authStore.isAuthenticated) {
     const confirmed = await showConfirm(
       "로그인이 필요한 서비스입니다.\n로그인 페이지로 이동하시겠습니까?",
@@ -190,7 +186,7 @@ const toggleWishlist = async (event: Event, productId: string) => {
 };
 
 // slug가 있으면 slug로 이동 (SEO URL), 없으면 id fallback
-const goToDetail = (slug: string | undefined, id: string) => {
+const goToDetail = (slug: string | null | undefined, id: string) => {
   router.push(`/productDetail/${slug || id}`);
 };
 
@@ -229,74 +225,10 @@ watch(isLoadingMore, (newValue) => {
   }
 });
 
-// --- 뷰포트 진입 시 순차 등장 애니메이션 (IntersectionObserver 기반) ---
-let cardObserver: IntersectionObserver | null = null;
-let revealQueue: HTMLElement[] = [];
-let revealBatchTimer: ReturnType<typeof setTimeout> | null = null;
-let initialRenderDone = false; // 초기 로드 완료 플래그
-
-// 같은 시점에 뷰포트에 진입한 카드를 배치로 묶어 순차 등장
-const processRevealBatch = () => {
-  const batch = [...revealQueue];
-  revealQueue = [];
-  revealBatchTimer = null;
-
-  if (!initialRenderDone) {
-    // 초기 렌더: 이미 뷰포트에 있는 카드는 애니메이션 없이 즉시 표시
-    batch.forEach((el) => {
-      el.classList.add('no-animate', 'revealed');
-    });
-    initialRenderDone = true;
-    return;
-  }
-
-  // 스크롤 등장: 순차 애니메이션
-  batch.forEach((el, i) => {
-    setTimeout(() => {
-      el.classList.add('revealed');
-    }, i * 70);
-  });
-};
-
-const getCardObserver = (): IntersectionObserver => {
-  if (!cardObserver) {
-    cardObserver = new IntersectionObserver(
-      (entries) => {
-        let hasNew = false;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            revealQueue.push(entry.target as HTMLElement);
-            cardObserver!.unobserve(entry.target);
-            hasNew = true;
-          }
-        }
-        if (hasNew) {
-          if (revealBatchTimer) clearTimeout(revealBatchTimer);
-          // 같은 프레임에서 여러 카드가 뷰포트 진입 → 30ms 내 배치 처리
-          revealBatchTimer = setTimeout(processRevealBatch, 30);
-        }
-      },
-      { threshold: 0.05, rootMargin: '50px' }
-    );
-  }
-  return cardObserver;
-};
-
-// Vue 3 로컬 디렉티브: 'v' 접두어로 자동 등록 → 템플릿에서 v-reveal 사용
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const vReveal: Directive<HTMLElement> = {
-  mounted(el) {
-    getCardObserver().observe(el);
-  },
-  unmounted(el) {
-    cardObserver?.unobserve(el);
-  },
-};
-
 onMounted(async () => {
   if (hasCategory.value) {
     // 카테고리 페이지: 기존 composable 사용 (무한 스크롤)
-    await loadProducts();
+    await Promise.all([categoryStore.loadCategories(), loadProducts()]);
   } else {
     // 홈페이지: 스토어 사용 (force: true로 최신 재고 반영)
     await productStore.loadHomeProducts(true);
@@ -315,17 +247,6 @@ onMounted(async () => {
 onUnmounted(() => {
   cleanupObserver();
 
-  // reveal 애니메이션 정리
-  if (cardObserver) {
-    cardObserver.disconnect();
-    cardObserver = null;
-  }
-  revealQueue = [];
-  if (revealBatchTimer) {
-    clearTimeout(revealBatchTimer);
-    revealBatchTimer = null;
-  }
-
   // 타이머 정리
   if (loadingDelayTimer) {
     clearTimeout(loadingDelayTimer);
@@ -335,9 +256,30 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="w-11/12 max-w-screen-2xl mx-auto py-4 sm:py-8">
+  <section class="w-[94%] sm:w-11/12 max-w-screen-2xl mx-auto pt-4 pb-12 sm:pt-8 sm:pb-16">
+    <!-- 카테고리 선택 영역 (Shop 진입 화면) -->
+    <nav
+      v-if="hasCategory"
+      class="hidden sm:flex flex-wrap items-center gap-x-7 gap-y-2 mb-3"
+      aria-label="Shop categories"
+    >
+      <RouterLink
+        v-for="{ path, label } in categoryRoutes"
+        :key="label"
+        :to="path"
+        class="inline-flex h-7 items-center border-b-2 px-0.5 text-caption font-semibold tracking-wider transition-colors"
+        :class="
+          activeCategory === path.split('/').pop()
+            ? 'border-primary text-primary'
+            : 'border-transparent text-muted-foreground hover:text-primary'
+        "
+      >
+        {{ label }}
+      </RouterLink>
+    </nav>
+
     <!-- 검색 입력 영역 (카테고리 라우트에서만 활성화) -->
-    <div v-if="hasCategory" class="mb-6 pt-8">
+    <div v-if="false && hasCategory" class="mb-6">
       <div class="relative max-w-md">
         <Search
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
@@ -367,7 +309,7 @@ onUnmounted(() => {
     </div>
 
     <div
-      class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6"
+      class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-8"
     >
       <!-- 로딩 상태: 스켈레톤 카드 표시 (4열 그리드에 맞게 8개) -->
       <ProductCardSkeleton v-if="isLoading" :count="8" />
@@ -388,88 +330,21 @@ onUnmounted(() => {
       />
 
       <!-- 상품 카드 목록 -->
-      <Card
+      <ProductGridCard
         v-else
-        v-for="(
-          { id, slug, imageUrl, images, name, price, totalStock }
-        ) in displayProducts"
+        v-for="({ id, slug, imageUrl, images, name, price }, idx) in displayProducts"
+        :id="id"
         :key="id"
-        v-reveal
-        class="product-card bg-muted/5 flex flex-col h-full group/hoverimg border-none !shadow-none hover:!shadow-md relative mt-3"
-      >
-        <CardHeader class="p-0 gap-0 overflow-hidden rounded-t-lg">
-          <div
-            class="aspect-square cursor-pointer relative"
-            @click="goToDetail(slug, id)"
-            @mouseenter="hoveredProductId = id"
-            @mouseleave="hoveredProductId = null"
-          >
-            <!-- 기본 이미지 -->
-            <img
-              v-bind="getProductImageAttrs(imageUrl)"
-              :alt="name"
-              class="w-full aspect-square object-cover size-full absolute inset-0 transition-opacity duration-300"
-              :class="
-                hoveredProductId === id && images && images.length > 0
-                  ? 'opacity-0'
-                  : 'opacity-100'
-              "
-              draggable="false"
-            />
-            <!-- 호버 이미지 (장식용 → alt="" 적용) -->
-            <img
-              v-if="images && images.length > 0"
-              v-bind="getProductImageAttrs(images[0])"
-              alt=""
-              class="w-full aspect-square object-cover size-full transition-opacity duration-300"
-              :class="hoveredProductId === id ? 'opacity-100' : 'opacity-0'"
-              draggable="false"
-            />
-
-            <!-- SOLD OUT 배지 (재고 소진) -->
-            <div
-              v-if="totalStock !== undefined && Number(totalStock) === 0"
-              class="absolute top-2 right-2 z-10 px-2 py-1 text-caption font-bold bg-primary text-white rounded"
-            >
-              SOLD OUT
-            </div>
-
-            <!-- 위시리스트 버튼 -->
-            <button
-              @click="toggleWishlist($event, id)"
-              class="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-md shadow-light"
-              title="위시리스트 담기"
-            >
-              <Heart
-                class="w-5 h-5 transition-colors duration-200"
-                :class="
-                  wishlistSet.has(id)
-                    ? 'fill-primary text-primary'
-                    : 'text-muted-foreground group-hover:text-primary'
-                "
-              />
-            </button>
-          </div>
-          <Separator></Separator>
-          <!-- 상품명 -->
-          <CardContent
-            class="pb-0 px-4 mt-3 cursor-pointer hover:underline text-center"
-            @click="goToDetail(slug, id)"
-          >
-            <span
-              class="text-caption text-foreground leading-snug line-clamp-2"
-            >
-              {{ name }}
-            </span>
-          </CardContent>
-          <!-- 가격 -->
-          <CardContent class="pb-0 px-4 text-center">
-            <span class="text-caption text-muted-foreground">
-              {{ formatPrice(price) }}</span
-            >
-          </CardContent>
-        </CardHeader>
-      </Card>
+        :slug="slug"
+        :image-url="imageUrl"
+        :images="images"
+        :name="name"
+        :price="price"
+        :is-wishlisted="wishlistSet.has(id)"
+        :animation-delay="`${Math.min(idx % 8, 7) * 0.05}s`"
+        @open="goToDetail"
+        @action="toggleWishlist"
+      />
     </div>
 
     <!-- 무한 스크롤 트리거 및 로딩 인디케이터 -->
@@ -493,32 +368,3 @@ onUnmounted(() => {
     </div>
   </section>
 </template>
-
-<style scoped>
-/* 초기 상태: 숨김 (IntersectionObserver가 .revealed 추가 시 등장) */
-.product-card {
-  opacity: 0;
-  transform: translateY(32px) scale(0.96);
-  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.15s ease;
-}
-
-.product-card.revealed {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-/* 초기 뷰포트 내 카드: 트랜지션 없이 즉시 표시 (hover shadow는 유지) */
-.product-card.no-animate {
-  transition: box-shadow 0.15s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .product-card {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-</style>

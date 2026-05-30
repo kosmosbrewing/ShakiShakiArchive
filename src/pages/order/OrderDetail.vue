@@ -225,7 +225,7 @@ const getPaymentProviderLabel = (provider: string): string => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">주문 상세</h3>
       <Separator></Separator>

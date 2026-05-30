@@ -1,5 +1,5 @@
 /* Critical CSS는 index.html에 inline으로 이동 (LCP 최적화) */
-/* - @font-face (Pretendard)
+/* - @font-face (Nanum Gothic, Pretendard fallback)
  * - :root CSS 변수
  * - body 기본 스타일
  */
@@ -7,6 +7,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .sold-out-chip {
+    @apply rounded-[2px] bg-white/85 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary ring-1 ring-primary/15 backdrop-blur-sm shadow-sm;
+  }
+
+  .sold-out-cta {
+    @apply w-full border border-primary/15 bg-white/85 text-primary font-semibold uppercase tracking-[0.16em] shadow-none disabled:opacity-100;
+  }
+}
 
 /* [참고] 기존에 있던 .text-heading, .text-body 등의 클래스는
   이제 tailwind.config.js의 theme 설정을 통해

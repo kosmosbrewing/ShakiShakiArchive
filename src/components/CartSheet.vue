@@ -175,7 +175,7 @@ const handleTouchEnd = () => {
   <Sheet :open="open" @update:open="emit('update:open', $event)">
     <SheetContent
       side="right"
-      class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-2xl"
+      class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-[3px]"
       @open-auto-focus="(event) => event.preventDefault()"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -224,7 +224,7 @@ const handleTouchEnd = () => {
             <!-- 재고 부족 경고 -->
             <Card
               v-if="hasOutOfStockItems"
-              class="border-primary/50 bg-primary/5 rounded-2xl"
+              class="rounded-[3px] border-primary/15 bg-primary/[0.04]"
             >
               <CardContent class="p-3">
                 <AlertDescription>
@@ -239,15 +239,15 @@ const handleTouchEnd = () => {
               v-for="item in cartItems"
               :key="item.id"
               :class="[
-                'rounded-2xl overflow-hidden',
-                isOutOfStock(item) ? 'border-primary/30 bg-primary/5 ' : '',
+                'rounded-[3px] overflow-hidden border-primary/10 bg-background/80',
+                isOutOfStock(item) ? 'border-primary/15 bg-primary/[0.04]' : '',
               ]"
             >
-              <CardContent class="flex gap-6 p-4 relative">
+              <CardContent class="flex gap-4 p-4 relative">
                 <!-- SOLD OUT 배지 -->
                 <Badge
                   v-if="isOutOfStock(item)"
-                  class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
+                  class="sold-out-chip absolute top-3 left-3 z-10 border-0"
                 >
                   SOLD OUT
                 </Badge>
@@ -324,7 +324,7 @@ const handleTouchEnd = () => {
       <!-- 푸터 (주문 요약) -->
       <SheetFooter
         v-if="!loading && !isEmpty"
-        class="flex-col gap-4 px-6 py-4 bg-muted/100 rounded-2xl"
+        class="flex-col gap-4 rounded-[3px] border border-primary/10 bg-muted/30 px-6 py-4"
       >
         <div class="w-full space-y-2">
           <div class="flex justify-between text-body">

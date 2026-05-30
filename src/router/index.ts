@@ -19,6 +19,7 @@ import { Account, Modify, AddressList } from "@/pages/account";
 
 // Product (상품)
 import { Product, ProductDetail } from "@/pages/product";
+import { Journal, SoldArchive } from "@/pages/archive";
 
 // Order (주문)
 import {
@@ -56,6 +57,8 @@ import {
 } from "@/pages/admin";
 
 // Static (정적 페이지)
+import About from "@/pages/static/About.vue";
+import Notice from "@/pages/static/Notice.vue";
 import PrivacyPolicy from "@/pages/static/PrivacyPolicy.vue";
 import TermsOfService from "@/pages/static/TermsOfService.vue";
 
@@ -104,6 +107,35 @@ const routes = [
     name: "ProductDetail",
     component: ProductDetail,
     meta: { title: "상품 상세" },
+  },
+
+  // Archive
+  { path: "/archive", redirect: "/archive/sold" },
+  {
+    path: "/archive/sold",
+    name: "SoldArchive",
+    component: SoldArchive,
+    meta: { title: "Sold Archive" },
+  },
+  {
+    path: "/archive/journal",
+    name: "Journal",
+    component: Journal,
+    meta: { title: "Journal" },
+  },
+
+  {
+    path: "/about",
+    name: "About",
+    component: About,
+    meta: { title: "About" },
+  },
+
+  {
+    path: "/notice",
+    name: "Notice",
+    component: Notice,
+    meta: { title: "Notice" },
   },
 
   // 장바구니

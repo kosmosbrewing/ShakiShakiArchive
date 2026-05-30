@@ -21,7 +21,30 @@
 
     <!-- Critical CSS Inline: LCP 최적화 (폰트 + CSS 변수 + 기본 스타일) -->
     <style>
-      /* 1. Pretendard 폰트 - 즉시 사용 가능 */
+      /* 1. Nanum Gothic 기본 폰트 - self-hosting */
+      @font-face {
+        font-family: "Nanum Gothic";
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+        src: url("/fonts/NanumGothic-Regular.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Nanum Gothic";
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+        src: url("/fonts/NanumGothic-Bold.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Nanum Gothic";
+        font-weight: 800;
+        font-style: normal;
+        font-display: swap;
+        src: url("/fonts/NanumGothic-ExtraBold.woff2") format("woff2");
+      }
+
+      /* 2. Pretendard 폰트 - fallback으로 사용 가능 */
       @font-face {
         font-family: "Pretendard";
         font-weight: 400;
@@ -39,7 +62,7 @@
         unicode-range: U+AC00-D7A3, U+0020-007E;
       }
 
-      /* 2. CSS 변수 - Tailwind 색상 시스템 */
+      /* 3. CSS 변수 - Tailwind 색상 시스템 */
       :root {
         --background: 0 0% 100%;
         --foreground: 31 34% 28%;
@@ -50,7 +73,7 @@
         --card-foreground: 31 34% 28%;
         --popover: 0 0% 100%;
         --popover-foreground: 31 34% 28%;
-        --primary: 335 56% 63%;
+        --primary: 19 16% 31%;
         --primary-foreground: 0 0% 100%;
         --secondary: 60 4.8% 95.9%;
         --secondary-foreground: 31 34% 28%;
@@ -61,11 +84,11 @@
         --destructive-foreground: 60 9.1% 97.8%;
         --border: 335 10% 90%;
         --input: 20 5.9% 90%;
-        --ring: 336 60% 68%;
+        --ring: 19 16% 31%;
         --radius: 0.5rem;
       }
 
-      /* 3. 기본 스타일 - 즉시 렌더링 */
+      /* 4. 기본 스타일 - 즉시 렌더링 */
       html {
         scroll-behavior: auto;
       }
@@ -73,6 +96,9 @@
         background: hsl(var(--background));
         color: hsl(var(--foreground));
         font-family:
+          "Nanum Gothic",
+          "나눔고딕",
+          "NanumGothic",
           "Pretendard",
           -apple-system,
           BlinkMacSystemFont,
@@ -92,24 +118,15 @@
       rel="preload"
       as="font"
       type="font/woff2"
-      href="/fonts/Pretendard-Regular.subset.woff2"
+      href="/fonts/NanumGothic-Regular.woff2"
       crossorigin
     />
-    <!-- SemiBold는 필요 시 CSS에서 자동 로드 (preload 제거로 초기 로딩 속도 개선) -->
-
-    <!-- Preload: 첫 번째 Hero 이미지 반응형 로드 (LCP 최적화) -->
-    <!-- q_auto:eco + 정밀 breakpoint로 모바일 279KB→~60KB 절감, 메인화면 변경 시 수정 필요 -->
     <link
       rel="preload"
-      as="image"
-      imagesrcset="
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_640,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 640w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_828,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 828w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1024,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1024w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1280,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1280w,
-        https://res.cloudinary.com/diyuvt3qg/image/upload/f_auto,q_auto:eco,w_1920,c_fill/v1771835971/shakishaki/products/v2imq2hwa6yb8yek3067.jpg 1920w"
-      imagesizes="(max-width: 640px) 91.67vw, (max-width: 1024px) 80vw, 600px"
-      fetchpriority="high"
+      as="font"
+      type="font/woff2"
+      href="/fonts/NanumGothic-Bold.woff2"
+      crossorigin
     />
 
     <!-- 기본 제목 -->

@@ -249,7 +249,7 @@ watch(
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 제목 -->
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">장바구니</h3>
@@ -274,7 +274,7 @@ watch(
         <!-- 재고 부족 경고 -->
         <Card
           v-if="hasOutOfStockItems"
-          class="border-primary/50 bg-primary/5 rounded-2xl"
+          class="rounded-[3px] border-primary/15 bg-primary/[0.04]"
         >
           <CardContent class="p-3">
             <AlertDescription>
@@ -288,8 +288,8 @@ watch(
         </Card>
 
         <!-- 장바구니 상품 -->
-        <Card>
-          <CardHeader>
+        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading"
               >상품 목록
               {{
@@ -301,13 +301,13 @@ watch(
             <div
               v-for="item in cartItems"
               :key="item.id"
-              class="pl-6 pr-6 pb-6 pt-1 flex flex-col sm:flex-row gap-6 relative"
-              :class="[isOutOfStock(item) ? 'bg-primary/5' : '']"
+              class="px-4 pb-5 pt-0 sm:px-5 flex flex-col sm:flex-row gap-4 sm:gap-5 relative"
+              :class="[isOutOfStock(item) ? 'bg-primary/[0.04]' : '']"
             >
               <!-- SOLD OUT 배지 -->
               <Badge
                 v-if="isOutOfStock(item)"
-                class="absolute top-3 left-3 z-10 bg-primary text-primary-foreground"
+                class="sold-out-chip absolute top-3 left-3 z-10 border-0"
               >
                 SOLD OUT
               </Badge>
@@ -377,11 +377,11 @@ watch(
 
       <div class="lg:col-span-1 space-y-4 sticky top-24">
         <!-- 주문 요약 Card -->
-        <Card>
-          <CardHeader>
+        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">주문 요약</CardTitle>
           </CardHeader>
-          <CardContent class="space-y-4">
+          <CardContent class="space-y-4 px-4 pb-4 sm:px-5 sm:pb-5">
             <div class="flex justify-between text-body">
               <span class="text-muted-foreground">상품 금액</span>
               <span class="text-foreground">{{
@@ -407,12 +407,12 @@ watch(
         <!-- 주문하기 Card (SDK 로드 완료 후 표시) -->
         <Card
           v-if="!hasOutOfStockItems && showPaymentButtons"
-          class="animate-fade-in"
+          class="animate-fade-in rounded-[3px] border-primary/10 bg-background/80"
         >
-          <CardHeader>
+          <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">바로 구매</CardTitle>
           </CardHeader>
-          <CardContent class="flex flex-col gap-2 pt-2">
+          <CardContent class="flex flex-col gap-2 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
             <!-- 네이버페이 SDK 버튼 (관리자 + 검수 테스트 계정) -->
             <div
               v-if="naverPay.isEnabled.value && (authStore.isAdmin || authStore.user?.email === 'test@shakishakiarchive.com')"

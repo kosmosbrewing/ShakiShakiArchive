@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { Alert } from "@/components/ui/alert";
 import { useAlert } from "@/composables/useAlert";
 
-// 커서 이미지 import - WebP 최적화 (16종 신규 커서)
+// 커서 이미지 import - WebP 최적화 (23종 신규 커서)
 import cursor01 from "@/assets/optimized/cursor/cursor01.webp";
 import cursor02 from "@/assets/optimized/cursor/cursor02.webp";
 import cursor03 from "@/assets/optimized/cursor/cursor03.webp";
@@ -23,6 +23,13 @@ import cursor13 from "@/assets/optimized/cursor/cursor13.webp";
 import cursor14 from "@/assets/optimized/cursor/cursor14.webp";
 import cursor15 from "@/assets/optimized/cursor/cursor15.webp";
 import cursor16 from "@/assets/optimized/cursor/cursor16.webp";
+import cursor17 from "@/assets/optimized/cursor/cursor17.webp";
+import cursor18 from "@/assets/optimized/cursor/cursor18.webp";
+import cursor19 from "@/assets/optimized/cursor/cursor19.webp";
+import cursor20 from "@/assets/optimized/cursor/cursor20.webp";
+import cursor21 from "@/assets/optimized/cursor/cursor21.webp";
+import cursor22 from "@/assets/optimized/cursor/cursor22.webp";
+import cursor23 from "@/assets/optimized/cursor/cursor23.webp";
 
 const cursorImages = [
   cursor01,
@@ -41,6 +48,13 @@ const cursorImages = [
   cursor14,
   cursor15,
   cursor16,
+  cursor17,
+  cursor18,
+  cursor19,
+  cursor20,
+  cursor21,
+  cursor22,
+  cursor23,
 ];
 
 const authStore = useAuthStore();

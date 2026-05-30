@@ -792,7 +792,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-7xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 에러 상태: 로딩 완료 후 상품 데이터가 없는 경우 (Rate-limit 등) -->
     <div
       v-if="
@@ -980,7 +980,8 @@ onMounted(async () => {
               <Button
                 v-else-if="isOutOfStock"
                 disabled
-                class="w-full font-bold"
+                variant="outline"
+                class="sold-out-cta"
                 size="lg"
               >
                 SOLD OUT
@@ -1229,94 +1230,63 @@ onMounted(async () => {
       </div>
 
       <!-- 배송 및 교환/환불 안내 -->
-      <div class="order-4 lg:order-2 pt-4">
-        <Card>
-          <CardContent class="p-5 space-y-4">
-            <!-- 배송 안내 -->
-            <div class="space-y-2">
-              <h3 class="text-body font-semibold text-foreground">배송 안내</h3>
-              <ul class="space-y-1.5 text-caption text-muted-foreground">
-                <li class="flex gap-2">
-                  <span
-                    >결제 완료 후
-                    <strong class="text-foreground">최대 7일 이내</strong>
-                    택배로 배송됩니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >제주 및 도서산간 지역은 별도의 추가 배송비가 발생할 수
-                    있으며, 배송일이 1~2일 더 소요될 수 있습니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >배송 조회는 마이페이지 > 주문내역에서 확인
-                    가능합니다.</span
-                  >
-                </li>
-              </ul>
-            </div>
+      <div class="order-4 lg:order-2 pt-0">
+        <section
+          aria-labelledby="product-notice-title"
+          class="pt-1 sm:pt-2"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <h3
+              id="product-notice-title"
+              class="text-caption font-semibold uppercase tracking-[0.18em] text-primary"
+            >
+              ✦ notice
+            </h3>
+            <RouterLink
+              to="/notice"
+              class="hidden sm:inline-flex h-7 items-center border-b border-primary/30 text-caption font-semibold tracking-wider text-primary transition-colors hover:border-primary hover:text-primary/80"
+            >
+              notice page
+            </RouterLink>
+          </div>
 
-            <Separator />
+          <div
+            class="mt-4 max-w-3xl space-y-4 text-caption leading-relaxed text-muted-foreground"
+          >
+            <p class="space-y-1">
+              <span class="block">
+                모든 세트는 한 점씩만 준비되는 빈티지 상품입니다.
+              </span>
+              <span class="block">
+                동일한 상품으로 교환은 어렵지만, 상품 수령 후 7일 이내 반품 접수가 가능합니다.
+              </span>
+              <span class="block">
+                단순 변심 반품 배송비는 고객님 부담입니다.
+              </span>
+            </p>
+            <p class="space-y-1">
+              <span class="block">
+                상세페이지에 고지된 빈티지 특성, 미세 사용감, 원단 결,
+              </span>
+              <span class="block">
+                작은 보풀이나 이염은 불량 사유에 해당하지 않습니다.
+              </span>
+            </p>
+          </div>
 
-            <!-- 교환/환불 안내 -->
-            <div class="space-y-2">
-              <h3 class="text-body font-semibold text-foreground">
-                환불 및 반품 안내
-              </h3>
-              <ul class="space-y-1.5 text-caption text-muted-foreground">
-                <li class="flex gap-2">
-                  <span
-                    >반품 신청 후, 고객님께서 직접 원하시는 택배사를 이용해
-                    상품이 발송된 주소로 상품을 보내주셔야 합니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >상품 수령 후
-                    <strong class="text-foreground">7일 이내</strong>
-                    신청 및
-                    <strong class="text-foreground">14일 이내</strong>
-                    상품 도착 시 환불이 가능합니다.</span
-                  >
-                </li>
-
-                <li class="flex gap-2">
-                  <span
-                    >고객 단순 변심 시
-                    <strong class="text-foreground">선불로 직접 발송</strong
-                    >하시거나, 결제 대금에서
-                    <strong class="text-foreground">왕복 배송비가 차감</strong>
-                    된 후 환불됩니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >상품 불량/오배송 시 반품 배송비는 전액 무료입니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >상품이 훼손된 경우 환불이 불가능합니다. (라벨제거/세탁/착용
-                    등)</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >환불은 결제 수단에 따라 즉시~3영업일 이내 완료됩니다.</span
-                  >
-                </li>
-                <li class="flex gap-2">
-                  <span
-                    >정확한 환불 일정은 결제 수단 및 카드사 정책에 따라 상이할
-                    수 있습니다.</span
-                  >
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+          <p
+            class="mt-4 space-y-1 text-caption leading-relaxed text-muted-foreground sm:hidden"
+          >
+            <span class="block">자세한 배송/교환/반품 안내는</span>
+            <RouterLink
+              to="/notice"
+              class="font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
+            >
+              notice 페이지
+            </RouterLink>
+            <span>를 확인해주세요.</span>
+          </p>
+        </section>
       </div>
     </div>
 

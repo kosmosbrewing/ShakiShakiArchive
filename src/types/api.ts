@@ -623,11 +623,16 @@ export interface ImagesDeleteResponse {
 }
 
 // ------------------------------------------------------------------
-// 사이트 이미지 관련 타입 (Hero, Marquee)
+// 사이트 이미지 관련 타입 (Main, Hero, Marquee, Journal)
 // ------------------------------------------------------------------
 
 // 사이트 이미지 타입
-export type SiteImageType = "hero" | "marquee";
+export type SiteImageType =
+  | "main_desktop"
+  | "main_mobile"
+  | "hero"
+  | "marquee"
+  | "journal";
 
 // 사이트 이미지 정보
 export interface SiteImage {

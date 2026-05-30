@@ -1484,7 +1484,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <div class="mb-6">
       <h3 class="text-heading text-primary tracking-wider">주문 하기</h3>
       <p class="text-body text-muted-foreground pt-1 mb-3">
@@ -1497,25 +1497,25 @@ onUnmounted(() => {
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-8">
-        <Card>
-          <CardHeader>
+        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">배송지 정보</CardTitle>
             <p class="text-caption text-muted-foreground mt-1">
               택배 배송 ( 제주·도서산간 추가 운임 발생 )
             </p>
           </CardHeader>
-          <CardContent class="space-y-6">
-            <div class="flex flex-wrap gap-2 p-1 bg-muted/50 rounded-lg">
+          <CardContent class="space-y-6 px-4 pb-4 sm:px-5 sm:pb-5">
+            <div class="flex flex-wrap gap-2 rounded-[3px] bg-muted/30 p-1">
               <button
                 v-for="mode in ['saved', 'member', 'new']"
                 :key="mode"
                 @click="deliveryMode = mode as any"
                 :disabled="mode === 'saved' && addresses.length === 0"
                 :class="[
-                  'flex-1 py-2 text-body font-medium rounded-md transition-all',
+                  'flex-1 rounded-[2px] py-2 text-body font-medium transition-all',
                   deliveryMode === mode
-                    ? 'bg-background shadow text-foreground'
-                    : 'text-muted-foreground hover:underline disabled:opacity-50',
+                    ? 'bg-background text-foreground ring-1 ring-primary/10'
+                    : 'text-muted-foreground hover:text-primary disabled:opacity-50',
                 ]"
               >
                 {{
@@ -1553,8 +1553,8 @@ onUnmounted(() => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading"
               >주문 상품
               {{
@@ -1566,7 +1566,7 @@ onUnmounted(() => {
             <div
               v-for="item in orderItems"
               :key="item.id"
-              class="pl-6 pr-6 pb-6 pt-1 flex flex-col sm:flex-row gap-6"
+              class="px-4 pb-5 pt-0 sm:px-5 flex flex-col sm:flex-row gap-4 sm:gap-5"
             >
               <ProductThumbnail
                 :image-url="item.product.imageUrl"
@@ -1596,11 +1596,11 @@ onUnmounted(() => {
 
       <div class="lg:col-span-1">
         <div class="sticky top-24 space-y-6">
-          <Card>
-            <CardHeader>
+          <Card class="rounded-[3px] border-primary/10 bg-background/80">
+            <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
               <CardTitle class="text-heading">최종 결제 금액</CardTitle>
             </CardHeader>
-            <CardContent class="space-y-3">
+            <CardContent class="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
               <div class="flex justify-between text-body">
                 <span class="text-muted-foreground">총 상품 금액</span>
                 <span>{{ formatPrice(orderSubtotal) }}</span>
@@ -1641,21 +1641,21 @@ onUnmounted(() => {
             택배로 안전하게 배송됩니다.
           </p>
 
-          <Card>
-            <CardHeader>
+          <Card class="rounded-[3px] border-primary/10 bg-background/80">
+            <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
               <CardTitle class="text-heading">결제 수단</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent class="px-4 pb-4 sm:px-5 sm:pb-5">
               <button
                 v-for="method in paymentMethods"
                 :key="method.value"
                 type="button"
                 @click="paymentProvider = method.value as any"
                 :class="[
-                  'w-full flex items-center justify-center gap-2 py-4 rounded-lg border-2 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary',
+                  'w-full flex items-center justify-center gap-2 rounded-[3px] border py-4 transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 hover:border-primary/50',
                   paymentProvider === method.value
-                    ? 'border-primary'
-                    : 'border-border',
+                    ? 'border-primary/60 bg-primary/[0.03]'
+                    : 'border-border/70',
                 ]"
               >
                 <img

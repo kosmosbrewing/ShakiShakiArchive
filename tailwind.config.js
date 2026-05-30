@@ -23,9 +23,9 @@ module.exports = {
       },
     },
     extend: {
-      // [1] 폰트 패밀리 통합 (Pretendard 하나만 사용)
+      // [1] 폰트 패밀리 통합
       fontFamily: {
-        sans: ["Pretendard", ...fontFamily.sans],
+        sans: ["Nanum Gothic", "나눔고딕", "NanumGothic", "Pretendard", ...fontFamily.sans],
       },
 
       // [2] 5단계 폰트 계층 시스템 (Size + LineHeight + Weight)

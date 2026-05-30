@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // src/pages/admin/SiteImageAdmin.vue
-// 사이트 이미지 관리 페이지 (Hero, Marquee)
+// 사이트 이미지 관리 페이지 (Main, Marquee, Journal)
 
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
@@ -48,6 +48,27 @@ const authStore = useAuthStore();
 const siteImageStore = useSiteImageStore();
 const { showAlert, showDestructiveConfirm } = useAlert();
 
+type ImageTab = Exclude<SiteImageType, "hero">;
+type AdminTab = ImageTab | "email";
+
+const IMAGE_TYPE_LABELS: Record<SiteImageType, string> = {
+  main_desktop: "Main Desktop",
+  main_mobile: "Main Mobile",
+  hero: "Main Desktop",
+  marquee: "Marquee",
+  journal: "Journal",
+};
+
+const MAX_IMAGES_BY_TYPE: Record<ImageTab, number> = {
+  main_desktop: 3,
+  main_mobile: 3,
+  marquee: 6,
+  journal: 30,
+};
+
+const isImageTab = (tab: AdminTab): tab is ImageTab => tab !== "email";
+const getImageTypeLabel = (type: SiteImageType) => IMAGE_TYPE_LABELS[type];
+
 // 상태
 const siteImages = ref<SiteImage[]>([]);
 const isLoading = ref(true);
@@ -57,7 +78,7 @@ const isEditModalLoading = ref(false);
 const isUploading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
-const activeTab = ref<"hero" | "marquee" | "email">("hero");
+const activeTab = ref<AdminTab>("main_desktop");
 
 // 이메일 템플릿 미리보기 상태
 const emailTemplates = ref<EmailTemplateInfo[]>([]);
@@ -67,13 +88,15 @@ const isEmailLoading = ref(false);
 const isEmailPreviewOpen = ref(false);
 
 // 타입별 최대 개수 제한
-const MAX_HERO_IMAGES = 3;
-const MAX_MARQUEE_IMAGES = 6;
+const MAX_MAIN_DESKTOP_IMAGES = MAX_IMAGES_BY_TYPE.main_desktop;
+const MAX_MAIN_MOBILE_IMAGES = MAX_IMAGES_BY_TYPE.main_mobile;
+const MAX_MARQUEE_IMAGES = MAX_IMAGES_BY_TYPE.marquee;
+const MAX_JOURNAL_IMAGES = MAX_IMAGES_BY_TYPE.journal;
 
 // 폼 데이터
 const initialForm = {
   id: 0,
-  type: "hero" as SiteImageType,
+  type: "main_desktop" as SiteImageType,
   imageUrl: "",
   linkUrl: "",
   displayOrder: 0,
@@ -82,9 +105,15 @@ const initialForm = {
 const form = ref({ ...initialForm });
 
 // 타입별 이미지 필터링
-const heroImages = computed(() =>
+const mainDesktopImages = computed(() =>
   siteImages.value
-    .filter((img) => img.type === "hero")
+    .filter((img) => img.type === "main_desktop" || img.type === "hero")
+    .sort((a, b) => a.displayOrder - b.displayOrder),
+);
+
+const mainMobileImages = computed(() =>
+  siteImages.value
+    .filter((img) => img.type === "main_mobile")
     .sort((a, b) => a.displayOrder - b.displayOrder),
 );
 
@@ -94,18 +123,29 @@ const marqueeImages = computed(() =>
     .sort((a, b) => a.displayOrder - b.displayOrder),
 );
 
+const journalImages = computed(() =>
+  siteImages.value
+    .filter((img) => img.type === "journal")
+    .sort((a, b) => a.displayOrder - b.displayOrder),
+);
+
 // 현재 탭의 이미지
-const currentImages = computed(() =>
-  activeTab.value === "hero" ? heroImages.value : marqueeImages.value,
+const currentImages = computed(() => {
+  if (activeTab.value === "main_desktop") return mainDesktopImages.value;
+  if (activeTab.value === "main_mobile") return mainMobileImages.value;
+  if (activeTab.value === "marquee") return marqueeImages.value;
+  if (activeTab.value === "journal") return journalImages.value;
+  return [];
+});
+
+const currentImageTypeLabel = computed(() =>
+  isImageTab(activeTab.value) ? getImageTypeLabel(activeTab.value) : "",
 );
 
 // 추가 가능 여부
 const canAddMore = computed(() => {
-  if (activeTab.value === "email") return false;
-  if (activeTab.value === "hero") {
-    return heroImages.value.length < MAX_HERO_IMAGES;
-  }
-  return marqueeImages.value.length < MAX_MARQUEE_IMAGES;
+  if (!isImageTab(activeTab.value)) return false;
+  return currentImages.value.length < MAX_IMAGES_BY_TYPE[activeTab.value];
 });
 
 // 데이터 로드 (showLoading: 초기 로드 시에만 스피너 표시)
@@ -124,9 +164,9 @@ const loadData = async (showLoading = true) => {
 // 모달 열기 (추가)
 const openCreateModal = () => {
   if (!canAddMore.value) {
-    const max =
-      activeTab.value === "hero" ? MAX_HERO_IMAGES : MAX_MARQUEE_IMAGES;
-    const imageType = activeTab.value === "hero" ? "Hero" : "Marquee";
+    if (!isImageTab(activeTab.value)) return;
+    const max = MAX_IMAGES_BY_TYPE[activeTab.value];
+    const imageType = getImageTypeLabel(activeTab.value);
     showAlert(
       ADMIN_MESSAGES.imageTypeLimitExceeded
         .replace("{type}", imageType)
@@ -137,11 +177,10 @@ const openCreateModal = () => {
   }
   isEditMode.value = false;
   isEditModalLoading.value = false;
-  // email 탭에서는 이미지 추가 불가 (canAddMore에서 이미 false 처리됨)
-  const imageType = activeTab.value === "email" ? "hero" : activeTab.value;
+  if (!isImageTab(activeTab.value)) return;
   form.value = {
     ...initialForm,
-    type: imageType as SiteImageType,
+    type: activeTab.value,
     displayOrder: currentImages.value.length,
   };
   errorMessage.value = "";
@@ -308,7 +347,7 @@ const toggleActive = async (image: SiteImage) => {
 
 // 순서 변경 (위로) - 낙관적 업데이트
 const moveUp = async (index: number) => {
-  if (index === 0) return;
+  if (index === 0 || !isImageTab(activeTab.value)) return;
 
   const images = currentImages.value;
   const imageIds = images.map((img) => img.id);
@@ -323,7 +362,7 @@ const moveUp = async (index: number) => {
   images[index].displayOrder = prevOrder;
 
   try {
-    await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
+    await reorderSiteImages({ type: activeTab.value, imageIds });
     siteImageStore.syncFromAdminImages(siteImages.value);
   } catch (e: any) {
     // 실패 시 롤백
@@ -336,7 +375,7 @@ const moveUp = async (index: number) => {
 
 // 순서 변경 (아래로) - 낙관적 업데이트
 const moveDown = async (index: number) => {
-  if (index === currentImages.value.length - 1) return;
+  if (index === currentImages.value.length - 1 || !isImageTab(activeTab.value)) return;
 
   const images = currentImages.value;
   const imageIds = images.map((img) => img.id);
@@ -351,7 +390,7 @@ const moveDown = async (index: number) => {
   images[index + 1].displayOrder = currentOrder;
 
   try {
-    await reorderSiteImages({ type: activeTab.value as SiteImageType, imageIds });
+    await reorderSiteImages({ type: activeTab.value, imageIds });
     siteImageStore.syncFromAdminImages(siteImages.value);
   } catch (e: any) {
     // 실패 시 롤백
@@ -417,7 +456,7 @@ onMounted(async () => {
           사이트 이미지 관리
         </h3>
         <p class="text-body text-admin-muted mt-1 mb-3">
-          Hero 및 Marquee 이미지를 관리합니다.
+          Main, Marquee 및 Journal 이미지를 관리합니다.
         </p>
       </div>
       <Button
@@ -432,18 +471,30 @@ onMounted(async () => {
     <Separator class="mb-6"></Separator>
 
     <!-- 탭 -->
-    <div class="flex gap-2 mb-6">
+    <div class="flex flex-wrap gap-2 mb-6">
       <Button
-        @click="activeTab = 'hero'"
-        :variant="activeTab === 'hero' ? undefined : 'outline'"
+        @click="activeTab = 'main_desktop'"
+        :variant="activeTab === 'main_desktop' ? undefined : 'outline'"
         :class="
-          activeTab === 'hero'
+          activeTab === 'main_desktop'
             ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
             : 'gap-2'
         "
       >
         <ImageIcon class="w-4 h-4" />
-        Hero ({{ heroImages.length }}/{{ MAX_HERO_IMAGES }})
+        Main PC ({{ mainDesktopImages.length }}/{{ MAX_MAIN_DESKTOP_IMAGES }})
+      </Button>
+      <Button
+        @click="activeTab = 'main_mobile'"
+        :variant="activeTab === 'main_mobile' ? undefined : 'outline'"
+        :class="
+          activeTab === 'main_mobile'
+            ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
+            : 'gap-2'
+        "
+      >
+        <ImageIcon class="w-4 h-4" />
+        Main Mobile ({{ mainMobileImages.length }}/{{ MAX_MAIN_MOBILE_IMAGES }})
       </Button>
       <Button
         @click="activeTab = 'marquee'"
@@ -456,6 +507,18 @@ onMounted(async () => {
       >
         <ImageIcon class="w-4 h-4" />
         Marquee ({{ marqueeImages.length }}/{{ MAX_MARQUEE_IMAGES }})
+      </Button>
+      <Button
+        @click="activeTab = 'journal'"
+        :variant="activeTab === 'journal' ? undefined : 'outline'"
+        :class="
+          activeTab === 'journal'
+            ? 'gap-2 bg-primary hover:bg-primary/80 text-white font-semibold'
+            : 'gap-2'
+        "
+      >
+        <ImageIcon class="w-4 h-4" />
+        Journal ({{ journalImages.length }}/{{ MAX_JOURNAL_IMAGES }})
       </Button>
       <Button
         @click="activeTab = 'email'"
@@ -654,9 +717,7 @@ onMounted(async () => {
                   colspan="5"
                   class="px-6 py-16 text-center text-admin-muted text-caption"
                 >
-                  등록된
-                  {{ activeTab === "hero" ? "Hero" : "Marquee" }} 이미지가
-                  없습니다.
+                  등록된 {{ currentImageTypeLabel }} 이미지가 없습니다.
                 </td>
               </tr>
             </tbody>
@@ -707,7 +768,7 @@ onMounted(async () => {
             <div class="space-y-2">
               <Label class="text-admin">타입</Label>
               <div class="px-4 py-2 bg-muted rounded-lg text-body">
-                {{ form.type === "hero" ? "Hero" : "Marquee" }}
+                {{ getImageTypeLabel(form.type) }}
               </div>
             </div>
 

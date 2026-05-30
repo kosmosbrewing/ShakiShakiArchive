@@ -225,7 +225,7 @@ watch(
 <template>
   <section
     id="forgot-password"
-    class="max-w-md mx-auto items-center justify-center py-12 sm:py-16 px-3 sm:px-4"
+    class="max-w-md mx-auto items-center justify-center pt-8 pb-12 sm:pt-12 sm:pb-16 px-3 sm:px-4"
   >
     <div class="mb-6 text-center">
       <h2 class="text-heading text-primary mb-2 tracking-wider">

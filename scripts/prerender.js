@@ -607,7 +607,11 @@ async function generateSitemap() {
       { loc: `${SITE_URL}/faq` },
       { loc: `${SITE_URL}/terms`, lastmod: STATIC_POLICY_PAGES.terms.lastmod },
       { loc: `${SITE_URL}/privacy`, lastmod: STATIC_POLICY_PAGES.privacy.lastmod },
+      { loc: `${SITE_URL}/about` },
+      { loc: `${SITE_URL}/notice` },
       { loc: `${SITE_URL}/product/all`, lastmod: allProductsLastmod },
+      { loc: `${SITE_URL}/archive/sold`, lastmod: allProductsLastmod },
+      { loc: `${SITE_URL}/archive/journal` },
     ];
 
     // 카테고리 페이지

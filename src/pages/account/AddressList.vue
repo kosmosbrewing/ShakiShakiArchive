@@ -170,7 +170,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-3xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 타이틀 -->
     <div class="mb-6">
       <div class="flex items-center justify-between mb-3">

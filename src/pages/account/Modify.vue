@@ -636,7 +636,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
+  <div class="max-w-md mx-auto px-3 sm:px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 제목 -->
     <div class="mb-4 sm:mb-6">
       <h3 class="text-heading text-primary tracking-wider mb-3">

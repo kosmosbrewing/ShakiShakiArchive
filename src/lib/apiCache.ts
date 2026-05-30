@@ -94,7 +94,7 @@ export const cachePolicies = {
   // 상품 상세: 3초 (아주 짧은 캐시로 Rate Limit 방지, 재고/가격 변동 즉시 반영)
   productDetail: { maxAge: 3 * 1000 },
 
-  // 사이트 이미지 (Hero, Marquee): 10분 (Cloudinary 메타데이터)
+  // 사이트 이미지 (Main, Hero, Marquee, Journal): 10분 (Cloudinary 메타데이터)
   siteImages: { maxAge: 10 * 60 * 1000 },
 
   // 공통 상수: 1시간 (거의 변경 안됨)

@@ -2,29 +2,92 @@
 // src/components/Hero.vue
 // 메인 히어로 섹션 컴포넌트
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { ProductHome } from "@/pages/product";
-import { Marquee } from "@selemondev/vue3-marquee";
-import "@selemondev/vue3-marquee/dist/style.css";
 import { useSiteImageStore } from "@/stores/siteImage";
 import { storeToRefs } from "pinia";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useOptimizedImage } from "@/composables";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/common";
 
 // LCP 최적화: 폴백 이미지 제거 (46KB 절약, 텍스트 기준 LCP로 전환)
 
 // 스토어
 const siteImageStore = useSiteImageStore();
-const { heroImages, marqueeImages, isLoading } = storeToRefs(siteImageStore);
+const {
+  mainDesktopImages,
+  mainMobileImages,
+  heroImages,
+  isLoading,
+} = storeToRefs(siteImageStore);
 
 // 이미지 최적화
-const { getHeroAttrs, marquee: optimizeMarquee } = useOptimizedImage();
+const { getHeroAttrs } = useOptimizedImage();
+
+const MAIN_HERO_PRELOAD_ATTR = "data-main-hero-preload";
+
+const removeMainHeroPreload = () => {
+  if (typeof document === "undefined") return;
+
+  document
+    .querySelector<HTMLLinkElement>(`link[${MAIN_HERO_PRELOAD_ATTR}="true"]`)
+    ?.remove();
+};
+
+const applyMainHeroPreload = (
+  url: string | undefined,
+  profile: "mobile" | "desktop",
+) => {
+  if (typeof document === "undefined") return;
+
+  if (!url) {
+    removeMainHeroPreload();
+    return;
+  }
+
+  const attrs = getHeroAttrs(url, true, profile);
+  let link = document.querySelector<HTMLLinkElement>(
+    `link[${MAIN_HERO_PRELOAD_ATTR}="true"]`,
+  );
+
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.setAttribute(MAIN_HERO_PRELOAD_ATTR, "true");
+    document.head.appendChild(link);
+  }
+
+  link.href = attrs.src;
+  link.setAttribute("fetchpriority", "high");
+  link.setAttribute("crossorigin", "anonymous");
+
+  if ("srcset" in attrs && attrs.srcset) {
+    link.setAttribute("imagesrcset", attrs.srcset);
+  } else {
+    link.removeAttribute("imagesrcset");
+  }
+
+  if ("sizes" in attrs && attrs.sizes) {
+    link.setAttribute("imagesizes", attrs.sizes);
+  } else {
+    link.removeAttribute("imagesizes");
+  }
+};
 
 // 슬라이드 상태
 const currentHeroIndex = ref(0);
 const prevHeroIndex = ref(0); // 이전 인덱스 추적
 const slideDirection = ref<"next" | "prev">("next"); // 슬라이드 방향
+const isMobileViewport = ref(
+  typeof window !== "undefined"
+    ? window.matchMedia("(max-width: 767px)").matches
+    : false,
+);
+let viewportMediaQuery: MediaQueryList | null = null;
+let viewportChangeHandler: ((event: MediaQueryListEvent) => void) | null = null;
+
+const currentHeroProfile = computed(() =>
+  isMobileViewport.value ? "mobile" : "desktop",
+);
 
 // 자동 재생 설정
 const AUTO_PLAY_INTERVAL = 20000; // 20초
@@ -93,34 +156,36 @@ const handleTouchEnd = () => {
   touchEndX = 0;
 };
 
-// Hero 이미지 목록 (LCP 최적화: 폴백 제거, 빈 배열 반환)
+const mapSiteImages = (images: typeof heroImages.value) =>
+  images.map((img) => ({
+    url: img.imageUrl,
+    linkUrl: img.linkUrl,
+  }));
+
+// 메인 이미지 목록
+// - 신규 Main Desktop/Mobile 이미지를 우선 사용
+// - 아직 Main PC 등록 전이면 기존 Hero 이미지를 Main PC legacy 데이터로 사용
 const heroImageList = computed(() => {
-  if (heroImages.value.length > 0) {
-    return heroImages.value.map((img) => ({
-      url: img.imageUrl,
-      linkUrl: img.linkUrl,
-    }));
+  if (isMobileViewport.value) {
+    if (mainMobileImages.value.length > 0) {
+      return mapSiteImages(mainMobileImages.value);
+    }
+    if (mainDesktopImages.value.length > 0) {
+      return mapSiteImages(mainDesktopImages.value);
+    }
+    if (heroImages.value.length > 0) return mapSiteImages(heroImages.value);
+  } else {
+    if (mainDesktopImages.value.length > 0) {
+      return mapSiteImages(mainDesktopImages.value);
+    }
+    if (heroImages.value.length > 0) return mapSiteImages(heroImages.value);
+    if (mainMobileImages.value.length > 0) {
+      return mapSiteImages(mainMobileImages.value);
+    }
   }
-  // LCP 최적화: 폴백 이미지 없이 빈 배열 반환 → EmptyState 표시
-  return [];
-});
 
-// Marquee 이미지 URL 배열 (LCP 최적화: 폴백 제거)
-const marqueeImageUrls = computed(() => {
-  if (marqueeImages.value.length > 0) {
-    return marqueeImages.value.map((img) => ({
-      url: img.imageUrl,
-      linkUrl: img.linkUrl,
-    }));
-  }
-  // LCP 최적화: 폴백 이미지 제거, 빈 배열 반환
+  // 이미지가 없으면 메인 영역 자체를 렌더링하지 않는다.
   return [];
-});
-
-// Marquee 효과를 위해 이미지 3배로 반복
-const repeatedMarqueeImages = computed(() => {
-  const images = marqueeImageUrls.value;
-  return [...images, ...images, ...images, ...images, ...images];
 });
 
 // 이미지 클릭 핸들러
@@ -181,6 +246,15 @@ const getSlideClass = (index: number) => {
 
 // 데이터 로드 (스토어의 캐싱 활용)
 onMounted(async () => {
+  if (typeof window !== "undefined") {
+    viewportMediaQuery = window.matchMedia("(max-width: 767px)");
+    isMobileViewport.value = viewportMediaQuery.matches;
+    viewportChangeHandler = (event) => {
+      isMobileViewport.value = event.matches;
+    };
+    viewportMediaQuery.addEventListener("change", viewportChangeHandler);
+  }
+
   try {
     await siteImageStore.loadSiteImages();
   } catch (error) {
@@ -193,6 +267,11 @@ onMounted(async () => {
 watch(
   () => heroImageList.value.length,
   (length) => {
+    if (currentHeroIndex.value >= length) {
+      currentHeroIndex.value = 0;
+      prevHeroIndex.value = 0;
+    }
+
     if (length > 1) {
       startAutoPlay();
     } else {
@@ -202,21 +281,38 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [heroImageList.value[0]?.url, currentHeroProfile.value] as const,
+  ([url, profile]) => {
+    applyMainHeroPreload(url, profile);
+  },
+  { immediate: true },
+);
+
 // 컴포넌트 언마운트 시 타이머 정리
 onUnmounted(() => {
   stopAutoPlay();
+  removeMainHeroPreload();
+  if (viewportMediaQuery && viewportChangeHandler) {
+    viewportMediaQuery.removeEventListener("change", viewportChangeHandler);
+    viewportChangeHandler = null;
+    viewportMediaQuery = null;
+  }
 });
 </script>
 
 <template>
-  <section class="w-11/12 max-w-screen-2xl mx-auto pt-8 sm:pt-16">
-    <div class="grid grid-cols-1 lg:grid-cols-2 mx-auto lg:items-stretch">
-      <!-- Hero 이미지 슬라이더 영역 -->
-      <div class="flex flex-col justify-center mb-5 lg:justify-start lg:pr-8 lg:h-full">
+  <section
+    v-if="isLoading || heroImageList.length > 0"
+    class="w-full max-w-none mx-0 pt-0"
+  >
+    <div class="w-full">
+      <!-- 메인 이미지 슬라이더 영역 -->
+      <div class="flex flex-col justify-center">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
-          <!-- CLS 방지: Hero 이미지 비율(4:5)에 맞춤 -->
-          <Skeleton class="w-full rounded-2xl" style="aspect-ratio: 4 / 5" />
+          <!-- CLS 방지: 모바일/데스크톱 이미지 비율에 맞춤 -->
+          <Skeleton class="w-full rounded-none aspect-[4/5] md:aspect-auto md:h-[clamp(480px,62vh,760px)]" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
             <Skeleton class="w-2.5 h-2.5 rounded-full" />
@@ -225,18 +321,10 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- EmptyState: 이미지 없을 때 (LCP 최적화: 텍스트 기준 LCP) -->
-        <div v-else-if="heroImageList.length === 0" class="w-full">
-          <EmptyState
-            header="이미지 준비 중"
-            message="곧 멋진 컬렉션을 선보이겠습니다"
-          />
-        </div>
-
         <!-- 실제 콘텐츠: 이미지 있을 때 -->
         <div
           v-else
-          class="relative group w-full lg:flex-1 lg:flex lg:flex-col"
+          class="relative group w-full"
           @mouseenter="stopAutoPlay"
           @mouseleave="startAutoPlay"
           @touchstart="handleTouchStart"
@@ -244,12 +332,12 @@ onUnmounted(() => {
           @touchend="handleTouchEnd"
         >
           <!-- 슬라이더 이미지: 컨테이너에 aspect-ratio 적용 → 모든 슬라이드 동일 렌더링 보장 -->
-          <div class="overflow-hidden rounded-2xl shadow-lg relative aspect-[4/5] lg:aspect-auto lg:flex-1">
+          <div class="overflow-hidden rounded-none relative aspect-[4/5] md:aspect-auto md:h-[clamp(480px,62vh,760px)] bg-muted/10">
             <!-- 모든 이미지를 쌓아두고 부드러운 전환 효과 -->
             <img
               v-for="(image, index) in heroImageList"
               :key="index"
-              v-bind="getHeroAttrs(image.url, index === 0)"
+              v-bind="getHeroAttrs(image.url, index === 0, currentHeroProfile)"
               alt="ShakiShaki Archive"
               class="absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out"
               :class="[
@@ -307,41 +395,6 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-
-      <!-- 상품 목록 영역 -->
-      <div class="w-full flex items-start justify-center lg:justify-start">
-        <ProductHome />
-      </div>
-    </div>
-  </section>
-
-  <!-- Marquee 섹션: 이미지가 있을 때만 표시 (LCP 최적화) -->
-  <section
-    v-if="!isLoading && marqueeImageUrls.length > 0"
-    id="marquee"
-    class="max-w-[75%] mx-auto"
-  >
-    <div class="mx-auto mt-10 lg:mt-5">
-      <Marquee
-        class="gap-[2rem]"
-        :pauseOnHover="true"
-        :fade="true"
-        innerClassName="gap-[2rem]"
-      >
-        <img
-          v-for="(img, index) in repeatedMarqueeImages"
-          :key="index"
-          :src="optimizeMarquee(img.url)"
-          alt="marquee Logo"
-          class="min-w-[50px] lg:min-w-[60px] object-contain"
-          :class="{ 'cursor-pointer': img.linkUrl }"
-          loading="lazy"
-          decoding="async"
-          crossorigin="anonymous"
-          draggable="false"
-          @click="handleImageClick(img.linkUrl)"
-        />
-      </Marquee>
     </div>
   </section>
 </template>

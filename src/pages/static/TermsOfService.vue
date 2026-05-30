@@ -17,7 +17,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 헤더 -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold mb-2">이용약관</h1>

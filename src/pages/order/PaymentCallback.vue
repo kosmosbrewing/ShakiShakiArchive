@@ -751,7 +751,7 @@ onUnmounted(() => {
   />
 
   <!-- 결과 표시 (성공/에러) -->
-  <section v-else class="max-w-lg mx-auto px-4 py-24 sm:py-16">
+  <section v-else class="max-w-lg mx-auto px-4 pt-8 pb-12 sm:pt-12 sm:pb-16">
     <Card class="bg-muted/5 dark:bg-card">
       <CardContent class="flex flex-col items-center justify-center py-12 px-6">
         <!-- 성공 상태 -->

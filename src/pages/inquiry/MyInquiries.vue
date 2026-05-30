@@ -117,7 +117,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-12 sm:py-16">
+  <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 헤더 -->
     <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center gap-3">

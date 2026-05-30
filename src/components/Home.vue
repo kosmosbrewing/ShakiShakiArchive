@@ -1,9 +1,7 @@
 <template>
   <Hero />
-  <Product />
 </template>
 
 <script setup lang="ts">
 import Hero from "@/components/Hero.vue";
-import { Product } from "@/pages/product";
 </script>

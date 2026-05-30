@@ -421,8 +421,9 @@ export interface ProductListItem {
 /**
  * 상품 목록 조회 및 관리 (무한 스크롤 지원 - 상태 기반 잠금)
  */
-export function useProductList() {
+export function useProductList(options: { soldOutOnly?: boolean } = {}) {
   const route = useRoute();
+  const soldOutOnly = options.soldOutOnly === true;
 
   const products = ref<ProductListItem[]>([]);
   const loading = ref(true); // 초기 로딩 상태 true로 시작 (첫 렌더링 시 스켈레톤 표시)
@@ -502,6 +503,7 @@ export function useProductList() {
       const response = await fetchProducts({
         category: currentCategory.value,
         search: currentSearch.value || undefined,
+        soldOut: soldOutOnly,
         page: 1,
         limit: pageSize,
       });
@@ -534,6 +536,7 @@ export function useProductList() {
       const response = await fetchProducts({
         category: currentCategory.value,
         search: currentSearch.value || undefined,
+        soldOut: soldOutOnly,
         page: nextPage,
         limit: pageSize,
       });

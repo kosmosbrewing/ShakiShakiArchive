@@ -213,14 +213,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header
-    :class="{
-      'w-11/12 max-w-screen-2xl top-5 mx-auto sticky z-40 shadow-light border-zinc-200 rounded-2xl flex items-center px-4 p-3 lg:p-4 bg-card shadow-md transition-all duration-300': true,
-    }"
-    :style="{
-      backgroundColor: 'rgba(var(--color-card-rgb, 255, 255, 255), 0.3)',
-    }"
-  >
+  <div class="sticky top-0 z-40">
+    <div
+      class="flex h-5 w-full items-center justify-center bg-primary text-primary-foreground text-[10px] sm:text-[11px] tracking-wider"
+    >
+      one-of-one japanese vintage sets
+    </div>
+
+    <header
+      class="nav-header relative w-full mx-0 flex items-center rounded-none border-zinc-200 p-3 px-4 shadow-none transition-all duration-300 lg:bg-card lg:px-10 lg:py-5"
+    >
     <!-- Mobile -->
     <div
       class="relative flex items-center justify-between lg:hidden w-full"
@@ -242,36 +244,88 @@ onUnmounted(() => {
 
           <SheetContent
             side="left"
-            class="flex flex-col rounded-tr-2xl rounded-br-2xl bg-card"
+            class="flex flex-col bg-card"
             @open-auto-focus="(event) => event.preventDefault()"
           >
-            <div class="flex flex-col gap-0.5 mt-12">
-              <RouterLink
-                v-for="route in categoryRoutes"
-                :key="route.label"
-                :to="route.path"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 pl-3"
-                @click="closingByPopState = true; isOpen = false"
-              >
-                {{ route.label }}
-              </RouterLink>
-              <button
-                type="button"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 text-left pl-3"
-                aria-label="Instagram 공식 계정 열기"
-                @click="handleInstagram"
-              >
-                INSTAGRAM
-              </button>
+            <div class="flex flex-col gap-7 mt-14 px-4 text-primary">
+              <nav class="flex flex-col gap-1.5" aria-label="Shop menu">
+                <RouterLink
+                  to="/product/all"
+                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  shop
+                </RouterLink>
+                <RouterLink
+                  v-for="route in categoryRoutes"
+                  :key="route.label"
+                  :to="route.path"
+                  class="text-xl font-normal leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  {{ route.label }}
+                </RouterLink>
+              </nav>
 
-              <button
-                type="button"
-                class="text-body font-medium hover:text-primary transition-colors tracking-wider py-1.5 text-left pl-3"
-                aria-label="FAQ"
-                @click="handleFAQClick"
-              >
-                FAQ
-              </button>
+              <nav class="flex flex-col gap-1.5" aria-label="Archive menu">
+                <RouterLink
+                  to="/archive/sold"
+                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  archive
+                </RouterLink>
+                <RouterLink
+                  to="/archive/sold"
+                  class="text-xl font-normal leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  sold archive
+                </RouterLink>
+                <RouterLink
+                  to="/archive/journal"
+                  class="text-xl font-normal leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  journal
+                </RouterLink>
+              </nav>
+
+              <nav class="flex flex-col gap-2.5" aria-label="Site menu">
+                <RouterLink
+                  to="/about"
+                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  about
+                </RouterLink>
+
+                <RouterLink
+                  to="/notice"
+                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  @click="closingByPopState = true; isOpen = false"
+                >
+                  notice
+                </RouterLink>
+
+                <button
+                  type="button"
+                  class="text-left text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  aria-label="FAQ"
+                  @click="handleFAQClick"
+                >
+                  FAQ
+                </button>
+
+                <button
+                  type="button"
+                  class="text-left text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  aria-label="Instagram 공식 계정 열기"
+                  @click="handleInstagram"
+                >
+                  instagram
+                </button>
+              </nav>
             </div>
             <div class="flex-1"></div>
 
@@ -365,7 +419,7 @@ onUnmounted(() => {
             />
             <span
               v-if="cartItemCount > 0"
-              class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white"
+              class="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white shadow-sm"
               aria-hidden="true"
             >
               {{ cartItemCount }}
@@ -379,19 +433,56 @@ onUnmounted(() => {
     <div
       class="hidden lg:grid grid-cols-[1fr_auto_1fr] items-center w-full gap-4"
     >
-      <div class="flex justify-start items-center flex-wrap gap-1">
+      <div class="flex justify-start items-center">
         <Button
-          v-for="{ path, label } in categoryRoutes"
-          :key="label"
           as-child
           variant="ghost"
-          class="h-9 pl-1 px-2.5 text-caption font-medium hover:bg-transparent tracking-wider"
+          class="h-9 px-2.5 text-body font-bold hover:bg-transparent tracking-wider"
         >
           <RouterLink
-            :to="path"
+            to="/product/all"
             class="hover:text-primary transition-colors tracking-wider py-3"
           >
-            <span class="text-caption">{{ label }}</span>
+            shop
+          </RouterLink>
+        </Button>
+
+        <Button
+          as-child
+          variant="ghost"
+          class="h-9 px-2.5 text-body font-bold hover:bg-transparent tracking-wider"
+        >
+          <RouterLink
+            to="/archive/sold"
+            class="hover:text-primary transition-colors tracking-wider py-3"
+          >
+            archive
+          </RouterLink>
+        </Button>
+
+        <Button
+          as-child
+          variant="ghost"
+          class="h-9 px-2.5 text-body font-bold hover:bg-transparent tracking-wider"
+        >
+          <RouterLink
+            to="/about"
+            class="hover:text-primary transition-colors tracking-wider py-3"
+          >
+            about
+          </RouterLink>
+        </Button>
+
+        <Button
+          as-child
+          variant="ghost"
+          class="h-9 px-2.5 text-body font-bold hover:bg-transparent tracking-wider"
+        >
+          <RouterLink
+            to="/notice"
+            class="hover:text-primary transition-colors tracking-wider py-3"
+          >
+            notice
           </RouterLink>
         </Button>
       </div>
@@ -476,7 +567,7 @@ onUnmounted(() => {
             />
             <span
               v-if="cartItemCount > 0"
-              class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
+              class="absolute -top-1.5 -right-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white shadow-sm"
               aria-hidden="true"
             >
               {{ cartItemCount }}
@@ -523,14 +614,51 @@ onUnmounted(() => {
         </template>
       </div>
     </div>
-  </header>
+    </header>
+  </div>
 
   <!-- 장바구니 Sheet -->
   <CartSheet v-model:open="cartSheetOpen" />
 </template>
 
 <style scoped>
+.nav-header {
+  background-color: transparent;
+}
+
+@media (min-width: 1024px) {
+  .nav-header {
+    background-color: hsl(var(--card));
+  }
+
+  .nav-header::before,
+  .nav-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  .nav-header::before {
+    bottom: 2px;
+    background-color: hsl(var(--primary) / 0.42);
+  }
+
+  .nav-header::after {
+    bottom: 0;
+    background-color: hsl(var(--primary) / 0.42);
+  }
+}
+
 .shadow-light {
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.085);
+}
+
+@media (min-width: 1024px) {
+  .shadow-light {
+    box-shadow: none;
+  }
 }
 </style>

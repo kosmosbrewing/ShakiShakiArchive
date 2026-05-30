@@ -209,9 +209,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
+  <main class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 타이틀 -->
-    <div class="text-center mb-8">
+    <div class="text-center mb-3">
       <h2 class="text-heading text-primary mb-2 tracking-wider">문의하기</h2>
       <h3 class="text-heading">
         {{ activeTab === 'faq' ? '자주 묻는 질문' : '전체 문의' }}
