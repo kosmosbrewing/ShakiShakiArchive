@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Lock, MessageCircle, PenLine, ArrowLeft } from "lucide-vue-next";
+import { Lock, PenLine, ArrowLeft } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -117,9 +117,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
+  <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16 lg:min-h-[calc(100vh-9rem)] lg:pb-20">
     <!-- 헤더 -->
-    <div class="mb-2 flex items-center justify-between">
+    <div class="mb-2 flex items-center">
       <div class="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -133,21 +133,11 @@ onMounted(() => {
           내 문의 내역
         </h3>
       </div>
-      <Button
-        variant="default"
-        size="sm"
-        @click="goToCreate"
-        class="gap-1.5 shadow-sm hover:shadow"
-      >
-        <PenLine class="w-4 h-4" />
-        <span class="hidden sm:inline">문의하기</span>
-        <span class="sm:hidden">작성</span>
-      </Button>
     </div>
     <Separator></Separator>
 
     <!-- 필터 -->
-    <div class="mt-6 mb-6 flex items-center justify-between gap-4">
+    <div class="mt-6 mb-3 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <Select v-model="selectedStatus">
           <SelectTrigger class="w-[160px] sm:w-[180px] border-border/60">
@@ -162,10 +152,21 @@ onMounted(() => {
         <span class="text-caption text-muted-foreground hidden sm:inline">
           총 {{ filteredInquiries.length }}건
         </span>
+        <span class="text-caption text-muted-foreground sm:hidden">
+          {{ filteredInquiries.length }}건
+        </span>
       </div>
-      <span class="text-caption text-muted-foreground sm:hidden">
-        {{ filteredInquiries.length }}건
-      </span>
+      <Button
+        v-if="!loading && filteredInquiries.length > 0"
+        variant="default"
+        size="sm"
+        @click="goToCreate"
+        class="gap-1.5 shadow-sm hover:shadow"
+      >
+        <PenLine class="w-4 h-4" />
+        <span class="hidden sm:inline">문의하기</span>
+        <span class="sm:hidden">작성</span>
+      </Button>
     </div>
 
     <LoadingSpinner v-if="loading" />
@@ -183,40 +184,86 @@ onMounted(() => {
     />
 
     <!-- 문의 목록 -->
-    <div
-      v-else
-      class="bg-background border border-border rounded-xl overflow-hidden shadow-sm"
-    >
-      <Table>
+    <template v-else>
+      <div
+        class="md:hidden border-y border-primary/10 bg-background/80 rounded-none overflow-hidden shadow-none"
+      >
+        <button
+          v-for="inquiry in filteredInquiries"
+          :key="inquiry.id"
+          type="button"
+          class="block w-full border-b border-primary/10 px-3 py-3 text-left transition-colors duration-200 last:border-0 hover:bg-primary/[0.03]"
+          @click="goToDetail(inquiry)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <Lock
+                  v-if="inquiry.isPrivate"
+                  class="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                />
+                <span
+                  class="truncate text-[13px] font-medium leading-[1.25] text-foreground"
+                >
+                  <template
+                    v-if="
+                      inquiry.isPrivate &&
+                      authStore.user?.id !== inquiry.userId &&
+                      !authStore.user?.isAdmin
+                    "
+                  >
+                    비밀글입니다.
+                  </template>
+                  <template v-else>
+                    {{ inquiry.title }}
+                  </template>
+                </span>
+              </div>
+              <div class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption leading-[1.2] text-muted-foreground/80">
+                <span>{{ typeLabels[inquiry.type] }}</span>
+                <span>·</span>
+                <span>{{ maskUserName(inquiry.user?.userName) }}</span>
+                <span>·</span>
+                <span>{{ formatDate(inquiry.createdAt) }}</span>
+              </div>
+              <p
+                v-if="inquiry.product"
+                class="mt-0.5 truncate text-caption leading-[1.2] text-muted-foreground/80"
+              >
+                상품: {{ inquiry.product.name }}
+              </p>
+            </div>
+            <Badge
+              :variant="statusVariants[inquiry.status]"
+              class="shrink-0 text-[11px] font-semibold"
+            >
+              {{ statusLabelsShort[inquiry.status] }}
+            </Badge>
+          </div>
+        </button>
+      </div>
+
+      <div
+        class="inquiry-table hidden md:block border-y border-primary/10 bg-background/80 rounded-none overflow-hidden shadow-none"
+      >
+        <Table>
         <TableHeader>
           <TableRow
-            class="bg-muted/30 hover:bg-muted/30 border-b border-border"
-          >
-            <!-- 번호 (항상 표시) -->
-            <TableHead
-              class="w-[60px] sm:w-[80px] text-center font-semibold text-foreground"
+            class="bg-transparent hover:bg-transparent border-b border-primary/10"
             >
-              <span class="hidden sm:inline">번호</span>
-              <span class="sm:hidden">#</span>
-            </TableHead>
+            <TableHead class="font-semibold text-foreground/70">제목</TableHead>
             <TableHead
-              class="hidden sm:table-cell w-[100px] md:w-[120px] font-semibold text-foreground"
-            >
-              유형
-            </TableHead>
-            <TableHead class="font-semibold text-foreground">제목</TableHead>
-            <TableHead
-              class="hidden md:table-cell w-[100px] text-center font-semibold text-foreground"
-            >
-              작성자
-            </TableHead>
-            <TableHead
-              class="hidden lg:table-cell w-[140px] text-center font-semibold text-foreground"
+              class="w-[128px] text-center font-semibold text-foreground/70"
             >
               작성일
             </TableHead>
             <TableHead
-              class="w-[100px] sm:w-[110px] text-center font-semibold text-foreground"
+              class="hidden lg:table-cell w-[112px] text-center font-semibold text-foreground/70"
+            >
+              작성자
+            </TableHead>
+            <TableHead
+              class="w-[112px] text-center font-semibold text-foreground/70"
             >
               상태
             </TableHead>
@@ -224,113 +271,66 @@ onMounted(() => {
         </TableHeader>
         <TableBody>
           <TableRow
-            v-for="(inquiry, index) in filteredInquiries"
+            v-for="inquiry in filteredInquiries"
             :key="inquiry.id"
-            class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
+            class="cursor-pointer border-b border-primary/10 transition-colors duration-200 last:border-0 hover:bg-primary/[0.03]"
             @click="goToDetail(inquiry)"
           >
-            <!-- 번호 (항상 표시) -->
-            <TableCell class="text-center">
-              <span
-                class="text-caption sm:text-body font-semibold text-primary"
-              >
-                {{ index + 1 }}
-              </span>
-            </TableCell>
-
-            <!-- 유형 (sm 이상) -->
-            <TableCell class="hidden sm:table-cell">
-              <Badge variant="outline" class="text-xs">
-                {{ typeLabels[inquiry.type] }}
-              </Badge>
-            </TableCell>
-
             <!-- 제목 (항상 표시) -->
             <TableCell>
-              <div class="flex flex-col gap-1 py-1">
-                <!-- 모바일: 유형 뱃지 -->
-                <div class="sm:hidden flex items-center gap-1.5 mb-1">
-                  <Badge variant="outline" class="text-xs">
-                    {{ typeLabels[inquiry.type] }}
-                  </Badge>
-                </div>
-
-                <!-- 제목 -->
-                <div class="flex items-center gap-2">
-                  <Lock
-                    v-if="inquiry.isPrivate"
-                    class="w-3.5 h-3.5 text-muted-foreground shrink-0"
-                  />
-                  <span
-                    class="font-medium text-foreground truncate text-caption sm:text-body"
-                  >
-                    <template
-                      v-if="
-                        inquiry.isPrivate &&
-                        authStore.user?.id !== inquiry.userId &&
-                        !authStore.user?.isAdmin
-                      "
-                    >
-                      비밀글입니다.
-                    </template>
-                    <template v-else>
-                      {{ inquiry.title }}
-                    </template>
-                  </span>
-                  <div
-                    v-if="inquiry.replyCount && inquiry.replyCount > 0"
-                    class="flex items-center gap-1.5 shrink-0"
-                  >
-                    <div
-                      class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded"
-                    >
-                      RE
-                    </div>
-                    <div class="flex items-center gap-0.5 text-xs text-primary">
-                      <MessageCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span class="font-medium">{{ inquiry.replyCount }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 상품 정보 -->
-                <p
-                  v-if="inquiry.product"
-                  class="text-xs text-muted-foreground truncate"
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="w-[68px] shrink-0 text-caption font-medium leading-[1.2] text-muted-foreground/80">
+                  {{ typeLabels[inquiry.type] }}
+                </span>
+                <span class="w-2 shrink-0 text-center text-muted-foreground/50">·</span>
+                <Lock
+                  v-if="inquiry.isPrivate"
+                  class="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                />
+                <span
+                  class="inquiry-title-text min-w-0 flex-1 truncate text-[13px] font-medium leading-[1.25] text-foreground"
                 >
-                  상품: {{ inquiry.product.name }}
-                </p>
-
-                <!-- 모바일: 작성자 & 작성일 -->
-                <div class="md:hidden text-xs text-muted-foreground mt-0.5">
-                  <span>{{ maskUserName(inquiry.user?.userName) }}</span>
-                  <span class="mx-1">·</span>
-                  <span class="lg:hidden">{{
-                    formatDate(inquiry.createdAt)
-                  }}</span>
-                </div>
+                  <template
+                    v-if="
+                      inquiry.isPrivate &&
+                      authStore.user?.id !== inquiry.userId &&
+                      !authStore.user?.isAdmin
+                    "
+                  >
+                    비밀글입니다.
+                  </template>
+                  <template v-else>
+                    {{ inquiry.title }}
+                  </template>
+                </span>
+                <template v-if="inquiry.product">
+                  <span class="hidden shrink-0 text-muted-foreground/50 xl:inline">·</span>
+                  <span class="hidden max-w-[180px] shrink-0 truncate text-caption leading-[1.2] text-muted-foreground/70 xl:block">
+                    {{ inquiry.product.name }}
+                  </span>
+                </template>
               </div>
             </TableCell>
 
-            <!-- 작성자 (md 이상) -->
+            <!-- 작성일 -->
             <TableCell
-              class="hidden md:table-cell text-center text-caption text-muted-foreground"
-            >
-              {{ maskUserName(inquiry.user?.userName) }}
-            </TableCell>
-
-            <!-- 작성일 (lg 이상) -->
-            <TableCell
-              class="hidden lg:table-cell text-center text-caption text-muted-foreground"
+              class="text-center text-caption text-muted-foreground/80"
             >
               {{ formatDate(inquiry.createdAt) }}
+            </TableCell>
+
+            <!-- 작성자 (lg 이상) -->
+            <TableCell
+              class="hidden lg:table-cell text-center text-caption text-muted-foreground/80"
+            >
+              {{ maskUserName(inquiry.user?.userName) }}
             </TableCell>
 
             <!-- 상태 (항상 표시) -->
             <TableCell class="text-center">
               <Badge
                 :variant="statusVariants[inquiry.status]"
-                class="text-xs font-medium"
+                class="text-[11px] font-semibold"
               >
                 <span class="sm:hidden">{{ statusLabelsShort[inquiry.status] }}</span>
                 <span class="hidden sm:inline">{{ statusLabels[inquiry.status] }}</span>
@@ -338,7 +338,8 @@ onMounted(() => {
             </TableCell>
           </TableRow>
         </TableBody>
-      </Table>
-    </div>
+        </Table>
+      </div>
+    </template>
   </div>
 </template>

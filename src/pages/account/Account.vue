@@ -185,7 +185,7 @@ onMounted(async () => {
     </div>
 
     <!-- 사용자 인사 -->
-    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+    <Card class="mb-6 rounded-none border-primary/10 bg-background/80">
       <CardContent class="px-4 py-5 sm:px-5 sm:py-6">
         <div class="flex items-center gap-4">
           <div
@@ -211,7 +211,7 @@ onMounted(async () => {
     <!-- 관리자 메뉴 -->
     <Card
       v-if="authStore.user?.isAdmin"
-      class="mb-6 rounded-[3px] border-primary/10 bg-background/80"
+      class="mb-6 rounded-none border-primary/10 bg-background/80"
     >
       <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading flex items-center gap-2">
@@ -342,7 +342,7 @@ onMounted(async () => {
     </Card>
 
     <!-- 주문 현황 -->
-    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+    <Card class="mb-6 rounded-none border-primary/10 bg-background/80">
       <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading flex items-center gap-2">
           주문 현황
@@ -414,7 +414,7 @@ onMounted(async () => {
     </Card>
 
     <!-- 메뉴 목록 -->
-    <Card class="mb-6 rounded-[3px] border-primary/10 bg-background/80">
+    <Card class="mb-6 rounded-none border-primary/10 bg-background/80">
       <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
         <CardTitle class="text-heading">나의 쇼핑</CardTitle>
       </CardHeader>

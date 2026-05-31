@@ -11,7 +11,7 @@ import { createInquiry, fetchProduct } from "@/lib/api";
 import type { InquiryType, Product } from "@/types/api";
 
 // Shadcn UI 컴포넌트
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,10 +211,7 @@ onMounted(() => {
 
     <!-- 문의 작성 폼 -->
     <Card>
-      <CardHeader>
-        <CardTitle class="text-lg">문의 내용</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-6">
+      <CardContent class="space-y-6 p-6">
         <!-- 문의 유형 -->
         <div class="space-y-2">
           <Label>문의 유형</Label>
@@ -290,7 +287,7 @@ onMounted(() => {
         </div>
 
         <!-- 버튼 -->
-        <div class="flex gap-3 pt-4">
+        <div class="flex gap-3 pt-2">
           <Button
             variant="outline"
             class="flex-1 font-medium"

@@ -201,7 +201,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#FFFEFC]">
+  <div class="min-h-screen bg-background flex flex-col">
     <!-- 떨어지는 입자들 -->
     <div
       v-for="particle in particles"
@@ -226,7 +226,7 @@ onUnmounted(() => {
     </div>
 
     <Navbar />
-    <main>
+    <main class="bg-background flex-1">
       <router-view :key="$route.fullPath" />
     </main>
     <Footer />

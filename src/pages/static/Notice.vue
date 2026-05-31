@@ -20,7 +20,7 @@ onUnmounted(() => {
       <h1 class="text-3xl font-extrabold mb-5 text-primary tracking-wider">
         notice
       </h1>
-      <div class="space-y-3 text-body leading-relaxed text-muted-foreground">
+      <div class="space-y-3 text-body leading-[1.5] text-muted-foreground">
         <p>
           shaki shaki archive의 모든 상품은 한 점짜리 빈티지 세트 상품입니다.
         </p>
@@ -70,7 +70,7 @@ onUnmounted(() => {
     <div class="space-y-12">
       <section id="delivery" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4 text-primary">✦ delivery</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             결제 완료 후 1–3영업일 내 발송을 원칙으로 합니다.<br />
             검수 및 포장 상황에 따라 최대 7일 이내 발송될 수 있습니다.
@@ -89,7 +89,7 @@ onUnmounted(() => {
         <h2 class="text-2xl font-bold mb-4 text-primary">
           ✦ exchange / return
         </h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             모든 세트는 한 점씩만 준비되는 빈티지 상품입니다.<br />
             동일한 상품으로 교환은 어렵습니다.
@@ -115,7 +115,7 @@ onUnmounted(() => {
         <h2 class="text-2xl font-bold mb-4 text-primary">
           ✦ difficult to return
         </h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>아래의 경우 반품 및 환불이 어려울 수 있습니다.</p>
           <ul class="list-disc pl-6 space-y-2">
             <li>상품 수령 후 7일이 지난 경우</li>
@@ -133,7 +133,7 @@ onUnmounted(() => {
 
       <section id="vintage-guide" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4 text-primary">✦ vintage guide</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             shaki shaki archive의 상품은 새 상품이 아닌 빈티지 제품입니다.<br />
             오래된 옷이 가진 자연스러운 사용감, 원단의 결, 작은 보풀,<br />
@@ -157,7 +157,7 @@ onUnmounted(() => {
 
       <section id="set-item-only" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4 text-primary">✦ set item only</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             샤키샤키의 상품은 세트 구성을 기준으로 판매됩니다.<br />
             단품 판매는 어렵습니다.
@@ -173,7 +173,7 @@ onUnmounted(() => {
         <h2 class="text-2xl font-bold mb-4 text-primary">
           ✦ size / color / care
         </h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             실측은 단면 기준이며,<br />
             측정 위치와 방법에 따라 1–3cm 정도의 오차가 있을 수 있습니다.

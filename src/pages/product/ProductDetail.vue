@@ -125,6 +125,19 @@ watch(hasVisibleSizeInfo, (hasSizeInfo) => {
   }
 });
 
+watch(activeTab, (tab) => {
+  if (tab === "description") {
+    nextTick(updateDescriptionScrollState);
+  }
+});
+
+watch(
+  () => productData.product.value?.description,
+  () => {
+    nextTick(updateDescriptionScrollState);
+  },
+);
+
 // 갤러리 관리
 const gallery = useImageGallery(productData.galleryImages);
 
@@ -136,26 +149,18 @@ const naverPay = useNaverPayOrder();
 const naverPayInitialized = ref(false);
 const naverPayRenderTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
-// 네이버페이 버튼 표시 여부 (관리자 + 검수 테스트 계정만)
+// 네이버페이는 운영 UI에서 노출하지 않고, 관리자도 일반 사용자와 동일한 결제 UI를 사용한다.
 const showNaverPayButton = computed(() => {
-  return (
-    naverPay.isEnabled.value &&
-    (authStore.isAdmin ||
-      authStore.user?.email === "test@shakishakiarchive.com")
-  );
+  return false;
 });
 
 const canLoadNaverPaySdk = computed(() => {
-  return authStore.isAdmin || authStore.user?.email === "test@shakishakiarchive.com";
+  return false;
 });
 
 // 간편결제 버튼 표시 조건 (computed로 가독성 향상)
 const showPaymentButtons = computed(() => {
-  return (
-    !variantSelection.needsVariantSelection.value &&
-    !isOutOfStock.value &&
-    (naverPay.sdkLoaded.value || !naverPay.isEnabled.value)
-  );
+  return !variantSelection.needsVariantSelection.value && !isOutOfStock.value;
 });
 
 // Alert 상태
@@ -188,6 +193,10 @@ const isCopied = ref(false);
 // 이미지 로딩 상태
 const mainImageLoaded = ref(false);
 const detailImagesLoaded = ref<Record<number, boolean>>({});
+const descriptionScrollRef = ref<HTMLElement | null>(null);
+const isDescriptionScrollable = ref(false);
+const isDescriptionAtTop = ref(true);
+const isDescriptionAtBottom = ref(true);
 
 // 이미지 로드 핸들러
 const handleMainImageLoad = () => {
@@ -197,6 +206,29 @@ const handleMainImageLoad = () => {
 const handleDetailImageLoad = (index: number) => {
   detailImagesLoaded.value[index] = true;
 };
+
+const updateDescriptionScrollState = () => {
+  const el = descriptionScrollRef.value;
+  if (!el) {
+    isDescriptionScrollable.value = false;
+    isDescriptionAtTop.value = true;
+    isDescriptionAtBottom.value = true;
+    return;
+  }
+
+  const maxScrollTop = el.scrollHeight - el.clientHeight;
+  isDescriptionScrollable.value = maxScrollTop > 1;
+  isDescriptionAtTop.value = el.scrollTop <= 1;
+  isDescriptionAtBottom.value = el.scrollTop >= maxScrollTop - 1;
+};
+
+const showDescriptionTopFade = computed(() => {
+  return isDescriptionScrollable.value && !isDescriptionAtTop.value;
+});
+
+const showDescriptionBottomFade = computed(() => {
+  return isDescriptionScrollable.value && !isDescriptionAtBottom.value;
+});
 
 // 공유 모달 자동 닫기 타이머
 let shareModalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -752,6 +784,8 @@ watch(
 
 // 컴포넌트 언마운트 시 cleanup
 onUnmounted(() => {
+  window.removeEventListener("resize", updateDescriptionScrollState);
+
   if (naverPayRenderTimer.value) {
     clearTimeout(naverPayRenderTimer.value);
     naverPayRenderTimer.value = null;
@@ -761,6 +795,8 @@ onUnmounted(() => {
 
 // 데이터 로드
 onMounted(async () => {
+  window.addEventListener("resize", updateDescriptionScrollState);
+
   await productData.loadProduct(routeSlug.value);
   const loadedProduct = productData.product.value;
 
@@ -788,6 +824,9 @@ onMounted(async () => {
 
   // 네이버페이 SDK 로드 (약간 딜레이 후)
   setTimeout(loadNaverPaySdk, 200);
+
+  await nextTick();
+  updateDescriptionScrollState();
 });
 </script>
 
@@ -926,9 +965,19 @@ onMounted(async () => {
             <Separator class="mb-4" />
 
             <div v-if="productData.variants.value.length > 0" class="mb-6">
-              <label class="block text-body font-semibold text-foreground mb-2"
-                >사이즈</label
-              >
+              <div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <label class="text-body font-semibold text-foreground">
+                  사이즈
+                </label>
+                <span
+                  v-if="
+                    variantSelection.needsVariantSelection.value && !isOutOfStock
+                  "
+                  class="text-caption font-medium text-muted-foreground/75"
+                >
+                  옵션을 선택해주세요
+                </span>
+              </div>
               <div class="flex flex-wrap gap-2">
                 <Button
                   v-for="variant in productData.variants.value"
@@ -942,6 +991,9 @@ onMounted(async () => {
                   "
                   :class="[
                     'min-w-[3rem]',
+                    variantSelection.selectedVariantId.value === variant.id
+                      ? 'font-medium'
+                      : 'font-normal',
                     variant.stockQuantity <= 0 || !variant.isAvailable
                       ? 'opacity-40 line-through'
                       : '',
@@ -963,24 +1015,14 @@ onMounted(async () => {
               <QuantitySelector v-model="variantSelection.quantity.value" />
             </div>
              -->
-            <div class="mb-6 flex flex-col gap-3">
-              <!-- 옵션 미선택 시 안내 메시지 -->
-              <Button
-                v-if="
-                  variantSelection.needsVariantSelection.value && !isOutOfStock
-                "
-                disabled
-                class="w-full font-bold"
-                size="lg"
-              >
-                옵션을 선택해주세요
-              </Button>
-
+            <div
+              v-if="isOutOfStock || !variantSelection.needsVariantSelection.value"
+              class="mb-6 flex flex-col gap-3"
+            >
               <!-- 품절 시 안내 -->
               <Button
-                v-else-if="isOutOfStock"
+                v-if="isOutOfStock"
                 disabled
-                variant="outline"
                 class="sold-out-cta"
                 size="lg"
               >
@@ -993,7 +1035,7 @@ onMounted(async () => {
                   !variantSelection.needsVariantSelection.value && !isOutOfStock
                 "
                 @click="handleAddToCart"
-                class="w-full bg-primary text-white hover:bg-primary/90 font-bold animate-fade-in"
+                class="w-full bg-primary text-white hover:bg-primary/90 font-medium animate-fade-in"
                 size="lg"
               >
                 장바구니 담기
@@ -1118,13 +1160,36 @@ onMounted(async () => {
               <div class="py-6">
                 <div
                   v-show="activeTab === 'description'"
-                  class="animate-fade-in max-h-[180px] overflow-y-auto pr-2 scrollbar-thin"
+                  class="relative animate-fade-in"
                 >
-                  <p
-                    class="text-muted-foreground whitespace-pre-line leading-relaxed text-caption tracking-wide"
+                  <div
+                    ref="descriptionScrollRef"
+                    class="description-scrollbar max-h-[220px] overflow-y-auto pr-3 md:max-h-[240px]"
+                    @scroll="updateDescriptionScrollState"
                   >
-                    {{ productData.product.value.description }}
-                  </p>
+                    <p
+                      class="text-muted-foreground whitespace-pre-line leading-[1.45] text-caption tracking-wide"
+                    >
+                      {{ productData.product.value.description }}
+                    </p>
+                  </div>
+                  <div
+                    v-if="showDescriptionTopFade"
+                    class="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background via-background/90 to-transparent"
+                    aria-hidden="true"
+                  />
+                  <div
+                    v-if="showDescriptionBottomFade"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background via-background/95 to-transparent"
+                    aria-hidden="true"
+                  />
+                  <div
+                    v-if="showDescriptionBottomFade"
+                    class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 text-sm leading-none tracking-[0.2em] text-muted-foreground/45"
+                    aria-hidden="true"
+                  >
+                    ...
+                  </div>
                 </div>
 
                 <div
@@ -1251,7 +1316,7 @@ onMounted(async () => {
           </div>
 
           <div
-            class="mt-4 max-w-3xl space-y-4 text-caption leading-relaxed text-muted-foreground"
+            class="mt-4 max-w-3xl space-y-4 text-caption leading-[1.45] text-muted-foreground"
           >
             <p class="space-y-1">
               <span class="block">
@@ -1275,7 +1340,7 @@ onMounted(async () => {
           </div>
 
           <p
-            class="mt-4 space-y-1 text-caption leading-relaxed text-muted-foreground sm:hidden"
+            class="mt-4 space-y-1 text-caption leading-[1.45] text-muted-foreground sm:hidden"
           >
             <span class="block">자세한 배송/교환/반품 안내는</span>
             <RouterLink
@@ -1440,26 +1505,28 @@ onMounted(async () => {
 }
 
 /* Description 스크롤바 스타일 */
-.scrollbar-thin {
+.description-scrollbar {
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.32)
+    hsl(var(--primary) / 0.06);
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+.description-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+.description-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--primary) / 0.06);
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
-  border-radius: 4px;
+.description-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.32);
+  border: 2px solid hsl(var(--background));
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground));
+.description-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.48);
 }
 
 /* Vue Transition - fade */

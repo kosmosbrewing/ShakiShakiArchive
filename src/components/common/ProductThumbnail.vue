@@ -41,12 +41,12 @@ const sizeClasses = {
 </script>
 
 <template>
-  <div
-    :class="[
-      'rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm transition-all',
-      sizeClasses[props.size],
-      clickable && productId ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : '',
-    ]"
+	  <div
+	    :class="[
+	      'rounded-none overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm transition-colors',
+	      sizeClasses[props.size],
+	      clickable && productId ? 'cursor-pointer hover:border-primary/20' : '',
+	    ]"
     @click="handleClick"
   >
     <img

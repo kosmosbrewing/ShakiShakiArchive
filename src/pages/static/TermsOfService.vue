@@ -108,7 +108,7 @@ onUnmounted(() => {
       <!-- 제1조 (목적) -->
       <section id="section1" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제1조 (목적)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             이 약관은 샤키샤키 아카이브(ShakiShaki Archive)가 운영하는 온라인 스토어에서
             제공하는 서비스를 이용할 때 샤키샤키 아카이브와 이용자 간의 권리, 의무, 책임 사항 및
@@ -123,7 +123,7 @@ onUnmounted(() => {
       <!-- 제2조 (정의) -->
       <section id="section2" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제2조 (정의)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               <strong>"샤키샤키 아카이브"</strong>란 상품 및 서비스를 이용자에게 제공하기 위해
@@ -148,7 +148,7 @@ onUnmounted(() => {
       <!-- 제3조 (약관의 게시 및 개정) -->
       <section id="section3" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제3조 (약관의 게시 및 개정)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 이 약관의 내용, 상호, 대표자 성명, 사업장 주소, 연락처,
@@ -184,7 +184,7 @@ onUnmounted(() => {
       <!-- 제4조 (서비스의 제공 및 변경) -->
       <section id="section4" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제4조 (서비스의 제공 및 변경)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 다음과 같은 서비스를 제공합니다.
@@ -214,7 +214,7 @@ onUnmounted(() => {
       <!-- 제5조 (서비스의 중단) -->
       <section id="section5" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제5조 (서비스의 중단)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 시스템 점검, 교체, 고장 또는 통신 장애 등의 사유로
@@ -237,7 +237,7 @@ onUnmounted(() => {
       <!-- 제6조 (회원가입) -->
       <section id="section6" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제6조 (회원가입)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               이용자는 샤키샤키 아카이브가 정한 가입 양식에 따라 정보를 입력하고
@@ -265,7 +265,7 @@ onUnmounted(() => {
       <!-- 제7조 (회원탈퇴 및 자격 상실) -->
       <section id="section7" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제7조 (회원탈퇴 및 자격 상실)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               회원은 언제든지 탈퇴를 요청할 수 있으며, 샤키샤키 아카이브는 즉시 처리합니다.
@@ -294,7 +294,7 @@ onUnmounted(() => {
       <!-- 제8조 (회원에 대한 통지) -->
       <section id="section8" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제8조 (회원에 대한 통지)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브가 회원에게 통지할 때는 회원이 등록한 이메일 주소로 발송합니다.
@@ -311,7 +311,7 @@ onUnmounted(() => {
       <!-- 제9조 (구매신청) -->
       <section id="section9" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제9조 (구매신청)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>이용자는 샤키샤키 아카이브에서 다음과 같은 방법으로 구매를 신청합니다.
              샤키샤키 아카이브는 각 단계에서 필요한 정보를 알기 쉽게 제공합니다.</p>
           <ol class="list-decimal pl-6 space-y-3">
@@ -328,7 +328,7 @@ onUnmounted(() => {
       <!-- 제10조 (계약의 성립) -->
       <section id="section10" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제10조 (계약의 성립)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 다음의 경우 구매신청을 승낙하지 않을 수 있습니다.
@@ -356,7 +356,7 @@ onUnmounted(() => {
       <!-- 제11조 (결제 방법) -->
       <section id="section11" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제11조 (결제 방법)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>샤키샤키 아카이브에서 구매한 상품의 대금은 다음 방법으로 결제할 수 있습니다.</p>
           <div class="bg-muted/20 rounded-lg p-5">
             <ul class="list-disc pl-6 space-y-2">
@@ -369,7 +369,7 @@ onUnmounted(() => {
       <!-- 제12조 (주문 확인 및 변경·취소) -->
       <section id="section12" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제12조 (주문 확인 및 변경·취소)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 이용자가 구매를 신청하면 주문확인 알림을 보내드립니다.
@@ -386,7 +386,7 @@ onUnmounted(() => {
       <!-- 제13조 (상품의 배송) -->
       <section id="section13" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제13조 (상품의 배송)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               별도의 약정이 없는 한, 주문일로부터 7일 이내에 배송 준비를 완료합니다.
@@ -405,7 +405,7 @@ onUnmounted(() => {
       <!-- 제14조 (환불) -->
       <section id="section14" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제14조 (환불)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             이용자가 주문한 상품이 품절 등의 사유로 배송이 불가능한 경우,
             즉시 그 사유를 알려드리고, 이미 결제가 완료되었다면 결제일로부터
@@ -417,7 +417,7 @@ onUnmounted(() => {
       <!-- 제15조 (청약철회) -->
       <section id="section15" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제15조 (청약철회)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브에서 상품을 구매한 이용자는 계약 내용에 관한 서면을 받은 날
@@ -450,7 +450,7 @@ onUnmounted(() => {
       <!-- 제16조 (청약철회의 효과) -->
       <section id="section16" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제16조 (청약철회의 효과)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 상품을 반환받은 날로부터 3영업일 이내에 환불합니다.
@@ -476,7 +476,7 @@ onUnmounted(() => {
       <!-- 제17조 (개인정보보호) -->
       <section id="section17" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제17조 (개인정보보호)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 서비스 제공에 필요한 최소한의 개인정보만 수집합니다.
@@ -529,7 +529,7 @@ onUnmounted(() => {
       <!-- 제18조 (샤키샤키 아카이브의 의무) -->
       <section id="section18" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제18조 (샤키샤키 아카이브의 의무)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 법령과 이 약관을 준수하며, 안정적이고 지속적인
@@ -564,7 +564,7 @@ onUnmounted(() => {
       <!-- 제19조 (회원의 계정 관리 의무) -->
       <section id="section19" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제19조 (회원의 계정 관리 의무)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               제17조의 경우를 제외하고, 아이디와 비밀번호의 관리 책임은 회원에게 있습니다.
@@ -583,7 +583,7 @@ onUnmounted(() => {
       <!-- 제20조 (이용자의 의무) -->
       <section id="section20" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제20조 (이용자의 의무)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>이용자는 다음 행위를 해서는 안 됩니다.</p>
           <ol class="list-decimal pl-6 space-y-2">
             <li>허위 정보 등록</li>
@@ -600,7 +600,7 @@ onUnmounted(() => {
       <!-- 제21조 (외부 링크에 대한 책임) -->
       <section id="section21" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제21조 (외부 링크에 대한 책임)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브가 외부 웹사이트와 링크로 연결되어 있는 경우,
@@ -618,7 +618,7 @@ onUnmounted(() => {
       <!-- 제22조 (저작권) -->
       <section id="section22" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제22조 (저작권)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브가 작성한 콘텐츠의 저작권은 샤키샤키 아카이브에 있습니다.
@@ -638,7 +638,7 @@ onUnmounted(() => {
       <!-- 제23조 (분쟁해결) -->
       <section id="section23" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제23조 (분쟁해결)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브는 이용자가 제기하는 정당한 의견이나 불만을 반영하고,
@@ -659,7 +659,7 @@ onUnmounted(() => {
       <!-- 제24조 (관할법원 및 준거법) -->
       <section id="section24" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">제24조 (관할법원 및 준거법)</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ol class="list-decimal pl-6 space-y-3">
             <li>
               샤키샤키 아카이브와 이용자 간의 소송은 소송 제기 시 이용자의 주소지를

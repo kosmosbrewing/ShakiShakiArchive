@@ -355,13 +355,13 @@ onUnmounted(() => {
           v-model="searchQuery"
           type="text"
           placeholder="상품명으로 검색..."
-          class="pl-9 pr-9"
+          class="rounded-none border-border/70 bg-card pl-9 pr-9 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
         />
         <Button
           v-if="searchQuery"
           variant="ghost"
           size="sm"
-          class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+          class="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-none p-0 hover:bg-primary/[0.03]"
           @click="clearSearch"
         >
           <X class="w-4 h-4" />
@@ -376,9 +376,9 @@ onUnmounted(() => {
         <span class="text-caption text-muted-foreground">적용된 필터:</span>
         <Button
           v-if="currentFilter"
-          variant="secondary"
+          variant="outline"
           size="sm"
-          class="h-7 gap-1 pr-2 text-xs"
+          class="h-7 gap-1 rounded-none border-border/70 bg-card pr-2 text-xs text-card-foreground shadow-none hover:bg-primary/[0.03]"
           @click="clearFilter"
         >
           {{ statusLabels[currentFilter] }}
@@ -386,9 +386,9 @@ onUnmounted(() => {
         </Button>
         <Button
           v-if="searchQuery"
-          variant="secondary"
+          variant="outline"
           size="sm"
-          class="h-7 gap-1 pr-2 text-xs"
+          class="h-7 gap-1 rounded-none border-border/70 bg-card pr-2 text-xs text-card-foreground shadow-none hover:bg-primary/[0.03]"
           @click="clearSearch"
         >
           검색: {{ searchQuery }}

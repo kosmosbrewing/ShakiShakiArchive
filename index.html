@@ -21,7 +21,25 @@
 
     <!-- Critical CSS Inline: LCP 최적화 (폰트 + CSS 변수 + 기본 스타일) -->
     <style>
-      /* 1. Nanum Gothic 기본 폰트 - self-hosting */
+      /* 1. Pretendard 기본 폰트 - self-hosting */
+      @font-face {
+        font-family: "Pretendard";
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+        src: url("/fonts/Pretendard-Regular.subset.woff2") format("woff2");
+        unicode-range: U+AC00-D7A3, U+0020-007E;
+      }
+      @font-face {
+        font-family: "Pretendard";
+        font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+        src: url("/fonts/Pretendard-SemiBold.subset.woff2") format("woff2");
+        unicode-range: U+AC00-D7A3, U+0020-007E;
+      }
+
+      /* 2. Nanum Gothic fallback 폰트 */
       @font-face {
         font-family: "Nanum Gothic";
         font-weight: 400;
@@ -44,47 +62,29 @@
         src: url("/fonts/NanumGothic-ExtraBold.woff2") format("woff2");
       }
 
-      /* 2. Pretendard 폰트 - fallback으로 사용 가능 */
-      @font-face {
-        font-family: "Pretendard";
-        font-weight: 400;
-        font-style: normal;
-        font-display: optional;
-        src: url("/fonts/Pretendard-Regular.subset.woff2") format("woff2");
-        unicode-range: U+AC00-D7A3, U+0020-007E;
-      }
-      @font-face {
-        font-family: "Pretendard";
-        font-weight: 600;
-        font-style: normal;
-        font-display: optional;
-        src: url("/fonts/Pretendard-SemiBold.subset.woff2") format("woff2");
-        unicode-range: U+AC00-D7A3, U+0020-007E;
-      }
-
       /* 3. CSS 변수 - Tailwind 색상 시스템 */
       :root {
         --background: 0 0% 100%;
-        --foreground: 31 34% 28%;
-        --muted-foreground: 20 13% 44%;
+        --foreground: 30 13% 9%;
+        --muted-foreground: 25 12% 20%;
         --admin-foreground: 0 0% 9%;
         --admin-muted-foreground: 0 0% 45%;
         --card: 0 0% 100%;
-        --card-foreground: 31 34% 28%;
+        --card-foreground: 30 13% 9%;
         --popover: 0 0% 100%;
-        --popover-foreground: 31 34% 28%;
-        --primary: 19 16% 31%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 60 4.8% 95.9%;
-        --secondary-foreground: 31 34% 28%;
-        --muted: 60 4.8% 95.9%;
-        --accent: 60 4.8% 95.9%;
-        --accent-foreground: 31 34% 28%;
+        --popover-foreground: 25 12% 20%;
+        --primary: 30 13% 9%;
+        --primary-foreground: 39 40% 92%;
+        --secondary: 220 14% 96%;
+        --secondary-foreground: 25 12% 20%;
+        --muted: 220 14% 96%;
+        --accent: 220 14% 96%;
+        --accent-foreground: 25 12% 20%;
         --destructive: 350 70% 55%;
         --destructive-foreground: 60 9.1% 97.8%;
-        --border: 335 10% 90%;
-        --input: 20 5.9% 90%;
-        --ring: 19 16% 31%;
+        --border: 220 10% 90%;
+        --input: 220 10% 90%;
+        --ring: 30 13% 9%;
         --radius: 0.5rem;
       }
 
@@ -96,10 +96,10 @@
         background: hsl(var(--background));
         color: hsl(var(--foreground));
         font-family:
+          "Pretendard",
           "Nanum Gothic",
           "나눔고딕",
           "NanumGothic",
-          "Pretendard",
           -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
@@ -118,14 +118,14 @@
       rel="preload"
       as="font"
       type="font/woff2"
-      href="/fonts/NanumGothic-Regular.woff2"
+      href="/fonts/Pretendard-Regular.subset.woff2"
       crossorigin
     />
     <link
       rel="preload"
       as="font"
       type="font/woff2"
-      href="/fonts/NanumGothic-Bold.woff2"
+      href="/fonts/Pretendard-SemiBold.subset.woff2"
       crossorigin
     />
 

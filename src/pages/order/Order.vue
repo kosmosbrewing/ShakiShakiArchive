@@ -1497,7 +1497,7 @@ onUnmounted(() => {
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-8">
-        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+        <Card class="rounded-none border-primary/10 bg-background/80">
           <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">배송지 정보</CardTitle>
             <p class="text-caption text-muted-foreground mt-1">
@@ -1553,7 +1553,7 @@ onUnmounted(() => {
           </CardContent>
         </Card>
 
-        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+        <Card class="rounded-none border-primary/10 bg-background/80">
           <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading"
               >주문 상품
@@ -1596,7 +1596,7 @@ onUnmounted(() => {
 
       <div class="lg:col-span-1">
         <div class="sticky top-24 space-y-6">
-          <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <Card class="rounded-none border-primary/10 bg-background/80">
             <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
               <CardTitle class="text-heading">최종 결제 금액</CardTitle>
             </CardHeader>
@@ -1641,7 +1641,7 @@ onUnmounted(() => {
             택배로 안전하게 배송됩니다.
           </p>
 
-          <Card class="rounded-[3px] border-primary/10 bg-background/80">
+          <Card class="rounded-none border-primary/10 bg-background/80">
             <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
               <CardTitle class="text-heading">결제 수단</CardTitle>
             </CardHeader>

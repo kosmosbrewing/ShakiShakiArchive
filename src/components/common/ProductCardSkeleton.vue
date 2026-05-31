@@ -22,7 +22,7 @@ const { count = 4 } = defineProps<Props>();
   >
     <CardHeader class="p-0 gap-0">
       <!-- 이미지 영역 스켈레톤 -->
-      <div class="aspect-square overflow-hidden rounded-[3px] bg-muted/10 ring-1 ring-primary/10">
+      <div class="aspect-square overflow-hidden rounded-none bg-muted/10 ring-1 ring-primary/10">
         <Skeleton class="w-full h-full rounded-none" />
       </div>
 

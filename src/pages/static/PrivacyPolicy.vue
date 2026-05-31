@@ -61,7 +61,7 @@ onUnmounted(() => {
       <!-- 1. 개인정보 수집 및 이용 -->
       <section id="section1" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">1. 개인정보 수집 및 이용</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             샤키샤키 아카이브는 온라인 쇼핑몰 운영을 위해 다음과 같이 개인정보를
             수집하고 이용합니다.
@@ -107,7 +107,7 @@ onUnmounted(() => {
       <!-- 2. 개인정보 보유 기간 -->
       <section id="section2" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">2. 개인정보 보유 기간</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <ul class="list-disc pl-6 space-y-2">
             <li>
               <strong>회원 정보:</strong> 회원 탈퇴 시까지 (탈퇴 즉시 파기)
@@ -130,7 +130,7 @@ onUnmounted(() => {
       <!-- 3. 개인정보 제3자 제공 -->
       <section id="section3" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">3. 개인정보 제3자 제공</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>상품 배송을 위해 배송업체에 최소한의 정보만 제공합니다.</p>
 
           <div class="bg-muted/20 rounded-lg p-5">
@@ -166,7 +166,7 @@ onUnmounted(() => {
       <!-- 4. 이용자의 권리 -->
       <section id="section4" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">4. 이용자의 권리</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>언제든지 다음의 권리를 행사할 수 있습니다.</p>
 
           <ul class="list-disc pl-6 space-y-2">
@@ -189,7 +189,7 @@ onUnmounted(() => {
       <!-- 5. 개인정보 보호책임자 -->
       <section id="section5" class="scroll-mt-24">
         <h2 class="text-2xl font-bold mb-4">5. 개인정보 보호책임자</h2>
-        <div class="space-y-4 text-body leading-relaxed">
+        <div class="space-y-4 text-body leading-[1.5]">
           <p>
             개인정보 관련 문의사항이나 불만이 있으시면 아래로 연락주시기
             바랍니다.

@@ -24,8 +24,8 @@ export const useSiteImageStore = defineStore("siteImage", () => {
   const error = ref<string | null>(null);
   const lastFetchedAt = ref<number | null>(null);
 
-  // 캐시 유효 시간 (10분 - 사이트 이미지는 자주 변경되지 않음)
-  const CACHE_DURATION = 10 * 60 * 1000;
+  // 캐시 유효 시간 (5분 - 메인 이미지 변경 반영 지연을 줄이기 위해 짧게 유지)
+  const CACHE_DURATION = 5 * 60 * 1000;
 
   // 계산된 속성
   const hasMainDesktopImages = computed(() => mainDesktopImages.value.length > 0);

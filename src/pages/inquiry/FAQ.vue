@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -36,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LoadingSpinner, EmptyState } from "@/components/common";
-import { Lock, MessageCircle, PenLine } from "lucide-vue-next";
+import { Lock, PenLine } from "lucide-vue-next";
 
 // ─────────────────────────────────────────────
 // 탭 상태
@@ -209,13 +208,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
+  <main class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16 lg:min-h-[calc(100vh-9rem)] lg:pb-20">
     <!-- 페이지 타이틀 -->
     <div class="text-center mb-3">
-      <h2 class="text-heading text-primary mb-2 tracking-wider">문의하기</h2>
-      <h3 class="text-heading">
+      <h2 class="text-heading">
         {{ activeTab === 'faq' ? '자주 묻는 질문' : '전체 문의' }}
-      </h3>
+      </h2>
     </div>
 
     <!-- 언더라인 탭 -->
@@ -248,12 +246,18 @@ onMounted(() => {
 
     <!-- FAQ 탭 -->
     <section v-if="activeTab === 'faq'" aria-labelledby="faq-title" class="max-w-2xl mx-auto">
-      <Accordion v-if="FAQList.length > 0" type="single" collapsible class="w-full">
+      <Accordion
+        v-if="FAQList.length > 0"
+        type="single"
+        collapsible
+        class="w-full"
+      >
         <AccordionItem
           v-for="{ id, question, answer, value } in FAQList"
           :key="value"
           :id="id"
           :value="value"
+          class="rounded-none border-primary/10 bg-background/80 dark:bg-background/80 shadow-none"
           as-child
         >
           <article>
@@ -277,7 +281,7 @@ onMounted(() => {
         찾으시는 답변이 없으신가요?
         <router-link
           to="/inquiry/create"
-          class="text-primary hover:underline font-medium"
+          class="font-medium text-primary underline underline-offset-4 hover:text-foreground"
         >
           1:1 문의하기
         </router-link>
@@ -286,23 +290,8 @@ onMounted(() => {
 
     <!-- 전체 문의 탭 -->
     <section v-else aria-labelledby="qna-title">
-      <!-- 문의하기 버튼 -->
-      <div class="mb-4 flex justify-end">
-        <Button
-          variant="default"
-          size="sm"
-          @click="goToCreate"
-          class="gap-1.5 shadow-sm hover:shadow"
-        >
-          <PenLine class="w-4 h-4" />
-          <span class="hidden sm:inline">문의하기</span>
-          <span class="sm:hidden">작성</span>
-        </Button>
-      </div>
-      <Separator />
-
       <!-- 필터 -->
-      <div class="mt-6 mb-6 flex items-center justify-between gap-4">
+      <div class="mt-6 mb-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <Select v-model="selectedType">
             <SelectTrigger class="w-[160px] sm:w-[180px] border-border/60">
@@ -319,10 +308,21 @@ onMounted(() => {
           <span class="text-caption text-muted-foreground hidden sm:inline">
             총 {{ filteredInquiries.length }}건
           </span>
+          <span class="text-caption text-muted-foreground sm:hidden">
+            {{ filteredInquiries.length }}건
+          </span>
         </div>
-        <span class="text-caption text-muted-foreground sm:hidden">
-          {{ filteredInquiries.length }}건
-        </span>
+        <Button
+          v-if="!isQnaLoading && filteredInquiries.length > 0"
+          variant="default"
+          size="sm"
+          @click="goToCreate"
+          class="gap-1.5 shadow-sm hover:shadow"
+        >
+          <PenLine class="w-4 h-4" />
+          <span class="hidden sm:inline">문의하기</span>
+          <span class="sm:hidden">작성</span>
+        </Button>
       </div>
 
       <LoadingSpinner v-if="isQnaLoading" />
@@ -340,117 +340,136 @@ onMounted(() => {
       />
 
       <!-- 문의 목록 -->
-      <div
-        v-else
-        class="bg-background border border-border rounded-xl overflow-hidden shadow-sm"
-      >
-        <Table>
+      <template v-else>
+        <div
+          class="md:hidden border-y border-primary/10 bg-background/80 rounded-none overflow-hidden shadow-none"
+        >
+          <button
+            v-for="inquiry in filteredInquiries"
+            :key="inquiry.id"
+            type="button"
+            class="block w-full border-b border-primary/10 px-3 py-3 text-left transition-colors duration-200 last:border-0 hover:bg-primary/[0.03]"
+            @click="goToDetail(inquiry)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <Lock
+                    v-if="inquiry.isPrivate"
+                    class="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                  />
+                  <span class="truncate text-[13px] font-medium leading-[1.25] text-foreground">
+                    <template
+                      v-if="
+                        inquiry.isPrivate &&
+                        authStore.user?.id !== inquiry.userId &&
+                        !authStore.user?.isAdmin
+                      "
+                    >
+                      비밀글입니다.
+                    </template>
+                    <template v-else>{{ inquiry.title }}</template>
+                  </span>
+                </div>
+                <div class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption leading-[1.2] text-muted-foreground/80">
+                  <span>{{ typeLabels[inquiry.type] }}</span>
+                  <span>·</span>
+                  <span>{{ inquiry.user?.userName }}</span>
+                  <span>·</span>
+                  <span>{{ formatDate(inquiry.createdAt) }}</span>
+                </div>
+                <p
+                  v-if="inquiry.product"
+                  class="mt-0.5 truncate text-caption leading-[1.2] text-muted-foreground/80"
+                >
+                  상품: {{ inquiry.product.name }}
+                </p>
+              </div>
+              <Badge
+                :variant="statusVariants[inquiry.status]"
+                class="shrink-0 text-[11px] font-semibold"
+              >
+                {{ statusLabelsShort[inquiry.status] }}
+              </Badge>
+            </div>
+          </button>
+        </div>
+
+        <div
+          class="inquiry-table hidden md:block border-y border-primary/10 bg-background/80 rounded-none overflow-hidden shadow-none"
+        >
+          <Table>
           <TableHeader>
-            <TableRow class="bg-muted/30 hover:bg-muted/30 border-b border-border">
-              <TableHead class="w-[60px] sm:w-[80px] text-center font-semibold text-foreground">
-                <span class="hidden sm:inline">번호</span>
-                <span class="sm:hidden">#</span>
-              </TableHead>
-              <TableHead class="hidden sm:table-cell w-[100px] md:w-[120px] font-semibold text-foreground">
-                유형
-              </TableHead>
-              <TableHead class="font-semibold text-foreground">제목</TableHead>
-              <TableHead class="hidden md:table-cell w-[100px] text-center font-semibold text-foreground">
-                작성자
-              </TableHead>
-              <TableHead class="hidden lg:table-cell w-[140px] text-center font-semibold text-foreground">
+            <TableRow class="bg-transparent hover:bg-transparent border-b border-primary/10">
+              <TableHead class="font-semibold text-foreground/70">제목</TableHead>
+              <TableHead class="w-[128px] text-center font-semibold text-foreground/70">
                 작성일
               </TableHead>
-              <TableHead class="w-[100px] sm:w-[110px] text-center font-semibold text-foreground">
+              <TableHead class="hidden lg:table-cell w-[112px] text-center font-semibold text-foreground/70">
+                작성자
+              </TableHead>
+              <TableHead class="w-[112px] text-center font-semibold text-foreground/70">
                 상태
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow
-              v-for="(inquiry, index) in filteredInquiries"
+              v-for="inquiry in filteredInquiries"
               :key="inquiry.id"
-              class="cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 last:border-0"
+              class="cursor-pointer border-b border-primary/10 transition-colors duration-200 last:border-0 hover:bg-primary/[0.03]"
               @click="goToDetail(inquiry)"
             >
-              <TableCell class="text-center">
-                <span class="text-caption sm:text-body font-semibold text-primary">
-                  {{ index + 1 }}
-                </span>
-              </TableCell>
-
-              <TableCell class="hidden sm:table-cell">
-                <Badge variant="outline" class="text-xs">
-                  {{ typeLabels[inquiry.type] }}
-                </Badge>
-              </TableCell>
-
               <TableCell>
-                <div class="flex flex-col gap-1 py-1">
-                  <div class="sm:hidden flex items-center gap-1.5 mb-1">
-                    <Badge variant="outline" class="text-xs">
-                      {{ typeLabels[inquiry.type] }}
-                    </Badge>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <Lock
-                      v-if="inquiry.isPrivate"
-                      class="w-3.5 h-3.5 text-muted-foreground shrink-0"
-                    />
-                    <span class="font-medium text-foreground truncate text-caption sm:text-body">
-                      <template
-                        v-if="
-                          inquiry.isPrivate &&
-                          authStore.user?.id !== inquiry.userId &&
-                          !authStore.user?.isAdmin
-                        "
-                      >
-                        비밀글입니다.
-                      </template>
-                      <template v-else>{{ inquiry.title }}</template>
-                    </span>
-                    <div
-                      v-if="inquiry.replyCount && inquiry.replyCount > 0"
-                      class="flex items-center gap-1.5 shrink-0"
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="w-[68px] shrink-0 text-caption font-medium leading-[1.2] text-muted-foreground/80">
+                    {{ typeLabels[inquiry.type] }}
+                  </span>
+                  <span class="w-2 shrink-0 text-center text-muted-foreground/50">·</span>
+                  <Lock
+                    v-if="inquiry.isPrivate"
+                    class="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                  />
+                  <span class="inquiry-title-text min-w-0 flex-1 truncate text-[13px] font-medium leading-[1.25] text-foreground">
+                    <template
+                      v-if="
+                        inquiry.isPrivate &&
+                        authStore.user?.id !== inquiry.userId &&
+                        !authStore.user?.isAdmin
+                      "
                     >
-                      <div class="bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                        RE
-                      </div>
-                      <div class="flex items-center gap-0.5 text-xs text-primary">
-                        <MessageCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        <span class="font-medium">{{ inquiry.replyCount }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p v-if="inquiry.product" class="text-xs text-muted-foreground truncate">
-                    상품: {{ inquiry.product.name }}
-                  </p>
-                  <div class="md:hidden text-xs text-muted-foreground mt-0.5">
-                    <span>{{ inquiry.user?.userName }}</span>
-                    <span class="mx-1">·</span>
-                    <span>{{ formatDate(inquiry.createdAt) }}</span>
-                  </div>
+                      비밀글입니다.
+                    </template>
+                    <template v-else>{{ inquiry.title }}</template>
+                  </span>
+                  <template v-if="inquiry.product">
+                    <span class="hidden shrink-0 text-muted-foreground/50 xl:inline">·</span>
+                    <span class="hidden max-w-[180px] shrink-0 truncate text-caption leading-[1.2] text-muted-foreground/70 xl:block">
+                      {{ inquiry.product.name }}
+                    </span>
+                  </template>
                 </div>
               </TableCell>
 
-              <TableCell class="hidden md:table-cell text-center text-caption text-muted-foreground">
-                {{ inquiry.user?.userName }}
-              </TableCell>
-
-              <TableCell class="hidden lg:table-cell text-center text-caption text-muted-foreground">
+              <TableCell class="text-center text-caption text-muted-foreground/80">
                 {{ formatDate(inquiry.createdAt) }}
               </TableCell>
 
+              <TableCell class="hidden lg:table-cell text-center text-caption text-muted-foreground/80">
+                {{ inquiry.user?.userName }}
+              </TableCell>
+
               <TableCell class="text-center">
-                <Badge :variant="statusVariants[inquiry.status]" class="text-xs font-medium">
+                <Badge :variant="statusVariants[inquiry.status]" class="text-[11px] font-semibold">
                   <span class="sm:hidden">{{ statusLabelsShort[inquiry.status] }}</span>
                   <span class="hidden sm:inline">{{ statusLabels[inquiry.status] }}</span>
                 </Badge>
               </TableCell>
             </TableRow>
           </TableBody>
-        </Table>
-      </div>
+          </Table>
+        </div>
+      </template>
     </section>
   </main>
 </template>

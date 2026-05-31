@@ -35,15 +35,18 @@ const { showAlert, showConfirm } = useAlert();
 const naverPay = useNaverPayOrder();
 const naverPayInitialized = ref(false);
 
-// 결제 버튼 표시 조건 (SDK 로드 완료 후 동시 표시)
+// 네이버페이는 운영 UI에서 노출하지 않고, 관리자도 일반 사용자와 동일한 결제 UI를 사용한다.
+const showNaverPayButton = computed(() => {
+  return false;
+});
+
+// 결제 버튼 표시 조건
 const showPaymentButtons = computed(() => {
-  return (
-    !isEmpty.value && (naverPay.sdkLoaded.value || !naverPay.isEnabled.value)
-  );
+  return !isEmpty.value;
 });
 
 const canLoadNaverPaySdk = computed(() => {
-  return authStore.isAdmin || authStore.user?.email === "test@shakishakiarchive.com";
+  return false;
 });
 
 // [삭제] 인증 체크 로직 제거 (이제 누구나 접근 가능)
@@ -274,7 +277,7 @@ watch(
         <!-- 재고 부족 경고 -->
         <Card
           v-if="hasOutOfStockItems"
-          class="rounded-[3px] border-primary/15 bg-primary/[0.04]"
+          class="rounded-none border-primary/15 bg-primary/[0.04]"
         >
           <CardContent class="p-3">
             <AlertDescription>
@@ -288,7 +291,7 @@ watch(
         </Card>
 
         <!-- 장바구니 상품 -->
-        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+        <Card class="rounded-none border-primary/10 bg-background/80">
           <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading"
               >상품 목록
@@ -377,7 +380,7 @@ watch(
 
       <div class="lg:col-span-1 space-y-4 sticky top-24">
         <!-- 주문 요약 Card -->
-        <Card class="rounded-[3px] border-primary/10 bg-background/80">
+        <Card class="rounded-none border-primary/10 bg-background/80">
           <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">주문 요약</CardTitle>
           </CardHeader>
@@ -407,7 +410,7 @@ watch(
         <!-- 주문하기 Card (SDK 로드 완료 후 표시) -->
         <Card
           v-if="!hasOutOfStockItems && showPaymentButtons"
-          class="animate-fade-in rounded-[3px] border-primary/10 bg-background/80"
+          class="animate-fade-in rounded-none border-primary/10 bg-background/80"
         >
           <CardHeader class="px-4 py-4 sm:px-5 sm:py-5">
             <CardTitle class="text-heading">바로 구매</CardTitle>
@@ -415,7 +418,7 @@ watch(
           <CardContent class="flex flex-col gap-2 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
             <!-- 네이버페이 SDK 버튼 (관리자 + 검수 테스트 계정) -->
             <div
-              v-if="naverPay.isEnabled.value && (authStore.isAdmin || authStore.user?.email === 'test@shakishakiarchive.com')"
+              v-if="showNaverPayButton"
               id="naverpay-cart-button-container"
               class="flex items-center justify-center min-h-[100px]"
             ></div>

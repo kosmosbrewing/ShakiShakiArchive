@@ -21,7 +21,7 @@ import { INQUIRY_MESSAGES } from "@/lib/messages";
 import { LoadingSpinner } from "@/components/common";
 
 // Shadcn UI 컴포넌트
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -48,6 +48,7 @@ const replyLoading = ref(false);
 const deleteLoading = ref(false);
 const statusLoading = ref(false);
 const replyContent = ref("");
+const statusDraft = ref<InquiryStatus>("pending");
 const showDeleteConfirm = ref(false);
 const deletingReplyId = ref<string | null>(null);
 const showReplyDeleteConfirm = ref(false);
@@ -116,11 +117,16 @@ const canDelete = computed(() => isMyInquiry.value || isAdmin.value);
 // 답변 작성 가능 여부 (관리자만)
 const canReply = computed(() => isAdmin.value);
 
+const hasStatusDraftChanged = computed(() => {
+  return Boolean(inquiry.value && statusDraft.value !== inquiry.value.status);
+});
+
 // 문의 로드
 const loadInquiry = async () => {
   loading.value = true;
   try {
     inquiry.value = await fetchInquiry(inquiryId.value);
+    statusDraft.value = inquiry.value.status;
   } catch (error: any) {
     console.error("문의 로드 실패:", error);
     if (error.message?.includes("403") || error.message?.includes("권한")) {
@@ -164,11 +170,13 @@ const handleReply = async () => {
 };
 
 // 상태 변경
-const handleStatusChange = async (newStatus: string) => {
+const handleStatusSave = async () => {
+  if (!hasStatusDraftChanged.value) return;
+
   statusLoading.value = true;
   try {
     await updateInquiryStatus(inquiryId.value, {
-      status: newStatus as InquiryStatus,
+      status: statusDraft.value,
     });
     await loadInquiry();
   } catch (error: any) {
@@ -252,7 +260,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
+  <div class="max-w-4xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16 lg:min-h-[calc(100vh-9rem)] lg:pb-20">
     <!-- 헤더 -->
     <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -260,7 +268,7 @@ onMounted(() => {
           variant="ghost"
           size="icon"
           @click="goBack"
-          class="shrink-0 -ml-2 hover:bg-muted/80"
+          class="shrink-0 -ml-2 hover:bg-primary/[0.03]"
         >
           <ArrowLeft class="w-5 h-5" />
         </Button>
@@ -274,7 +282,7 @@ onMounted(() => {
         v-if="canDelete && inquiry"
         variant="ghost"
         size="sm"
-        class="text-primary hover:text-primary hover:bg-primary/5 transition-colors"
+        class="gap-1.5 rounded-none px-2 text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive"
         :disabled="deleteLoading"
         @click="confirmDelete"
       >
@@ -289,45 +297,92 @@ onMounted(() => {
         <span class="hidden sm:inline">삭제</span>
       </Button>
     </div>
-    <Separator class="mb-6" />
+    <Separator class="mb-6 bg-primary/10" />
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="inquiry">
       <!-- 문의 내용 -->
-      <Card class="mb-6 shadow-sm border-border rounded-xl">
-        <CardHeader class="pb-4 px-5 sm:px-6">
+      <Card class="mb-6 border-primary/10 bg-background/80 shadow-none">
+        <CardHeader class="px-5 pb-4 sm:px-6">
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1 min-w-0">
-              <!-- 배지 -->
-              <div class="flex items-center gap-2 mb-3 flex-wrap">
-                <Badge variant="outline" class="text-xs">
+              <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+                <span class="shrink-0 text-[11px] font-medium leading-none text-muted-foreground/75">
                   {{ typeLabels[inquiry.type] }}
-                </Badge>
-                <Badge
-                  :variant="statusVariants[inquiry.status]"
-                  class="text-xs font-medium"
-                >
-                  <span class="sm:hidden">{{ statusLabelsShort[inquiry.status] }}</span>
-                  <span class="hidden sm:inline">{{ statusLabels[inquiry.status] }}</span>
-                </Badge>
-                <Lock
-                  v-if="inquiry.isPrivate"
-                  class="w-3.5 h-3.5 text-muted-foreground"
-                />
+                </span>
+                <span class="shrink-0 text-[11px] leading-none text-muted-foreground/40">·</span>
+
+                <!-- 제목 -->
+                <CardTitle class="min-w-0 flex-1 text-base sm:text-lg leading-[1.3] font-semibold">
+                  {{ inquiry.title }}
+                </CardTitle>
               </div>
 
-              <!-- 제목 -->
-              <CardTitle class="text-lg sm:text-xl leading-snug font-semibold">
-                {{ inquiry.title }}
-              </CardTitle>
+              <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-caption leading-[1.2] text-muted-foreground/80">
+                <span>{{ formatDateTimeWithSeconds(inquiry.createdAt) }}</span>
+                <template v-if="inquiry.user?.userName">
+                  <span class="text-muted-foreground/50">·</span>
+                  <span>{{ inquiry.user.userName }}</span>
+                </template>
+                <template v-if="inquiry.isPrivate">
+                  <span class="text-muted-foreground/50">·</span>
+                  <span class="inline-flex items-center gap-1">
+                    <Lock class="w-3.5 h-3.5" />
+                    비밀글
+                  </span>
+                </template>
+              </div>
             </div>
 
-            <!-- 관리자: 상태 변경 -->
+            <Badge
+              :variant="statusVariants[inquiry.status]"
+              class="shrink-0 text-[11px] font-semibold"
+            >
+              <span class="sm:hidden">{{ statusLabelsShort[inquiry.status] }}</span>
+              <span class="hidden sm:inline">{{ statusLabels[inquiry.status] }}</span>
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent class="border-t border-primary/10 px-5 py-5 sm:px-6 sm:py-6">
+          <!-- 문의 내용 -->
+          <div
+            class="whitespace-pre-wrap text-foreground text-body leading-[1.5]"
+          >
+            {{ inquiry.content }}
+          </div>
+
+          <!-- 상품 정보 -->
+          <div
+            v-if="inquiry.product"
+            class="mt-5 flex items-center gap-3 p-3 sm:p-4 bg-background/80 border border-primary/10 rounded-none cursor-pointer hover:bg-primary/[0.03] hover:border-primary/20 transition-colors duration-200"
+            @click="goToProduct(inquiry.product.slug, inquiry.product.id)"
+          >
+            <img
+              v-if="safeProductImageUrl"
+              :src="safeProductImageUrl"
+              :alt="inquiry.product.name"
+              class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-none border border-primary/10"
+              crossorigin="anonymous"
+            />
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-muted-foreground mb-0.5">관련 상품</p>
+              <p class="text-sm font-medium truncate">
+                {{ inquiry.product.name }}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter
+          v-if="isAdmin"
+          class="justify-end border-t border-primary/10 px-5 py-3 sm:px-6"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-caption text-muted-foreground/80">상태 변경</span>
             <Select
-              v-if="isAdmin"
-              :model-value="inquiry.status"
+              v-model="statusDraft"
               :disabled="statusLoading"
-              @update:model-value="handleStatusChange"
             >
               <SelectTrigger class="w-[130px] border-border/60">
                 <SelectValue />
@@ -337,46 +392,17 @@ onMounted(() => {
                 <SelectItem value="answered">답변 완료</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-9 rounded-none border-border/60 px-3 text-caption font-medium shadow-none hover:bg-primary/[0.03]"
+              :disabled="statusLoading || !hasStatusDraftChanged"
+              @click="handleStatusSave"
+            >
+              {{ statusLoading ? "저장 중" : "저장" }}
+            </Button>
           </div>
-
-          <!-- 작성일 -->
-          <div
-            class="flex items-center gap-2 text-caption text-muted-foreground"
-          >
-            <span>{{ formatDateTimeWithSeconds(inquiry.createdAt) }}</span>
-          </div>
-          <Separator class="mt-1 mb-1"></Separator>
-        </CardHeader>
-
-        <CardContent class="px-5 sm:px-6 pb-5 sm:pb-6">
-          <!-- 상품 정보 -->
-          <div
-            v-if="inquiry.product"
-            class="flex items-center gap-3 p-3 sm:p-4 bg-muted/30 border border-border/50 rounded-lg mb-5 cursor-pointer hover:bg-muted/50 hover:border-primary/20 transition-all duration-200"
-            @click="goToProduct(inquiry.product.slug, inquiry.product.id)"
-          >
-            <img
-              v-if="safeProductImageUrl"
-              :src="safeProductImageUrl"
-              :alt="inquiry.product.name"
-              class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-md border border-border/30"
-              crossorigin="anonymous"
-            />
-            <div class="flex-1 min-w-0">
-              <p class="text-xs text-muted-foreground mb-0.5">문의 상품</p>
-              <p class="text-sm sm:text-base font-semibold truncate">
-                {{ inquiry.product.name }}
-              </p>
-            </div>
-          </div>
-
-          <!-- 문의 내용 -->
-          <div
-            class="whitespace-pre-wrap text-foreground text-body leading-relaxed"
-          >
-            {{ inquiry.content }}
-          </div>
-        </CardContent>
+        </CardFooter>
       </Card>
 
       <!-- 답변 목록 -->
@@ -386,30 +412,30 @@ onMounted(() => {
       >
         <div class="flex items-center gap-2 px-1">
           <h4 class="font-semibold text-foreground text-body">답변</h4>
-          <span class="text-caption text-primary font-medium">
+          <span class="text-caption text-muted-foreground/80 font-medium">
             {{ inquiry.replies.length }}
           </span>
         </div>
 
         <!-- 답변 위계 표시를 위한 왼쪽 여백 및 시각적 구분 -->
         <div
-          class="ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-4 border-primary/30 space-y-4"
+          class="ml-4 sm:ml-8 pl-4 sm:pl-6 border-l border-primary/10 space-y-4"
         >
           <Card
             v-for="reply in inquiry.replies"
             :key="reply.id"
-            class="bg-primary/5 border-primary/20 shadow-sm rounded-xl"
+            class="bg-background/80 border-primary/10 shadow-none"
           >
             <CardContent class="p-4 sm:p-5">
               <!-- 답변자 정보 -->
               <div class="flex items-center gap-2.5 mb-4">
                 <div
-                  class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0"
+                  class="w-9 h-9 sm:w-10 sm:h-10 rounded-none border border-primary/10 bg-background flex items-center justify-center shrink-0"
                 >
                   <User class="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm sm:text-base font-semibold text-foreground">
+                  <p class="text-sm font-medium text-foreground">
                     {{ reply.user.userName }}
                   </p>
                   <p class="text-xs text-muted-foreground">
@@ -421,7 +447,7 @@ onMounted(() => {
                   v-if="isAdmin"
                   variant="ghost"
                   size="sm"
-                  class="text-primary hover:text-primary hover:bg-primary/5 transition-colors shrink-0"
+                  class="rounded-none text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive shrink-0"
                   @click="confirmReplyDelete(String(reply.id))"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -430,7 +456,7 @@ onMounted(() => {
 
               <!-- 답변 내용 -->
               <div
-                class="whitespace-pre-wrap text-foreground text-body leading-relaxed"
+                class="whitespace-pre-wrap text-foreground text-body leading-[1.5]"
               >
                 {{ reply.content }}
               </div>
@@ -440,7 +466,7 @@ onMounted(() => {
       </div>
 
       <!-- 관리자 답변 작성 -->
-      <Card v-if="canReply" class="shadow-sm border-border rounded-xl">
+      <Card v-if="canReply" class="border-primary/10 bg-background/80 shadow-none">
         <CardHeader class="pb-3 px-5 sm:px-6">
           <CardTitle class="text-base sm:text-lg font-semibold">
             답변 작성
@@ -458,7 +484,7 @@ onMounted(() => {
             <Button
               :disabled="replyLoading || !replyContent.trim()"
               @click="handleReply"
-              class="shadow-sm hover:shadow"
+              class="shadow-none"
             >
               <LoadingSpinner
                 v-if="replyLoading"
@@ -476,14 +502,14 @@ onMounted(() => {
     </template>
 
     <!-- 문의를 찾을 수 없는 경우 -->
-    <Card v-else class="shadow-sm border-border rounded-xl">
+    <Card v-else class="border-primary/10 bg-background/80 shadow-none">
       <CardContent class="text-center py-16">
         <p class="text-muted-foreground text-body mb-6">
           문의를 찾을 수 없습니다.
         </p>
         <Button
           variant="outline"
-          class="shadow-sm hover:shadow border-border/60 font-medium"
+          class="rounded-none border-primary/10 font-medium shadow-none hover:bg-primary/[0.03]"
           @click="router.push('/inquiry')"
         >
           목록으로 돌아가기

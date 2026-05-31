@@ -175,7 +175,7 @@ const handleTouchEnd = () => {
   <Sheet :open="open" @update:open="emit('update:open', $event)">
     <SheetContent
       side="right"
-      class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-[3px]"
+      class="w-11/12 sm:max-w-md flex flex-col p-0 bg-card rounded-none"
       @open-auto-focus="(event) => event.preventDefault()"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -224,7 +224,7 @@ const handleTouchEnd = () => {
             <!-- 재고 부족 경고 -->
             <Card
               v-if="hasOutOfStockItems"
-              class="rounded-[3px] border-primary/15 bg-primary/[0.04]"
+              class="rounded-none border-primary/15 bg-primary/[0.04]"
             >
               <CardContent class="p-3">
                 <AlertDescription>
@@ -239,7 +239,7 @@ const handleTouchEnd = () => {
               v-for="item in cartItems"
               :key="item.id"
               :class="[
-                'rounded-[3px] overflow-hidden border-primary/10 bg-background/80',
+                'rounded-none overflow-hidden border-primary/10 bg-background/80',
                 isOutOfStock(item) ? 'border-primary/15 bg-primary/[0.04]' : '',
               ]"
             >
@@ -324,7 +324,7 @@ const handleTouchEnd = () => {
       <!-- 푸터 (주문 요약) -->
       <SheetFooter
         v-if="!loading && !isEmpty"
-        class="flex-col gap-4 rounded-[3px] border border-primary/10 bg-muted/30 px-6 py-4"
+        class="flex-col gap-4 rounded-none border border-primary/10 bg-muted/30 px-6 py-4"
       >
         <div class="w-full space-y-2">
           <div class="flex justify-between text-body">

@@ -16,13 +16,13 @@ onMounted(() => {
         <h1 class="text-3xl font-extrabold mb-5 text-primary tracking-wider">
           about shaki shaki archive
         </h1>
-        <p class="text-xl sm:text-2xl font-bold leading-relaxed text-foreground">
+        <p class="text-xl sm:text-2xl font-bold leading-[1.5] text-foreground">
           숲과 무대 사이,<br />
           일본 빈티지 소녀 아카이브
         </p>
       </div>
 
-      <div class="space-y-6 text-body leading-loose text-muted-foreground">
+      <div class="space-y-6 text-body leading-[1.55] text-muted-foreground">
         <p>
           shaki shaki archive는<br />
           일본 빈티지의 색감과 패턴,<br />
@@ -59,7 +59,7 @@ onMounted(() => {
         ♪ rhythm of archive
       </h2>
 
-      <div class="space-y-6 text-body leading-loose text-muted-foreground">
+      <div class="space-y-6 text-body leading-[1.55] text-muted-foreground">
         <p>
           도트는 작은 조각을,<br />
           음표는 이어지는 리듬을 뜻합니다.

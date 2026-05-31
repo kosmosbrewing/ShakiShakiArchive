@@ -63,7 +63,7 @@ const handleAction = () => {
   >
     <CardHeader class="p-0 gap-0">
       <div
-        class="aspect-square cursor-pointer relative overflow-hidden rounded-[3px] bg-muted/10 ring-1 ring-primary/10 transition-shadow duration-300 group-hover/hoverimg:ring-primary/20"
+        class="aspect-square cursor-pointer relative overflow-hidden rounded-none bg-muted/10 ring-1 ring-primary/10 transition-shadow duration-300 group-hover/hoverimg:ring-primary/20"
         @click="openProduct"
         @mouseenter="hovered = true"
         @mouseleave="hovered = false"
@@ -115,16 +115,13 @@ const handleAction = () => {
       </div>
 
       <CardContent
-        class="px-1 pt-3 pb-0 cursor-pointer text-center"
+        class="px-1 pt-2.5 pb-0 cursor-pointer text-center"
         @click="openProduct"
       >
-        <span class="text-caption text-foreground leading-snug line-clamp-2 transition-colors group-hover/hoverimg:text-primary">
+        <span class="block text-caption leading-[1.12] text-foreground line-clamp-2 transition-colors group-hover/hoverimg:text-primary">
           {{ name }}
         </span>
-      </CardContent>
-
-      <CardContent class="px-1 pt-1 pb-0 text-center">
-        <span class="text-caption text-muted-foreground/85">
+        <span class="mt-1 block text-caption leading-[1.1] text-muted-foreground/85">
           {{ formatPrice(price) }}
         </span>
       </CardContent>
