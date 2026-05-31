@@ -194,13 +194,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="category-admin-page w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
-    <div class="flex justify-between items-end">
-      <div>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div class="min-w-0">
         <h3 class="text-heading text-admin tracking-wider">카테고리 관리</h3>
-        <p class="text-caption text-admin-muted mt-1 mb-3">
-          상품 분류 체계를 구성하고 관리합니다.
+        <p class="mt-1 mb-3 text-body text-admin-muted">
+          총
+          <span class="text-body font-bold text-admin">{{ categories.length }}</span>개 카테고리
+          <span class="text-caption text-admin-muted">/ 상품 분류 체계 관리</span>
         </p>
       </div>
       <Button
@@ -211,39 +213,39 @@ onMounted(async () => {
         추가
       </Button>
     </div>
-    <Separator class="mb-6"></Separator>
+    <Separator class="mb-4 bg-border/70"></Separator>
 
     <LoadingSpinner v-if="isLoading && !hasLoadedOnce" />
 
-    <Card v-else class="overflow-hidden border-none shadow-md">
+    <Card v-else class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
       <div
         v-if="isLoading && hasLoadedOnce"
-        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted"
+        class="border-b border-border/70 bg-card px-6 py-3 text-caption text-admin-muted"
       >
         카테고리 목록 업데이트 중...
       </div>
       <CardContent class="p-0">
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
+          <table class="category-admin-table w-full min-w-[820px] border-separate border-spacing-0 text-left">
             <thead
-              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+              class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
             >
               <tr>
-                <th class="px-6 py-4 w-20">이미지</th>
-                <th class="px-6 py-4">분류 정보</th>
-                <th class="px-6 py-4 hidden sm:table-cell">설명</th>
-                <th class="px-6 py-4 text-right">작업</th>
+                <th class="px-5 py-2.5 w-20">이미지</th>
+                <th class="px-5 py-2.5 w-1/3">분류 정보</th>
+                <th class="px-5 py-2.5 hidden sm:table-cell">설명</th>
+                <th class="px-5 py-2.5 text-right w-28">작업</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody>
               <tr
                 v-for="category in categories"
                 :key="category.id"
-                class="hover:bg-muted/30 transition-colors"
+                class="group transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div
-                    class="h-12 w-12 bg-muted rounded-lg overflow-hidden border border-border shadow-sm"
+                    class="h-10 w-10 overflow-hidden border border-border/70 bg-muted/20 transition-colors group-hover:border-primary/20"
                   >
                     <img
                       v-if="category.imageUrl"
@@ -259,25 +261,25 @@ onMounted(async () => {
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-4">
-                  <div class="text-body font-bold text-admin">
+                <td class="px-5 py-2.5">
+                  <div class="text-[14px] font-medium leading-[1.25] text-admin">
                     {{ category.name }}
                   </div>
-                  <div class="flex gap-2 text-tiny text-admin-muted mt-0.5">
-                    <span class="bg-muted px-1.5 py-0.5 rounded"
+                  <div class="mt-1 flex flex-wrap gap-1.5 text-[11px] leading-[1.2] text-admin-muted">
+                    <span class="border border-border/60 bg-background px-1.5 py-0.5 font-mono"
                       >ID: {{ category.id }}</span
                     >
-                    <span class="bg-muted px-1.5 py-0.5 rounded"
+                    <span class="border border-border/60 bg-background px-1.5 py-0.5 font-mono"
                       >Slug: {{ category.slug }}</span
                     >
                   </div>
                 </td>
                 <td
-                  class="px-6 py-4 text-caption text-admin-muted hidden sm:table-cell max-w-xs truncate"
+                  class="hidden max-w-xs truncate px-5 py-2.5 text-[12px] leading-[1.25] text-admin-muted sm:table-cell"
                 >
                   {{ category.description || "-" }}
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-5 py-2.5 text-right">
                   <div class="flex justify-end gap-1">
                     <Button
                       variant="ghost"
@@ -315,7 +317,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-lg overflow-hidden border border-border bg-card shadow-2xl animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
           <div class="flex justify-between items-center mb-8 border-b pb-4">
@@ -441,5 +443,36 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 애니메이션 등 필요한 스타일이 있다면 추가 */
+.category-admin-page :deep(input),
+.category-admin-page :deep([role="combobox"]) {
+  border-radius: 0;
+  border-color: hsl(var(--border) / 0.7);
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+.category-admin-page :deep(input:focus-visible),
+.category-admin-page :deep([role="combobox"]:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.category-admin-table th,
+.category-admin-table td {
+  border-left: 1px solid hsl(var(--border) / 0.42);
+  vertical-align: middle;
+}
+
+.category-admin-table th:first-child,
+.category-admin-table td:first-child {
+  border-left: 0;
+}
+
+.category-admin-table tbody td {
+  border-top: 1px solid hsl(var(--border) / 0.62);
+}
+
+.category-admin-table thead th {
+  line-height: 1.2;
+}
 </style>

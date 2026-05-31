@@ -235,12 +235,14 @@ const handleFileSelect = async (event: Event) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
     errorMessage.value = ADMIN_MESSAGES.supportedImageFormats;
+    input.value = "";
     return;
   }
 
   // 파일 크기 검증 (10MB)
   if (file.size > 10 * 1024 * 1024) {
     errorMessage.value = ADMIN_MESSAGES.fileSizeLimit;
+    input.value = "";
     return;
   }
 
@@ -448,15 +450,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="site-image-admin-page w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
-    <div class="flex justify-between items-end">
-      <div>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div class="min-w-0">
         <h3 class="text-heading text-admin tracking-wider">
           사이트 이미지 관리
         </h3>
-        <p class="text-body text-admin-muted mt-1 mb-3">
-          Main, Marquee 및 Journal 이미지를 관리합니다.
+        <p class="mt-1 mb-3 text-body text-admin-muted">
+          총
+          <span class="text-body font-bold text-admin">{{ siteImages.length }}</span>개 이미지
+          <span class="text-caption text-admin-muted">/ Main, Marquee, Journal 관리</span>
         </p>
       </div>
       <Button
@@ -468,10 +472,10 @@ onMounted(async () => {
         이미지 추가
       </Button>
     </div>
-    <Separator class="mb-6"></Separator>
+    <Separator class="mb-4 bg-border/70"></Separator>
 
     <!-- 탭 -->
-    <div class="flex flex-wrap gap-2 mb-6">
+    <div class="mb-4 flex flex-wrap gap-2 border-y border-border/70 bg-card/60 px-3 py-3">
       <Button
         @click="activeTab = 'main_desktop'"
         :variant="activeTab === 'main_desktop' ? undefined : 'outline'"
@@ -538,42 +542,42 @@ onMounted(async () => {
     <LoadingSpinner v-if="isLoading && activeTab !== 'email'" />
 
     <!-- 이메일 템플릿 목록 -->
-    <Card v-if="activeTab === 'email'" class="overflow-hidden border-none shadow-lg">
+    <Card v-if="activeTab === 'email'" class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
       <CardContent class="p-0">
         <LoadingSpinner v-if="isEmailLoading && !isEmailPreviewOpen" />
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[600px]">
+          <table class="site-image-admin-table w-full min-w-[600px] border-separate border-spacing-0 text-left">
             <thead
-              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+              class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
             >
               <tr>
-                <th class="px-6 py-5">템플릿명</th>
-                <th class="px-6 py-5">설명</th>
-                <th class="px-6 py-5 text-right pr-10">작업</th>
+                <th class="px-5 py-2.5">템플릿명</th>
+                <th class="px-5 py-2.5">설명</th>
+                <th class="px-5 py-2.5 text-right pr-8">작업</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody>
               <tr
                 v-for="template in emailTemplates"
                 :key="template.type"
-                class="hover:bg-muted/30 transition-colors group"
+                class="group transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div class="flex items-center gap-3">
-                    <div class="p-2 bg-primary/10 rounded-lg">
-                      <Mail class="w-4 h-4 text-primary" />
+                    <div class="flex h-8 w-8 items-center justify-center border border-border/70 bg-muted/20">
+                      <Mail class="h-4 w-4 text-primary" />
                     </div>
-                    <span class="text-body font-medium text-foreground">
+                    <span class="text-[14px] font-medium leading-[1.25] text-admin">
                       {{ template.name }}
                     </span>
                   </div>
                 </td>
-                <td class="px-6 py-4">
-                  <span class="text-body text-muted-foreground">
+                <td class="px-5 py-2.5">
+                  <span class="text-[12px] leading-[1.25] text-admin-muted">
                     {{ template.description }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-5 py-2.5 text-right">
                   <Button
                     variant="outline"
                     size="sm"
@@ -601,33 +605,33 @@ onMounted(async () => {
     </Card>
 
     <!-- 이미지 목록 -->
-    <Card v-else-if="!isLoading" class="overflow-hidden border-none shadow-lg">
+    <Card v-else-if="!isLoading" class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
       <CardContent class="p-0">
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[800px]">
+          <table class="site-image-admin-table w-full min-w-[860px] border-separate border-spacing-0 text-left">
             <thead
-              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+              class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
             >
               <tr>
-                <th class="px-6 py-5 w-12">순서</th>
-                <th class="px-6 py-5">이미지</th>
-                <th class="px-6 py-5">링크 URL</th>
-                <th class="px-6 py-5 text-center">상태</th>
-                <th class="px-6 py-5 text-right pr-10">작업</th>
+                <th class="px-5 py-2.5 w-16">순서</th>
+                <th class="px-5 py-2.5 w-44">이미지</th>
+                <th class="px-5 py-2.5">이미지 URL</th>
+                <th class="px-5 py-2.5 text-center w-28">상태</th>
+                <th class="px-5 py-2.5 text-right pr-8 w-28">작업</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody>
               <tr
                 v-for="(image, index) in currentImages"
                 :key="image.id"
-                class="hover:bg-muted/30 transition-colors group"
+                class="group transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div class="flex flex-col gap-1">
                     <button
                       @click="moveUp(index)"
                       :disabled="index === 0"
-                      class="p-1 hover:bg-muted rounded disabled:opacity-30"
+                      class="p-1 hover:bg-muted disabled:opacity-30"
                     >
                       <GripVertical class="w-4 h-4 rotate-90" />
                     </button>
@@ -637,15 +641,15 @@ onMounted(async () => {
                     <button
                       @click="moveDown(index)"
                       :disabled="index === currentImages.length - 1"
-                      class="p-1 hover:bg-muted rounded disabled:opacity-30"
+                      class="p-1 hover:bg-muted disabled:opacity-30"
                     >
                       <GripVertical class="w-4 h-4 -rotate-90" />
                     </button>
                   </div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div
-                    class="h-20 w-32 bg-muted rounded-xl overflow-hidden border border-border shadow-sm group-hover:scale-105 transition-transform"
+                    class="h-16 w-28 overflow-hidden border border-border/70 bg-muted/20 transition-colors group-hover:border-primary/20"
                   >
                     <img
                       v-if="image.imageUrl"
@@ -663,21 +667,21 @@ onMounted(async () => {
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-4">
-                  <div v-if="image.linkUrl" class="flex items-center gap-2">
+                <td class="px-5 py-2.5">
+                  <div v-if="image.imageUrl" class="flex items-center gap-2">
                     <a
-                      :href="image.linkUrl"
+                      :href="image.imageUrl"
                       target="_blank"
-                      class="text-caption text-primary hover:underline flex items-center gap-1"
+                      class="flex items-center gap-1 text-[12px] leading-[1.25] text-primary hover:underline"
                     >
-                      {{ image.linkUrl.substring(0, 40)
-                      }}{{ image.linkUrl.length > 40 ? "..." : "" }}
+                      {{ image.imageUrl.substring(0, 48)
+                      }}{{ image.imageUrl.length > 48 ? "..." : "" }}
                       <ExternalLink class="w-3 h-3" />
                     </a>
                   </div>
-                  <span v-else class="text-caption text-admin-muted">-</span>
+                  <span v-else class="text-[12px] text-admin-muted">-</span>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-5 py-2.5 text-center">
                   <button
                     @click="toggleActive(image)"
                     :class="
@@ -690,7 +694,7 @@ onMounted(async () => {
                     {{ image.isActive ? "활성화" : "비활성화" }}
                   </button>
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-5 py-2.5 text-right">
                   <div class="flex justify-end gap-1">
                     <Button
                       variant="ghost"
@@ -732,7 +736,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border bg-card shadow-2xl animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
           <div class="flex justify-between items-end">
@@ -767,7 +771,7 @@ onMounted(async () => {
             <!-- 타입 표시 -->
             <div class="space-y-2">
               <Label class="text-admin">타입</Label>
-              <div class="px-4 py-2 bg-muted rounded-lg text-body">
+              <div class="border border-border/70 bg-background px-4 py-2 text-body">
                 {{ getImageTypeLabel(form.type) }}
               </div>
             </div>
@@ -806,14 +810,14 @@ onMounted(async () => {
                   />
                 </label>
                 <span class="text-caption text-admin-muted">
-                  JPEG, PNG, GIF, WebP (최대 10MB)
+                  JPG/PNG/GIF/WebP · 10MB
                 </span>
               </div>
 
               <!-- 이미지 미리보기 -->
               <div
                 v-if="form.imageUrl"
-                class="relative w-full h-48 bg-muted rounded-lg overflow-hidden border border-border"
+                class="relative h-48 w-full overflow-hidden border border-border/70 bg-muted/20"
               >
                 <img
                   :src="form.imageUrl"
@@ -825,14 +829,14 @@ onMounted(async () => {
                   type="button"
                   @click="form.imageUrl = ''"
                   :disabled="isUploading || isSaving"
-                  class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="absolute right-2 top-2 bg-red-500 p-1 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <X class="w-4 h-4" />
                 </button>
               </div>
               <div
                 v-else
-                class="border-2 border-dashed border-border rounded-lg p-8 text-center text-admin-muted"
+                class="border-2 border-dashed border-border p-8 text-center text-admin-muted"
               >
                 <ImageIcon class="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p class="text-body">이미지를 업로드해주세요</p>
@@ -930,11 +934,11 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col"
+        class="flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden border border-border bg-card shadow-2xl animate-in fade-in zoom-in duration-200"
       >
         <div class="p-6 border-b border-border flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <div class="p-2 bg-primary/10 rounded-lg">
+            <div class="flex h-9 w-9 items-center justify-center border border-border/70 bg-primary/10">
               <Mail class="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -955,8 +959,8 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <div class="flex-1 overflow-auto bg-muted/30 p-4">
-          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="flex-1 overflow-auto bg-muted/20 p-4">
+          <div class="overflow-hidden border border-border/70 bg-white">
             <iframe
               v-if="emailPreviewHtml"
               :srcdoc="emailPreviewHtml"
@@ -979,3 +983,38 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.site-image-admin-page :deep(input),
+.site-image-admin-page :deep([role="combobox"]) {
+  border-radius: 0;
+  border-color: hsl(var(--border) / 0.7);
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+.site-image-admin-page :deep(input:focus-visible),
+.site-image-admin-page :deep([role="combobox"]:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.site-image-admin-table th,
+.site-image-admin-table td {
+  border-left: 1px solid hsl(var(--border) / 0.42);
+  vertical-align: middle;
+}
+
+.site-image-admin-table th:first-child,
+.site-image-admin-table td:first-child {
+  border-left: 0;
+}
+
+.site-image-admin-table tbody td {
+  border-top: 1px solid hsl(var(--border) / 0.62);
+}
+
+.site-image-admin-table thead th {
+  line-height: 1.2;
+}
+</style>

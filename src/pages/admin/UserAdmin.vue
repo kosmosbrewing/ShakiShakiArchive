@@ -25,9 +25,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/common";
 import { AdminNavigationTabs } from "@/components/admin";
+import { getUserProfileImageUrl } from "@/lib/constants/profile";
 import {
   Users,
   Search,
@@ -207,6 +209,33 @@ const clearSelectedUserForRole = () => {
   selectedUserForRole.value = null;
 };
 
+const hasText = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  return String(value).trim().length > 0;
+};
+
+const displayText = (value: unknown, fallback = "미입력"): string => {
+  return hasText(value) ? String(value).trim() : fallback;
+};
+
+const displayUserName = (user: Partial<User> | null | undefined): string => {
+  return displayText(user?.userName, "이름 없음");
+};
+
+const displayUserEmail = (user: Partial<User> | null | undefined): string => {
+  return displayText(user?.email, "이메일 미입력");
+};
+
+const displayUserPhone = (user: Partial<User> | null | undefined): string => {
+  return displayText(user?.phone, "연락처 미입력");
+};
+
+const displayUserAddress = (user: Partial<User> | null | undefined): string => {
+  const zip = hasText(user?.zipCode) ? `(${String(user?.zipCode).trim()})` : "";
+  const address = hasText(user?.address) ? String(user?.address).trim() : "";
+  return [zip, address].filter(Boolean).join(" ") || "주소 미입력";
+};
+
 // 관리자 권한 부여/해제
 const handleRoleUpdate = async (grantAdmin: boolean) => {
   if (!selectedUserForRole.value) return;
@@ -214,7 +243,7 @@ const handleRoleUpdate = async (grantAdmin: boolean) => {
   const actionText = grantAdmin ? "부여" : "해제";
 
   const confirmed = await showConfirm(
-    `${selectedUserForRole.value.userName}님에게 관리자 권한을 ${actionText}하시겠습니까?`,
+    `${displayUserName(selectedUserForRole.value)}님에게 관리자 권한을 ${actionText}하시겠습니까?`,
     {
       confirmText: actionText,
       cancelText: "취소",
@@ -304,18 +333,24 @@ onMounted(async () => {
 onUnmounted(() => {
   // ESC 키 이벤트 해제
   window.removeEventListener("keydown", handleKeydown);
+  if (searchTimeout) clearTimeout(searchTimeout);
+  if (roleSearchTimeout) clearTimeout(roleSearchTimeout);
 });
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="user-admin-page w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
     <!-- 헤더 -->
-    <div class="flex justify-between items-end">
-      <div>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div class="min-w-0">
         <h3 class="text-heading text-admin tracking-wider">회원 관리</h3>
-        <p class="text-body text-admin-muted pt-1 mb-3">
-          전체 {{ pagination.total }}명의 회원이 가입되어 있습니다.
+        <p class="mt-1 mb-3 text-body text-admin-muted">
+          총
+          <span class="text-body font-bold text-admin">{{ pagination.total }}</span>명 회원
+          <span class="text-caption text-admin-muted">
+            / 현재 {{ users.length }}명 표시
+          </span>
         </p>
       </div>
       <Button
@@ -327,11 +362,11 @@ onUnmounted(() => {
         관리자 권한 관리
       </Button>
     </div>
-    <Separator class="mb-6"></Separator>
+    <Separator class="mb-4 bg-border/70"></Separator>
 
     <!-- 검색바 -->
-    <div class="mb-6 flex items-center gap-3 max-w-md">
-      <div class="relative flex-1">
+    <div class="mb-4 flex flex-wrap items-center gap-3 border-y border-border/70 bg-card/60 px-3 py-3">
+      <div class="relative w-full sm:max-w-md">
         <Search
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted"
         />
@@ -349,7 +384,7 @@ onUnmounted(() => {
           @click="clearSearch"
         >
           <X class="w-3.5 h-3.5" />
-        </Button>
+          </Button>
       </div>
       <Badge variant="outline" class="px-3 py-1.5">
         {{ users.length }}명
@@ -360,81 +395,92 @@ onUnmounted(() => {
     <LoadingSpinner v-if="loading && users.length === 0" />
 
     <!-- 회원 목록 테이블 -->
-    <Card v-else class="overflow-hidden border-none shadow-lg">
+    <Card v-else class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
       <div
         v-if="loading && users.length > 0"
-        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted flex items-center gap-2"
+        class="flex items-center gap-2 border-b border-border/70 bg-card px-6 py-3 text-caption text-admin-muted"
       >
         <Loader2 class="w-3.5 h-3.5 animate-spin" />
         회원 목록 업데이트 중...
       </div>
       <CardContent class="p-0 overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[1000px]">
+        <table class="user-admin-table w-full min-w-[1000px] border-separate border-spacing-0 text-left">
           <thead
-            class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
+            class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
           >
             <tr>
-              <th class="px-6 py-4 w-16">No.</th>
-              <th class="px-6 py-4">회원정보</th>
-              <th class="px-6 py-4">연락처</th>
-              <th class="px-6 py-4 text-center">로그인</th>
-              <th class="px-6 py-4 text-center">권한</th>
-              <th class="px-6 py-4 text-center">가입일</th>
-              <th class="px-6 py-4 text-right">작업</th>
+              <th class="px-5 py-2.5 w-16">No.</th>
+              <th class="px-5 py-2.5">회원정보</th>
+              <th class="px-5 py-2.5">연락처</th>
+              <th class="px-5 py-2.5 text-center">로그인</th>
+              <th class="px-5 py-2.5 text-center">권한</th>
+              <th class="px-5 py-2.5 text-center">가입일</th>
+              <th class="px-5 py-2.5 text-right">작업</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody>
             <tr
               v-for="(user, index) in users"
               :key="user.id"
-              class="hover:bg-muted/30 transition-colors"
+              class="group transition-colors hover:bg-primary/[0.03]"
             >
               <!-- No. -->
-              <td class="px-6 py-4 text-caption text-admin-muted">
+              <td class="px-5 py-2.5 text-caption text-admin-muted">
                 {{ (pagination.page - 1) * pagination.limit + index + 1 }}
               </td>
 
               <!-- 회원정보 (이름 + 이메일) -->
-              <td class="px-6 py-4">
+              <td class="px-5 py-2.5">
                 <div class="flex items-center gap-3">
-                  <div
-                    class="h-10 w-10 bg-primary/5 rounded-full flex items-center justify-center"
+                  <Avatar
+                    v-if="user.isAdmin"
+                    shape="square"
+                    class="h-9 w-9 rounded-[3px] border border-primary/10 bg-white ring-1 ring-primary/10"
                   >
-                    <span class="text-body font-bold text-primary">
-                      {{ user.userName.charAt(0) }}
-                    </span>
-                  </div>
+                    <AvatarImage
+                      :src="getUserProfileImageUrl(user) || ''"
+                      :alt="`${displayUserName(user)} 프로필`"
+                      class="object-contain p-1"
+                    />
+                    <AvatarFallback
+                      class="flex h-full w-full items-center justify-center bg-white"
+                    >
+                      <Shield class="h-4 w-4 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <div class="text-body font-semibold text-admin">
-                      {{ user.userName }}
+                    <div class="text-[14px] font-medium leading-[1.25] text-admin">
+                      {{ displayUserName(user) }}
                     </div>
                     <div
-                      class="text-caption text-admin-muted flex items-center gap-1"
+                      class="mt-0.5 flex items-center gap-1 text-[11px] leading-[1.2] text-admin-muted"
                     >
                       <Mail class="w-3 h-3" />
-                      {{ user.email }}
+                      {{ displayUserEmail(user) }}
                     </div>
                   </div>
                 </div>
               </td>
 
               <!-- 연락처 -->
-              <td class="px-6 py-4">
-                <div class="text-caption text-admin flex items-center gap-1">
+              <td class="px-5 py-2.5">
+                <div class="flex items-center gap-1 text-caption text-admin">
                   <Phone class="w-3.5 h-3.5 text-admin-muted" />
-                  {{ user.phone }}
+                  <span :class="hasText(user.phone) ? 'text-admin' : 'text-admin-muted'">
+                    {{ displayUserPhone(user) }}
+                  </span>
                 </div>
               </td>
 
               <!-- 로그인 제공자 -->
-              <td class="px-6 py-4 text-center">
+              <td class="px-5 py-2.5 text-center">
                 <Badge :variant="getProviderColor(user.socialProvider)">
                   {{ formatProvider(user.socialProvider) }}
                 </Badge>
               </td>
 
               <!-- 권한 -->
-              <td class="px-6 py-4 text-center">
+              <td class="px-5 py-2.5 text-center">
                 <Badge
                   :variant="user.isAdmin ? 'default' : 'outline'"
                   class="gap-1"
@@ -445,7 +491,7 @@ onUnmounted(() => {
               </td>
 
               <!-- 가입일 -->
-              <td class="px-6 py-4 text-center">
+              <td class="px-5 py-2.5 text-center">
                 <div
                   class="text-caption text-admin-muted flex items-center justify-center gap-1"
                 >
@@ -455,7 +501,7 @@ onUnmounted(() => {
               </td>
 
               <!-- 작업 버튼 -->
-              <td class="px-6 py-4 text-right">
+              <td class="px-5 py-2.5 text-right">
                 <Button
                   size="sm"
                   variant="outline"
@@ -482,7 +528,7 @@ onUnmounted(() => {
       <!-- 페이지네이션 -->
       <div
         v-if="pagination.totalPages > 1"
-        class="p-6 bg-muted/20 flex justify-center items-center gap-2 border-t"
+        class="flex items-center justify-center gap-2 border-t border-border/70 bg-card p-4"
       >
         <Button
           variant="outline"
@@ -521,52 +567,60 @@ onUnmounted(() => {
     <div
       v-if="isDetailModalOpen && selectedUser"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-detail-title"
       @click.self="closeDetailModal"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-border bg-card shadow-2xl animate-in fade-in zoom-in duration-200"
       >
-        <div class="p-8">
+        <div class="p-6 sm:p-8">
           <!-- 헤더 -->
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <div class="flex items-center gap-3 mb-2">
-                <div
-                  class="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center"
+          <div class="mb-5 flex items-start justify-between gap-4">
+            <div class="flex min-w-0 items-start gap-4">
+              <Avatar
+                v-if="selectedUser?.isAdmin"
+                shape="square"
+                class="h-14 w-14 shrink-0 rounded-[3px] border border-primary/10 bg-white ring-1 ring-primary/10"
+              >
+                <AvatarImage
+                  :src="getUserProfileImageUrl(selectedUser) || ''"
+                  :alt="`${displayUserName(selectedUser)} 프로필`"
+                  class="object-contain p-1.5"
+                />
+                <AvatarFallback
+                  class="flex h-full w-full items-center justify-center bg-white"
                 >
-                  <span class="text-xl font-bold text-primary">
-                    {{ selectedUser?.userName.charAt(0) }}
-                  </span>
+                  <Shield class="h-5 w-5 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+              <div class="min-w-0">
+                <h2
+                  id="user-detail-title"
+                  class="truncate text-xl font-bold leading-tight text-admin"
+                >
+                  {{ displayUserName(selectedUser) }}
+                </h2>
+                <div class="mt-1 flex min-w-0 items-center gap-2 text-caption text-admin-muted">
+                  <Mail class="h-3.5 w-3.5 shrink-0" />
+                  <span class="truncate">{{ displayUserEmail(selectedUser) }}</span>
                 </div>
-                <div>
-                  <h2 class="text-xl font-bold text-admin">
-                    {{ selectedUser?.userName }}
-                  </h2>
-                  <div class="flex items-center gap-2 text-caption text-admin-muted">
-                    <Mail class="w-3.5 h-3.5" />
-                    {{ selectedUser?.email }}
-                  </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge :variant="getProviderColor(selectedUser?.socialProvider)">
+                    {{ formatProvider(selectedUser?.socialProvider) }} 로그인
+                  </Badge>
+                  <Badge
+                    :variant="selectedUser?.isAdmin ? 'default' : 'outline'"
+                    class="gap-1"
+                  >
+                    <Shield v-if="selectedUser?.isAdmin" class="h-3 w-3" />
+                    {{ selectedUser?.isAdmin ? "관리자" : "일반회원" }}
+                  </Badge>
+                  <Badge :variant="selectedUser?.emailOptIn ? 'default' : 'outline'">
+                    이메일 수신 {{ selectedUser?.emailOptIn ? "동의" : "미동의" }}
+                  </Badge>
                 </div>
-              </div>
-              <!-- 권한 뱃지 -->
-              <div class="flex items-center gap-2 ml-15">
-                <Badge
-                  :variant="getProviderColor(selectedUser?.socialProvider)"
-                >
-                  {{ formatProvider(selectedUser?.socialProvider) }} 로그인
-                </Badge>
-                <Badge
-                  :variant="selectedUser?.isAdmin ? 'default' : 'outline'"
-                  class="gap-1"
-                >
-                  <Shield v-if="selectedUser?.isAdmin" class="w-3 h-3" />
-                  {{ selectedUser?.isAdmin ? "관리자" : "일반회원" }}
-                </Badge>
-                <Badge
-                  :variant="selectedUser?.emailOptIn ? 'default' : 'outline'"
-                >
-                  이메일 수신 {{ selectedUser?.emailOptIn ? "동의" : "미동의" }}
-                </Badge>
               </div>
             </div>
             <Button variant="ghost" size="icon" @click="closeDetailModal">
@@ -574,7 +628,7 @@ onUnmounted(() => {
             </Button>
           </div>
 
-          <Separator class="mb-6" />
+          <Separator class="mb-5 bg-border/70" />
 
           <!-- 로딩 상태 -->
           <LoadingSpinner
@@ -583,85 +637,139 @@ onUnmounted(() => {
             class="py-12"
           />
 
-          <div v-else class="space-y-6">
+          <div v-else class="space-y-5">
             <!-- 활동 통계 -->
-            <div v-if="userStats" class="bg-muted/20 rounded-lg p-4">
-              <div class="flex items-center justify-between flex-wrap gap-4">
-                <span class="text-caption font-semibold text-admin-muted">활동 통계</span>
-                <div class="flex items-center gap-4 flex-wrap">
-                  <span class="text-caption text-muted-foreground">
-                    총 주문:
-                    <span class="font-bold text-foreground">
-                      {{ userStats.totalOrders }}
-                    </span>건
-                  </span>
-                  <span class="text-caption text-muted-foreground">
-                    총 구매액 <span class="text-xs">(취소 제외)</span>:
-                    <span class="font-bold text-foreground">
-                      {{ formatPrice(userStats.totalSpent) }}
-                    </span>
-                  </span>
-                  <span class="text-caption text-muted-foreground">
-                    최근 주문일:
-                    <span class="font-bold text-foreground">
-                      {{
-                        userStats.lastOrderDate
-                          ? formatDate(userStats.lastOrderDate)
-                          : "없음"
-                      }}
-                    </span>
-                  </span>
-                  <span class="text-caption text-muted-foreground">
-                    총 문의:
-                    <span class="font-bold text-foreground">
-                      {{ userStats.totalInquiries }}
-                    </span>건
-                  </span>
+            <section v-if="userStats" class="border-y border-border/70 bg-muted/10 px-4 py-4">
+              <h3 class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+                활동 통계
+              </h3>
+              <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p class="text-[11px] leading-[1.2] text-admin-muted">총 주문</p>
+                  <p class="mt-1 text-[15px] font-semibold leading-none text-admin">
+                    {{ userStats.totalOrders }}건
+                  </p>
+                </div>
+                <div>
+                  <p class="text-[11px] leading-[1.2] text-admin-muted">
+                    총 구매액 <span class="text-[10px]">(취소 제외)</span>
+                  </p>
+                  <p class="mt-1 text-[15px] font-semibold leading-none text-admin">
+                    {{ formatPrice(userStats.totalSpent) }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-[11px] leading-[1.2] text-admin-muted">최근 주문일</p>
+                  <p
+                    class="mt-1 text-[15px] font-semibold leading-none"
+                    :class="userStats.lastOrderDate ? 'text-admin' : 'text-admin-muted'"
+                  >
+                    {{
+                      userStats.lastOrderDate
+                        ? formatDate(userStats.lastOrderDate)
+                        : "주문 없음"
+                    }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-[11px] leading-[1.2] text-admin-muted">총 문의</p>
+                  <p class="mt-1 text-[15px] font-semibold leading-none text-admin">
+                    {{ userStats.totalInquiries }}건
+                  </p>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <!-- 연락처 및 주소 정보 -->
-            <div class="grid grid-cols-2 gap-6">
-              <div class="space-y-4">
-                <div>
-                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
-                    <Phone class="w-3.5 h-3.5" />
-                    연락처
-                  </label>
-                  <div class="text-body text-admin">
-                    {{ selectedUser.phone }}
+            <!-- 기본 정보 + 주소 정보 -->
+            <div class="grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+              <section class="border-y border-border/70 bg-muted/10 px-4 py-4">
+                <h3 class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+                  기본 정보
+                </h3>
+                <dl class="space-y-3">
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="flex items-center gap-1.5 text-caption font-semibold text-admin-muted">
+                      <Phone class="h-3.5 w-3.5" />
+                      연락처
+                    </dt>
+                    <dd
+                      class="text-caption"
+                      :class="hasText(selectedUser.phone) ? 'text-admin' : 'text-admin-muted'"
+                    >
+                      {{ displayUserPhone(selectedUser) }}
+                    </dd>
                   </div>
-                </div>
-                <div>
-                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
-                    <Calendar class="w-3.5 h-3.5" />
-                    가입일시
-                  </label>
-                  <div class="text-caption text-admin">
-                    {{ formatDateTime(selectedUser.createdAt) }}
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="flex items-center gap-1.5 text-caption font-semibold text-admin-muted">
+                      <Calendar class="h-3.5 w-3.5" />
+                      가입일시
+                    </dt>
+                    <dd class="text-caption text-admin">
+                      {{ hasText(selectedUser.createdAt) ? formatDateTime(selectedUser.createdAt) : "가입일 미입력" }}
+                    </dd>
                   </div>
-                </div>
-              </div>
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="flex items-center gap-1.5 text-caption font-semibold text-admin-muted">
+                      <Shield class="h-3.5 w-3.5" />
+                      로그인
+                    </dt>
+                    <dd class="text-caption text-admin">
+                      {{ formatProvider(selectedUser.socialProvider) }} 로그인
+                    </dd>
+                  </div>
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="text-caption font-semibold text-admin-muted">
+                      회원 구분
+                    </dt>
+                    <dd class="text-caption text-admin">
+                      {{ selectedUser?.isAdmin ? "관리자" : "일반회원" }}
+                    </dd>
+                  </div>
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="text-caption font-semibold text-admin-muted">
+                      수신 상태
+                    </dt>
+                    <dd class="text-caption text-admin">
+                      이메일 수신 {{ selectedUser?.emailOptIn ? "동의" : "미동의" }}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-              <div class="space-y-4">
-                <div>
-                  <label class="text-caption font-semibold text-admin-muted flex items-center gap-1.5 mb-2">
-                    <MapPin class="w-3.5 h-3.5" />
-                    주소
-                  </label>
-                  <div class="text-caption text-admin">
-                    ({{ selectedUser.zipCode }}) {{ selectedUser.address }}
+              <section class="border-y border-border/70 bg-muted/10 px-4 py-4">
+                <h3 class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+                  주소 정보
+                </h3>
+                <dl class="space-y-3">
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="flex items-center gap-1.5 text-caption font-semibold text-admin-muted">
+                      <MapPin class="h-3.5 w-3.5" />
+                      주소
+                    </dt>
+                    <dd
+                      class="text-caption leading-[1.35]"
+                      :class="hasText(selectedUser.address) || hasText(selectedUser.zipCode) ? 'text-admin' : 'text-admin-muted'"
+                    >
+                      {{ displayUserAddress(selectedUser) }}
+                    </dd>
                   </div>
-                  <div class="text-caption text-admin-muted mt-1">
-                    {{ selectedUser.detailAddress || "-" }}
+                  <div class="grid grid-cols-[88px_1fr] gap-3">
+                    <dt class="text-caption font-semibold text-admin-muted">
+                      상세주소
+                    </dt>
+                    <dd
+                      class="text-caption leading-[1.35]"
+                      :class="hasText(selectedUser.detailAddress) ? 'text-admin' : 'text-admin-muted'"
+                    >
+                      {{ displayText(selectedUser.detailAddress, "상세주소 미입력") }}
+                    </dd>
                   </div>
-                </div>
-              </div>
+                </dl>
+              </section>
             </div>
 
             <!-- 하단 버튼 -->
-            <div class="flex justify-end gap-2 pt-4 border-t">
+            <div class="flex justify-end gap-2 border-t border-border/70 pt-4">
               <Button
                 variant="outline"
                 class="font-medium"
@@ -685,14 +793,14 @@ onUnmounted(() => {
       @click.self="closeRoleModal"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border bg-card shadow-2xl animate-in fade-in zoom-in duration-200"
       >
         <div class="p-6">
           <!-- 헤더 -->
           <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-3">
               <div
-                class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                class="flex h-10 w-10 items-center justify-center border border-border/70 bg-primary/10"
               >
                 <UserCog class="w-5 h-5 text-primary" />
               </div>
@@ -705,22 +813,31 @@ onUnmounted(() => {
 
           <!-- 선택된 사용자 표시 -->
           <div v-if="selectedUserForRole" class="mb-6">
-            <div class="bg-muted/30 rounded-lg p-4">
+            <div class="border-y border-border/70 bg-muted/20 px-4 py-3">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <div
-                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                  <Avatar
+                    v-if="selectedUserForRole.isAdmin"
+                    shape="square"
+                    class="h-10 w-10 rounded-[3px] border border-primary/10 bg-white ring-1 ring-primary/10"
                   >
-                    <span class="text-body font-bold text-primary">
-                      {{ selectedUserForRole.userName.charAt(0) }}
-                    </span>
-                  </div>
+                    <AvatarImage
+                      :src="getUserProfileImageUrl(selectedUserForRole) || ''"
+                      :alt="`${displayUserName(selectedUserForRole)} 프로필`"
+                      class="object-contain p-1"
+                    />
+                    <AvatarFallback
+                      class="flex h-full w-full items-center justify-center bg-white"
+                    >
+                      <Shield class="h-4 w-4 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <div class="text-body font-semibold text-admin">
-                      {{ selectedUserForRole.userName }}
+                      {{ displayUserName(selectedUserForRole) }}
                     </div>
                     <div class="text-caption text-admin-muted">
-                      {{ selectedUserForRole.email }}
+                      {{ displayUserEmail(selectedUserForRole) }}
                     </div>
                   </div>
                 </div>
@@ -791,7 +908,7 @@ onUnmounted(() => {
             <!-- 검색 결과 -->
             <div
               v-if="roleSearchInput && (loadingRoleSearch || roleSearchResults.length > 0)"
-              class="mt-2 border rounded-lg overflow-hidden"
+              class="mt-2 overflow-hidden border-y border-border/70"
             >
               <LoadingSpinner v-if="loadingRoleSearch" :center="false" class="py-4" />
               <div v-else class="max-h-64 overflow-y-auto">
@@ -801,19 +918,28 @@ onUnmounted(() => {
                   class="w-full flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors text-left border-b last:border-b-0"
                   @click="selectUserForRole(user)"
                 >
-                  <div
-                    class="h-8 w-8 bg-primary/5 rounded-full flex items-center justify-center flex-shrink-0"
+                  <Avatar
+                    v-if="user.isAdmin"
+                    shape="square"
+                    class="h-8 w-8 flex-shrink-0 rounded-[3px] border border-primary/10 bg-white ring-1 ring-primary/10"
                   >
-                    <span class="text-caption font-bold text-primary">
-                      {{ user.userName.charAt(0) }}
-                    </span>
-                  </div>
+                    <AvatarImage
+                      :src="getUserProfileImageUrl(user) || ''"
+                      :alt="`${displayUserName(user)} 프로필`"
+                      class="object-contain p-1"
+                    />
+                    <AvatarFallback
+                      class="flex h-full w-full items-center justify-center bg-white"
+                    >
+                      <Shield class="h-3.5 w-3.5 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
                   <div class="flex-1 min-w-0">
                     <div class="text-body font-medium text-admin truncate">
-                      {{ user.userName }}
+                      {{ displayUserName(user) }}
                     </div>
                     <div class="text-caption text-admin-muted truncate">
-                      {{ user.email }}
+                      {{ displayUserEmail(user) }}
                     </div>
                   </div>
                   <Badge
@@ -851,7 +977,7 @@ onUnmounted(() => {
           </div>
 
           <!-- 안내 문구 -->
-          <div class="mt-6 p-3 bg-amber-50 rounded-lg border border-amber-200">
+          <div class="mt-6 border border-amber-200 bg-amber-50 p-3">
             <p class="text-caption text-amber-800">
               <strong>주의:</strong> 관리자 권한은 슈퍼 관리자만 변경할 수 있습니다.
               자기 자신의 권한은 변경할 수 없습니다.
@@ -864,6 +990,39 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.user-admin-page :deep(input),
+.user-admin-page :deep([role="combobox"]) {
+  border-radius: 0;
+  border-color: hsl(var(--border) / 0.7);
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+.user-admin-page :deep(input:focus-visible),
+.user-admin-page :deep([role="combobox"]:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.user-admin-table th,
+.user-admin-table td {
+  border-left: 1px solid hsl(var(--border) / 0.42);
+  vertical-align: middle;
+}
+
+.user-admin-table th:first-child,
+.user-admin-table td:first-child {
+  border-left: 0;
+}
+
+.user-admin-table tbody td {
+  border-top: 1px solid hsl(var(--border) / 0.62);
+}
+
+.user-admin-table thead th {
+  line-height: 1.2;
+}
+
 /* 테이블 스크롤바 디자인 */
 ::-webkit-scrollbar {
   width: 6px;

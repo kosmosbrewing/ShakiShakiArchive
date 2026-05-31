@@ -24,6 +24,7 @@ import { LoadingSpinner } from "@/components/common";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Lock, Trash2, User } from "lucide-vue-next";
 import { Alert } from "@/components/ui/alert";
+import { getUserProfileImageUrl } from "@/lib/constants/profile";
 
 const router = useRouter();
 const route = useRoute();
@@ -429,11 +431,22 @@ onMounted(() => {
             <CardContent class="p-4 sm:p-5">
               <!-- 답변자 정보 -->
               <div class="flex items-center gap-2.5 mb-4">
-                <div
-                  class="w-9 h-9 sm:w-10 sm:h-10 rounded-none border border-primary/10 bg-background flex items-center justify-center shrink-0"
+                <Avatar
+                  shape="square"
+                  class="h-9 w-9 shrink-0 rounded-none border border-primary/10 bg-background sm:h-10 sm:w-10"
                 >
-                  <User class="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                </div>
+                  <AvatarImage
+                    v-if="getUserProfileImageUrl(reply.user)"
+                    :src="getUserProfileImageUrl(reply.user) || ''"
+                    :alt="`${reply.user.userName} 프로필`"
+                    class="object-contain p-1"
+                  />
+                  <AvatarFallback
+                    class="flex h-full w-full items-center justify-center bg-background"
+                  >
+                    <User class="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-foreground">
                     {{ reply.user.userName }}

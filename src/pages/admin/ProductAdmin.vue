@@ -803,7 +803,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="product-admin-page w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
     <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-end">
       <div class="min-w-0">
@@ -861,12 +861,12 @@ onMounted(async () => {
         새 상품 등록
       </Button>
     </div>
-    <Separator class="mb-4"></Separator>
+    <Separator class="mb-4 bg-border/70"></Separator>
 
     <!-- 검색 & 필터 -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-y border-border/70 bg-card/60 px-3 py-3">
       <!-- 왼쪽: 검색 -->
-      <div class="relative">
+      <div class="relative w-full sm:w-auto">
         <Search
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
         />
@@ -874,15 +874,15 @@ onMounted(async () => {
           v-model="searchQuery"
           type="text"
           placeholder="상품명 또는 슬러그로 검색"
-          class="pl-9 w-64"
+          class="w-full pl-9 sm:w-72"
         />
       </div>
 
       <!-- 오른쪽: 필터 버튼 -->
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="min-w-[180px]">
+      <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div class="min-w-[180px] flex-1 sm:flex-none">
           <Select v-model="selectedCategoryId">
-            <SelectTrigger class="h-8">
+            <SelectTrigger class="h-9">
               <SelectValue placeholder="카테고리" />
             </SelectTrigger>
             <SelectContent>
@@ -898,7 +898,7 @@ onMounted(async () => {
           </Select>
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5">
           <Button
             v-for="opt in [
               { value: 'all', label: '전체 재고' },
@@ -920,7 +920,7 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5">
           <Button
             v-for="opt in [
               { value: 'all', label: '전체 상태' },
@@ -945,52 +945,50 @@ onMounted(async () => {
     </div>
     <LoadingSpinner v-if="isLoading && !hasLoadedOnce" />
 
-    <Card v-else class="overflow-hidden border-none shadow-lg">
+    <Card v-else class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
       <div
         v-if="isLoading && hasLoadedOnce"
-        class="px-6 py-3 border-b bg-muted/20 text-caption text-admin-muted"
+        class="border-b border-border/70 bg-card px-6 py-3 text-caption text-admin-muted"
       >
         상품 목록 업데이트 중...
       </div>
       <CardContent class="p-0">
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[1160px]">
-            <thead
-              class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
-            >
+          <table class="product-admin-table w-full min-w-[1160px] border-separate border-spacing-0 text-left">
+            <thead class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight">
               <tr>
-                <th class="px-6 py-5">이미지</th>
-                <th class="px-6 py-5 w-1/3">상품명 / 슬러그</th>
-                <th class="px-6 py-5 text-center whitespace-nowrap w-28">
+                <th class="px-5 py-2.5">이미지</th>
+                <th class="px-5 py-2.5 w-1/3">상품명 / 슬러그</th>
+                <th class="px-5 py-2.5 text-center whitespace-nowrap w-28">
                   판매가
                 </th>
-                <th class="px-6 py-5 text-center whitespace-nowrap w-20">
+                <th class="px-5 py-2.5 text-center whitespace-nowrap w-20">
                   재고
                 </th>
-                <th class="px-6 py-5 text-center whitespace-nowrap w-24">
+                <th class="px-5 py-2.5 text-center whitespace-nowrap w-24">
                   상태
                 </th>
-                <th class="px-6 py-5 text-center">관리 도구</th>
-                <th class="px-6 py-5 text-center">작업</th>
-                <th class="px-6 py-5 text-right pr-10">
+                <th class="px-5 py-2.5 text-center">관리 도구</th>
+                <th class="px-5 py-2.5 text-center">작업</th>
+                <th class="px-5 py-2.5 text-right pr-8">
                   <button
                     @click="toggleSortOrder"
-                    class="inline-flex items-center gap-1 hover:underline"
+                    class="inline-flex items-center gap-1 text-admin-muted hover:text-admin"
                   >
                     수정일
                   </button>
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody>
               <tr
                 v-for="product in paginatedProducts"
                 :key="product.id"
-                class="hover:bg-muted/30 transition-colors group"
+                class="group transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div
-                    class="h-14 w-14 bg-muted rounded-xl overflow-hidden border border-border shadow-sm group-hover:scale-105 transition-transform"
+                    class="h-11 w-11 overflow-hidden border border-border/70 bg-muted/20 transition-colors group-hover:border-primary/20"
                   >
                     <img
                       v-if="product.imageUrl"
@@ -1006,33 +1004,33 @@ onMounted(async () => {
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-4">
-                  <div class="text-body text-admin">
+                <td class="px-5 py-2.5">
+                  <div class="text-[14px] font-medium leading-[1.25] text-admin">
                     {{ product.name }}
                   </div>
                   <div
-                    class="text-caption text-admin-muted bg-muted inline-block py-0.5 rounded mt-1 font-mono"
+                    class="mt-1 inline-block border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[11px] leading-[1.2] text-admin-muted"
                   >
                     {{ product.slug }}
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center whitespace-nowrap">
-                  <div class="text-body text-admin">
+                <td class="px-5 py-2.5 text-center whitespace-nowrap">
+                  <div class="text-[14px] leading-[1.25] text-admin">
                     {{ formatPrice(product.price) }}
                   </div>
                   <div
                     v-if="product.originalPrice"
-                    class="text-caption text-admin-muted line-through opacity-50"
+                    class="text-[11px] leading-[1.2] text-admin-muted line-through opacity-50"
                   >
                     {{ formatPrice(product.originalPrice) }}
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center whitespace-nowrap">
-                  <div class="text-body text-admin">
+                <td class="px-5 py-2.5 text-center whitespace-nowrap">
+                  <div class="text-[14px] leading-[1.25] text-admin">
                     {{ product.totalStock ?? "-" }}개
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center whitespace-nowrap">
+                <td class="px-5 py-2.5 text-center whitespace-nowrap">
                   <span
                     :class="
                       product.isAvailable
@@ -1044,7 +1042,7 @@ onMounted(async () => {
                     {{ product.isAvailable ? "판매중" : "중단" }}
                   </span>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-5 py-2.5">
                   <div class="flex justify-center gap-2">
                     <Button
                       variant="outline"
@@ -1072,7 +1070,7 @@ onMounted(async () => {
                     </Button>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-5 py-2.5 text-center">
                   <div class="flex justify-center gap-1">
                     <Button
                       variant="ghost"
@@ -1101,8 +1099,8 @@ onMounted(async () => {
                     </Button>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-right pr-10">
-                  <span class="text-caption text-admin-muted">
+                <td class="px-5 py-2.5 text-right pr-8">
+                  <span class="text-[12px] leading-[1.2] text-admin-muted">
                     {{ formatDate(product.updatedAt) }}
                   </span>
                 </td>
@@ -1112,7 +1110,7 @@ onMounted(async () => {
         </div>
         <div
           v-if="totalPages > 1"
-          class="p-6 bg-muted/20 flex justify-center gap-2 border-t"
+          class="flex justify-center gap-2 border-t border-border/70 bg-card p-4"
         >
           <Button
             v-for="p in totalPages"
@@ -1133,7 +1131,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-border/70 bg-background shadow-none animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
           <div class="flex justify-between items-end">
@@ -1152,13 +1150,13 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </Button>
           </div>
-          <Separator></Separator>
+          <Separator class="bg-border/70"></Separator>
           <form
             @submit.prevent="handleSaveProduct"
             autocomplete="off"
             class="space-y-6"
           >
-            <div class="grid grid-cols-2 gap-6 mt-6">
+            <div class="grid gap-6 mt-6 md:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
               <div class="space-y-2">
                 <Label class="text-admin">
                   상품명 <span class="text-primary">*</span>
@@ -1181,11 +1179,40 @@ onMounted(async () => {
                   required
                 />
               </div>
+              <!-- 판매 상태 토글 -->
+              <div class="flex min-w-[190px] items-center gap-3 py-2 lg:justify-end">
+                <input
+                  v-model="productForm.isAvailable"
+                  type="checkbox"
+                  id="productIsAvailable"
+                  class="w-4 h-4 rounded border-border accent-primary focus:ring-primary/20"
+                />
+                <Label for="productIsAvailable" class="cursor-pointer whitespace-nowrap">
+                  판매 가능 상태
+                </Label>
+                <span
+                  :class="
+                    productForm.isAvailable
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  "
+                  class="px-2 py-0.5 rounded-full text-caption font-bold"
+                >
+                  {{ productForm.isAvailable ? "판매중" : "판매중단" }}
+                </span>
+              </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-6">
-              <div class="space-y-2">
-                <Label class="text-admin">
+            <div
+              :class="[
+                'grid gap-4',
+                isEditMode
+                  ? 'md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(230px,1.2fr)]'
+                  : 'md:grid-cols-3',
+              ]"
+            >
+              <div class="grid grid-rows-[16px_40px] gap-2">
+                <Label class="flex h-4 items-center text-admin">
                   판매 가격 <span class="text-primary">*</span>
                 </Label>
                 <Input
@@ -1195,16 +1222,16 @@ onMounted(async () => {
                   required
                 />
               </div>
-              <div class="space-y-2">
-                <Label class="text-admin">원래 가격</Label>
+              <div class="grid grid-rows-[16px_40px] gap-2">
+                <Label class="flex h-4 items-center text-admin">원래 가격</Label>
                 <Input
                   v-model.number="productForm.originalPrice"
                   type="number"
                   placeholder="0"
                 />
               </div>
-              <div class="space-y-2">
-                <Label class="text-admin">
+              <div class="grid grid-rows-[16px_40px] gap-2">
+                <Label class="flex h-4 items-center text-admin">
                   카테고리 <span class="text-primary">*</span>
                 </Label>
                 <Select v-model="productForm.categoryId">
@@ -1222,49 +1249,32 @@ onMounted(async () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <!-- 판매 상태 토글 -->
-            <div class="flex items-center gap-3 py-2">
-              <input
-                v-model="productForm.isAvailable"
-                type="checkbox"
-                id="productIsAvailable"
-                class="w-4 h-4 rounded border-border accent-primary focus:ring-primary/20"
-              />
-              <Label for="productIsAvailable" class="cursor-pointer">
-                판매 가능 상태
-              </Label>
-              <span
-                :class="
-                  productForm.isAvailable
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
-                "
-                class="px-2 py-0.5 rounded-full text-caption font-bold ml-2"
-              >
-                {{ productForm.isAvailable ? "판매중" : "판매중단" }}
-              </span>
-            </div>
-
-            <!-- 수정일 설정 (수정 모드에서만 표시) -->
-            <div v-if="isEditMode" class="space-y-2">
-              <Label class="text-admin">수정일 (updatedAt)</Label>
-              <Input v-model="productForm.updatedAt" type="datetime-local" />
-              <p class="text-caption text-muted-foreground">
-                비워두면 현재 시간으로 자동 설정됩니다.
-              </p>
+              <!-- 수정일 설정 (수정 모드에서만 표시) -->
+              <div v-if="isEditMode" class="grid min-w-0 grid-rows-[16px_40px] gap-2">
+                <Label class="flex h-4 items-center gap-1.5 text-admin">
+                  수정일
+                  <span class="text-[11px] font-normal leading-none text-muted-foreground">
+                    비우면 현재 시간
+                  </span>
+                </Label>
+                <input
+                  v-model="productForm.updatedAt"
+                  type="datetime-local"
+                  class="admin-datetime-input block h-10 min-h-10 w-full border border-input bg-background px-3 py-2 text-sm leading-5 text-admin ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
             </div>
 
             <div class="space-y-6">
-              <!-- 대표 이미지 + 추가 이미지 (2열) -->
-              <div class="grid grid-cols-2 gap-4">
+              <!-- 대표 이미지 + 추가 이미지 + 상세 이미지 -->
+              <div class="grid gap-4 lg:grid-cols-3">
                 <ImageUploader
                   v-model="productForm.imageUrl"
                   type="single"
                   label="대표 이미지"
                   :required="true"
                   :product-slug="productForm.slug"
+                  class="min-w-0"
                 />
                 <ImageUploader
                   v-model="productForm.images"
@@ -1273,18 +1283,18 @@ onMounted(async () => {
                   :required="false"
                   :max-files="10"
                   :product-slug="productForm.slug"
+                  class="min-w-0"
+                />
+                <ImageUploader
+                  v-model="productForm.detailImages"
+                  type="details"
+                  label="상세 이미지"
+                  :required="true"
+                  :max-files="10"
+                  :product-slug="productForm.slug"
+                  class="min-w-0"
                 />
               </div>
-
-              <!-- 상세 이미지 업로드 -->
-              <ImageUploader
-                v-model="productForm.detailImages"
-                type="details"
-                label="상세 이미지"
-                :required="true"
-                :max-files="10"
-                :product-slug="productForm.slug"
-              />
 
               <!-- 상품 설명 -->
               <div class="space-y-2">
@@ -1333,7 +1343,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-border/70 bg-background shadow-none animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
           <div class="flex justify-between items-end">
@@ -1356,14 +1366,14 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </Button>
           </div>
-          <Separator class="mb-6"></Separator>
+          <Separator class="mb-6 bg-border/70"></Separator>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div
-              class="bg-muted/30 p-6 rounded-2xl border border-border h-fit shadow-sm"
+              class="h-fit border border-border/70 bg-card p-6 shadow-none"
             >
               <h4
-                class="text-body font-bold text-admin mb-5 flex items-center gap-2"
+                class="text-body font-semibold text-admin mb-5 flex items-center gap-2"
               >
                 <PlusCircle class="w-[18px] h-[18px] text-primary" />
                 {{ isEditMode ? "옵션 정보 수정" : "옵션 신규 등록" }}
@@ -1442,49 +1452,47 @@ onMounted(async () => {
 
             <div class="lg:col-span-2">
               <div
-                class="border border-border rounded-2xl overflow-hidden shadow-sm bg-white"
+                class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none"
               >
-                <table class="w-full text-left border-collapse">
-                  <thead
-                    class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
-                  >
+                <table class="product-admin-table w-full border-separate border-spacing-0 text-left">
+                  <thead class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight">
                     <tr>
-                      <th class="px-6 py-4">재고관리코드(SKU)</th>
-                      <th class="px-6 py-4">옵션 상세</th>
-                      <th class="px-6 py-4 text-center">재고</th>
-                      <th class="px-6 py-4 text-right">작업</th>
+                      <th class="px-5 py-2.5">재고관리코드(SKU)</th>
+                      <th class="px-5 py-2.5">옵션 상세</th>
+                      <th class="px-5 py-2.5 text-center">재고</th>
+                      <th class="px-5 py-2.5 text-right">작업</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-border">
+                  <tbody>
                     <tr
                       v-for="variant in variants"
                       :key="variant.id"
                       :class="
                         variant.id === variantForm.id
-                          ? 'bg-primary/10'
-                          : 'hover:bg-muted/20'
+                          ? 'bg-primary/[0.04]'
+                          : 'hover:bg-primary/[0.03]'
                       "
                       class="transition-colors group cursor-pointer"
                       @click="handleEditVariant(variant)"
                     >
-                      <td class="px-6 py-4 text-tiny text-admin-muted">
+                      <td class="px-5 py-2.5 text-[12px] leading-[1.2] text-admin-muted">
                         <div class="flex items-center gap-2">
                           <span
                             v-if="variant.id === variantForm.id"
-                            class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"
+                            class="w-1.5 h-1.5 bg-primary shrink-0"
                           />
                           {{ variant.sku }}
                         </div>
                       </td>
-                      <td class="px-6 py-4">
+                      <td class="px-5 py-2.5">
                         <div class="flex items-center gap-2">
                           <span
-                            class="text-caption font-semibold text-admin-muted"
+                            class="text-[12px] font-semibold leading-[1.2] text-admin-muted"
                             >{{ variant.size }}</span
                           >
                           <span
                             v-if="variant.color"
-                            class="text-caption font-semibold text-admin-muted"
+                            class="text-[12px] font-semibold leading-[1.2] text-admin-muted"
                             >/ {{ variant.color }}</span
                           >
                           <span
@@ -1495,11 +1503,11 @@ onMounted(async () => {
                         </div>
                       </td>
                       <td
-                        class="px-6 py-4 text-center font-semibold text-caption text-admin-muted"
+                        class="px-5 py-2.5 text-center text-[12px] font-semibold leading-[1.2] text-admin-muted"
                       >
                         {{ variant.stockQuantity }}
                       </td>
-                      <td class="px-6 py-4 text-right" @click.stop>
+                      <td class="px-5 py-2.5 text-right" @click.stop>
                         <div class="flex justify-end gap-1">
                           <Button
                             variant="ghost"
@@ -1515,7 +1523,7 @@ onMounted(async () => {
                     <tr v-if="variants.length === 0">
                       <td
                         colspan="4"
-                        class="px-6 py-16 text-center text-admin-muted text-caption"
+                        class="px-5 py-10 text-center text-admin-muted text-caption"
                       >
                         등록된 상품 옵션이 없습니다.
                       </td>
@@ -1534,7 +1542,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-4xl max-h-[85vh] overflow-y-auto border border-border/70 bg-background shadow-none animate-in fade-in zoom-in duration-200"
       >
         <div class="p-8">
           <div class="flex justify-between items-end">
@@ -1554,7 +1562,7 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </Button>
           </div>
-          <Separator></Separator>
+          <Separator class="bg-border/70"></Separator>
           <div class="mb-4">
             <p class="text-body text-admin-muted mt-3 mb-1">
               상품:
@@ -1576,7 +1584,7 @@ onMounted(async () => {
             </div>
             <div
               v-else
-              class="p-5 bg-destructive/5 text-destructive text-body rounded-2xl border border-destructive/10 flex items-center gap-2"
+              class="flex items-center gap-2 border border-destructive/20 bg-destructive/5 p-5 text-body text-destructive"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1603,52 +1611,50 @@ onMounted(async () => {
             class="space-y-5 animate-in slide-in-from-bottom-2 duration-300"
           >
             <div
-              class="border border-border rounded-2xl overflow-hidden shadow-sm bg-white"
+              class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none"
             >
-              <table class="w-full text-left border-collapse">
-                <thead
-                  class="bg-muted/50 text-caption font-bold text-admin-muted uppercase tracking-tight"
-                >
+              <table class="product-admin-table w-full border-separate border-spacing-0 text-left">
+                <thead class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight">
                   <tr>
-                    <th class="px-6 py-4">총장</th>
-                    <th class="px-6 py-4">어깨</th>
-                    <th class="px-6 py-4">가슴</th>
-                    <th class="px-6 py-4">소매</th>
-                    <th class="px-6 py-4">허리/힙/허벅지</th>
-                    <th class="px-6 py-4 text-right">관리</th>
+                    <th class="px-5 py-2.5">총장</th>
+                    <th class="px-5 py-2.5">어깨</th>
+                    <th class="px-5 py-2.5">가슴</th>
+                    <th class="px-5 py-2.5">소매</th>
+                    <th class="px-5 py-2.5">허리/힙/허벅지</th>
+                    <th class="px-5 py-2.5 text-right">관리</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-border text-body text-admin">
+                <tbody class="text-body text-admin">
                   <tr
                     v-for="m in measurements"
                     :key="m.id"
                     :class="
                       m.id === measurementForm.id
-                        ? 'bg-primary/10'
-                        : 'hover:bg-muted/20'
+                        ? 'bg-primary/[0.04]'
+                        : 'hover:bg-primary/[0.03]'
                     "
                     class="transition-colors cursor-pointer"
                     @click="handleEditMeasurement(m)"
                   >
-                    <td class="px-6 py-4 text-caption">
+                    <td class="px-5 py-2.5 text-[12px] leading-[1.2]">
                       <div class="flex items-center gap-2">
                         <span
                           v-if="m.id === measurementForm.id"
-                          class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"
+                          class="w-1.5 h-1.5 bg-primary shrink-0"
                         />
                         {{ m.totalLength }}
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-caption">
+                    <td class="px-5 py-2.5 text-[12px] leading-[1.2]">
                       {{ m.shoulderWidth }}
                     </td>
-                    <td class="px-6 py-4 text-caption">{{ m.chestSection }}</td>
-                    <td class="px-6 py-4 text-caption">{{ m.sleeveLength }}</td>
-                    <td class="px-6 py-4 text-caption">
+                    <td class="px-5 py-2.5 text-[12px] leading-[1.2]">{{ m.chestSection }}</td>
+                    <td class="px-5 py-2.5 text-[12px] leading-[1.2]">{{ m.sleeveLength }}</td>
+                    <td class="px-5 py-2.5 text-[12px] leading-[1.2]">
                       {{ m.waistSection }} / {{ m.hipSection }} /
                       {{ m.thighSection }}
                     </td>
-                    <td class="px-6 py-4 text-right" @click.stop>
+                    <td class="px-5 py-2.5 text-right" @click.stop>
                       <div class="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -1664,7 +1670,7 @@ onMounted(async () => {
                   <tr v-if="measurements.length === 0">
                     <td
                       colspan="6"
-                      class="px-6 py-12 text-center text-admin-muted text-caption"
+                      class="px-5 py-10 text-center text-admin-muted text-caption"
                     >
                       등록된 치수 정보가 없습니다. 상단 폼을 통해 입력해주세요.
                     </td>
@@ -1672,9 +1678,7 @@ onMounted(async () => {
                 </tbody>
               </table>
             </div>
-            <div
-              class="bg-muted/30 p-6 rounded-2xl border border-border shadow-inner"
-            >
+            <div class="border border-border/70 bg-card p-6 shadow-none">
               <div class="flex items-center gap-2 mb-5">
                 <div class="text-body font-semibold text-admin-muted">
                   사이즈 상세 수치 입력
@@ -1755,7 +1759,7 @@ onMounted(async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200"
+        class="w-full max-w-6xl max-h-[90vh] flex flex-col border border-border/70 bg-background shadow-none animate-in fade-in zoom-in duration-200"
       >
         <!-- 헤더 영역 (고정) -->
         <div class="p-8 pb-0 shrink-0">
@@ -1763,7 +1767,7 @@ onMounted(async () => {
             <h2
               class="text-heading font-semibold text-admin tracking-wide flex items-center gap-2"
             >
-              <Eye class="w-5 h-5 text-blue-600" />
+              <Eye class="w-5 h-5 text-primary" />
               상품 미리보기
             </h2>
             <Button
@@ -1774,7 +1778,7 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </Button>
           </div>
-          <Separator class="mb-8" />
+          <Separator class="mb-8 bg-border/70" />
         </div>
 
         <!-- 스크롤 영역 -->
@@ -1792,7 +1796,7 @@ onMounted(async () => {
               <div
                 v-for="(detailImg, idx) in previewProduct.detailImages"
                 :key="`detail-${idx}`"
-                class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm"
+                class="detail-image-wrapper overflow-hidden border border-border/70 shadow-none"
               >
                 <img
                   :src="detail(detailImg)"
@@ -1865,7 +1869,7 @@ onMounted(async () => {
 
                   <!-- 미리보기용 안내 메시지 -->
                   <div
-                    class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-caption text-blue-700"
+                    class="mb-6 border border-primary/20 bg-primary/[0.04] p-4 text-caption text-admin-muted"
                   >
                     <div class="flex items-center gap-2">
                       <Eye class="w-4 h-4" />
@@ -2003,12 +2007,63 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.product-admin-page :deep(input),
+.product-admin-page :deep([role="combobox"]) {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.product-admin-page :deep(input),
+.product-admin-page :deep([role="combobox"]) {
+  border-color: hsl(var(--border) / 0.7);
+  background: hsl(var(--card));
+}
+
+.product-admin-page :deep(input:focus-visible),
+.product-admin-page :deep([role="combobox"]:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.product-admin-page :deep(input.admin-datetime-input) {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  line-height: 1.25rem;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.product-admin-page :deep(input.admin-datetime-input::-webkit-datetime-edit) {
+  height: 100%;
+  padding: 0;
+  line-height: 1.25rem;
+}
+
+.product-admin-table th,
+.product-admin-table td {
+  border-left: 1px solid hsl(var(--border) / 0.42);
+  vertical-align: middle;
+}
+
+.product-admin-table th:first-child,
+.product-admin-table td:first-child {
+  border-left: 0;
+}
+
+.product-admin-table tbody td {
+  border-top: 1px solid hsl(var(--border) / 0.62);
+}
+
+.product-admin-table thead th {
+  line-height: 1.2;
+}
+
 /* 실측 입력용 전용 클래스 (패딩 최적화) */
 .form-input-custom {
-  @apply w-full border border-border rounded-xl p-3 text-body text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
+  @apply w-full border border-border/70 p-3 text-body text-admin outline-none transition-colors shadow-none;
 }
 .form-input-custom-small {
-  @apply w-full border border-border rounded-xl p-2.5 text-caption text-admin focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm;
+  @apply w-full border border-border/70 p-2.5 text-caption text-admin outline-none transition-colors shadow-none;
 }
 
 /* 미리보기 모달 애니메이션 */

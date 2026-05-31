@@ -2,8 +2,8 @@
 // src/components/admin/ImageUploader.vue
 // 관리자용 이미지 업로드 컴포넌트
 
-import { ref, computed, watch } from "vue";
-import { Upload, X, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight } from "lucide-vue-next";
+import { ref, computed } from "vue";
+import { Upload, X, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-vue-next";
 import { LoadingSpinner } from "@/components/common";
 import {
   uploadProductImage,
@@ -117,24 +117,6 @@ const handleDrop = async (event: DragEvent) => {
   await processFiles(files);
 };
 
-// 다중 이미지 캐러셀 인덱스
-const carouselIndex = ref(0);
-
-// 이미지 목록 변경 시 인덱스 보정
-watch(currentImages, (imgs) => {
-  if (carouselIndex.value >= imgs.length) {
-    carouselIndex.value = Math.max(0, imgs.length - 1);
-  }
-});
-
-const prevImage = () => {
-  if (carouselIndex.value > 0) carouselIndex.value--;
-};
-
-const nextImage = () => {
-  if (carouselIndex.value < currentImages.value.length - 1) carouselIndex.value++;
-};
-
 // 이미지 제거 (URL만 제거, 실제 삭제는 하지 않음)
 const removeImage = (index: number) => {
   if (props.type === "single") {
@@ -147,6 +129,7 @@ const removeImage = (index: number) => {
 
 // 상세 이미지 순서 변경 (swap)
 const moveImage = (fromIndex: number, toIndex: number) => {
+  if (toIndex < 0 || toIndex >= currentImages.value.length) return;
   const newUrls = [...currentImages.value];
   [newUrls[fromIndex], newUrls[toIndex]] = [newUrls[toIndex], newUrls[fromIndex]];
   emit("update:modelValue", newUrls);
@@ -189,8 +172,8 @@ const moveImage = (fromIndex: number, toIndex: number) => {
       <span class="text-caption text-admin-muted">
         {{
           type === "single"
-            ? "JPEG, PNG, GIF, WebP (최대 10MB)"
-            : `최대 ${maxFiles}개, 각 10MB`
+            ? "JPG/PNG/GIF/WebP · 10MB"
+            : `${maxFiles}개까지 · 각 10MB`
         }}
       </span>
     </div>
@@ -229,68 +212,15 @@ const moveImage = (fromIndex: number, toIndex: number) => {
       </div>
     </div>
 
-    <!-- 이미지 미리보기: 다중 (캐러셀) -->
+    <!-- 이미지 미리보기: 추가/상세 이미지 (그리드 + 순서 조정) -->
     <div
-      v-else-if="currentImages.length > 0 && type === 'multiple'"
-      class="space-y-2"
-    >
-      <div
-        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 w-40 h-40"
-      >
-        <img
-          :src="currentImages[carouselIndex]"
-          :alt="`이미지 ${carouselIndex + 1}`"
-          class="w-full h-full object-cover"
-          crossorigin="anonymous"
-        />
-        <!-- 삭제 버튼 -->
-        <div
-          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-        >
-          <button
-            type="button"
-            @click="removeImage(carouselIndex)"
-            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-            title="제거"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-        <!-- 좌우 네비게이션 (2장 이상일 때) -->
-        <template v-if="currentImages.length > 1">
-          <button
-            v-if="carouselIndex > 0"
-            type="button"
-            @click="prevImage"
-            class="absolute left-1 top-1/2 -translate-y-1/2 p-1 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors"
-          >
-            <ChevronLeft class="w-4 h-4" />
-          </button>
-          <button
-            v-if="carouselIndex < currentImages.length - 1"
-            type="button"
-            @click="nextImage"
-            class="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors"
-          >
-            <ChevronRight class="w-4 h-4" />
-          </button>
-        </template>
-      </div>
-      <!-- 페이지 인디케이터 -->
-      <p v-if="currentImages.length > 1" class="text-caption text-admin-muted">
-        {{ carouselIndex + 1 }} / {{ currentImages.length }}
-      </p>
-    </div>
-
-    <!-- 이미지 미리보기: 상세 이미지 (그리드 + 순서 조정) -->
-    <div
-      v-else-if="currentImages.length > 0 && type === 'details'"
-      class="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+      v-else-if="currentImages.length > 0 && (type === 'multiple' || type === 'details')"
+      class="flex max-w-full gap-2 overflow-x-auto pb-1"
     >
       <div
         v-for="(url, index) in currentImages"
         :key="index"
-        class="relative group rounded-lg overflow-hidden border border-border bg-muted/30 aspect-square"
+        class="relative h-32 w-32 shrink-0 overflow-hidden border border-border bg-muted/30"
       >
         <img
           :src="url"
@@ -300,42 +230,40 @@ const moveImage = (fromIndex: number, toIndex: number) => {
         />
         <!-- 순서 번호 뱃지 -->
         <span
-          class="absolute top-1.5 left-1.5 bg-black/60 text-white text-xs font-semibold rounded-full w-6 h-6 flex items-center justify-center"
+          class="absolute left-2 top-2 flex h-6 min-w-6 items-center justify-center bg-black/65 px-1.5 text-xs font-semibold text-white"
         >
           {{ index + 1 }}
         </span>
-        <!-- hover 오버레이: 이동 + 삭제 버튼 -->
+
+        <!-- 하단 고정 컨트롤: 사진이 작아져도 조작 버튼이 보이도록 유지 -->
         <div
-          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+          class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 border-t border-border/60 bg-background/95 px-1.5 py-1.5 backdrop-blur-sm"
         >
-          <!-- 좌측 이동 -->
           <button
-            v-if="index > 0"
             type="button"
+            :disabled="index === 0"
             @click="moveImage(index, index - 1)"
-            class="p-2 bg-white/90 text-black rounded-full hover:bg-white transition-colors"
-            title="왼쪽으로 이동"
+            class="inline-flex h-7 w-7 items-center justify-center border border-border bg-card text-admin transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+            title="앞으로 이동"
           >
-            <ArrowLeft class="w-4 h-4" />
+            <ArrowLeft class="h-3.5 w-3.5" />
           </button>
-          <!-- 삭제 -->
           <button
             type="button"
             @click="removeImage(index)"
-            class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            class="inline-flex h-7 w-7 items-center justify-center border border-destructive/30 bg-destructive text-white transition-colors hover:bg-destructive/90"
             title="제거"
           >
-            <X class="w-4 h-4" />
+            <X class="h-3.5 w-3.5" />
           </button>
-          <!-- 우측 이동 -->
           <button
-            v-if="index < currentImages.length - 1"
             type="button"
+            :disabled="index === currentImages.length - 1"
             @click="moveImage(index, index + 1)"
-            class="p-2 bg-white/90 text-black rounded-full hover:bg-white transition-colors"
-            title="오른쪽으로 이동"
+            class="inline-flex h-7 w-7 items-center justify-center border border-border bg-card text-admin transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+            title="뒤로 이동"
           >
-            <ArrowRight class="w-4 h-4" />
+            <ArrowRight class="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

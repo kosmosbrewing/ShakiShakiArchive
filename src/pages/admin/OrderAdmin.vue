@@ -609,8 +609,11 @@ const handleAdminCancel = async (data: {
 // 주문 아이템 상태 저장
 const handleSaveItemStatus = async (item: any) => {
   const hasTrackingNumber = Boolean(String(item.trackingNumber || "").trim());
+  const requestedStatus = item.status;
+  const willAutoShip = requestedStatus === "preparing" && hasTrackingNumber;
+  const finalStatus = willAutoShip ? "shipped" : requestedStatus;
   const confirmMessage =
-    item.status === "preparing"
+    requestedStatus === "preparing"
       ? hasTrackingNumber
         ? "운송장 번호가 등록되어 있습니다.\n저장하면 상품 상태가 배송중으로 변경됩니다."
         : "상품을 배송준비중 상태로 저장합니다.\n운송장 번호는 나중에 등록할 수 있습니다."
@@ -625,15 +628,17 @@ const handleSaveItemStatus = async (item: any) => {
   savingStatus.value[item.id] = true;
   try {
     // API 호출 (상태만 업데이트)
-    await updateAdminOrderItem(
+    const updatedItem = await updateAdminOrderItem(
       item.id,
-      item.status,
+      finalStatus,
       item.trackingNumber,
       item.courierCompany,
     );
+    const savedStatus = updatedItem?.status || finalStatus;
+    item.status = savedStatus;
 
     showAlert(
-      item.status === "preparing" && hasTrackingNumber
+      willAutoShip
         ? "운송장 번호가 확인되어\n배송중 상태로 저장되었습니다."
         : ADMIN_MESSAGES.orderStatusSaveSuccess,
     );
@@ -647,10 +652,7 @@ const handleSaveItemStatus = async (item: any) => {
         (oi: any) => oi.id === item.id,
       );
       if (originalItem) {
-        originalItem.status =
-          item.status === "preparing" && hasTrackingNumber
-            ? "shipped"
-            : item.status;
+        originalItem.status = savedStatus;
       }
     }
   } catch (error: any) {
@@ -745,16 +747,27 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="order-admin-page w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
     <!-- 헤더 -->
-    <div class="mb-6">
+    <div class="mb-4">
       <h3 class="text-heading text-admin tracking-wider">주문/배송 관리</h3>
+      <p class="mt-1 text-body text-admin-muted">
+        <template v-if="selectedStatus !== 'all' || searchQuery.trim() || startDate || endDate">
+          검색 결과
+          <span class="text-body font-bold text-admin">{{ filteredOrders.length }}</span>건
+          <span class="text-caption text-admin-muted">/ 전체 {{ orders.length }}건</span>
+        </template>
+        <template v-else>
+          총
+          <span class="text-body font-bold text-admin">{{ orders.length }}</span>건 주문
+        </template>
+      </p>
     </div>
-    <Separator class="mb-6"></Separator>
+    <Separator class="mb-4 bg-border/70"></Separator>
 
     <!-- 빠른 필터 버튼 -->
-    <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
+    <div class="mb-4 flex items-center justify-between gap-3 flex-wrap border-y border-border/70 bg-card/60 px-3 py-3">
       <!-- 왼쪽: 전체상태 드롭다운 + 건수 -->
       <div class="flex items-center gap-2">
         <Select v-model="selectedStatus">
@@ -804,7 +817,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 검색 / 기간 필터 -->
-    <div class="mb-6 rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+    <div class="mb-5 border-y border-border/70 bg-card/60 px-3 py-3">
       <div class="flex flex-wrap items-start gap-3">
         <div class="relative w-full lg:max-w-sm">
           <Search
@@ -1003,7 +1016,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 상태별 현황 요약 (우측 정렬) -->
-    <div class="mb-6 flex items-center justify-end gap-3 flex-wrap">
+    <div class="mb-5 flex items-center justify-end gap-3 flex-wrap">
       <span
         v-for="status in statusCounts"
         :key="status.label"
@@ -1024,39 +1037,39 @@ onUnmounted(() => {
     <div v-else class="space-y-4">
       <div
         v-if="loading && hasLoadedOnce"
-        class="rounded-lg border border-border bg-muted/20 px-4 py-2 text-caption text-admin-muted"
+        class="border-y border-border/70 bg-card px-4 py-2 text-caption text-admin-muted"
       >
         주문 목록 업데이트 중...
       </div>
 
-      <div v-if="filteredOrders.length > 0" class="space-y-10">
+      <div v-if="filteredOrders.length > 0" class="space-y-6">
         <Card
           v-for="order in displayedOrders"
           :key="order.id"
-          class="overflow-hidden border-none shadow-lg group"
+          class="overflow-hidden border-x-0 border-y border-t-border border-b-border/70 bg-card shadow-none group"
         >
         <CardHeader
-          class="bg-muted/30 px-6 py-5 border-b border-border transition-colors group-hover:bg-muted/50"
+          class="bg-muted/15 px-5 py-2.5 border-b border-border/70 transition-colors group-hover:bg-muted/25"
         >
-          <div class="flex flex-wrap justify-between items-center gap-6">
-            <div class="flex items-center gap-6">
+          <div class="flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
               <div class="flex flex-col">
                 <span
-                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  class="text-[11px] font-bold leading-[1.1] text-admin-muted uppercase tracking-tighter"
                   >주문번호</span
                 >
-                <span class="text-caption font-semibold text-admin-muted">{{
+                <span class="text-caption font-semibold leading-[1.2] text-admin-muted">{{
                   order.externalOrderId || order.id
                 }}</span>
               </div>
-              <div class="h-8 w-px bg-border hidden sm:block"></div>
+              <div class="h-6 w-px bg-border hidden sm:block"></div>
               <div class="flex flex-col">
                 <span
-                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  class="text-[11px] font-bold leading-[1.1] text-admin-muted uppercase tracking-tighter"
                   >주문일자</span
                 >
                 <div
-                  class="flex items-center gap-1.5 text-caption text-admin-muted font-semibold"
+                  class="flex items-center gap-1.5 text-caption leading-[1.2] text-admin-muted font-semibold"
                 >
                   <Calendar class="w-3.5 h-3.5 opacity-50" />
                   {{ formatDate(order.createdAt) }}({{
@@ -1064,14 +1077,14 @@ onUnmounted(() => {
                   }})
                 </div>
               </div>
-              <div class="h-8 w-px bg-border hidden sm:block"></div>
+              <div class="h-6 w-px bg-border hidden sm:block"></div>
               <div class="flex flex-col">
                 <span
-                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  class="text-[11px] font-bold leading-[1.1] text-admin-muted uppercase tracking-tighter"
                   >주문자</span
                 >
                 <div
-                  class="flex items-center gap-1.5 text-body text-admin font-bold"
+                  class="flex items-center gap-1.5 text-caption leading-[1.2] text-admin font-bold"
                 >
                   <User class="w-3.5 h-3.5 opacity-50" />
                   <span class="text-caption text-admin-muted font-semibold">{{
@@ -1083,17 +1096,17 @@ onUnmounted(() => {
                   >
                 </div>
               </div>
-              <div class="h-8 w-px bg-border hidden sm:block"></div>
+              <div class="h-6 w-px bg-border hidden sm:block"></div>
               <div class="flex flex-col max-w-xs">
                 <span
-                  class="text-caption font-bold text-admin-muted uppercase tracking-tighter mb-0.5"
+                  class="text-[11px] font-bold leading-[1.1] text-admin-muted uppercase tracking-tighter"
                   >배송지</span
                 >
                 <div class="flex items-start gap-1.5">
                   <MapPin
                     class="w-3.5 h-3.5 opacity-50 text-admin-muted mt-0.5 flex-shrink-0"
                   />
-                  <span class="text-caption text-admin-muted font-semibold">
+                  <span class="text-caption leading-[1.2] text-admin-muted font-semibold">
                     {{ order.shippingAddress }}
                     <span class="text-admin-muted opacity-70"
                       >({{ order.shippingPostalCode }})</span
@@ -1108,12 +1121,12 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-            <div class="text-right">
+            <div class="flex items-baseline justify-end gap-1.5 whitespace-nowrap text-right">
               <span
-                class="text-body font-semibold text-admin uppercase tracking-tighter block mb-0.5"
+                class="text-[11px] font-semibold leading-none text-admin-muted uppercase tracking-tighter"
                 >총액</span
               >
-              <span class="text-body font-semibold text-admin"
+              <span class="text-[15px] font-bold leading-none text-admin"
                 >{{ formatPrice(order.totalAmount) }}</span
               >
             </div>
@@ -1121,29 +1134,29 @@ onUnmounted(() => {
         </CardHeader>
 
         <CardContent class="p-0 overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[1200px]">
+          <table class="order-admin-table w-full text-left border-separate border-spacing-0 min-w-[1200px]">
             <thead
-              class="bg-white border-l border-r text-caption font-bold text-admin-muted uppercase tracking-tight shadow-sm shadow-light"
+              class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
             >
               <tr>
-                <th class="px-5 py-3 w-24">이미지</th>
-                <th class="px-5 py-3 w-1/4">상품명 / 옵션</th>
-                <th class="px-5 py-3 text-center">수량/금액</th>
-                <th class="px-5 py-3 text-center">상태 정보</th>
-                <th class="px-5 py-3 text-center">배송 정보</th>
-                <th class="px-5 py-3 text-center">상태 관리</th>
-                <th class="px-5 py-3 text-center whitespace-nowrap w-[120px]">취소 관리</th>
+                <th class="px-5 py-2 w-24">이미지</th>
+                <th class="px-5 py-2 w-1/4">상품명 / 옵션</th>
+                <th class="px-5 py-2 text-center">수량/금액</th>
+                <th class="px-5 py-2 text-center">상태 정보</th>
+                <th class="px-5 py-2 text-center">배송 정보</th>
+                <th class="px-5 py-2 text-center">상태 관리</th>
+                <th class="px-5 py-2 text-center whitespace-nowrap w-[120px]">취소 관리</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody>
               <tr
                 v-for="item in order.orderItems"
                 :key="item.id"
-                class="hover:bg-muted/10 transition-colors"
+                class="transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-5 py-3.5">
+                <td class="px-5 py-2">
                   <div
-                    class="h-14 w-14 bg-muted rounded-xl overflow-hidden border border-border shadow-sm"
+                    class="h-10 w-10 bg-muted/20 overflow-hidden border border-border/70 transition-colors group-hover:border-primary/20"
                   >
                     <img
                       v-if="item.product?.imageUrl"
@@ -1159,32 +1172,32 @@ onUnmounted(() => {
                     </div>
                   </div>
                 </td>
-                <td class="px-5 py-3.5">
-                  <div class="text-body text-admin">
+                <td class="px-5 py-2">
+                  <div class="text-[14px] font-medium leading-[1.25] text-admin">
                     {{ item.productName }}
                   </div>
                   <div
-                    class="text-caption text-admin-muted mt-1 bg-muted/50 inline-block py-0.5 rounded"
+                    class="mt-1 inline-block border border-border/60 bg-background px-1.5 py-0.5 text-[11px] leading-[1.2] text-admin-muted"
                   >
                     {{ item.options || "기본 옵션" }}
                   </div>
                 </td>
 
-                <td class="px-5 py-3.5 text-center">
-                  <div class="text-body text-admin">
+                <td class="px-5 py-2 text-center">
+                  <div class="text-[14px] leading-[1.25] text-admin">
                     <span class="text-admin">{{ item.quantity }}</span
                     >개
                   </div>
-                  <div class="text-caption text-admin-muted mt-0.5">
+                  <div class="mt-0.5 text-[11px] leading-[1.2] text-admin-muted">
                     {{ formatPrice(item.productPrice) }}
                   </div>
                 </td>
 
-                <td class="px-5 py-3.5 text-center">
+                <td class="px-5 py-2 text-center">
                   <select
                     v-model="item.status"
                     :class="[
-                      'inline-flex items-center border rounded-xl px-3 py-1.5 text-caption font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
+                      'inline-flex h-8 items-center border rounded-xl px-2.5 py-1 text-caption font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
                       getStatusClass(item.status),
                     ]"
                   >
@@ -1200,7 +1213,7 @@ onUnmounted(() => {
                   <!-- 정상 흐름 상태일 때 미니 프로그레스바 -->
                   <div
                     v-if="isNormalFlowStatus(item.status)"
-                    class="flex gap-1 mt-2 mx-auto w-28"
+                    class="flex gap-1 mt-1.5 mx-auto w-28"
                   >
                     <div
                       v-for="step in 4"
@@ -1211,15 +1224,15 @@ onUnmounted(() => {
                   </div>
                 </td>
 
-                <td class="px-5 py-3.5 text-center">
-                  <div class="flex flex-col items-center gap-2">
+                <td class="px-5 py-2 text-center">
+                  <div class="flex flex-col items-center gap-1.5">
                     <Button
                       variant="outline"
                       size="sm"
                       @click="openShippingModal(item, order)"
-                      class="gap-2"
+                      class="h-8 gap-1.5 px-2.5"
                     >
-                      <Truck class="w-4 h-4" />
+                      <Truck class="h-3.5 w-3.5" />
                       <span
                         v-if="item.trackingNumber"
                         class="font-mono text-caption"
@@ -1234,27 +1247,27 @@ onUnmounted(() => {
                       v-if="item.trackingNumber"
                       type="button"
                       @click="openTrackingPage(item)"
-                      class="inline-flex items-center gap-1 text-caption text-primary hover:underline font-mono"
+                      class="inline-flex items-center gap-1 text-[11px] leading-[1.2] text-primary hover:underline font-mono"
                     >
                       {{ item.trackingNumber }}
-                      <ExternalLink class="w-3 h-3" />
+                      <ExternalLink class="h-3 w-3" />
                     </button>
                   </div>
                 </td>
 
-                <td class="px-5 py-3.5 text-center">
+                <td class="px-5 py-2 text-center">
                   <Button
                     size="sm"
                     @click="handleSaveItemStatus(item)"
                     :disabled="isSaveDisabled(item) || savingStatus[item.id]"
-                    class="bg-primary hover:bg-primary/80 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="h-8 px-3 bg-primary hover:bg-primary/80 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span v-if="savingStatus[item.id]">저장중...</span>
                     <span v-else>저장</span>
                   </Button>
                 </td>
 
-                <td class="px-5 py-3.5 text-center">
+                <td class="px-5 py-2 text-center">
                   <div class="flex justify-center">
                     <Button
                       variant="outline"
@@ -1262,13 +1275,13 @@ onUnmounted(() => {
                       :disabled="!isCancelable(item.status)"
                       @click="openCancelModal(item, order)"
                       :class="[
-                        'w-[92px] justify-center gap-1.5',
+                        'h-8 w-[88px] justify-center gap-1.5 px-2',
                         isCancelable(item.status)
                           ? 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
                           : 'text-muted-foreground border-border opacity-60 cursor-not-allowed',
                       ]"
                     >
-                      <XCircle class="w-4 h-4" />
+                      <XCircle class="h-3.5 w-3.5" />
                       <span class="text-caption">
                         {{ isCancelable(item.status) ? "취소" : "취소불가" }}
                       </span>
@@ -1307,7 +1320,7 @@ onUnmounted(() => {
 
     <div
       v-if="filteredOrders.length === 0 && hasLoadedOnce"
-      class="text-center py-32 border-2 border-dashed border-border rounded-2xl bg-muted/10"
+      class="text-center py-24 border-y border-border/70 bg-card"
     >
       <ShoppingBag class="w-12 h-12 mx-auto mb-4 opacity-10 text-admin" />
       <p class="text-body text-admin-muted">
@@ -1338,6 +1351,39 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.order-admin-page :deep(input),
+.order-admin-page :deep([role="combobox"]) {
+  border-radius: 0;
+  border-color: hsl(var(--border) / 0.7);
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+.order-admin-page :deep(input:focus-visible),
+.order-admin-page :deep([role="combobox"]:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.order-admin-table th,
+.order-admin-table td {
+  border-left: 1px solid hsl(var(--border) / 0.34);
+  vertical-align: middle;
+}
+
+.order-admin-table th:first-child,
+.order-admin-table td:first-child {
+  border-left: 0;
+}
+
+.order-admin-table tbody td {
+  border-top: 1px solid hsl(var(--border) / 0.46);
+}
+
+.order-admin-table thead th {
+  line-height: 1.2;
+}
+
 /* 테이블 스크롤바 디자인 */
 ::-webkit-scrollbar {
   width: 6px;

@@ -29,6 +29,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserProfileImageUrl } from "@/lib/constants/profile";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -54,6 +56,8 @@ const userName = computed(() => {
 const userRole = computed(() => {
   return authStore.user?.isAdmin ? "관리자" : "일반회원";
 });
+
+const profileImageUrl = computed(() => getUserProfileImageUrl(authStore.user));
 
 // 모바일 환경 감지
 const isMobile = computed(() => {
@@ -188,11 +192,22 @@ onMounted(async () => {
     <Card class="mb-6 rounded-none border-primary/10 bg-background/80">
       <CardContent class="px-4 py-5 sm:px-5 sm:py-6">
         <div class="flex items-center gap-4">
-          <div
-            class="w-14 h-14 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center"
+          <Avatar
+            v-if="profileImageUrl"
+            shape="square"
+            class="h-14 w-14 rounded-[3px] border border-primary/10 bg-white ring-1 ring-primary/10"
           >
-            <User class="w-7 h-7 text-primary" />
-          </div>
+            <AvatarImage
+              :src="profileImageUrl || ''"
+              :alt="`${userName} 프로필`"
+              class="object-contain p-1.5"
+            />
+            <AvatarFallback
+              class="flex h-full w-full items-center justify-center bg-white text-[26px] font-semibold leading-none text-primary"
+            >
+              <User class="w-7 h-7 text-primary" />
+            </AvatarFallback>
+          </Avatar>
           <div>
             <!-- 모바일: 줄바꿈 -->
             <p v-if="isMobile" class="text-heading font-bold text-foreground">
