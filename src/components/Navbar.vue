@@ -215,7 +215,7 @@ onUnmounted(() => {
 <template>
   <div class="sticky top-0 z-40">
     <div
-      class="flex h-5 w-full items-center justify-center bg-primary text-primary-foreground text-[10px] sm:text-[11px] lg:text-xs tracking-wider"
+      class="flex h-5 w-full items-center justify-center bg-primary text-white text-[10px] sm:text-[11px] lg:text-xs tracking-wider"
     >
       one-of-one japanese vintage sets
     </div>
@@ -251,7 +251,7 @@ onUnmounted(() => {
               <nav class="flex flex-col gap-1.5" aria-label="Shop menu">
                 <RouterLink
                   to="/product/all"
-                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   @click="closingByPopState = true; isOpen = false"
                 >
                   shop
@@ -270,7 +270,7 @@ onUnmounted(() => {
               <nav class="flex flex-col gap-1.5" aria-label="Archive menu">
                 <RouterLink
                   to="/archive/sold"
-                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   @click="closingByPopState = true; isOpen = false"
                 >
                   archive
@@ -294,7 +294,7 @@ onUnmounted(() => {
               <nav class="flex flex-col gap-2.5" aria-label="Site menu">
                 <RouterLink
                   to="/about"
-                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   @click="closingByPopState = true; isOpen = false"
                 >
                   about
@@ -302,7 +302,7 @@ onUnmounted(() => {
 
                 <RouterLink
                   to="/notice"
-                  class="text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   @click="closingByPopState = true; isOpen = false"
                 >
                   notice
@@ -310,7 +310,7 @@ onUnmounted(() => {
 
                 <button
                   type="button"
-                  class="text-left text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-left text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   aria-label="FAQ"
                   @click="handleFAQClick"
                 >
@@ -319,7 +319,7 @@ onUnmounted(() => {
 
                 <button
                   type="button"
-                  class="text-left text-2xl font-extrabold leading-snug tracking-wide hover:text-primary/80 transition-colors"
+                  class="text-left text-2xl font-semibold leading-snug tracking-wide hover:text-primary/80 transition-colors"
                   aria-label="Instagram 공식 계정 열기"
                   @click="handleInstagram"
                 >
@@ -389,7 +389,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 hover:bg-transparent p-0"
+          class="h-7 w-7 hover:bg-transparent p-0"
           :aria-label="isAuthenticated ? '내 계정' : '로그인'"
           @click="handleAccountClick"
         >
@@ -397,7 +397,7 @@ onUnmounted(() => {
             :src="accountIcon"
             alt=""
             aria-hidden="true"
-            class="w-full h-full object-contain"
+            class="h-6 w-6 object-contain"
             draggable="false"
           />
         </Button>
@@ -405,16 +405,16 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 relative hover:bg-transparent overflow-visible p-0"
+          class="h-7 w-7 relative hover:bg-transparent overflow-visible p-0"
           :aria-label="`장바구니${cartItemCount > 0 ? ` (${cartItemCount}개 상품)` : ''}`"
           @click="handleCartClick"
         >
-          <div class="relative w-full h-full">
+          <div class="relative h-6 w-6">
             <img
               :src="cartIcon"
               alt=""
               aria-hidden="true"
-              class="w-full h-full object-contain"
+              class="h-6 w-6 object-contain"
               draggable="false"
             />
             <span
@@ -437,7 +437,7 @@ onUnmounted(() => {
         <Button
           as-child
           variant="ghost"
-          class="h-8 px-2 text-lg leading-none font-extrabold hover:bg-transparent tracking-wider"
+          class="h-8 px-2 text-lg leading-none font-semibold hover:bg-transparent tracking-wider"
         >
           <RouterLink
             to="/product/all"
@@ -450,7 +450,7 @@ onUnmounted(() => {
         <Button
           as-child
           variant="ghost"
-          class="h-8 px-2 text-lg leading-none font-extrabold hover:bg-transparent tracking-wider"
+          class="h-8 px-2 text-lg leading-none font-semibold hover:bg-transparent tracking-wider"
         >
           <RouterLink
             to="/archive/sold"
@@ -463,7 +463,7 @@ onUnmounted(() => {
         <Button
           as-child
           variant="ghost"
-          class="h-8 px-2 text-lg leading-none font-extrabold hover:bg-transparent tracking-wider"
+          class="h-8 px-2 text-lg leading-none font-semibold hover:bg-transparent tracking-wider"
         >
           <RouterLink
             to="/about"
@@ -476,7 +476,7 @@ onUnmounted(() => {
         <Button
           as-child
           variant="ghost"
-          class="h-8 px-2 text-lg leading-none font-extrabold hover:bg-transparent tracking-wider"
+          class="h-8 px-2 text-lg leading-none font-semibold hover:bg-transparent tracking-wider"
         >
           <RouterLink
             to="/notice"
@@ -501,11 +501,11 @@ onUnmounted(() => {
         />
       </button>
 
-      <div class="flex justify-end items-center gap-4">
+      <div class="flex justify-end items-center gap-[1.125rem]">
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform"
+          class="h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform"
           aria-label="Instagram 공식 계정 열기"
           @click="handleInstagram"
         >
@@ -513,7 +513,7 @@ onUnmounted(() => {
             :src="instagramIcon"
             alt=""
             aria-hidden="true"
-            class="w-8 h-8 object-contain"
+            class="w-7 h-7 object-contain"
             draggable="false"
           />
         </Button>
@@ -521,7 +521,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform"
+          class="h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform"
           :aria-label="isAuthenticated ? '내 계정' : '로그인'"
           @click="handleAccountClick"
         >
@@ -529,7 +529,7 @@ onUnmounted(() => {
             :src="accountIcon"
             alt=""
             aria-hidden="true"
-            class="w-8 h-8 object-contain"
+            class="w-7 h-7 object-contain"
             draggable="false"
           />
         </Button>
@@ -537,7 +537,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform"
+          class="h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform"
           aria-label="문의하기"
           @click="handleFAQClick"
         >
@@ -545,7 +545,7 @@ onUnmounted(() => {
             :src="faqIcon"
             alt=""
             aria-hidden="true"
-            class="w-8 h-8 object-contain"
+            class="w-7 h-7 object-contain"
             draggable="false"
           />
         </Button>
@@ -553,7 +553,7 @@ onUnmounted(() => {
         <Button
           variant="ghost"
           size="icon"
-          class="relative h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
+          class="relative h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform overflow-visible"
           :aria-label="`장바구니${cartItemCount > 0 ? ` (${cartItemCount}개 상품)` : ''}`"
           @click="handleCartClick"
         >
@@ -562,7 +562,7 @@ onUnmounted(() => {
               :src="cartIcon"
               alt=""
               aria-hidden="true"
-              class="w-8 h-8 object-contain"
+              class="w-7 h-7 object-contain"
               draggable="false"
             />
             <span
@@ -579,7 +579,7 @@ onUnmounted(() => {
           <Button
             variant="ghost"
             size="icon"
-            class="h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform"
+            class="h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform"
             aria-label="로그아웃"
             @click="handleLogout"
           >
@@ -587,7 +587,7 @@ onUnmounted(() => {
               :src="logoutIcon"
               alt=""
               aria-hidden="true"
-              class="w-8 h-8 object-contain"
+              class="w-7 h-7 object-contain"
               draggable="false"
             />
           </Button>
@@ -598,7 +598,7 @@ onUnmounted(() => {
             variant="ghost"
             size="icon"
             as-child
-            class="h-8 w-8 p-0 hover:bg-transparent hover:scale-110 transition-transform"
+            class="h-7 w-7 p-0 hover:bg-transparent hover:scale-110 transition-transform"
             aria-label="로그인"
           >
             <RouterLink to="/login">
@@ -606,7 +606,7 @@ onUnmounted(() => {
                 :src="loginIcon"
                 alt=""
                 aria-hidden="true"
-                class="w-8 h-8 object-contain"
+                class="w-7 h-7 object-contain"
                 draggable="false"
               />
             </RouterLink>

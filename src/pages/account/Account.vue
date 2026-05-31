@@ -370,7 +370,7 @@ onMounted(async () => {
             class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] border border-primary/10 flex items-center justify-center mb-2"
             >
               <CheckCircle class="w-5 h-5 text-primary" />
             </div>
@@ -385,7 +385,7 @@ onMounted(async () => {
             class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] border border-primary/10 flex items-center justify-center mb-2"
             >
               <Settings class="w-5 h-5 text-primary" />
             </div>
@@ -400,7 +400,7 @@ onMounted(async () => {
             class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] border border-primary/10 flex items-center justify-center mb-2"
             >
               <Truck class="w-5 h-5 text-primary" />
             </div>
@@ -415,7 +415,7 @@ onMounted(async () => {
             class="flex flex-col items-center rounded-[3px] py-4 hover:bg-primary/[0.03] transition-colors cursor-pointer"
           >
             <div
-              class="w-10 h-10 rounded-[3px] bg-primary/[0.04] ring-1 ring-primary/10 flex items-center justify-center mb-2"
+              class="w-10 h-10 rounded-[3px] border border-primary/10 flex items-center justify-center mb-2"
             >
               <Package class="w-5 h-5 text-primary" />
             </div>

@@ -52,6 +52,7 @@ export interface Admin2FARequiredResponse {
   requiresAdmin2FA: true;
   challengeId: string;
   expiresInSeconds: number;
+  admin2faFallbackAvailable?: boolean;
   devCode?: string;
 }
 

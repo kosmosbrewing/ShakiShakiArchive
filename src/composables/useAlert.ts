@@ -24,6 +24,7 @@ interface AlertState {
   promptValue: string;
   promptPlaceholder: string;
   promptRequired: string; // 필수 입력값 (예: "탈퇴")
+  dialogClass: string;
 }
 
 // 기본 상태
@@ -41,6 +42,7 @@ const defaultState: AlertState = {
   promptValue: "",
   promptPlaceholder: "",
   promptRequired: "",
+  dialogClass: "",
 };
 
 // 전역 상태 (싱글톤)
@@ -66,6 +68,7 @@ interface PromptConfirmOptions {
   cancelText?: string;
   placeholder?: string;
   required?: string; // 필수 입력값
+  dialogClass?: string;
 }
 
 /**
@@ -160,6 +163,7 @@ export function useAlert() {
         promptPlaceholder: options?.placeholder ?? "",
         promptRequired: options?.required ?? "",
         promptValue: "",
+        dialogClass: options?.dialogClass ?? "",
         resolve: resolve as ((value: boolean | string | null) => void),
       };
     });

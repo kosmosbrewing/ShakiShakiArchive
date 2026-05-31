@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -231,19 +230,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 py-24 sm:py-16">
+  <div class="w-11/12 max-w-screen-2xl mx-auto px-4 pt-6 pb-12 sm:pt-8 sm:pb-16">
     <AdminNavigationTabs />
 
-    <div class="flex justify-between items-end">
-      <div>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div class="min-w-0">
         <h3 class="text-heading text-admin tracking-wider">통계 관리</h3>
-        <p class="text-body text-admin-muted pt-1 mb-3">
+        <p class="mt-1 mb-3 text-body text-admin-muted">
           방문자 및 상품 조회 통계를 확인할 수 있습니다.
         </p>
       </div>
       <Button
         variant="outline"
-        class="mb-2 gap-2 text-admin font-semibold"
+        class="gap-2 text-admin font-semibold"
         @click="loadAnalytics"
         :disabled="isLoading"
       >
@@ -251,12 +250,12 @@ onMounted(async () => {
         새로고침
       </Button>
     </div>
-    <Separator class="mb-6" />
+    <Separator class="mb-4 bg-border/70" />
 
     <LoadingSpinner v-if="isLoading && !overview" />
 
     <div v-else-if="errorMessage && !overview" class="space-y-4">
-      <Card class="border-destructive/30">
+      <Card class="border-x-0 border-y border-destructive/30 bg-card shadow-none">
         <CardContent class="py-6 text-body text-admin">
           {{ errorMessage }}
         </CardContent>
@@ -266,15 +265,16 @@ onMounted(async () => {
     <div v-else-if="overview" class="space-y-6">
       <Card
         v-if="isLoading"
-        class="border-border bg-muted/20 shadow-none"
+        class="border-x-0 border-y border-border/70 bg-card shadow-none"
       >
-        <CardContent class="py-3 text-caption text-admin-muted">
+        <CardContent class="flex items-center gap-2 py-3 text-caption text-admin-muted">
+          <RefreshCw class="h-3.5 w-3.5 animate-spin" />
           통계 데이터 업데이트 중...
         </CardContent>
       </Card>
       <Card
         v-else-if="errorMessage"
-        class="border-destructive/30 shadow-none"
+        class="border-x-0 border-y border-destructive/30 bg-card shadow-none"
       >
         <CardContent class="py-3 text-caption text-admin">
           {{ errorMessage }}
@@ -282,88 +282,80 @@ onMounted(async () => {
       </Card>
 
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card v-for="card in visitorCards" :key="card.label">
-          <CardHeader class="pb-2">
-            <CardDescription class="text-caption text-admin-muted">
-              {{ card.label }}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p class="text-2xl font-bold text-admin tracking-tight">
-              {{ formatNumber(card.value) }}
-            </p>
-          </CardContent>
-        </Card>
+        <section
+          v-for="card in visitorCards"
+          :key="card.label"
+          class="border-y border-border/70 bg-card px-4 py-3 shadow-none"
+        >
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+            {{ card.label }}
+          </p>
+          <p class="mt-1 text-[22px] font-bold leading-none tracking-tight text-admin">
+            {{ formatNumber(card.value) }}
+          </p>
+        </section>
       </div>
 
-      <div class="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader class="flex flex-row items-center justify-between gap-3 space-y-0">
-            <h3 class="text-body text-admin flex items-center gap-2">
-              <ShoppingBag class="w-4 h-4" />
+      <div class="grid gap-4 lg:grid-cols-2">
+        <Card class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
+          <CardHeader class="border-b border-border/70 px-4 py-3">
+            <h3 class="flex items-center gap-2 text-[13px] font-semibold text-admin">
+              <ShoppingBag class="h-4 w-4 text-admin-muted" />
               주문 지표
             </h3>
           </CardHeader>
-          <CardContent>
-            <div class="grid grid-cols-2 gap-3">
-              <Card
+          <CardContent class="p-0">
+            <div class="grid grid-cols-2">
+              <div
                 v-for="card in orderCards"
                 :key="card.label"
-                class="shadow-none"
+                class="border-t border-border/60 px-4 py-3 odd:border-r odd:border-border/60 first:border-t-0 [&:nth-child(2)]:border-t-0"
               >
-                <CardHeader class="pb-2">
-                  <CardDescription class="text-caption text-admin-muted">
-                    {{ card.label }}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p class="text-2xl font-bold text-admin tracking-tight">
-                    {{ formatNumber(card.value) }}건
-                  </p>
-                </CardContent>
-              </Card>
+                <p class="text-[11px] font-semibold leading-[1.2] text-admin-muted">
+                  {{ card.label }}
+                </p>
+                <p class="mt-1 text-[20px] font-bold leading-none tracking-tight text-admin">
+                  {{ formatNumber(card.value) }}건
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader class="flex flex-row items-center justify-between gap-3 space-y-0">
-            <h3 class="text-body text-admin flex items-center gap-2">
-              <Banknote class="w-4 h-4" />
+        <Card class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
+          <CardHeader class="border-b border-border/70 px-4 py-3">
+            <h3 class="flex items-center gap-2 text-[13px] font-semibold text-admin">
+              <Banknote class="h-4 w-4 text-admin-muted" />
               매출 지표
             </h3>
           </CardHeader>
-          <CardContent>
-            <div class="grid grid-cols-2 gap-3">
-              <Card
+          <CardContent class="p-0">
+            <div class="grid grid-cols-2">
+              <div
                 v-for="card in salesCards"
                 :key="card.label"
-                class="shadow-none"
+                class="border-t border-border/60 px-4 py-3 odd:border-r odd:border-border/60 first:border-t-0 [&:nth-child(2)]:border-t-0"
               >
-                <CardHeader class="pb-2">
-                  <CardDescription class="text-caption text-admin-muted">
-                    {{ card.label }}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p class="text-2xl font-bold text-admin tracking-tight">
-                    {{ card.value }}
-                  </p>
-                </CardContent>
-              </Card>
+                <p class="text-[11px] font-semibold leading-[1.2] text-admin-muted">
+                  {{ card.label }}
+                </p>
+                <p class="mt-1 text-[20px] font-bold leading-none tracking-tight text-admin">
+                  {{ card.value }}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div class="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0">
-            <h3 class="text-body text-admin flex items-center gap-2">
-              <Users class="w-4 h-4" />
+      <div class="grid gap-4 lg:grid-cols-2">
+        <Card class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
+          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3">
+            <h3 class="flex items-center gap-2 text-[13px] font-semibold text-admin">
+              <Users class="h-4 w-4 text-admin-muted" />
               방문자 통계
             </h3>
-            <div class="text-right text-caption text-admin-muted">
+            <div class="text-right text-[11px] leading-[1.35] text-admin-muted">
               <p v-if="shouldShowGaStatus" class="text-caption text-admin-muted">
                 상태 :
                 <span class="font-semibold text-admin">{{ gaStatusText }}</span>
@@ -371,19 +363,21 @@ onMounted(async () => {
               <p>집계 시각: {{ generatedAtText }}</p>
             </div>
           </CardHeader>
-          <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
-            <div class="space-y-3">
-              <p class="text-caption font-semibold">방문자 기간별 그래프 (Google Analytics)</p>
-              <div v-for="item in visitorChartData" :key="item.label">
-                <div class="mb-1 flex h-12 min-h-0 items-center justify-between gap-2 text-caption text-admin-muted">
-                  <span class="truncate text-admin min-w-0">{{ item.label }}</span>
+          <CardContent class="px-4 py-4 text-caption leading-4 text-admin">
+            <div class="space-y-4">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+                Google Analytics
+              </p>
+              <div v-for="item in visitorChartData" :key="item.label" class="space-y-1.5">
+                <div class="flex min-h-0 items-center justify-between gap-2 text-caption text-admin-muted">
+                  <span class="min-w-0 truncate font-medium text-admin">{{ item.label }}</span>
                   <span class="font-semibold text-admin">
                     {{ formatNumber(item.value) }}
                   </span>
                 </div>
-                <div class="h-2 rounded-full bg-muted">
+                <div class="h-1.5 bg-border/50">
                   <div
-                    class="h-2 rounded-full bg-primary/80 transition-all duration-500"
+                    class="h-1.5 bg-primary/80 transition-all duration-500"
                     :style="{ width: getBarWidth(item.value, maxVisitorValue) }"
                   />
                 </div>
@@ -392,23 +386,25 @@ onMounted(async () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0">
-            <h3 class="text-body text-admin flex items-center gap-2">
-              <Eye class="w-4 h-4" />
+        <Card class="overflow-hidden border-x-0 border-y border-border/70 bg-card shadow-none">
+          <CardHeader class="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3">
+            <h3 class="flex items-center gap-2 text-[13px] font-semibold text-admin">
+              <Eye class="h-4 w-4 text-admin-muted" />
               상품 조회 통계
             </h3>
-            <p class="text-body text-admin text-right whitespace-nowrap">
-              누적 상품 조회수 {{ formatNumber(overview.productViews.totalViewCount) }}
+            <p class="text-right text-caption font-semibold text-admin whitespace-nowrap">
+              누적 {{ formatNumber(overview.productViews.totalViewCount) }}회
             </p>
           </CardHeader>
-          <CardContent class="space-y-2.5 text-caption leading-4 text-admin">
-            <div v-if="topViewedChartData.length" class="space-y-3">
-              <p class="text-caption font-semibold">상위 20개 상품 조회수</p>
-              <div v-for="item in topViewedChartData" :key="item.id">
-                <div class="mb-1 flex h-12 min-h-0 items-center justify-between gap-2 text-caption">
+          <CardContent class="px-4 py-4 text-caption leading-4 text-admin">
+            <div v-if="topViewedChartData.length" class="space-y-4">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-admin-muted">
+                상위 20개 상품
+              </p>
+              <div v-for="item in topViewedChartData" :key="item.id" class="space-y-1.5">
+                <div class="flex min-h-0 items-center justify-between gap-2 text-caption">
                   <div class="min-w-0 flex flex-1 items-center gap-2">
-                    <div class="h-12 w-12 rounded-md bg-muted border border-border overflow-hidden flex-shrink-0">
+                    <div class="h-10 w-10 flex-shrink-0 overflow-hidden border border-border/70 bg-muted">
                       <img
                         v-if="item.imageUrl"
                         :src="item.imageUrl"
@@ -422,15 +418,15 @@ onMounted(async () => {
                   </div>
                   <span class="font-semibold text-admin text-caption">{{ formatNumber(item.value) }}</span>
                 </div>
-                <div class="h-2 rounded-full bg-muted">
+                <div class="h-1.5 bg-border/50">
                   <div
-                    class="h-2 rounded-full bg-primary/70 transition-all duration-500"
+                    class="h-1.5 bg-primary/70 transition-all duration-500"
                     :style="{ width: getBarWidth(item.value, maxTopViewedValue) }"
                   />
                 </div>
               </div>
             </div>
-            <p v-else class="text-caption">조회수 데이터가 없습니다.</p>
+            <p v-else class="text-caption text-admin-muted">조회수 데이터가 없습니다.</p>
           </CardContent>
         </Card>
       </div>

@@ -254,6 +254,7 @@ onUnmounted(() => {
     :prompt-value="alertState.promptValue"
     :prompt-placeholder="alertState.promptPlaceholder"
     :prompt-required="alertState.promptRequired"
+    :class="alertState.dialogClass"
     @close="closeAlert"
     @confirm="handleConfirm"
     @cancel="handleCancel"

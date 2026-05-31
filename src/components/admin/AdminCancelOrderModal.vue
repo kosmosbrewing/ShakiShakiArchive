@@ -8,10 +8,8 @@ import { useConstantsStore } from "@/stores/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner, ProductThumbnail } from "@/components/common";
-import { X, AlertTriangle, Info, FileText } from "lucide-vue-next";
+import { X, AlertTriangle, Info } from "lucide-vue-next";
 import { formatPrice } from "@/lib/formatters";
 import { getStatusLabel } from "@/lib/constants/orderStatus";
 import type { OrderItem } from "@/types/api";
@@ -49,7 +47,6 @@ const emit = defineEmits<{
     e: "confirm",
     data: {
       cancelType: CancelType;
-      adminMemo: string;
       cancelReason: string;
     },
   ): void;
@@ -80,20 +77,9 @@ const cancelTypeOptions = [
   },
 ];
 
-// 내부 관리용 메모 템플릿
-const adminMemoTemplates: Record<CancelType, string> = {
-  customer_request: "[반품승인] 고객 요청에 따른 상품 회수 확인 후 취소.",
-  customer_request_cod: "[반품승인-착불] 착불 반품비 차감 후 환불 처리.",
-  seller_cancel: "[직권취소] 재고부족/상품오류로 인한 관리자 취소.",
-};
-
-// 입력 필드
-const adminMemo = ref("");
-
-// 취소 유형 선택 시 템플릿 자동 적용
+// 취소 유형 선택
 const selectCancelType = (type: CancelType) => {
   selectedCancelType.value = type;
-  adminMemo.value = adminMemoTemplates[type];
 };
 
 // 확인 버튼 활성화 여부
@@ -321,7 +307,6 @@ const handleConfirm = async () => {
 
   emit("confirm", {
     cancelType: selectedCancelType.value as CancelType,
-    adminMemo: adminMemo.value.trim(),
     cancelReason: getFinalCancelReason(),
   });
 };
@@ -330,7 +315,6 @@ const handleConfirm = async () => {
 const handleClose = () => {
   if (props.loading) return;
   selectedCancelType.value = "";
-  adminMemo.value = "";
   emit("close");
 };
 
@@ -340,7 +324,6 @@ watch(
   (isOpen) => {
     if (isOpen) {
       selectedCancelType.value = "";
-      adminMemo.value = "";
     }
   },
 );
@@ -476,28 +459,6 @@ watch(
                 </div>
               </div>
 
-              <!-- 내부 관리용 메모 -->
-              <Transition name="slide">
-                <div v-if="selectedCancelType" class="space-y-4">
-                  <Separator />
-
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                      <FileText class="w-4 h-4 text-muted-foreground" />
-                      <Label class="text-body font-medium"
-                        >내부 관리용 메모</Label
-                      >
-                    </div>
-                    <Textarea
-                      v-model="adminMemo"
-                      placeholder="내부 관리용 메모를 입력해주세요 (선택)"
-                      class="min-h-[80px] resize-none"
-                      :disabled="loading"
-                    />
-                  </div>
-                </div>
-              </Transition>
-
               <!-- 환불 안내 -->
               <div
                 class="flex items-start gap-2 p-3 bg-primary/10 rounded-lg text-primary"
@@ -555,14 +516,4 @@ watch(
   opacity: 0;
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.2s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
 </style>

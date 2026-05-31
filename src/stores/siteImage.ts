@@ -40,6 +40,25 @@ export const useSiteImageStore = defineStore("siteImage", () => {
     return Date.now() - lastFetchedAt.value < CACHE_DURATION;
   });
 
+  const sortSiteImages = (images: SiteImage[]) =>
+    [...images].sort(
+      (a, b) => a.displayOrder - b.displayOrder || a.id - b.id,
+    );
+
+  // 기존 Hero 항목은 관리자에서 Main PC로 표시하므로 공개 메인 PC 목록에도 포함한다.
+  const mergeMainDesktopImages = (
+    mainDesktopData: SiteImage[],
+    heroData: SiteImage[],
+  ) => {
+    const uniqueImages = new Map<number, SiteImage>();
+
+    [...heroData, ...mainDesktopData].forEach((image) => {
+      uniqueImages.set(image.id, image);
+    });
+
+    return sortSiteImages([...uniqueImages.values()]);
+  };
+
   const loadOptionalImages = async (
     loader: () => Promise<SiteImage[]>,
     label: string,
@@ -72,14 +91,18 @@ export const useSiteImageStore = defineStore("siteImage", () => {
         loadOptionalImages(fetchMainMobileImages, "메인 모바일"),
         fetchHeroImages(),
       ]);
+      const mergedMainDesktopData = mergeMainDesktopImages(
+        mainDesktopData,
+        heroData,
+      );
 
-      mainDesktopImages.value = mainDesktopData;
+      mainDesktopImages.value = mergedMainDesktopData;
       mainMobileImages.value = mainMobileData;
       heroImages.value = heroData;
       lastFetchedAt.value = Date.now();
 
       return {
-        mainDesktopImages: mainDesktopData,
+        mainDesktopImages: mergedMainDesktopData,
         mainMobileImages: mainMobileData,
         heroImages: heroData,
       };
@@ -99,9 +122,17 @@ export const useSiteImageStore = defineStore("siteImage", () => {
     }
 
     try {
-      const data = await fetchMainDesktopImages();
-      mainDesktopImages.value = data;
-      return data;
+      const [mainDesktopData, heroData] = await Promise.all([
+        fetchMainDesktopImages(),
+        fetchHeroImages(),
+      ]);
+      const mergedMainDesktopData = mergeMainDesktopImages(
+        mainDesktopData,
+        heroData,
+      );
+      mainDesktopImages.value = mergedMainDesktopData;
+      heroImages.value = heroData;
+      return mergedMainDesktopData;
     } catch (e) {
       console.error("메인 데스크톱 이미지 로드 실패:", e);
       throw e;
@@ -184,24 +215,24 @@ export const useSiteImageStore = defineStore("siteImage", () => {
     const activeImages = images.filter((img) => img.isActive);
 
     mainDesktopImages.value = activeImages
-      .filter((img) => img.type === "main_desktop")
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .filter((img) => img.type === "main_desktop" || img.type === "hero")
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
 
     mainMobileImages.value = activeImages
       .filter((img) => img.type === "main_mobile")
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
 
     heroImages.value = activeImages
       .filter((img) => img.type === "hero")
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
 
     marqueeImages.value = activeImages
       .filter((img) => img.type === "marquee")
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
 
     journalImages.value = activeImages
       .filter((img) => img.type === "journal")
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
 
     lastFetchedAt.value = Date.now();
     apiCache.invalidate('/api/site-images');

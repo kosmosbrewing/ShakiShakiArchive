@@ -4,7 +4,14 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAlert } from "@/composables/useAlert";
 import { ADMIN_MESSAGES } from "@/lib/messages";
-import { fetchAdminOrders, updateAdminOrderItem, adminCancelPayment } from "@/lib/api";
+import {
+  fetchAdminOrders,
+  updateAdminOrderItem,
+  adminCancelPayment,
+  manualRefundAdminOrderItem,
+  requestAdmin2FAChallenge,
+  verifyAdminLogin2FA,
+} from "@/lib/api";
 import { getDayName } from "@/lib/utils";
 import { maskUserName, maskPhone, maskDetailAddress, formatDate, formatPrice } from "@/lib/formatters";
 import { getStatusClass as getStatusClassFromConstants, isNormalFlowStatus, getStepIndex } from "@/lib/constants/orderStatus";
@@ -16,6 +23,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -37,11 +45,12 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { showAlert, showConfirm } = useAlert();
+const { showAlert, showConfirm, showPromptConfirm } = useAlert();
 
 const orders = ref<any[]>([]);
 const originalOrders = ref<any[]>([]); // 원본 데이터 저장 (변경 감지용)
@@ -74,6 +83,13 @@ const cancelTargetItem = ref<any>(null);
 const cancelTargetOrder = ref<any>(null);
 const cancelLoading = ref(false);
 
+// 수기환불 모달 상태 (PG 취소 호출 없음)
+const manualRefundModalOpen = ref(false);
+const manualRefundTargetItem = ref<any>(null);
+const manualRefundTargetOrder = ref<any>(null);
+const manualRefundReason = ref("");
+const manualRefundLoading = ref(false);
+
 // 상태 저장 중 표시
 const savingStatus = ref<Record<number, boolean>>({}); // key: orderItemId, value: saving 여부
 
@@ -85,6 +101,15 @@ const loadMoreTrigger = ref<HTMLDivElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
 // 자주 사용하는 상태 빠른 필터
+const MANUAL_REFUND_FILTER_VALUE = "manual_refund_available";
+const MANUAL_REFUND_AVAILABLE_STATUSES = [
+  "shipped",
+];
+
+const isManualRefundAvailable = (status: string) => {
+  return MANUAL_REFUND_AVAILABLE_STATUSES.includes(status);
+};
+
 const quickFilters = [
   { value: "all", label: "전체" },
   { value: "payment_confirmed", label: "결제완료" },
@@ -92,30 +117,63 @@ const quickFilters = [
   { value: "shipped", label: "배송중" },
   { value: "return_requested", label: "반품요청" },
   { value: "return_received", label: "검수대기" },
+  { value: MANUAL_REFUND_FILTER_VALUE, label: "수기환불 대상" },
 ];
 
-// 상태 옵션 (백엔드 상태값 기준으로 통일)
-const statusOptions = [
-  { value: "pending_payment", label: "입금대기" },
-  { value: "paying", label: "결제진행중" },
-  { value: "cancelled", label: "주문중단" },
-  { value: "payment_confirmed", label: "결제완료" },
-  { value: "preparing", label: "배송준비중" },
-  { value: "shipped", label: "배송중" },
-  { value: "delivered", label: "배송완료" },
-  { value: "purchase_confirmed", label: "구매확정" },
-  { value: "refunded", label: "주문취소" },
-  { value: "partial_refunded", label: "부분환불" },
-  { value: "return_requested", label: "반품요청" },
-  // { value: "return_in_transit", label: "반품배송중" }, // 비활성화 (추후 사용 예정)
-  { value: "return_received", label: "검수대기" },
+type StatusOption = {
+  value: string;
+  label: string;
+};
+
+// 상태 옵션 (관리자 UX용 카테고리)
+const statusOptionGroups: { label: string; options: StatusOption[] }[] = [
+  {
+    label: "결제/대기",
+    options: [
+      { value: "pending_payment", label: "입금대기" },
+      { value: "paying", label: "결제진행중" },
+      { value: "payment_confirmed", label: "결제완료" },
+    ],
+  },
+  {
+    label: "배송",
+    options: [
+      { value: "preparing", label: "배송준비중" },
+      { value: "shipped", label: "배송중" },
+      { value: "delivered", label: "배송완료" },
+    ],
+  },
+  {
+    label: "반품",
+    options: [
+      { value: "return_requested", label: "반품요청" },
+      { value: "return_received", label: "검수대기" },
+    ],
+  },
+  {
+    label: "환불/취소",
+    options: [
+      { value: "cancelled", label: "주문중단" },
+      { value: "refunded", label: "주문취소" },
+      { value: "partial_refunded", label: "부분환불" },
+    ],
+  },
+  {
+    label: "최종",
+    options: [{ value: "purchase_confirmed", label: "구매확정" }],
+  },
 ];
+const statusOptions = statusOptionGroups.flatMap((group) => group.options);
 
 // 필터링된 주문 목록 (전체)
 const filteredOrders = computed(() => {
   let result = orders.value;
 
-  if (selectedStatus.value !== "all") {
+  if (selectedStatus.value === MANUAL_REFUND_FILTER_VALUE) {
+    result = result.filter((order) =>
+      order.orderItems.some((item: any) => isManualRefundAvailable(item.status)),
+    );
+  } else if (selectedStatus.value !== "all") {
     result = result.filter((order) =>
       order.orderItems.some((item: any) => item.status === selectedStatus.value),
     );
@@ -168,6 +226,22 @@ const getStatusCount = (status: string) => {
   }, 0);
 };
 
+const getManualRefundAvailableCount = () => {
+  return orders.value.reduce((count, order) => {
+    return (
+      count +
+      order.orderItems.filter((item: any) => isManualRefundAvailable(item.status)).length
+    );
+  }, 0);
+};
+
+const getQuickFilterCount = (filterValue: string) => {
+  if (filterValue === MANUAL_REFUND_FILTER_VALUE) {
+    return getManualRefundAvailableCount();
+  }
+  return getStatusCount(filterValue);
+};
+
 // 각 상태별 건수 (백엔드 상태값 기준)
 const statusCounts = computed(() => [
   { label: "입금대기", count: getStatusCount("pending_payment"), emphasized: false },
@@ -190,25 +264,219 @@ const getStatusClass = (status: string) => {
   return `${baseClass} border`;
 };
 
-// 주문 아이템의 상태가 변경되었는지 확인
-const isItemStatusChanged = (item: any) => {
+const getOriginalItemStatus = (item: any) => {
   const originalOrder = originalOrders.value.find((o) =>
     o.orderItems.some((oi: any) => oi.id === item.id),
   );
-  if (!originalOrder) return false;
-
-  const originalItem = originalOrder.orderItems.find(
+  const originalItem = originalOrder?.orderItems.find(
     (oi: any) => oi.id === item.id,
   );
-  if (!originalItem) return false;
+  return originalItem?.status || item.status;
+};
 
-  return originalItem.status !== item.status;
+const routineStatusTransitions = new Set([
+  "payment_confirmed->preparing",
+  "preparing->shipped",
+  "shipped->delivered",
+  "return_requested->return_received",
+]);
+
+const customerCancelableStatuses = new Set([
+  "pending",
+  "pending_payment",
+  "paying",
+  "payment_confirmed",
+  "preparing",
+]);
+
+const postShippingOrReturnStatuses = new Set([
+  "shipped",
+  "delivered",
+  "purchase_confirmed",
+  "return_requested",
+  "return_in_transit",
+  "return_received",
+]);
+
+const terminalOrRefundStatuses = new Set([
+  "cancelled",
+  "refunded",
+  "partial_refunded",
+  "purchase_confirmed",
+]);
+
+const isRiskStatusTransition = (fromStatus: string, toStatus: string) => {
+  if (fromStatus === toStatus) return false;
+  return !routineStatusTransitions.has(`${fromStatus}->${toStatus}`);
+};
+
+const getStatusLabel = (status: string) => {
+  for (const group of statusOptionGroups) {
+    const option = group.options.find((item) => item.value === status);
+    if (option) return option.label;
+  }
+  return status;
 };
 
 // 저장 버튼 비활성화 여부 확인 (입금대기, 결제진행중, 주문중단, 주문취소, 반품완료 상태)
 const isSaveDisabled = (item: any) => {
   const disabledStatuses = ["pending_payment", "paying", "cancelled", "refunded", "returned"];
-  return disabledStatuses.includes(item.status) || !isItemStatusChanged(item);
+  return disabledStatuses.includes(item.status) || !getPendingStatusChangeLabel(item);
+};
+
+const shouldAutoShipWithTracking = (
+  fromStatus: string,
+  selectedStatus: string,
+  trackingNumber?: string | null,
+) => {
+  return (
+    fromStatus === "preparing" &&
+    selectedStatus === "preparing" &&
+    Boolean(String(trackingNumber || "").trim())
+  );
+};
+
+const getFinalStatusForSelection = (item: any, selectedStatus: string) => {
+  const originalStatus = getOriginalItemStatus(item);
+  return shouldAutoShipWithTracking(
+    originalStatus,
+    selectedStatus,
+    item.trackingNumber,
+  )
+    ? "shipped"
+    : selectedStatus;
+};
+
+const getPendingStatusChangeLabel = (item: any) => {
+  const originalStatus = getOriginalItemStatus(item);
+  const finalStatus = getFinalStatusForSelection(item, item.status);
+  if (originalStatus === finalStatus) return "";
+  return `${getStatusLabel(originalStatus)} → ${getStatusLabel(finalStatus)}`;
+};
+
+const isPendingStatusChangeRisk = (item: any) => {
+  const originalStatus = getOriginalItemStatus(item);
+  const finalStatus = getFinalStatusForSelection(item, item.status);
+  return isRiskStatusTransition(originalStatus, finalStatus);
+};
+
+const isStatusOptionRisk = (item: any, toStatus: string) => {
+  const originalStatus = getOriginalItemStatus(item);
+  const finalStatus = getFinalStatusForSelection(item, toStatus);
+  return isRiskStatusTransition(originalStatus, finalStatus);
+};
+
+const getStatusOptionLabel = (item: any, option: StatusOption) => {
+  const prefix = isStatusOptionRisk(item, option.value) ? "⚠ " : "";
+  return `${prefix}${option.label}`;
+};
+
+const buildRiskStatusMessage = (fromStatus: string, toStatus: string) => {
+  const fromLabel = getStatusLabel(fromStatus);
+  const toLabel = getStatusLabel(toStatus);
+  const warnings = [
+    "상태를 변경하기 전에 확인해주세요",
+    "",
+    `${fromLabel} → ${toLabel}`,
+    "",
+    "이 변경은 일반적인 주문 처리 순서와 다릅니다.",
+    "저장하면 고객 화면의 주문 상태와 취소 가능 여부가 달라질 수 있고,",
+    "환불/정산 판단에도 영향을 줄 수 있습니다.",
+    "",
+    "저장 전 아래 내용을 확인해주세요.",
+    "- 실제 배송/반품 진행 상태와 맞나요?",
+    "- PG 환불이나 수기환불을 이미 처리하지 않았나요?",
+    "- 고객에게 취소 가능한 상태로 다시 보이지 않나요?",
+  ];
+
+  if (
+    postShippingOrReturnStatuses.has(fromStatus) &&
+    customerCancelableStatuses.has(toStatus)
+  ) {
+    warnings.push(
+      "",
+      "특히 이 변경은 출고 이후 상태를 이전 단계로 되돌립니다.",
+      "이미 상품이 출고되었거나 배송 사고/CS 처리가 끝난 주문이라면",
+      "중복 취소나 정산 오류가 생길 수 있습니다.",
+    );
+  } else if (customerCancelableStatuses.has(toStatus)) {
+    warnings.push(
+      "",
+      "변경 후 고객이 주문취소를 요청할 수 있는 단계가 될 수 있습니다.",
+      "이미 별도 환불이나 CS 처리가 끝난 주문이면 먼저 처리 내역을 확인해주세요.",
+    );
+  }
+
+  if (terminalOrRefundStatuses.has(toStatus)) {
+    warnings.push(
+      "",
+      "변경 후 주문이 최종 또는 환불 상태로 처리됩니다.",
+      "PG 취소, 수기환불, 재고 복구가 필요한 상황인지 확인해주세요.",
+    );
+  }
+
+  warnings.push(
+    "",
+    "계속 진행하려면 변경 사유를 남겨주세요.",
+    "사유 입력 후 관리자 2차 인증을 진행합니다.",
+  );
+  return warnings.join("\n");
+};
+
+const requestRiskAdmin2FA = async () => {
+  const challenge = await requestAdmin2FAChallenge();
+  if (!("requiresAdmin2FA" in challenge)) return true;
+
+  const fallbackAvailable = !!challenge.admin2faFallbackAvailable;
+  const code = await showPromptConfirm(
+    fallbackAvailable
+      ? "텔레그램 발송이 지연되어 임시 접속 코드 6자리를 입력해주세요."
+      : "텔레그램으로 발송된 관리자 인증번호 4자리를 입력해주세요.",
+    {
+      variant: "destructive",
+      confirmText: "인증",
+      cancelText: "취소",
+      placeholder: fallbackAvailable ? "임시 접속 코드 6자리" : "인증번호 4자리",
+    },
+  );
+
+  if (!code) return false;
+
+  await verifyAdminLogin2FA({
+    challengeId: challenge.challengeId,
+    code,
+  });
+
+  return true;
+};
+
+const confirmRiskStatusChange = async (
+  fromStatus: string,
+  toStatus: string,
+) => {
+  const reason = await showPromptConfirm(
+    buildRiskStatusMessage(fromStatus, toStatus),
+    {
+      variant: "destructive",
+      confirmText: "2차 인증 진행",
+      cancelText: "취소",
+      placeholder: "예: 배송 사고 처리 후 상태 보정",
+      dialogClass: "w-[min(92vw,440px)] sm:w-[440px]",
+    },
+  );
+
+  if (!reason) return null;
+
+  const trimmedReason = reason.trim();
+  if (trimmedReason.length < 2) {
+    showAlert("상태 변경 사유를 2자 이상 입력해주세요.", { type: "error" });
+    return null;
+  }
+
+  const verified = await requestRiskAdmin2FA();
+  if (!verified) return null;
+
+  return trimmedReason;
 };
 
 const loadData = async () => {
@@ -562,19 +830,144 @@ const closeCancelModal = () => {
   cancelTargetOrder.value = null;
 };
 
-// 취소 가능 상태 확인 (결제완료, 배송준비중, 검수대기)
+const openManualRefundModal = (item: any, order: any) => {
+  manualRefundTargetItem.value = item;
+  manualRefundTargetOrder.value = order;
+  manualRefundReason.value = "";
+  manualRefundModalOpen.value = true;
+};
+
+const handleDangerActionClick = (action: string, item: any, order: any) => {
+  if (action === "manual_refund") {
+    openManualRefundModal(item, order);
+  } else if (action === "return_refund") {
+    openCancelModal(item, order);
+  }
+};
+
+const getDangerActions = (item: any) => {
+  const actions: { value: string; label: string }[] = [];
+
+  if (isManualRefundAvailable(item.status)) {
+    actions.push({ value: "manual_refund", label: "수기 환불" });
+  }
+
+  if (item.status === "return_received") {
+    actions.push({ value: "return_refund", label: "검수 후 환불" });
+  }
+
+  return actions;
+};
+
+const closeManualRefundModal = (force = false) => {
+  if (manualRefundLoading.value && !force) return;
+  manualRefundModalOpen.value = false;
+  manualRefundTargetItem.value = null;
+  manualRefundTargetOrder.value = null;
+  manualRefundReason.value = "";
+};
+
+const getManualRefundAmount = (item: any) => {
+  if (!item) return 0;
+  return Math.round(Number(item.productPrice || 0) * Number(item.quantity || 1));
+};
+
+const handleManualRefund = async () => {
+  if (
+    !manualRefundTargetItem.value ||
+    !manualRefundTargetOrder.value ||
+    manualRefundLoading.value
+  ) {
+    return;
+  }
+
+  const refundAmount = getManualRefundAmount(manualRefundTargetItem.value);
+  if (!Number.isInteger(refundAmount) || refundAmount <= 0) {
+    showAlert("수기환불 금액을 계산할 수 없습니다.", { type: "error" });
+    return;
+  }
+
+  const reason = manualRefundReason.value.trim();
+  if (reason.length < 2) {
+    showAlert("수기환불 처리 메모를 입력해주세요.", { type: "error" });
+    return;
+  }
+
+  const confirmed = await showConfirm(
+    "수기환불 처리입니다.\n\nPG 취소 API는 호출하지 않고, 이미 계좌로 환불한 내역을 시스템에 반영합니다.\n해당 상품은 주문취소로 표시되고, 주문 전체는 부분환불 또는 주문취소로 반영됩니다.\n\n계속 진행하시겠습니까?",
+    {
+      variant: "destructive",
+      confirmText: "수기환불 처리",
+      cancelText: "취소",
+    },
+  );
+  if (!confirmed) return;
+
+  try {
+    const verified = await requestRiskAdmin2FA();
+    if (!verified) return;
+  } catch (error: any) {
+    showAlert(error.message || "관리자 2차 인증에 실패했습니다.", { type: "error" });
+    return;
+  }
+
+  manualRefundLoading.value = true;
+  try {
+    await manualRefundAdminOrderItem(manualRefundTargetItem.value.id, {
+      reason,
+    });
+
+    showAlert("수기환불 처리 내역이 반영되었습니다.");
+    closeManualRefundModal(true);
+    await loadData();
+  } catch (error: any) {
+    showAlert(error.message || "수기환불 처리에 실패했습니다.", { type: "error" });
+  } finally {
+    manualRefundLoading.value = false;
+  }
+};
+
+// 일반 취소 가능 상태 확인 (검수 후 환불은 위험작업에서 처리)
 const isCancelable = (status: string) => {
-  const cancelableStatuses = ["payment_confirmed", "preparing", "return_received"];
+  const cancelableStatuses = ["payment_confirmed", "preparing"];
   return cancelableStatuses.includes(status);
+};
+
+const getCancelUnavailableReason = (status: string) => {
+  const reasonMap: Record<string, string> = {
+    pending_payment: "결제 전",
+    paying: "결제 진행 중",
+    shipped: "수기 환불만 가능",
+    delivered: "반품 요청 후 처리",
+    purchase_confirmed: "구매확정 완료",
+    return_requested: "검수 후 처리",
+    return_in_transit: "반품 도착 대기",
+    return_received: "검수 후 환불 가능",
+    cancelled: "주문중단 완료",
+    refunded: "주문취소 완료",
+    partial_refunded: "부분환불 완료",
+    returned: "반품완료",
+  };
+
+  return reasonMap[status] || "취소불가";
 };
 
 // 관리자 주문 취소 처리
 const handleAdminCancel = async (data: {
   cancelType: "customer_request" | "customer_request_cod" | "seller_cancel";
-  adminMemo: string;
   cancelReason: string;
 }) => {
   if (!cancelTargetItem.value || !cancelTargetOrder.value) return;
+
+  if (cancelTargetItem.value.status === "return_received") {
+    try {
+      const verified = await requestRiskAdmin2FA();
+      if (!verified) return;
+    } catch (error: any) {
+      showAlert(error.message || "관리자 2차 인증에 실패했습니다.", { type: "error" });
+      return;
+    }
+  }
 
   cancelLoading.value = true;
   try {
@@ -591,7 +984,7 @@ const handleAdminCancel = async (data: {
 
     await adminCancelPayment(
       cancelTargetOrder.value.id,
-      `[${typeLabel}] ${data.cancelReason}${data.adminMemo ? `\n\n[관리메모]\n${data.adminMemo}` : ""}`,
+      `[${typeLabel}] ${data.cancelReason}`,
       data.cancelType,
       cancelTargetItem.value.id
     );
@@ -608,15 +1001,35 @@ const handleAdminCancel = async (data: {
 
 // 주문 아이템 상태 저장
 const handleSaveItemStatus = async (item: any) => {
-  const hasTrackingNumber = Boolean(String(item.trackingNumber || "").trim());
+  const originalStatus = getOriginalItemStatus(item);
   const requestedStatus = item.status;
-  const willAutoShip = requestedStatus === "preparing" && hasTrackingNumber;
-  const finalStatus = willAutoShip ? "shipped" : requestedStatus;
+  const willAutoShip = shouldAutoShipWithTracking(
+    originalStatus,
+    requestedStatus,
+    item.trackingNumber,
+  );
+  const finalStatus = getFinalStatusForSelection(item, requestedStatus);
+  let statusChangeReason: string | null = null;
+
+  if (isRiskStatusTransition(originalStatus, finalStatus)) {
+    try {
+      statusChangeReason = await confirmRiskStatusChange(
+        originalStatus,
+        finalStatus,
+      );
+    } catch (error: any) {
+      showAlert(error.message || "관리자 2차 인증에 실패했습니다.", { type: "error" });
+      return;
+    }
+
+    if (!statusChangeReason) return;
+  }
+
   const confirmMessage =
-    requestedStatus === "preparing"
-      ? hasTrackingNumber
-        ? "운송장 번호가 등록되어 있습니다.\n저장하면 상품 상태가 배송중으로 변경됩니다."
-        : "상품을 배송준비중 상태로 저장합니다.\n운송장 번호는 나중에 등록할 수 있습니다."
+    willAutoShip
+      ? "운송장 번호가 등록되어 있습니다.\n저장하면 상품 상태가 배송중으로 변경됩니다."
+      : requestedStatus === "preparing"
+        ? "상품을 배송준비중 상태로 저장합니다.\n고객 주문취소 가능 여부와 실제 배송 상태를 확인해주세요."
       : "상태를 저장하시겠습니까?";
 
   const confirmed = await showConfirm(confirmMessage, {
@@ -633,6 +1046,7 @@ const handleSaveItemStatus = async (item: any) => {
       finalStatus,
       item.trackingNumber,
       item.courierCompany,
+      statusChangeReason,
     );
     const savedStatus = updatedItem?.status || finalStatus;
     item.status = savedStatus;
@@ -776,6 +1190,7 @@ onUnmounted(() => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
+            <SelectItem :value="MANUAL_REFUND_FILTER_VALUE">수기환불 대상</SelectItem>
             <SelectItem
               v-for="opt in statusOptions"
               :key="opt.value"
@@ -807,10 +1222,10 @@ onUnmounted(() => {
           >
             {{ opt.label }}
             <span
-              v-if="opt.value !== 'all' && getStatusCount(opt.value) > 0"
+              v-if="opt.value !== 'all' && getQuickFilterCount(opt.value) > 0"
               class="font-bold text-admin"
             >
-              {{ getStatusCount(opt.value) }}
+              {{ getQuickFilterCount(opt.value) }}
             </span>
           </Button>
       </div>
@@ -1134,18 +1549,25 @@ onUnmounted(() => {
         </CardHeader>
 
         <CardContent class="p-0 overflow-x-auto">
-          <table class="order-admin-table w-full text-left border-separate border-spacing-0 min-w-[1200px]">
+          <table class="order-admin-table w-full table-fixed text-left border-separate border-spacing-0 min-w-[1200px]">
+            <colgroup>
+              <col class="w-[410px]" />
+              <col class="w-[120px]" />
+              <col class="w-[180px]" />
+              <col class="w-[230px]" />
+              <col class="w-[110px]" />
+              <col class="w-[150px]" />
+            </colgroup>
             <thead
               class="border-b border-border/70 bg-transparent text-caption font-semibold text-admin-muted uppercase tracking-tight"
             >
               <tr>
-                <th class="px-5 py-2 w-24">이미지</th>
-                <th class="px-5 py-2 w-1/4">상품명 / 옵션</th>
+                <th class="px-5 py-2">상품 정보</th>
                 <th class="px-5 py-2 text-center">수량/금액</th>
                 <th class="px-5 py-2 text-center">상태 정보</th>
                 <th class="px-5 py-2 text-center">배송 정보</th>
                 <th class="px-5 py-2 text-center">상태 관리</th>
-                <th class="px-5 py-2 text-center whitespace-nowrap w-[120px]">취소 관리</th>
+                <th class="px-5 py-2 text-center whitespace-nowrap">취소 관리</th>
               </tr>
             </thead>
             <tbody>
@@ -1154,83 +1576,109 @@ onUnmounted(() => {
                 :key="item.id"
                 class="transition-colors hover:bg-primary/[0.03]"
               >
-                <td class="px-5 py-2">
-                  <div
-                    class="h-10 w-10 bg-muted/20 overflow-hidden border border-border/70 transition-colors group-hover:border-primary/20"
-                  >
-                    <img
-                      v-if="item.product?.imageUrl"
-                      :src="item.product.imageUrl"
-                      class="h-full w-full object-cover"
-                      crossorigin="anonymous"
-                    />
+                <td class="px-5 py-2.5">
+                  <div class="flex min-w-0 items-center gap-3">
                     <div
-                      v-else
-                      class="h-full w-full flex items-center justify-center text-admin-muted opacity-20"
+                      class="h-11 w-11 shrink-0 bg-muted/20 overflow-hidden border border-border/70 transition-colors group-hover:border-primary/20"
                     >
-                      <ImageIcon class="w-6 h-6" />
+                      <img
+                        v-if="item.product?.imageUrl"
+                        :src="item.product.imageUrl"
+                        class="h-full w-full object-cover"
+                        crossorigin="anonymous"
+                      />
+                      <div
+                        v-else
+                        class="h-full w-full flex items-center justify-center text-admin-muted opacity-20"
+                      >
+                        <ImageIcon class="w-6 h-6" />
+                      </div>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="truncate text-[14px] font-medium leading-[1.25] text-admin">
+                        {{ item.productName }}
+                      </div>
+                      <div
+                        class="mt-1 inline-block max-w-full truncate border border-border/60 bg-background px-1.5 py-0.5 text-[11px] leading-[1.2] text-admin-muted"
+                      >
+                        {{ item.options || "기본 옵션" }}
+                      </div>
                     </div>
                   </div>
                 </td>
-                <td class="px-5 py-2">
-                  <div class="text-[14px] font-medium leading-[1.25] text-admin">
-                    {{ item.productName }}
-                  </div>
-                  <div
-                    class="mt-1 inline-block border border-border/60 bg-background px-1.5 py-0.5 text-[11px] leading-[1.2] text-admin-muted"
-                  >
-                    {{ item.options || "기본 옵션" }}
-                  </div>
-                </td>
 
-                <td class="px-5 py-2 text-center">
-                  <div class="text-[14px] leading-[1.25] text-admin">
+                <td class="px-5 py-2.5 text-center">
+                  <div class="whitespace-nowrap text-[14px] font-semibold leading-[1.25] text-admin">
                     <span class="text-admin">{{ item.quantity }}</span
                     >개
                   </div>
-                  <div class="mt-0.5 text-[11px] leading-[1.2] text-admin-muted">
+                  <div class="mt-0.5 whitespace-nowrap text-[11px] leading-[1.2] text-admin-muted">
                     {{ formatPrice(item.productPrice) }}
                   </div>
                 </td>
 
-                <td class="px-5 py-2 text-center">
-                  <select
-                    v-model="item.status"
-                    :class="[
-                      'inline-flex h-8 items-center border rounded-xl px-2.5 py-1 text-caption font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
-                      getStatusClass(item.status),
-                    ]"
-                  >
-                    <option
-                      v-for="opt in statusOptions"
-                      :key="opt.value"
-                      :value="opt.value"
-                      class="text-center"
+                <td class="px-5 py-2.5 text-center">
+                  <div class="flex min-h-[48px] flex-col items-center justify-center">
+                    <select
+                      v-model="item.status"
+                      :class="[
+                        'inline-flex h-8 items-center border rounded-xl px-2.5 py-1 text-caption font-bold focus:ring-2 focus:ring-primary/20 outline-none w-36 transition-all shadow-sm',
+                        getStatusClass(item.status),
+                      ]"
                     >
-                      {{ opt.label }}
-                    </option>
-                  </select>
-                  <!-- 정상 흐름 상태일 때 미니 프로그레스바 -->
-                  <div
-                    v-if="isNormalFlowStatus(item.status)"
-                    class="flex gap-1 mt-1.5 mx-auto w-28"
-                  >
+                      <optgroup
+                        v-for="group in statusOptionGroups"
+                        :key="group.label"
+                        :label="group.label"
+                      >
+                        <option
+                          v-for="opt in group.options"
+                          :key="opt.value"
+                          :value="opt.value"
+                          class="text-center"
+                        >
+                          {{ getStatusOptionLabel(item, opt) }}
+                        </option>
+                      </optgroup>
+                    </select>
+                    <!-- 정상 흐름 상태일 때 미니 프로그레스바 -->
                     <div
-                      v-for="step in 4"
-                      :key="step"
-                      class="flex-1 h-1 rounded-full transition-colors"
-                      :class="step - 1 <= getStepIndex(item.status) ? 'bg-primary' : 'bg-muted'"
-                    />
+                      class="mt-1.5 flex w-28 gap-1"
+                      :class="isNormalFlowStatus(item.status) ? '' : 'invisible'"
+                    >
+                      <div
+                        v-for="step in 4"
+                        :key="step"
+                        class="h-1 flex-1 rounded-full transition-colors"
+                        :class="
+                          isNormalFlowStatus(item.status) &&
+                          step - 1 <= getStepIndex(item.status)
+                            ? 'bg-primary'
+                            : 'bg-muted'
+                        "
+                      />
+                    </div>
+                    <div
+                      v-if="getPendingStatusChangeLabel(item)"
+                      class="mt-1 flex max-w-[170px] items-center justify-center gap-1"
+                    >
+                        <span
+                          class="truncate border border-primary/25 bg-primary/5 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary"
+                          :title="getPendingStatusChangeLabel(item)"
+                        >
+                          변경됨 {{ getPendingStatusChangeLabel(item) }}
+                        </span>
+                    </div>
                   </div>
                 </td>
 
-                <td class="px-5 py-2 text-center">
-                  <div class="flex flex-col items-center gap-1.5">
+                <td class="px-5 py-2.5 text-center">
+                  <div class="flex min-h-[48px] w-full flex-col items-center justify-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
                       @click="openShippingModal(item, order)"
-                      class="h-8 gap-1.5 px-2.5"
+                      class="h-8 w-[96px] justify-center gap-1.5 px-2.5"
                     >
                       <Truck class="h-3.5 w-3.5" />
                       <span
@@ -1247,43 +1695,80 @@ onUnmounted(() => {
                       v-if="item.trackingNumber"
                       type="button"
                       @click="openTrackingPage(item)"
-                      class="inline-flex items-center gap-1 text-[11px] leading-[1.2] text-primary hover:underline font-mono"
+                      class="inline-flex max-w-[170px] items-center gap-1 text-[11px] leading-[1.2] text-primary hover:underline font-mono"
                     >
-                      {{ item.trackingNumber }}
+                      <span class="truncate">{{ item.trackingNumber }}</span>
                       <ExternalLink class="h-3 w-3" />
                     </button>
                   </div>
                 </td>
 
-                <td class="px-5 py-2 text-center">
+                <td class="px-5 py-2.5 text-center">
                   <Button
                     size="sm"
+                    :variant="isPendingStatusChangeRisk(item) ? 'outline' : 'default'"
                     @click="handleSaveItemStatus(item)"
                     :disabled="isSaveDisabled(item) || savingStatus[item.id]"
-                    class="h-8 px-3 bg-primary hover:bg-primary/80 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="[
+                      'h-8 px-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed',
+                      isPendingStatusChangeRisk(item)
+                        ? 'w-[96px] gap-1 border-amber-300 bg-amber-50/80 text-amber-800 hover:bg-amber-100 hover:text-amber-900'
+                        : 'w-[72px] bg-primary text-white hover:bg-primary/80',
+                    ]"
                   >
                     <span v-if="savingStatus[item.id]">저장중...</span>
-                    <span v-else>저장</span>
+                    <template v-else>
+                      <span>저장</span>
+                      <span
+                        v-if="isPendingStatusChangeRisk(item)"
+                        class="shrink-0 border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold leading-none text-amber-800"
+                      >
+                        2FA
+                      </span>
+                    </template>
                   </Button>
                 </td>
 
-                <td class="px-5 py-2 text-center">
-                  <div class="flex justify-center">
+                <td class="px-5 py-2.5 text-center">
+                  <div class="flex min-h-[48px] flex-col items-center justify-center gap-1.5">
                     <Button
+                      v-if="isCancelable(item.status)"
                       variant="outline"
                       size="sm"
-                      :disabled="!isCancelable(item.status)"
                       @click="openCancelModal(item, order)"
-                      :class="[
-                        'h-8 w-[88px] justify-center gap-1.5 px-2',
-                        isCancelable(item.status)
-                          ? 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
-                          : 'text-muted-foreground border-border opacity-60 cursor-not-allowed',
-                      ]"
+                      class="h-8 w-[116px] justify-center gap-1.5 border-destructive/40 bg-destructive/5 px-2 text-destructive shadow-sm hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive"
                     >
                       <XCircle class="h-3.5 w-3.5" />
-                      <span class="text-caption">
-                        {{ isCancelable(item.status) ? "취소" : "취소불가" }}
+                      <span class="text-caption font-semibold">주문 취소</span>
+                    </Button>
+                    <Button
+                      v-for="action in getDangerActions(item)"
+                      :key="action.value"
+                      variant="outline"
+                      size="sm"
+                      class="h-8 w-[116px] justify-center gap-1 border-amber-300 bg-amber-50/80 px-1.5 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+                      @click="handleDangerActionClick(action.value, item, order)"
+                    >
+                      <AlertTriangle class="h-3.5 w-3.5 shrink-0" />
+                      <span class="truncate text-caption font-semibold">
+                        {{ action.label }}
+                      </span>
+                      <span
+                        class="shrink-0 border border-amber-300 bg-amber-100 px-1 py-0.5 text-[9px] font-bold leading-none text-amber-800"
+                      >
+                        2FA
+                      </span>
+                    </Button>
+                    <Button
+                      v-if="!isCancelable(item.status) && getDangerActions(item).length === 0"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      class="h-8 w-[116px] justify-center gap-1.5 border-border px-2 text-muted-foreground opacity-60 cursor-not-allowed"
+                    >
+                      <XCircle class="h-3.5 w-3.5" />
+                      <span class="truncate text-[11px]">
+                        {{ getCancelUnavailableReason(item.status) }}
                       </span>
                     </Button>
                   </div>
@@ -1338,6 +1823,99 @@ onUnmounted(() => {
       @save="handleSaveShipping"
     />
 
+    <!-- 관리자 수기환불 모달 (PG 취소 호출 없음) -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="manualRefundModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          @click.self="closeManualRefundModal()"
+        >
+          <div class="w-full max-w-lg border border-border bg-card shadow-2xl">
+            <div class="border-b border-border/70 px-5 py-4">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-300 bg-amber-50">
+                  <AlertTriangle class="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <h3 class="text-body font-bold text-admin">수기환불 처리</h3>
+                  <p class="mt-1 text-caption leading-[1.35] text-admin-muted">
+                    PG 취소 API를 호출하지 않고 계좌 환불 완료 내역만 시스템에 반영합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4 px-5 py-4">
+              <div class="border-y border-border/70 bg-muted/10 px-3 py-3">
+                <p class="text-caption font-semibold text-admin">
+                  {{ manualRefundTargetItem?.productName || "상품" }}
+                </p>
+                <p class="mt-1 text-caption text-admin-muted">
+                  현재 상태: {{ getStatusLabel(manualRefundTargetItem?.status || "") }}
+                </p>
+              </div>
+
+              <div class="rounded-none border border-amber-200 bg-amber-50 px-3 py-3 text-caption leading-[1.45] text-amber-900">
+                배송중 상품을 이미 고객 계좌로 환불한 경우에만 사용하세요.
+                <br />
+                처리 후 해당 상품은 주문취소로, 주문 전체는 부분환불 또는 주문취소로 반영됩니다.
+              </div>
+
+              <div class="border-y border-border/70 bg-muted/10 px-3 py-3">
+                <p class="text-caption font-semibold text-admin-muted">수기환불 반영 금액</p>
+                <p class="mt-1 text-body font-bold text-admin">
+                  {{ formatPrice(getManualRefundAmount(manualRefundTargetItem)) }}
+                </p>
+              </div>
+
+              <div class="grid gap-2">
+                <label class="text-caption font-semibold text-admin-muted">
+                  수기환불 처리 메모
+                </label>
+                <Textarea
+                  v-model="manualRefundReason"
+                  placeholder="예: 택배사 분실로 고객 계좌 환불 완료"
+                  class="min-h-20 rounded-none"
+                  :disabled="manualRefundLoading"
+                />
+                <p class="text-[11px] leading-[1.35] text-admin-muted">
+                  이 메모는 고객 화면에 노출되는 취소 사유로 저장하지 않습니다.
+                </p>
+              </div>
+
+            </div>
+
+            <div class="flex gap-2 border-t border-border/70 px-5 py-4">
+              <Button
+                variant="outline"
+                class="flex-1"
+                :disabled="manualRefundLoading"
+                @click="closeManualRefundModal()"
+              >
+                취소
+              </Button>
+              <Button
+                class="flex-1 bg-amber-700 text-white hover:bg-amber-800"
+                :disabled="manualRefundLoading"
+                @click="handleManualRefund"
+              >
+                <LoadingSpinner
+                  v-if="manualRefundLoading"
+                  variant="spinner"
+                  size="sm"
+                  color="white"
+                  :center="false"
+                  class="mr-2"
+                />
+                {{ manualRefundLoading ? "처리 중..." : "수기환불 처리" }}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- 관리자 주문 취소 모달 -->
     <AdminCancelOrderModal
       :open="cancelModalOpen"
@@ -1382,6 +1960,16 @@ onUnmounted(() => {
 
 .order-admin-table thead th {
   line-height: 1.2;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* 테이블 스크롤바 디자인 */

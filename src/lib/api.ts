@@ -260,6 +260,12 @@ export async function verifyAdminLogin2FA(data: VerifyAdmin2FARequest): Promise<
   });
 }
 
+export async function requestAdmin2FAChallenge(): Promise<LoginResponse> {
+  return apiRequest<LoginResponse>("/api/auth/admin-2fa/challenge", {
+    method: "POST",
+  });
+}
+
 // 회원가입
 export async function signup(data: {
   email: string;
@@ -1143,7 +1149,8 @@ export async function updateAdminOrderItem(
   itemId: number | string,
   status: string,
   trackingNumber?: string | null,
-  courierCompany?: string | null
+  courierCompany?: string | null,
+  statusChangeReason?: string | null
 ): Promise<OrderItem> {
   const body: Record<string, string> = { status };
 
@@ -1155,10 +1162,29 @@ export async function updateAdminOrderItem(
     body.courierCompany = courierCompany;
   }
 
+  if (statusChangeReason != null) {
+    body.statusChangeReason = statusChangeReason;
+  }
+
   return apiRequest<OrderItem>(`/api/admin/order-items/${itemId}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
+}
+
+export async function manualRefundAdminOrderItem(
+  itemId: number | string,
+  data: {
+    reason: string;
+  }
+): Promise<{ message: string; order: Order }> {
+  return apiRequest<{ message: string; order: Order }>(
+    `/api/admin/order-items/${itemId}/manual-refund`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
 }
 
 // ------------------------------------------------------------------
@@ -1597,8 +1623,14 @@ export async function fetchEmailTemplates(): Promise<{
 
 // 이메일 템플릿 미리보기 HTML 조회
 export async function fetchEmailPreview(type: EmailTemplateType): Promise<string> {
-  const response = await fetch(`${API_BASE}/api/admin/email-preview/${type}`, {
+  const cacheBust = Date.now().toString();
+  const response = await fetch(`${API_BASE}/api/admin/email-preview/${type}?t=${cacheBust}`, {
+    cache: "no-store",
     credentials: "include",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
   });
   if (!response.ok) {
     throw new Error("이메일 템플릿을 불러오는데 실패했습니다.");

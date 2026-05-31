@@ -13,9 +13,9 @@
         >
           <a href="/" class="inline-block">
             <img
-              src="@/assets/optimized/logo01-2.webp"
+              src="@/assets/logo01-2.png"
               alt="ShakiShaki Archive Logo"
-              class="w-48 md:w-48 object-contain brightness-0 invert"
+              class="w-48 md:w-48 object-contain brightness-0 invert opacity-90"
               draggable="false"
             />
           </a>
@@ -44,7 +44,7 @@
           <!-- 저작권 및 정책 링크 -->
           <div class="mt-2 border-t border-white/20">
             <nav
-              class="flex flex-wrap gap-x-3 gap-y-1 text-caption leading-[1.35] text-white/70 pt-4"
+              class="flex flex-wrap gap-x-3 gap-y-1 text-caption leading-[1.35] text-white/80 pt-4"
               aria-label="고객지원 링크"
             >
               <router-link to="/notice" class="hover:text-white transition-colors">
