@@ -9,6 +9,8 @@ import {
   isValidDirectPurchaseData,
   calculateShippingFee,
 } from "@/lib/validators";
+import { hasUnavailableCartItems } from "@/lib/cartStock";
+import { CART_MESSAGES } from "@/lib/messages";
 import type { DirectPurchaseData, CartItem } from "@/types/api";
 
 // 주문 상품 통합 타입 (바로 구매 / 장바구니 공통)
@@ -151,6 +153,12 @@ export function useOrderItems() {
         if (cartItems.value.length === 0) {
           showAlert("주문할 상품이 없습니다.", { type: "error" });
           router.replace("/");
+          return false;
+        }
+
+        if (hasUnavailableCartItems(cartItems.value)) {
+          showAlert(CART_MESSAGES.unavailableItems, { type: "error" });
+          router.replace("/cart");
           return false;
         }
       }

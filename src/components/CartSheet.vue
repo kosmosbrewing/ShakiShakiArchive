@@ -6,6 +6,11 @@ import { computed, watch, ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCart } from "@/composables/useCart";
 import { formatPrice } from "@/lib/formatters";
+import {
+  getCartItemStockState,
+  hasUnavailableCartItems,
+} from "@/lib/cartStock";
+import type { CartItem } from "@/types/api";
 
 // 아이콘
 import { X } from "lucide-vue-next";
@@ -61,19 +66,12 @@ const {
 
 // 재고 없는 상품 확인
 const hasOutOfStockItems = computed(() => {
-  return cartItems.value.some((item) => {
-    if (!item.variant) return false;
-    const availableStock = item.variant.stockQuantity;
-    return availableStock === 0 || item.quantity > availableStock;
-  });
+  return hasUnavailableCartItems(cartItems.value);
 });
 
 // 특정 아이템이 재고 부족인지 확인
-const isOutOfStock = (item: any) => {
-  if (!item.variant) return false;
-  const availableStock = item.variant.stockQuantity;
-  return availableStock === 0 || item.quantity > availableStock;
-};
+const getStockState = (item: CartItem) => getCartItemStockState(item);
+const isOutOfStock = (item: CartItem) => getStockState(item).unavailable;
 
 // Sheet가 열릴 때 장바구니 로드 및 history 관리
 watch(
@@ -284,24 +282,24 @@ const handleTouchEnd = () => {
                   </div>
 
                   <p
-                    v-if="item.variant"
                     :class="[
                       'text-body text-muted-foreground mt-1',
                       isOutOfStock(item) ? 'opacity-60' : '',
                     ]"
                   >
-                    Size : {{ item.variant.size }}
-                    <span v-if="item.variant.color">
-                      / Color : {{ item.variant.color }}</span
-                    >
+                    <template v-if="item.variant">
+                      Size : {{ item.variant.size }}
+                      <span v-if="item.variant.color">
+                        / Color : {{ item.variant.color }}</span
+                      >
+                    </template>
+                    <template v-else>옵션 정보를 확인할 수 없습니다.</template>
                     / {{ item.quantity }}개
                   </p>
 
                   <!-- 재고 부족 메시지 -->
                   <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
-                    재고 부족<span v-if="item.variant">
-                      (남은 재고: {{ item.variant.stockQuantity }}개)</span
-                    >
+                    {{ getStockState(item).message }}
                   </AlertDescription>
 
                   <p
@@ -350,7 +348,7 @@ const handleTouchEnd = () => {
             class="w-full font-bold hover:bg-primary/80"
             size="lg"
           >
-            {{ hasOutOfStockItems ? "재고 부족 상품 확인 필요" : "주문하기" }}
+            주문하기
           </Button>
           <div class="pt-1"></div>
         </div>

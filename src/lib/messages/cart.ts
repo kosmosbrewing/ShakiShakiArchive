@@ -30,6 +30,7 @@ export const CART_MESSAGES = {
   stockLimitExceeded: "아쉽게도 남은 재고가 부족하여 더 이상 담을 수 없어요. (재고: {stock}개)",
   stockExceededWithCart: "재고가 부족합니다. (재고: {stock}개, 장바구니: {cartQty}개)",
   outOfStockItems: "재고가 부족한 상품이 있습니다.\n해당 상품을 삭제해주세요.",
+  unavailableItems: "구매할 수 없는 상품이 장바구니에 있습니다.\n해당 상품을 제외한 뒤 다시 진행해주세요.",
 
   // 수량 관련
   quantityLimit: "수량은 {min}~{max}개 사이로 입력해주세요.",

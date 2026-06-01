@@ -11,6 +11,11 @@ import { useAlert } from "@/composables/useAlert";
 import { useNaverPayOrder } from "@/composables/useNaverPayOrder";
 import { CART_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
 import { formatPrice } from "@/lib/formatters";
+import {
+  getCartItemStockState,
+  hasUnavailableCartItems,
+} from "@/lib/cartStock";
+import type { CartItem } from "@/types/api";
 
 // 공통 컴포넌트
 import {
@@ -67,19 +72,12 @@ const {
 
 // 재고 없는 상품 확인
 const hasOutOfStockItems = computed(() => {
-  return cartItems.value.some((item) => {
-    if (!item.variant) return false;
-    const availableStock = item.variant.stockQuantity;
-    return availableStock === 0 || item.quantity > availableStock;
-  });
+  return hasUnavailableCartItems(cartItems.value);
 });
 
 // 특정 아이템이 재고 부족인지 확인
-const isOutOfStock = (item: any) => {
-  if (!item.variant) return false;
-  const availableStock = item.variant.stockQuantity;
-  return availableStock === 0 || item.quantity > availableStock;
-};
+const getStockState = (item: CartItem) => getCartItemStockState(item);
+const isOutOfStock = (item: CartItem) => getStockState(item).unavailable;
 
 // 주문 페이지로 이동 (추후 필요 시 활성화)
 // const goToOrder = async () => {
@@ -344,24 +342,24 @@ watch(
                 </div>
 
                 <p
-                  v-if="item.variant"
                   :class="[
                     'text-body text-muted-foreground mt-1',
                     isOutOfStock(item) ? 'opacity-60' : '',
                   ]"
                 >
-                  Size : {{ item.variant.size }}
-                  <span v-if="item.variant.color">
-                    / Color : {{ item.variant.color }}</span
-                  >
+                  <template v-if="item.variant">
+                    Size : {{ item.variant.size }}
+                    <span v-if="item.variant.color">
+                      / Color : {{ item.variant.color }}</span
+                    >
+                  </template>
+                  <template v-else>옵션 정보를 확인할 수 없습니다.</template>
                   / {{ item.quantity }}개
                 </p>
 
                 <!-- 재고 부족 메시지 -->
                 <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
-                  재고가 부족합니다<span v-if="item.variant">
-                    (남은 재고: {{ item.variant.stockQuantity }}개)</span
-                  >
+                  {{ getStockState(item).message }}
                 </AlertDescription>
 
                 <p
