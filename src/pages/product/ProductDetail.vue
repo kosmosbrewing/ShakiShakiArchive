@@ -1185,10 +1185,12 @@ onMounted(async () => {
                   />
                   <div
                     v-if="showDescriptionBottomFade"
-                    class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 text-sm leading-none tracking-[0.2em] text-muted-foreground/45"
+                    class="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center pr-3"
                     aria-hidden="true"
                   >
-                    ...
+                    <span
+                      class="h-2.5 w-7 rounded-full border border-primary/10 bg-background/90 shadow-sm"
+                    />
                   </div>
                 </div>
 
@@ -1268,7 +1270,7 @@ onMounted(async () => {
         <div
           v-for="(detailImg, idx) in productData.product.value?.detailImages"
           :key="`detail-${idx}`"
-          class="detail-image-wrapper overflow-hidden rounded-lg shadow-sm relative"
+          class="detail-image-wrapper overflow-hidden shadow-sm relative"
           :style="{ animationDelay: `${idx * 0.1}s` }"
         >
           <!-- 로딩 스피너 -->
