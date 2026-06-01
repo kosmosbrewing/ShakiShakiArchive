@@ -69,7 +69,7 @@ const containerStyles = computed(() => {
   if (props.confirmMode) {
     return "bg-background border border-border rounded-2xl shadow-2xl pointer-events-auto w-[280px] sm:w-[320px] overflow-hidden";
   }
-  return "rounded-2xl shadow-lg px-5 py-3 flex items-center gap-2 pointer-events-auto";
+  return "rounded-2xl shadow-lg px-5 py-3 flex items-center gap-2 pointer-events-auto max-w-[calc(100vw-2rem)] sm:max-w-md";
 });
 
 // 애니메이션 완료 후 close 이벤트 발생
@@ -225,7 +225,7 @@ onUnmounted(() => {
             <slot>
               <Check v-if="type === 'success'" class="w-4 h-4" />
               <X v-else class="w-4 h-4" />
-              <p class="text-body font-medium">{{ message }}</p>
+              <p class="text-body font-medium leading-snug whitespace-pre-line">{{ message }}</p>
             </slot>
           </template>
         </div>

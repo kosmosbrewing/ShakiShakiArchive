@@ -67,16 +67,117 @@ const MAX_IMAGES_BY_TYPE: Record<ImageTab, number> = {
 };
 
 const IMAGE_UPLOAD_HINTS: Record<SiteImageType, string> = {
-  main_desktop: "권장 2400x1000 · JPG/PNG/GIF/WebP · 10MB",
-  main_mobile: "모바일 세로형 권장 · JPG/PNG/GIF/WebP · 10MB",
-  hero: "권장 2400x1000 · JPG/PNG/GIF/WebP · 10MB",
+  main_desktop: "권장 3200x1333 · 최소 2400x1000 · 10MB",
+  main_mobile: "권장 1440x1800 · 최소 1080x1350 · 10MB",
+  hero: "권장 3200x1333 · 최소 2400x1000 · 10MB",
   marquee: "JPG/PNG/GIF/WebP · 10MB",
   journal: "JPG/PNG/GIF/WebP · 10MB",
+};
+
+const IMAGE_DIMENSION_REQUIREMENTS: Partial<
+  Record<
+    SiteImageType,
+    {
+      label: string;
+      recommendedWidth: number;
+      recommendedHeight: number;
+      minWidth: number;
+      minHeight: number;
+      targetRatio: number;
+      ratioLabel: string;
+    }
+  >
+> = {
+  main_desktop: {
+    label: "Main PC",
+    recommendedWidth: 3200,
+    recommendedHeight: 1333,
+    minWidth: 2400,
+    minHeight: 1000,
+    targetRatio: 12 / 5,
+    ratioLabel: "12:5",
+  },
+  hero: {
+    label: "Main PC",
+    recommendedWidth: 3200,
+    recommendedHeight: 1333,
+    minWidth: 2400,
+    minHeight: 1000,
+    targetRatio: 12 / 5,
+    ratioLabel: "12:5",
+  },
+  main_mobile: {
+    label: "Main Mobile",
+    recommendedWidth: 1440,
+    recommendedHeight: 1800,
+    minWidth: 1080,
+    minHeight: 1350,
+    targetRatio: 4 / 5,
+    ratioLabel: "4:5",
+  },
 };
 
 const isImageTab = (tab: AdminTab): tab is ImageTab => tab !== "email";
 const getImageTypeLabel = (type: SiteImageType) => IMAGE_TYPE_LABELS[type];
 const getImageUploadHint = (type: SiteImageType) => IMAGE_UPLOAD_HINTS[type];
+
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("이미지 크기를 확인할 수 없습니다."));
+    };
+
+    image.src = objectUrl;
+  });
+
+const getDimensionWarning = (
+  type: SiteImageType,
+  dimensions: { width: number; height: number },
+) => {
+  const requirement = IMAGE_DIMENSION_REQUIREMENTS[type];
+  if (!requirement) return "";
+
+  const warnings: string[] = [];
+  const ratio = dimensions.width / dimensions.height;
+  const ratioDiff = Math.abs(ratio - requirement.targetRatio) / requirement.targetRatio;
+
+  if (
+    dimensions.width < requirement.minWidth ||
+    dimensions.height < requirement.minHeight
+  ) {
+    warnings.push(
+      `이미지가 최소 권장 크기(${requirement.minWidth}x${requirement.minHeight})보다 작습니다.`,
+    );
+  }
+
+  if (ratioDiff > 0.08) {
+    warnings.push(
+      `이미지 비율이 권장 비율(${requirement.ratioLabel})과 달라 화면에서 크게 잘릴 수 있습니다.`,
+    );
+  }
+
+  if (warnings.length === 0) return "";
+
+  return [
+    `${requirement.label} 이미지 기준을 확인해주세요.`,
+    `현재 이미지: ${dimensions.width}x${dimensions.height}`,
+    `권장 크기: ${requirement.recommendedWidth}x${requirement.recommendedHeight}`,
+    "",
+    ...warnings,
+  ].join("\n");
+};
 
 // 상태
 const siteImages = ref<SiteImage[]>([]);
@@ -253,6 +354,20 @@ const handleFileSelect = async (event: Event) => {
     errorMessage.value = ADMIN_MESSAGES.fileSizeLimit;
     input.value = "";
     return;
+  }
+
+  try {
+    const dimensions = await getImageDimensions(file);
+    const dimensionWarning = getDimensionWarning(form.value.type, dimensions);
+
+    if (dimensionWarning) {
+      showAlert(dimensionWarning, { type: "error", duration: 9000 });
+    }
+  } catch {
+    showAlert(
+      "이미지 크기를 확인하지 못했습니다.\n업로드 후 화면에서 잘림 여부를 확인해주세요.",
+      { type: "error", duration: 7000 },
+    );
   }
 
   isUploading.value = true;

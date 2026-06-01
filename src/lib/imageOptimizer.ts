@@ -176,8 +176,8 @@ export const IMAGE_PRESETS = {
   },
   // Hero 배너
   hero: {
-    width: 2400,
-    height: 1000,
+    width: 3200,
+    height: 1333,
     quality: "auto:good" as const,
     format: "auto" as const,
     crop: "fill" as const,

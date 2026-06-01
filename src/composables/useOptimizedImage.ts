@@ -149,10 +149,10 @@ export function useOptimizedImage() {
     // 메인 이미지는 full-width 렌더링이다. 데스크톱은 큰 후보를 열고, 모바일은 상한을 낮춰 전송량을 제한한다.
     const isMobileProfile = profile === "mobile";
     const heroWidths = isMobileProfile
-      ? [390, 640, 828, 1024, 1280]
-      : [1280, 1600, 1920, 2400];
-    const fallbackWidth = isMobileProfile ? 1280 : 2400;
-    const fallbackHeight = isMobileProfile ? undefined : 1000;
+      ? [640, 828, 1080, 1280, 1440]
+      : [1600, 1920, 2400, 2880, 3200];
+    const fallbackWidth = isMobileProfile ? 1440 : 3200;
+    const fallbackHeight = isMobileProfile ? undefined : 1333;
     const heroSizes = "100vw";
 
     if (!isCloudinaryUrl(url)) {
