@@ -365,7 +365,7 @@ watch(
                 <!-- 재고 부족 메시지 -->
                 <AlertDescription
                   v-if="isOutOfStock(item)"
-                  class="mt-1 whitespace-pre-line leading-[1.45] sm:whitespace-normal"
+                  class="mt-1 whitespace-pre-line leading-[1.45]"
                 >
                   {{ getStockState(item).message }}
                 </AlertDescription>
