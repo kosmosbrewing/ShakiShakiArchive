@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AlertDescription } from "@/components/ui/alert";
 import {
   Sheet,
@@ -180,13 +179,13 @@ const handleTouchEnd = () => {
       @touchend="handleTouchEnd"
     >
       <!-- 헤더 -->
-      <SheetHeader class="px-6 py-4 pt-10">
+      <SheetHeader class="px-6 py-4 pt-10 text-left">
         <div class="flex items-center justify-between">
           <SheetTitle class="text-heading text-primary tracking-wider">
             장바구니
           </SheetTitle>
         </div>
-        <p class="text-caption text-muted-foreground mb-3">
+        <p class="text-caption text-left text-muted-foreground mb-3">
           관심 있는 상품을 모아두었습니다.
         </p>
         <Separator></Separator>
@@ -219,45 +218,31 @@ const handleTouchEnd = () => {
         <!-- 장바구니 아이템 목록 -->
         <ScrollArea v-else class="h-full">
           <div class="px-4 space-y-3">
-            <!-- 재고 부족 경고 -->
-            <Card
-              v-if="hasOutOfStockItems"
-              class="rounded-none border-primary/15 bg-primary/[0.04]"
-            >
-              <CardContent class="p-3">
-                <AlertDescription>
-                  아쉽게도 일부 상품의 재고가 소진되었습니다.
-                  <p />
-                  원활한 주문을 위해 목록에서 제외해 주세요.
-                </AlertDescription>
-              </CardContent>
-            </Card>
-
             <Card
               v-for="item in cartItems"
               :key="item.id"
               :class="[
                 'rounded-none overflow-hidden border-primary/10 bg-background/80',
-                isOutOfStock(item) ? 'border-primary/15 bg-primary/[0.04]' : '',
+                isOutOfStock(item) ? 'border-primary/15' : '',
               ]"
             >
               <CardContent class="flex gap-4 p-4 relative">
-                <!-- SOLD OUT 배지 -->
-                <Badge
-                  v-if="isOutOfStock(item)"
-                  class="sold-out-chip absolute top-3 left-3 z-10 border-0"
-                >
-                  SOLD OUT
-                </Badge>
-
                 <!-- 상품 이미지 -->
-                <ProductThumbnail
-                  :image-url="item.product?.imageUrl"
-                  :product-id="item.productId"
-                  :product-slug="item.product?.slug"
-                  :class="[isOutOfStock(item) ? 'opacity-50' : '']"
-                  @click="goToProductDetail(item.product?.slug, item.productId)"
-                />
+                <div class="relative flex-shrink-0">
+                  <div
+                    v-if="isOutOfStock(item)"
+                    class="sold-out-chip absolute top-2 right-2 z-10"
+                  >
+                    SOLD OUT
+                  </div>
+                  <ProductThumbnail
+                    :image-url="item.product?.imageUrl"
+                    :product-id="item.productId"
+                    :product-slug="item.product?.slug"
+                    :class="[isOutOfStock(item) ? 'opacity-50' : '']"
+                    @click="goToProductDetail(item.product?.slug, item.productId)"
+                  />
+                </div>
 
                 <!-- 상품 정보 -->
                 <div class="flex-1 flex flex-col min-w-0">
@@ -275,9 +260,14 @@ const handleTouchEnd = () => {
                       variant="ghost"
                       size="sm"
                       @click="removeItem(item.id)"
-                      class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto p-0.5 flex-shrink-0"
+                      :class="[
+                        'transition-colors h-auto p-0.5 flex-shrink-0',
+                        isOutOfStock(item)
+                          ? 'text-destructive hover:bg-transparent hover:text-destructive/80'
+                          : 'text-muted-foreground hover:bg-transparent hover:text-primary',
+                      ]"
                     >
-                      <X class="h-3.5 w-3.5" />
+                      <X :class="isOutOfStock(item) ? 'h-4 w-4' : 'h-3.5 w-3.5'" />
                     </Button>
                   </div>
 
@@ -293,12 +283,17 @@ const handleTouchEnd = () => {
                         / Color : {{ item.variant.color }}</span
                       >
                     </template>
-                    <template v-else>옵션 정보를 확인할 수 없습니다.</template>
+                    <template v-else>
+                      <span class="block sm:inline">옵션 정보를 확인할 수 없습니다.</span>
+                    </template>
                     / {{ item.quantity }}개
                   </p>
 
                   <!-- 재고 부족 메시지 -->
-                  <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
+                  <AlertDescription
+                    v-if="isOutOfStock(item)"
+                    class="mt-1 whitespace-pre-line leading-[1.45] sm:whitespace-normal"
+                  >
                     {{ getStockState(item).message }}
                   </AlertDescription>
 

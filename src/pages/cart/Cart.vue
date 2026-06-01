@@ -29,7 +29,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { AlertDescription } from "@/components/ui/alert";
 
 const router = useRouter();
@@ -252,9 +251,9 @@ watch(
 <template>
   <div class="max-w-5xl mx-auto px-4 pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6">
+    <div class="mb-6 text-left">
       <h3 class="text-heading text-primary tracking-wider">장바구니</h3>
-      <p class="text-body text-muted-foreground pt-1 mb-3">
+      <p class="text-body text-left text-muted-foreground pt-1 mb-3">
         관심 있는 상품을 모아두었습니다.
       </p>
       <Separator></Separator>
@@ -303,22 +302,21 @@ watch(
               v-for="item in cartItems"
               :key="item.id"
               class="px-4 pb-5 pt-0 sm:px-5 flex flex-col sm:flex-row gap-4 sm:gap-5 relative"
-              :class="[isOutOfStock(item) ? 'bg-primary/[0.04]' : '']"
             >
-              <!-- SOLD OUT 배지 -->
-              <Badge
-                v-if="isOutOfStock(item)"
-                class="sold-out-chip absolute top-3 left-3 z-10 border-0"
-              >
-                SOLD OUT
-              </Badge>
-
-              <ProductThumbnail
-                :image-url="item.product?.imageUrl"
-                :product-id="item.productId"
-                :product-slug="item.product?.slug"
-                :class="[isOutOfStock(item) ? 'opacity-50' : '']"
-              />
+              <div class="relative flex-shrink-0">
+                <div
+                  v-if="isOutOfStock(item)"
+                  class="sold-out-chip absolute top-2 right-2 z-10"
+                >
+                  SOLD OUT
+                </div>
+                <ProductThumbnail
+                  :image-url="item.product?.imageUrl"
+                  :product-id="item.productId"
+                  :product-slug="item.product?.slug"
+                  :class="[isOutOfStock(item) ? 'opacity-50' : '']"
+                />
+              </div>
 
               <div class="flex-1 flex flex-col">
                 <div class="flex justify-between items-start">
@@ -335,7 +333,12 @@ watch(
                     variant="ghost"
                     size="sm"
                     @click="removeItem(item.id)"
-                    class="text-muted-foreground hover:bg-transparent hover:text-primary transition-colors h-auto flex-shrink-0"
+                    :class="[
+                      'hover:bg-transparent transition-colors h-auto flex-shrink-0',
+                      isOutOfStock(item)
+                        ? 'text-destructive hover:text-destructive/80'
+                        : 'text-muted-foreground hover:text-primary',
+                    ]"
                   >
                     삭제
                   </Button>
@@ -353,12 +356,17 @@ watch(
                       / Color : {{ item.variant.color }}</span
                     >
                   </template>
-                  <template v-else>옵션 정보를 확인할 수 없습니다.</template>
+                  <template v-else>
+                    <span class="block sm:inline">옵션 정보를 확인할 수 없습니다.</span>
+                  </template>
                   / {{ item.quantity }}개
                 </p>
 
                 <!-- 재고 부족 메시지 -->
-                <AlertDescription v-if="isOutOfStock(item)" class="mt-1">
+                <AlertDescription
+                  v-if="isOutOfStock(item)"
+                  class="mt-1 whitespace-pre-line leading-[1.45] sm:whitespace-normal"
+                >
                   {{ getStockState(item).message }}
                 </AlertDescription>
 

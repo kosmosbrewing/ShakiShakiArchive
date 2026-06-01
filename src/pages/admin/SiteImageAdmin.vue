@@ -66,8 +66,17 @@ const MAX_IMAGES_BY_TYPE: Record<ImageTab, number> = {
   journal: 30,
 };
 
+const IMAGE_UPLOAD_HINTS: Record<SiteImageType, string> = {
+  main_desktop: "권장 2400x1000 · JPG/PNG/GIF/WebP · 10MB",
+  main_mobile: "모바일 세로형 권장 · JPG/PNG/GIF/WebP · 10MB",
+  hero: "권장 2400x1000 · JPG/PNG/GIF/WebP · 10MB",
+  marquee: "JPG/PNG/GIF/WebP · 10MB",
+  journal: "JPG/PNG/GIF/WebP · 10MB",
+};
+
 const isImageTab = (tab: AdminTab): tab is ImageTab => tab !== "email";
 const getImageTypeLabel = (type: SiteImageType) => IMAGE_TYPE_LABELS[type];
+const getImageUploadHint = (type: SiteImageType) => IMAGE_UPLOAD_HINTS[type];
 
 // 상태
 const siteImages = ref<SiteImage[]>([]);
@@ -810,7 +819,7 @@ onMounted(async () => {
                   />
                 </label>
                 <span class="text-caption text-admin-muted">
-                  JPG/PNG/GIF/WebP · 10MB
+                  {{ getImageUploadHint(form.type) }}
                 </span>
               </div>
 

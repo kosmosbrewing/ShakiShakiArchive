@@ -11,7 +11,7 @@ export const getCartItemStockState = (item: CartItem): CartItemStockState => {
     return {
       unavailable: true,
       availableStock: null,
-      message: "현재 판매하지 않는 상품입니다. 장바구니에서 제외해주세요.",
+      message: "현재 판매하지 않는 상품입니다.\n장바구니에서 제외해주세요.",
     };
   }
 
@@ -19,7 +19,7 @@ export const getCartItemStockState = (item: CartItem): CartItemStockState => {
     return {
       unavailable: true,
       availableStock: null,
-      message: "선택한 옵션을 확인할 수 없습니다. 장바구니에서 제외한 뒤 다시 담아주세요.",
+      message: "선택한 옵션을 확인할 수 없습니다.\n장바구니에서 제외한 뒤 다시 담아주세요.",
     };
   }
 
@@ -27,7 +27,7 @@ export const getCartItemStockState = (item: CartItem): CartItemStockState => {
     return {
       unavailable: true,
       availableStock: item.variant.stockQuantity ?? null,
-      message: "선택하신 옵션은 현재 판매하지 않습니다. 장바구니에서 제외해주세요.",
+      message: "선택하신 옵션은 현재 판매하지 않습니다.\n장바구니에서 제외해주세요.",
     };
   }
 
@@ -48,7 +48,7 @@ export const getCartItemStockState = (item: CartItem): CartItemStockState => {
     return {
       unavailable: true,
       availableStock,
-      message: "재고가 소진되었습니다. 장바구니에서 제외해주세요.",
+      message: "재고가 소진되었습니다.\n장바구니에서 제외해주세요.",
     };
   }
 
@@ -56,7 +56,7 @@ export const getCartItemStockState = (item: CartItem): CartItemStockState => {
     return {
       unavailable: true,
       availableStock,
-      message: `남은 재고보다 수량이 많습니다. (남은 재고: ${availableStock}개)`,
+      message: `남은 재고보다 수량이 많습니다.\n남은 재고: ${availableStock}개`,
     };
   }
 

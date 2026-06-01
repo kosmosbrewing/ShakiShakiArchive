@@ -312,7 +312,7 @@ onUnmounted(() => {
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
         <div v-if="isLoading" class="relative group w-full">
           <!-- CLS 방지: 모바일/데스크톱 이미지 비율에 맞춤 -->
-          <Skeleton class="w-full rounded-none aspect-[4/5] md:aspect-auto md:h-[clamp(480px,62vh,760px)]" />
+          <Skeleton class="w-full rounded-none aspect-[4/5] md:aspect-[12/5]" />
           <!-- 인디케이터 스켈레톤 -->
           <div class="flex justify-center gap-2 mt-4">
             <Skeleton class="w-2.5 h-2.5 rounded-full" />
@@ -332,7 +332,7 @@ onUnmounted(() => {
           @touchend="handleTouchEnd"
         >
           <!-- 슬라이더 이미지: 컨테이너에 aspect-ratio 적용 → 모든 슬라이드 동일 렌더링 보장 -->
-          <div class="overflow-hidden rounded-none relative aspect-[4/5] md:aspect-auto md:h-[clamp(480px,62vh,760px)] bg-muted/10">
+          <div class="overflow-hidden rounded-none relative aspect-[4/5] md:aspect-[12/5] bg-muted/10">
             <!-- 모든 이미지를 쌓아두고 부드러운 전환 효과 -->
             <img
               v-for="(image, index) in heroImageList"
@@ -346,6 +346,11 @@ onUnmounted(() => {
               ]"
               draggable="false"
               @click="handleImageClick(image.linkUrl)"
+            />
+
+            <div
+              class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-b from-transparent via-background/15 to-background/45 sm:h-14 md:h-16"
+              aria-hidden="true"
             />
 
             <!-- 좌우 화살표 (이미지 위에 오버레이, 호버 시 나타남) -->

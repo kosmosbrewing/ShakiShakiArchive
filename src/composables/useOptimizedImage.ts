@@ -20,6 +20,21 @@ const DEFAULT_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 // srcset용 기본 너비 배열
 const DEFAULT_SRCSET_WIDTHS = [320, 480, 640, 960, 1280];
 
+const generateHeroDesktopSrcSet = (url: string, widths: number[]) =>
+  widths
+    .map((width) => {
+      const height = Math.round((width * 5) / 12);
+      const optimizedUrl = optimizeImageUrl(url, {
+        width,
+        height,
+        quality: "auto:good",
+        format: "auto",
+        crop: "fill",
+      });
+      return `${optimizedUrl} ${width}w`;
+    })
+    .join(", ");
+
 export function useOptimizedImage() {
   /**
    * 단일 이미지 URL 최적화
@@ -135,8 +150,9 @@ export function useOptimizedImage() {
     const isMobileProfile = profile === "mobile";
     const heroWidths = isMobileProfile
       ? [390, 640, 828, 1024, 1280]
-      : [1280, 1600, 1920, 2560, 3200];
-    const fallbackWidth = isMobileProfile ? 1280 : 2560;
+      : [1280, 1600, 1920, 2400];
+    const fallbackWidth = isMobileProfile ? 1280 : 2400;
+    const fallbackHeight = isMobileProfile ? undefined : 1000;
     const heroSizes = "100vw";
 
     if (!isCloudinaryUrl(url)) {
@@ -150,8 +166,10 @@ export function useOptimizedImage() {
     }
 
     return {
-      src: optimizeImageUrl(url, { width: fallbackWidth, quality: "auto:good", format: "auto", crop: "fill" }),
-      srcset: generateSrcSet(url, heroWidths, { quality: "auto:good", format: "auto", crop: "fill" }),
+      src: optimizeImageUrl(url, { width: fallbackWidth, height: fallbackHeight, quality: "auto:good", format: "auto", crop: "fill" }),
+      srcset: isMobileProfile
+        ? generateSrcSet(url, heroWidths, { quality: "auto:good", format: "auto", crop: "fill" })
+        : generateHeroDesktopSrcSet(url, heroWidths),
       sizes: heroSizes,
       loading: isFirst ? ("eager" as const) : ("lazy" as const),
       decoding: "async" as const,

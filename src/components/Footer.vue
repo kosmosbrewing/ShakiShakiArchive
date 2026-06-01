@@ -4,7 +4,7 @@
 </script>
 
 <template>
-  <footer class="mt-6 w-full bg-black text-white sm:mt-8 lg:mt-24 xl:mt-32">
+  <footer class="mt-6 w-full bg-black text-white sm:mt-8 lg:mt-16 xl:mt-20">
     <div class="mx-auto w-11/12 max-w-screen-2xl py-8 sm:py-10">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
         <!-- 로고 영역 -->

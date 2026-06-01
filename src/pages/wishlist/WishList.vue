@@ -44,9 +44,9 @@ onMounted(() => {
 <template>
   <section class="w-[94%] sm:w-11/12 max-w-screen-2xl mx-auto pt-4 pb-12 sm:pt-8 sm:pb-16">
     <!-- 페이지 제목 -->
-    <div class="mb-6">
+    <div class="mb-6 text-left">
       <h3 class="text-heading text-primary tracking-wider">위시리스트</h3>
-      <p class="text-body text-muted-foreground pt-1 mb-3">
+      <p class="text-body text-left text-muted-foreground pt-1 mb-3">
         관심 있는 상품을 모아두었습니다.
       </p>
       <Separator></Separator>
