@@ -226,10 +226,15 @@ onUnmounted(() => {
     </div>
 
     <Navbar />
-    <main class="bg-background flex-1">
+    <main
+      :class="[
+        'bg-background flex-1',
+        $route.name === 'Home' ? 'flex min-h-0 flex-col' : '',
+      ]"
+    >
       <router-view :key="$route.fullPath" />
     </main>
-    <Footer />
+    <Footer :compact="$route.name === 'Home'" />
   </div>
 
   <!-- 전역 환영 메시지 Alert -->

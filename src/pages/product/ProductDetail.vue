@@ -222,6 +222,16 @@ const updateDescriptionScrollState = () => {
   isDescriptionAtBottom.value = el.scrollTop >= maxScrollTop - 1;
 };
 
+const scrollDescriptionDown = () => {
+  const el = descriptionScrollRef.value;
+  if (!el) return;
+
+  el.scrollBy({
+    top: Math.max(el.clientHeight * 0.75, 120),
+    behavior: "smooth",
+  });
+};
+
 const showDescriptionTopFade = computed(() => {
   return isDescriptionScrollable.value && !isDescriptionAtTop.value;
 });
@@ -1186,11 +1196,15 @@ onMounted(async () => {
                   <div
                     v-if="showDescriptionBottomFade"
                     class="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center pr-3"
-                    aria-hidden="true"
                   >
-                    <span
-                      class="h-2.5 w-7 rounded-full border border-primary/10 bg-background/90 shadow-sm"
-                    />
+                    <button
+                      type="button"
+                      class="pointer-events-auto inline-flex h-5 min-w-9 items-center justify-center rounded-full border border-primary/10 bg-background/95 px-2 text-caption font-semibold leading-none text-primary/70 shadow-sm transition-colors hover:border-primary/25 hover:text-primary"
+                      aria-label="Description 추가 내용 보기"
+                      @click="scrollDescriptionDown"
+                    >
+                      ...
+                    </button>
                   </div>
                 </div>
 

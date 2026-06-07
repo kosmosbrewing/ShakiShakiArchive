@@ -304,27 +304,36 @@ onUnmounted(() => {
 <template>
   <section
     v-if="isLoading || heroImageList.length > 0"
-    class="w-full max-w-none mx-0 pt-0"
+    class="mx-0 flex min-h-0 w-full max-w-none flex-1 flex-col pt-0"
   >
-    <div class="w-full">
+    <div class="flex min-h-0 w-full flex-1 flex-col">
       <!-- 메인 이미지 슬라이더 영역 -->
-      <div class="flex flex-col justify-center">
+      <div class="flex min-h-0 flex-1 flex-col justify-center">
         <!-- 스켈레톤 UI: 로딩 중일 때 표시 -->
-        <div v-if="isLoading" class="relative group w-full">
+        <div
+          v-if="isLoading"
+          class="relative group w-full md:min-h-[520px] md:flex-1"
+        >
           <!-- CLS 방지: 모바일/데스크톱 이미지 비율에 맞춤 -->
-          <Skeleton class="w-full rounded-none aspect-[4/5] md:aspect-[12/5]" />
-          <!-- 인디케이터 스켈레톤 -->
-          <div class="flex justify-center gap-2 mt-4">
-            <Skeleton class="w-2.5 h-2.5 rounded-full" />
-            <Skeleton class="w-6 h-2.5 rounded-full" />
-            <Skeleton class="w-2.5 h-2.5 rounded-full" />
+          <div
+            class="relative aspect-[4/5] w-full overflow-hidden rounded-none md:h-full md:min-h-[520px] md:aspect-auto"
+          >
+            <Skeleton class="absolute inset-0 h-full w-full rounded-none" />
+            <!-- 인디케이터 스켈레톤 -->
+            <div
+              class="absolute inset-x-0 bottom-3 z-20 flex justify-center gap-2 sm:bottom-4"
+            >
+              <Skeleton class="h-2.5 w-2.5 rounded-full bg-white/55" />
+              <Skeleton class="h-2.5 w-6 rounded-full bg-white/75" />
+              <Skeleton class="h-2.5 w-2.5 rounded-full bg-white/55" />
+            </div>
           </div>
         </div>
 
         <!-- 실제 콘텐츠: 이미지 있을 때 -->
         <div
           v-else
-          class="relative group w-full"
+          class="relative group w-full md:min-h-[520px] md:flex-1"
           @mouseenter="stopAutoPlay"
           @mouseleave="startAutoPlay"
           @touchstart="handleTouchStart"
@@ -332,7 +341,7 @@ onUnmounted(() => {
           @touchend="handleTouchEnd"
         >
           <!-- 슬라이더 이미지: 컨테이너에 aspect-ratio 적용 → 모든 슬라이드 동일 렌더링 보장 -->
-          <div class="overflow-hidden rounded-none relative aspect-[4/5] md:aspect-[12/5] bg-muted/10">
+          <div class="relative aspect-[4/5] overflow-hidden rounded-none bg-muted/10 md:h-full md:min-h-[520px] md:aspect-auto">
             <!-- 모든 이미지를 쌓아두고 부드러운 전환 효과 -->
             <img
               v-for="(image, index) in heroImageList"
@@ -349,7 +358,7 @@ onUnmounted(() => {
             />
 
             <div
-              class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-b from-transparent via-background/15 to-background/45 sm:h-14 md:h-16"
+              class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-b from-transparent via-black/20 to-black/70 sm:h-20 md:h-24"
               aria-hidden="true"
             />
 
@@ -370,33 +379,34 @@ onUnmounted(() => {
                 <ChevronRight class="w-6 h-6 text-white drop-shadow-md" />
               </button>
             </template>
-          </div>
 
-          <!-- 슬라이드 인디케이터 (세련된 pill 스타일, 터치 영역 확대) -->
-          <div
-            v-if="heroImageList.length > 1"
-            class="flex justify-center items-center gap-1 mt-5"
-            role="tablist"
-            aria-label="슬라이드 네비게이션"
-          >
-            <button
-              v-for="(_, index) in heroImageList"
-              :key="index"
-              @click="goToSlideManual(index)"
-              class="flex items-center justify-center min-w-[44px] min-h-[44px] transition-all duration-500 ease-out"
-              role="tab"
-              :aria-selected="currentHeroIndex === index"
-              :aria-label="`슬라이드 ${index + 1}로 이동`"
+            <!-- 슬라이드 인디케이터 (이미지 내부 하단 오버레이) -->
+            <div
+              v-if="heroImageList.length > 1"
+              class="absolute inset-x-0 bottom-3 z-20 flex items-center justify-center gap-1 sm:bottom-4"
+              role="tablist"
+              aria-label="슬라이드 네비게이션"
             >
-              <span
-                class="h-2 rounded-full transition-all duration-500 ease-out"
-                :class="
-                  currentHeroIndex === index
-                    ? 'bg-primary w-8 shadow-sm shadow-primary/30'
-                    : 'bg-gray-400 w-2.5'
-                "
-              />
-            </button>
+              <button
+                v-for="(_, index) in heroImageList"
+                :key="index"
+                @click="goToSlideManual(index)"
+                class="flex min-h-9 min-w-9 items-center justify-center transition-all duration-500 ease-out md:min-h-10 md:min-w-10"
+                role="tab"
+                :aria-selected="currentHeroIndex === index"
+                :aria-label="`슬라이드 ${index + 1}로 이동`"
+              >
+                <span
+                  class="h-2 rounded-full shadow-sm transition-all duration-500 ease-out"
+                  :class="
+                    currentHeroIndex === index
+                      ? 'w-8 bg-white/90 shadow-black/20'
+                      : 'w-2.5 bg-white/55'
+                  "
+                />
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

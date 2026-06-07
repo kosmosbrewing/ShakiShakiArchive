@@ -1,10 +1,21 @@
 <script setup lang="ts">
 // src/components/Footer.vue
 // 푸터 컴포넌트
+
+defineProps<{
+  compact?: boolean;
+}>();
 </script>
 
 <template>
-  <footer class="mt-6 w-full bg-black text-white sm:mt-8 lg:mt-16 xl:mt-20">
+  <footer
+    :class="[
+      'w-full bg-black text-white',
+      compact ? 'mt-0' : 'mt-6 sm:mt-8 lg:mt-16 xl:mt-20',
+    ]"
+  >
+    <div v-if="compact" class="h-px w-full bg-white/20" aria-hidden="true" />
+    <div v-if="compact" class="h-px w-full bg-white/10" aria-hidden="true" />
     <div class="mx-auto w-11/12 max-w-screen-2xl py-8 sm:py-10">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
         <!-- 로고 영역 -->
