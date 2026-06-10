@@ -9,7 +9,7 @@ import { trackPageView } from "@/lib/analytics";
 import { fetchProduct } from "@/lib/api";
 
 // 홈/공용 컴포넌트
-import Home from "@/components/Home.vue";
+const Home = () => import("@/components/Home.vue");
 
 // Auth (인증)
 import { Login, Signup, OAuthCallback, ForgotPassword } from "@/pages/auth";
