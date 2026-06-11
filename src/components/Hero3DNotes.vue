@@ -15,6 +15,7 @@ let resizeObserver: ResizeObserver | null = null;
 let noteGroups: THREE.Group[] = [];
 let staffLines: THREE.Line[] = [];
 let noteMaterial: THREE.MeshStandardMaterial | null = null;
+let nearNoteMaterial: THREE.MeshStandardMaterial | null = null;
 let iconFillMaterial: THREE.MeshBasicMaterial | null = null;
 let staffLineMaterial: THREE.LineBasicMaterial | null = null;
 
@@ -23,9 +24,17 @@ const targetPointer = new THREE.Vector2(0, 0);
 const clock = new THREE.Clock();
 
 const initializeNoteMaterials = () => {
-  // 참조 시안(image.png)의 아이콘 색: 웜 토프 브라운 #574C46
+  // 깊이별 색상 계층: 중경(별·스월·도트)은 참조 시안 색 #574C46
   noteMaterial = new THREE.MeshStandardMaterial({
     color: 0x574c46,
+    roughness: 0.82,
+    metalness: 0,
+    side: THREE.DoubleSide,
+  });
+
+  // 전경(음표)은 웜 블랙 — 검정 대비 포인트이자 공기원근의 기준점
+  nearNoteMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2a241e,
     roughness: 0.82,
     metalness: 0,
     side: THREE.DoubleSide,
@@ -38,10 +47,11 @@ const initializeNoteMaterials = () => {
     depthWrite: false,
   });
 
+  // 공기원근 fog에 더 잠기는 만큼(z -1.35) 불투명도를 올려 가시성 보정
   staffLineMaterial = new THREE.LineBasicMaterial({
     color: 0x574c46,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.26,
     depthWrite: false,
   });
 };
@@ -177,14 +187,40 @@ const getFlowRange = (isMobile: boolean) => (isMobile ? 4.3 : 12.35);
 const getCompositionYOffset = (isMobile: boolean) => (isMobile ? 0.34 : 0.82);
 const getArcRise = (isMobile: boolean) => (isMobile ? 0.66 : 1.15);
 
-// 참조 시안(image.png)의 흐름 추출값:
-// 좌측 낮게 시작(초반 살짝 가라앉음) → 75% 지점에서 크레스트 → 우측 끝 완만한 하강
+// 참조 시안(image.png)의 흐름 제어점: (progress, 높이, 접선 기울기)
+// 좌측 낮게 시작(초반 살짝 가라앉음) → 75% 지점 크레스트 → 우측 완만한 하강
+// 양 끝/크레스트 접선을 0으로 두어 오선이 꺾임(팔꿈치) 없이 수평으로 풀리도록 함
+const TREND_POINTS = [
+  { p: 0, y: -0.44, m: 0 },
+  { p: 0.1, y: -0.48, m: 1.05 },
+  { p: 0.45, y: 0.04, m: 1.6 },
+  { p: 0.75, y: 0.56, m: 0 },
+  { p: 1, y: -0.24, m: 0 },
+];
+
 const getTrendY = (progress: number, isMobile: boolean) => {
-  // 오선이 화면 밖까지 연장되므로 범위 밖 진행도는 양끝 값으로 고정
+  // 오선이 화면 밖까지 연장되므로 범위 밖은 양끝 값으로 고정 (끝 접선이 0이라 C1 연속)
   const clamped = Math.min(Math.max(progress, 0), 1);
-  const eased = 1.08 * clamped * clamped - 0.14 * clamped;
-  // 0.44 = sin 곡선의 평균값. 빼주면 트렌드가 yOffset 기준으로 상하 균형을 이룸
-  return getArcRise(isMobile) * (Math.sin(Math.PI * eased) - 0.44);
+
+  let index = 0;
+  while (index < TREND_POINTS.length - 2 && clamped > TREND_POINTS[index + 1].p) {
+    index += 1;
+  }
+  const from = TREND_POINTS[index];
+  const to = TREND_POINTS[index + 1];
+  const span = to.p - from.p;
+  const t = (clamped - from.p) / span;
+  const t2 = t * t;
+  const t3 = t2 * t;
+
+  // 큐빅 Hermite 보간
+  const y =
+    (2 * t3 - 3 * t2 + 1) * from.y +
+    (t3 - 2 * t2 + t) * span * from.m +
+    (-2 * t3 + 3 * t2) * to.y +
+    (t3 - t2) * span * to.m;
+
+  return getArcRise(isMobile) * y;
 };
 
 const getWaveY = (
@@ -253,11 +289,14 @@ const addStaffLines = () => {
   updateStaffLines(0, (canvasRef.value?.clientWidth ?? 0) < 768);
 };
 
-const createSvgNote = (variant: NoteVariant) => {
+const createSvgNote = (
+  variant: NoteVariant,
+  bodyMaterial: THREE.MeshStandardMaterial,
+) => {
   const group = new THREE.Group();
 
   if (variant === "swirl") {
-    group.add(new THREE.Mesh(createSwirlGeometry(), noteMaterial!));
+    group.add(new THREE.Mesh(createSwirlGeometry(), bodyMaterial));
     return normalizeNoteGroup(group);
   }
 
@@ -270,7 +309,7 @@ const createSvgNote = (variant: NoteVariant) => {
     ).toLowerCase();
     const isFill = fill.includes("ffffff");
 
-    const material = isFill ? iconFillMaterial! : noteMaterial!;
+    const material = isFill ? iconFillMaterial! : bodyMaterial;
     const shapes = SVGLoader.createShapes(path);
 
     shapes.forEach((shape) => {
@@ -350,7 +389,9 @@ const addNotes = () => {
   ];
 
   noteGroups = specs.map((spec) => {
-    const group = createSvgNote(spec.type as NoteVariant);
+    // z ≥ -0.3 = 전경(음표 전부) → 웜 블랙, 그 뒤(별·스월·장식) → 토프 브라운
+    const bodyMaterial = spec.z >= -0.3 ? nearNoteMaterial! : noteMaterial!;
+    const group = createSvgNote(spec.type as NoteVariant, bodyMaterial);
     group.position.set(0, 0, spec.z);
     group.rotation.set(0.08, spec.r, spec.r);
     group.scale.setScalar(spec.s);
@@ -379,9 +420,16 @@ const resize = () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   camera.aspect = width / height;
   // 모바일은 카메라를 가까이 → 구성이 화면을 더 채워 상하 여백 축소
-  camera.position.z = width < 768 ? 4.9 : 6.65;
+  camera.position.z = width < 768 ? 4.4 : 6.65;
   camera.fov = width < 768 ? 43 : 41;
   camera.updateProjectionMatrix();
+
+  // 공기원근: fog 범위를 카메라 거리 기준으로 좁게 잡아
+  // 깊이(z)가 깊은 아이콘일수록 배경에 잠기며 원근감이 또렷해짐
+  if (scene && scene.fog instanceof THREE.Fog) {
+    scene.fog.near = camera.position.z - 0.2;
+    scene.fog.far = camera.position.z + 2.6;
+  }
 };
 
 const animate = () => {
@@ -391,7 +439,7 @@ const animate = () => {
   const isMobile = (canvasRef.value?.clientWidth ?? 0) < 768;
   const xSpread = isMobile ? 0.8 : 1.1;
   const ySpread = isMobile ? 0.96 : 1;
-  // 모바일은 카메라 줌인(z 4.9)으로 이미 커 보이므로 스케일은 낮춰서 보정
+  // 모바일은 카메라 줌인(z 4.4)으로 이미 커 보이므로 스케일은 낮춰서 보정
   const scaleFactor = isMobile ? 0.7 : 1.2;
   pointer.lerp(targetPointer, 0.05);
   updateStaffLines(elapsed, isMobile);
@@ -513,6 +561,8 @@ onBeforeUnmount(() => {
   staffLines = [];
   noteMaterial?.dispose();
   noteMaterial = null;
+  nearNoteMaterial?.dispose();
+  nearNoteMaterial = null;
   iconFillMaterial?.dispose();
   iconFillMaterial = null;
   staffLineMaterial?.dispose();
@@ -529,7 +579,7 @@ onBeforeUnmount(() => {
     class="relative mx-0 flex min-h-0 w-full max-w-none flex-1 flex-col overflow-hidden bg-[#f8f8f6]"
     aria-label="ShakiShaki Archive 3D musical note hero"
   >
-    <div class="relative min-h-[62svh] flex-1 md:min-h-[500px]">
+    <div class="relative min-h-[56svh] flex-1 md:min-h-[500px]">
       <canvas
         ref="canvasRef"
         class="absolute inset-0 h-full w-full touch-pan-y"

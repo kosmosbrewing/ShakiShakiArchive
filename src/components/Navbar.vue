@@ -379,8 +379,8 @@ onUnmounted(() => {
         <img
           src="@/assets/optimized/logo01-2.webp"
           alt="샤키샤키 아카이브"
-          class="w-auto max-h-[52px] min-h-[36px] max-w-[65vw]"
-          style="height: clamp(40px, 11vw, 52px)"
+          class="w-auto max-h-[58px] min-h-[40px] max-w-[65vw]"
+          style="height: clamp(44px, 12vw, 58px)"
           draggable="false"
         />
       </button>
@@ -626,29 +626,30 @@ onUnmounted(() => {
   background-color: transparent;
 }
 
+/* 하단 더블 헤어라인: 데스크톱과 동일하게 모바일에도 표시 */
+.nav-header::before,
+.nav-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+}
+
+.nav-header::before {
+  bottom: 2px;
+  background-color: hsl(var(--primary) / 0.42);
+}
+
+.nav-header::after {
+  bottom: 0;
+  background-color: hsl(var(--primary) / 0.42);
+}
+
 @media (min-width: 1024px) {
   .nav-header {
     background-color: hsl(var(--card));
-  }
-
-  .nav-header::before,
-  .nav-header::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    pointer-events: none;
-  }
-
-  .nav-header::before {
-    bottom: 2px;
-    background-color: hsl(var(--primary) / 0.42);
-  }
-
-  .nav-header::after {
-    bottom: 0;
-    background-color: hsl(var(--primary) / 0.42);
   }
 }
 
