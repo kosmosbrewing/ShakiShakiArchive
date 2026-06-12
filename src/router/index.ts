@@ -353,8 +353,27 @@ router.beforeEach(async (to: any, _from: any, next: any) => {
   next();
 });
 
+/**
+ * soft 404 완화: 존재하지 않는 경로(NotFound)는 robots noindex 처리
+ * 정적 호스팅 특성상 HTTP 404를 반환할 수 없으므로 메타 태그로 색인 오염 방지
+ */
+function setRobotsNoindex(enabled: boolean) {
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+  if (enabled) {
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "robots";
+      document.head.appendChild(meta);
+    }
+    meta.content = "noindex, nofollow";
+  } else if (meta) {
+    meta.remove();
+  }
+}
+
 router.afterEach((to) => {
   trackPageView(to.fullPath);
+  setRobotsNoindex(to.name === "NotFound");
 });
 
 export default router;

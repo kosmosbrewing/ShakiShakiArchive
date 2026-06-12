@@ -49,6 +49,15 @@ const activeCategory = computed(() => {
   return categoryParam || "all";
 });
 
+// SEO용 h1 텍스트: 활성 카테고리 라벨 기반
+const categoryHeading = computed(() => {
+  const match = categoryRoutes.value.find(
+    (r) => r.path.split("/").pop() === activeCategory.value
+  );
+  const label = match?.label || (activeCategory.value === "all" ? "전체 상품" : "SHOP");
+  return `${label} 빈티지 컬렉션 | 샤키샤키 아카이브`;
+});
+
 const hideSoldOutProducts = <T extends { totalStock?: number }>(items: T[]): T[] =>
   items.filter((item) => item.totalStock === undefined || Number(item.totalStock) > 0);
 
@@ -257,6 +266,9 @@ onUnmounted(() => {
 
 <template>
   <section class="w-[94%] sm:w-11/12 max-w-screen-2xl mx-auto pt-4 pb-12 sm:pt-8 sm:pb-16">
+    <!-- SEO: 시각적 디자인 변경 없이 h1 제공 (sr-only) -->
+    <h1 class="sr-only">{{ categoryHeading }}</h1>
+
     <!-- 카테고리 선택 영역 (Shop 진입 화면) -->
     <nav
       v-if="hasCategory"

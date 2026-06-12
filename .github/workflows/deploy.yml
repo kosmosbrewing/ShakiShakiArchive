@@ -6,6 +6,8 @@ on:
       - main
     tags:
       - 'v*'  # v1.0.0 형식의 태그 Push 시 전체 무효화
+  repository_dispatch:
+    types: [content-update]  # 백엔드 상품 변경 시 자동 재빌드 (searchPing.service)
   workflow_dispatch:  # 수동 실행 지원
     inputs:
       full_invalidation:
@@ -150,6 +152,11 @@ jobs:
             --cli-read-timeout 600 || echo "⚠️  타임아웃 (백그라운드에서 계속 진행됨)"
 
           echo "✅ 무효화 완료"
+
+      # 9-C. IndexNow 색인 핑 (무효화 완료 후 — 페이지가 실존해야 핑이 유효)
+      # 최근 변경된 URL을 네이버/빙 등 IndexNow 지원 검색엔진에 즉시 알림
+      - name: Ping IndexNow
+        run: node scripts/indexnow-ping.js
 
       # 10. 배포 검증 (Cache-Control 헤더 확인)
       - name: Verify Cache-Control Headers

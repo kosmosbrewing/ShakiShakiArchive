@@ -927,9 +927,10 @@ onMounted(async () => {
           <CardContent class="p-6">
             <div class="flex justify-between items-end gap-3 mb-3">
               <div>
-                <h3 class="text-body text-foreground font-medium">
+                <!-- SEO: 페이지의 유일한 h1 (스타일은 기존 h3과 동일하게 유지) -->
+                <h1 class="text-body text-foreground font-medium">
                   {{ productData.product.value.name }}
-                </h3>
+                </h1>
                 <div class="flex items-baseline gap-2 pt-1.5">
                   <span class="text-body text-muted-foreground">
                     {{ formatPrice(productData.product.value.price) }}

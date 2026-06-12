@@ -23,7 +23,7 @@
     "dev": "vite",
     "build": "vue-tsc && vite build && mkdir -p dist/fonts && cp public/fonts/*.woff2 dist/fonts/",
     "preview": "vite preview",
-    "prerender": "node scripts/prerender.js",
+    "prerender": "node scripts/prerender/index.js",
     "build:full": "npm run build && npm run prerender",
     "optimize-images": "node scripts/optimize-images.js"
   },
