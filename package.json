@@ -1,11 +1,11 @@
 {
-  "name": "shadcn-vue-landing-page",
-  "description": "Shadcn/Vue landing page template using Vue, Shadcn/Vue + TypeScript + Tailwind CSS.",
-  "version": "0.1.1",
+  "name": "shakishaki-archive-frontend",
+  "description": "ShakiShaki Archive - 의류 쇼핑몰 프론트엔드 (Vue 3 + TypeScript + Tailwind CSS).",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
   "author": {
-    "name": "Leopoldo Miranda",
-    "email": "leomirandadev@gmail.com",
-    "url": "https://github.com/leomirandaa"
+    "name": "ShakiShaki",
+    "url": "https://github.com/kosmosbrewing"
   },
   "keywords": [
     "vue",
