@@ -28,10 +28,12 @@ apiClient.interceptors.response.use(
 export default apiClient;
 
 /**
- * 비동기 앱 초기화
- * 핵심 데이터(공통 상수)를 먼저 로드한 후 앱을 마운트합니다.
+ * 앱 초기화
+ * mount를 먼저 실행해 첫 페인트를 앞당기고, 공통 상수는 백그라운드로 로드합니다.
+ * (constants 응답을 기다리면 그동안 흰 화면이 유지됨 — 소비처는 전부
+ * FALLBACK_CONSTANTS 폴백 + reactive 갱신이라 mount 전 대기가 불필요)
  */
-async function bootstrap() {
+function bootstrap() {
   const app = createApp(App);
   const pinia = createPinia();
 
@@ -42,17 +44,20 @@ async function bootstrap() {
   // GA4 초기화 (환경변수 설정 시에만 동작)
   initAnalytics();
 
-  // 공통 상수 로드 (앱 마운트 전 대기)
-  const constantsStore = useConstantsStore();
-  try {
-    await constantsStore.loadConstants();
-  } catch (e) {
-    // 실패해도 폴백 값으로 앱 실행 (스토어 내부에서 처리됨)
-    console.warn("⚠️ 상수 로드 실패, 폴백 값으로 진행합니다.");
-  }
+  // 배포 직후 옛 index.html이 삭제/교체된 청크를 preload하다 실패하면 새 HTML로 리로드
+  window.addEventListener("vite:preloadError", () => {
+    window.location.reload();
+  });
 
-  // 앱 마운트
+  // 앱 마운트 (constants를 기다리지 않음)
   app.mount("#app");
+
+  // 공통 상수 백그라운드 로드 — 실패해도 스토어 내부 폴백 값으로 동작
+  useConstantsStore()
+    .loadConstants()
+    .catch(() => {
+      console.warn("⚠️ 상수 로드 실패, 폴백 값으로 진행합니다.");
+    });
 }
 
 // 앱 시작

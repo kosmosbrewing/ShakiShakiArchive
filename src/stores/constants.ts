@@ -131,14 +131,18 @@ export const useConstantsStore = defineStore("constants", () => {
   const quantityLimits = computed(() => validation.value.quantity);
   const priceLimits = computed(() => validation.value.price);
 
+  // 진행 중인 로드 promise — 동시 호출 시 같은 요청을 공유하고,
+  // ensureLoaded()가 "완료 시점까지 대기"할 수 있게 함
+  let inflight: Promise<boolean> | null = null;
+
   /**
    * 상수 데이터 로드
    * @param force - true면 이전 실패/성공 여부와 관계없이 재시도
    * @returns 로드 성공 여부
    */
   async function loadConstants(force = false): Promise<boolean> {
-    // 이미 로드 중이면 스킵
-    if (isLoading.value) return false;
+    // 이미 로드 중이면 진행 중인 요청의 결과를 공유
+    if (inflight) return inflight;
 
     // 강제 재시도가 아니고 이미 성공적으로 로드된 경우 스킵
     if (!force && isLoaded.value && !loadFailed.value) return true;
@@ -146,24 +150,39 @@ export const useConstantsStore = defineStore("constants", () => {
     isLoading.value = true;
     error.value = null;
 
-    try {
-      const data = await fetchConstants();
-      // API 응답을 폴백 값과 병합 (누락된 필드 방어)
-      constants.value = mergeWithFallback(data);
-      isLoaded.value = true;
-      loadFailed.value = false;
-      console.log("✅ [Constants] 공통 상수 로드 완료");
-      return true;
-    } catch (e: any) {
-      error.value = e.message || "상수 로드 실패";
-      console.warn("⚠️ [Constants] API 실패, 폴백 값 사용:", error.value);
-      // 폴백 값은 이미 설정되어 있으므로 앱은 정상 동작
-      isLoaded.value = true;
-      loadFailed.value = true; // 실패 플래그 설정 (재시도 가능)
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
+    inflight = (async () => {
+      try {
+        const data = await fetchConstants();
+        // API 응답을 폴백 값과 병합 (누락된 필드 방어)
+        constants.value = mergeWithFallback(data);
+        isLoaded.value = true;
+        loadFailed.value = false;
+        console.log("✅ [Constants] 공통 상수 로드 완료");
+        return true;
+      } catch (e: any) {
+        error.value = e.message || "상수 로드 실패";
+        console.warn("⚠️ [Constants] API 실패, 폴백 값 사용:", error.value);
+        // 폴백 값은 이미 설정되어 있으므로 앱은 정상 동작
+        isLoaded.value = true;
+        loadFailed.value = true; // 실패 플래그 설정 (재시도 가능)
+        return false;
+      } finally {
+        isLoading.value = false;
+        inflight = null;
+      }
+    })();
+
+    return inflight;
+  }
+
+  /**
+   * 상수 로드 완료 보장 — 주문/결제처럼 정확한 상수가 필요한 경로에서 사용.
+   * mount-first 전환으로 앱 시작 시 로드가 백그라운드로 돌기 때문에,
+   * 진행 중이면 그 완료를 기다리고, 이전에 실패했으면 1회 재시도한다.
+   */
+  async function ensureLoaded(): Promise<void> {
+    if (isLoaded.value && !loadFailed.value) return;
+    await loadConstants(loadFailed.value);
   }
 
   /**
@@ -230,6 +249,7 @@ export const useConstantsStore = defineStore("constants", () => {
 
     // 액션
     loadConstants,
+    ensureLoaded,
 
     // 헬퍼 함수
     calculateShippingFee,
