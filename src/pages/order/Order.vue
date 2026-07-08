@@ -1410,13 +1410,11 @@ watch(isPaymentPopupOpen, async (isOpen, wasOpen) => {
 // 카카오페이는 팝업/리다이렉트 방식이므로 SDK 사전 로드 불필요
 
 onMounted(async () => {
-  // 결제 금액 계산에 정확한 상수(배송비 등) 필요 — 백그라운드 로드 완료 보장
-  await useConstantsStore().ensureLoaded();
-
-  // 사용자 정보 로드
-  if (!authStore.user) {
-    await authStore.loadUser();
-  }
+  // 상수(배송비 등) 완료 보장 + 사용자 정보 로드 — 서로 독립이라 병렬 실행
+  await Promise.all([
+    useConstantsStore().ensureLoaded(),
+    authStore.user ? Promise.resolve() : authStore.loadUser(),
+  ]);
 
   // 접근 제어는 라우터 가드에서 처리 (router/index.ts:249-260)
   // 중복 체크 제거로 코드 간소화

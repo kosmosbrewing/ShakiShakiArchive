@@ -7,6 +7,11 @@ import { useAlert } from "@/composables/useAlert";
 import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
 import { trackPageView } from "@/lib/analytics";
 import { fetchProduct } from "@/lib/api";
+import {
+  isChunkLoadError,
+  reloadOnceForStaleChunk,
+  clearChunkReloadGuard,
+} from "@/lib/chunkReload";
 
 // 전 페이지 lazy import — 정적 import는 index.html에 modulepreload로 포함되어
 // 첫 방문자가 admin/payment 청크까지 다운로드하게 되므로 금지 (라우트 진입 시에만 로드)
@@ -380,25 +385,14 @@ router.afterEach((to) => {
   trackPageView(to.fullPath);
   setRobotsNoindex(to.name === "NotFound");
   // 내비게이션 성공 시 청크 리로드 가드 해제 (아래 onError 참조)
-  sessionStorage.removeItem(CHUNK_RELOAD_GUARD_KEY);
+  clearChunkReloadGuard();
 });
 
-/**
- * 배포 직후 옛 index.html을 든 사용자가 삭제/교체된 lazy 청크를 요청하면 404가 남.
- * 이때 전체 리로드로 새 index.html을 받아 복구한다.
- * sessionStorage 플래그로 무한 리로드 루프를 방지 (성공 내비게이션 시 afterEach에서 해제).
- */
-const CHUNK_RELOAD_GUARD_KEY = "chunk-reload-guard";
-
+// 배포 직후 옛 index.html을 든 사용자가 삭제/교체된 lazy 청크를 요청하면 404가 남.
+// 이때 전체 리로드로 새 index.html을 받아 복구 (가드 상세는 lib/chunkReload.ts)
 router.onError((error, to) => {
-  const msg = String((error as Error)?.message ?? "");
-  const isChunkLoadError =
-    msg.includes("Failed to fetch dynamically imported module") ||
-    msg.includes("Importing a module script failed"); // Safari
-
-  if (isChunkLoadError && !sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY)) {
-    sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, "1");
-    window.location.assign(to.fullPath);
+  if (isChunkLoadError(error)) {
+    reloadOnceForStaleChunk(to.fullPath);
   }
 });
 

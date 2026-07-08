@@ -6,6 +6,7 @@ import "./assets/index.css";
 import axios from "axios";
 import { useConstantsStore } from "./stores/constants";
 import { initAnalytics } from "./lib/analytics";
+import { reloadOnceForStaleChunk } from "./lib/chunkReload";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 axios.defaults.baseURL = API_BASE;
@@ -45,8 +46,9 @@ function bootstrap() {
   initAnalytics();
 
   // 배포 직후 옛 index.html이 삭제/교체된 청크를 preload하다 실패하면 새 HTML로 리로드
+  // (router.onError와 같은 가드를 공유해 무한 리로드 루프 방지)
   window.addEventListener("vite:preloadError", () => {
-    window.location.reload();
+    reloadOnceForStaleChunk();
   });
 
   // 앱 마운트 (constants를 기다리지 않음)
