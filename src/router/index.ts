@@ -8,62 +8,67 @@ import { AUTH_MESSAGES, ADMIN_MESSAGES } from "@/lib/messages";
 import { trackPageView } from "@/lib/analytics";
 import { fetchProduct } from "@/lib/api";
 
+// 전 페이지 lazy import — 정적 import는 index.html에 modulepreload로 포함되어
+// 첫 방문자가 admin/payment 청크까지 다운로드하게 되므로 금지 (라우트 진입 시에만 로드)
+
 // 홈/공용 컴포넌트
 const Home = () => import("@/components/Home.vue");
 
 // Auth (인증)
-import { Login, Signup, OAuthCallback, ForgotPassword } from "@/pages/auth";
+const Login = () => import("@/pages/auth/Login.vue");
+const Signup = () => import("@/pages/auth/Signup.vue");
+const OAuthCallback = () => import("@/pages/auth/OAuthCallback.vue");
+const ForgotPassword = () => import("@/pages/auth/ForgotPassword.vue");
 
 // Account (계정)
-import { Account, Modify, AddressList } from "@/pages/account";
+const Account = () => import("@/pages/account/Account.vue");
+const Modify = () => import("@/pages/account/Modify.vue");
+const AddressList = () => import("@/pages/account/AddressList.vue");
 
 // Product (상품)
-import { Product, ProductDetail } from "@/pages/product";
-import { Journal, SoldArchive } from "@/pages/archive";
+const Product = () => import("@/pages/product/Product.vue");
+const ProductDetail = () => import("@/pages/product/ProductDetail.vue");
+const Journal = () => import("@/pages/archive/Journal.vue");
+const SoldArchive = () => import("@/pages/archive/SoldArchive.vue");
 
 // Order (주문)
-import {
-  Order,
-  OrderList,
-  OrderDetail,
-  PaymentCallback,
-  NaverPayBack,
-} from "@/pages/order";
+const Order = () => import("@/pages/order/Order.vue");
+const OrderList = () => import("@/pages/order/OrderList.vue");
+const OrderDetail = () => import("@/pages/order/OrderDetail.vue");
+// 3개 라우트에서 공유 — 동일 경로 import라 청크는 1개로 dedupe됨
+const PaymentCallback = () => import("@/pages/order/PaymentCallback.vue");
+const NaverPayBack = () => import("@/pages/order/NaverPayBack.vue");
 
 // Cart (장바구니)
-import { Cart } from "@/pages/cart";
+const Cart = () => import("@/pages/cart/Cart.vue");
 
 // Wishlist (위시리스트)
-import { WishList } from "@/pages/wishlist";
+const WishList = () => import("@/pages/wishlist/WishList.vue");
 
 // Inquiry (문의하기)
-import {
-  InquiryList,
-  InquiryCreate,
-  InquiryDetail,
-  MyInquiries,
-  FAQ,
-} from "@/pages/inquiry";
+const InquiryList = () => import("@/pages/inquiry/InquiryList.vue");
+const InquiryCreate = () => import("@/pages/inquiry/InquiryCreate.vue");
+const InquiryDetail = () => import("@/pages/inquiry/InquiryDetail.vue");
+const MyInquiries = () => import("@/pages/inquiry/MyInquiries.vue");
+const FAQ = () => import("@/pages/inquiry/FAQ.vue");
 
 // Admin (관리자)
-import {
-  ProductAdmin,
-  CategoryAdmin,
-  InquiryAdmin,
-  OrderAdmin,
-  SiteImageAdmin,
-  UserAdmin,
-  AnalyticsAdmin,
-} from "@/pages/admin";
+const ProductAdmin = () => import("@/pages/admin/ProductAdmin.vue");
+const CategoryAdmin = () => import("@/pages/admin/CategoryAdmin.vue");
+const InquiryAdmin = () => import("@/pages/admin/InquiryAdmin.vue");
+const OrderAdmin = () => import("@/pages/admin/OrderAdmin.vue");
+const SiteImageAdmin = () => import("@/pages/admin/SiteImageAdmin.vue");
+const UserAdmin = () => import("@/pages/admin/UserAdmin.vue");
+const AnalyticsAdmin = () => import("@/pages/admin/AnalyticsAdmin.vue");
 
 // Static (정적 페이지)
-import About from "@/pages/static/About.vue";
-import Notice from "@/pages/static/Notice.vue";
-import PrivacyPolicy from "@/pages/static/PrivacyPolicy.vue";
-import TermsOfService from "@/pages/static/TermsOfService.vue";
+const About = () => import("@/pages/static/About.vue");
+const Notice = () => import("@/pages/static/Notice.vue");
+const PrivacyPolicy = () => import("@/pages/static/PrivacyPolicy.vue");
+const TermsOfService = () => import("@/pages/static/TermsOfService.vue");
 
 // 404 페이지
-import NotFound from "@/pages/NotFound.vue";
+const NotFound = () => import("@/pages/NotFound.vue");
 
 const routes = [
   // 홈
@@ -374,6 +379,27 @@ function setRobotsNoindex(enabled: boolean) {
 router.afterEach((to) => {
   trackPageView(to.fullPath);
   setRobotsNoindex(to.name === "NotFound");
+  // 내비게이션 성공 시 청크 리로드 가드 해제 (아래 onError 참조)
+  sessionStorage.removeItem(CHUNK_RELOAD_GUARD_KEY);
+});
+
+/**
+ * 배포 직후 옛 index.html을 든 사용자가 삭제/교체된 lazy 청크를 요청하면 404가 남.
+ * 이때 전체 리로드로 새 index.html을 받아 복구한다.
+ * sessionStorage 플래그로 무한 리로드 루프를 방지 (성공 내비게이션 시 afterEach에서 해제).
+ */
+const CHUNK_RELOAD_GUARD_KEY = "chunk-reload-guard";
+
+router.onError((error, to) => {
+  const msg = String((error as Error)?.message ?? "");
+  const isChunkLoadError =
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Importing a module script failed"); // Safari
+
+  if (isChunkLoadError && !sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY)) {
+    sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, "1");
+    window.location.assign(to.fullPath);
+  }
 });
 
 export default router;
