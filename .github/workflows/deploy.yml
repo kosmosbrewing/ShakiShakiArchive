@@ -91,6 +91,27 @@ jobs:
             --content-type "application/xml; charset=utf-8" \
             --cache-control "max-age=300, stale-while-revalidate=86400"
 
+      # 7-2. S3 Lifecycle 규칙 보장 (60일 지난 assets/ 자동 삭제)
+      # - 매 배포마다 재적용(멱등)해 콘솔 설정 유실 시에도 자동 복구
+      # - assets는 매 배포마다 재업로드되어 타임스탬프가 갱신되므로,
+      #   60일 이상 배포 공백이 없는 한 현역 청크는 삭제되지 않음
+      # - Prefix "assets/" 한정 필수: index.html·robots·sitemap 등 루트 객체는 대상 외
+      # - IAM 권한(s3:PutLifecycleConfiguration) 부재 시 경고만 남기고 배포는 계속
+      - name: Ensure S3 lifecycle rule for old assets
+        run: |
+          aws s3api put-bucket-lifecycle-configuration \
+            --bucket ${{ secrets.AWS_S3_BUCKET_NAME }} \
+            --lifecycle-configuration '{
+              "Rules": [{
+                "ID": "expire-old-assets-60d",
+                "Filter": { "Prefix": "assets/" },
+                "Status": "Enabled",
+                "Expiration": { "Days": 60 }
+              }]
+            }' \
+          && echo "✅ Lifecycle 규칙 적용 완료 (assets/ 60일)" \
+          || echo "::warning::Lifecycle 규칙 적용 실패 — IAM에 s3:PutLifecycleConfiguration 권한이 있는지 확인 필요 (배포는 계속 진행)"
+
       # 8. 무효화 전략 판단 및 실행
       - name: Determine invalidation strategy
         id: invalidation

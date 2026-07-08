@@ -60,21 +60,14 @@ deploy.yml이 업로드만 하고 이전 해시 파일을 지우지 않음.
 배포 직전에 옛 `index.html`을 받은 사용자가 세션 중 lazy 청크를 요청할 때 404가 나지 않도록
 최근 세대는 남겨두는 것이 의도된 순기능임. 30일 유예가 이 문제를 자연스럽게 해결.
 
-**📋 적용 명령 확정 (2026-07-08, 실행 대기)**: 보존 기간은 60일로 결정
+**✅ 완료 (2026-07-08)**: deploy.yml에 lifecycle 규칙 보장 스텝(7-2)으로 코드화 —
+매 배포마다 멱등 재적용되어 콘솔 설정 유실 시에도 자동 복구됨. 보존 기간 60일
 (빌드 산출물은 매 배포마다 재업로드되어 타임스탬프가 갱신되지만,
-60일 이상 배포 공백이 생기면 현역 청크도 삭제될 수 있음 — 여유를 둠).
-
-```bash
-aws s3api put-bucket-lifecycle-configuration --bucket <BUCKET> \
-  --lifecycle-configuration '{"Rules":[{"ID":"expire-old-assets-60d",
-    "Filter":{"Prefix":"assets/"},"Status":"Enabled","Expiration":{"Days":60}}]}'
-# 확인
-aws s3api get-bucket-lifecycle-configuration --bucket <BUCKET>
-```
-
-- `Prefix: "assets/"` 한정 필수 — HTML·robots·sitemap 등 루트 객체는 대상 외.
-- **선행 조건**: 항목 1의 청크 로드 실패 리로드 가드가 프로덕션에 배포된 뒤에만 적용할 것
-  (가드 없이 lifecycle만 켜면 장기 세션 사용자가 404 시 복구 수단이 없음).
+60일 이상 배포 공백이 생기면 현역 청크도 삭제될 수 있어 여유를 둠).
+선행 조건이었던 청크 로드 실패 리로드 가드는 먼저 배포 완료.
+주의: `put-bucket-lifecycle-configuration`은 버킷 lifecycle 전체를 교체하므로,
+다른 규칙이 필요해지면 deploy.yml의 JSON에 함께 넣어야 함.
+적용 확인: `aws s3api get-bucket-lifecycle-configuration --bucket <BUCKET>`
 
 ---
 
