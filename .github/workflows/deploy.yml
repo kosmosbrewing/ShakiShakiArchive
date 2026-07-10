@@ -137,7 +137,7 @@ jobs:
           echo "📄 HTML 캐시 무효화 중..."
           INVALIDATION_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/product/*" "/productDetail/*" "/sitemap.xml" "/robots.txt" "/llms.txt" \
+            --paths "/index.html" "/faq" "/faq.html" "/terms" "/terms.html" "/privacy" "/privacy.html" "/product/*" "/productDetail/*" "/sitemap.xml" "/robots.txt" "/llms.txt" \
             --query 'Invalidation.Id' \
             --output text)
 

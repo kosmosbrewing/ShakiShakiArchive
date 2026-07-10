@@ -1,6 +1,6 @@
 # ShakiShaki Archive
 
-Last-Updated: 2026-02-19
+Last-Updated: 2026-07-10
 Primary-Domain: https://shakishakiarchive.com
 Language: ko-KR
 Currency: KRW
@@ -21,9 +21,9 @@ ShakiShaki Archive(샤키샤키 아카이브)는 빈티지 의류 중심의 온�
 
 ## Brand Facts
 
-- 여성 빈티지·일본 구제 의류 전문 온라인 셀렉샵입니다.
+- 빈티지 의류 중심의 온라인 스토어입니다.
 - 경상남도 밀양시 기반으로 운영됩니다.
-- 모든 상품은 1:1 단품 큐레이션으로 동일 상품 중복이 없습니다.
+- 상품별 가격, 재고, 상태와 설명은 각 상품 상세 페이지를 기준으로 확인합니다.
 
 ## Shipping Policy
 

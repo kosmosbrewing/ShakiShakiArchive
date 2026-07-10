@@ -16,8 +16,8 @@ function handler(event) {
     return request;
   }
 
-  // assets 폴더는 그대로 반환
-  if (uri.startsWith('/assets/')) {
+  // 빌드 asset과 public font는 그대로 반환
+  if (uri.startsWith('/assets/') || uri.startsWith('/fonts/')) {
     return request;
   }
 
@@ -26,9 +26,9 @@ function handler(event) {
     return request;
   }
 
-  // 정적 파일 확장자 (.txt, .xml, .ico 등)는 SPA fallback 없이 직접 반환
-  // robots.txt, sitemap.xml이 index.html로 rewrite되는 것을 방지
-  if (uri.match(/\.(txt|xml|ico|webmanifest|json)$/i)) {
+  // 정적 파일은 SPA fallback 없이 직접 반환한다.
+  // Why: /fonts/*.woff2 같은 public asset이 index.html로 바뀌면 폰트가 전부 깨진다.
+  if (uri.match(/\.(js|css|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|txt|xml|ico|webmanifest|json)$/i)) {
     return request;
   }
 
@@ -44,7 +44,13 @@ function handler(event) {
     return request;
   }
 
-  // 상품 목록/카테고리 페이지: /product/all(/) -> /product/all.html
+  // ALL은 API category가 아니라 프런트에서 합성하므로 prerender 파일이 없다.
+  if (normalizedUri === '/product/all') {
+    request.uri = '/index.html';
+    return request;
+  }
+
+  // API에서 받은 실제 카테고리 페이지: /product/{slug} -> /product/{slug}.html
   if (normalizedUri.match(/^\/product\/[^/]+$/)) {
     request.uri = normalizedUri + '.html';
     return request;

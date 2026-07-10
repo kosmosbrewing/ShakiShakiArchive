@@ -1,905 +1,269 @@
-# DevOps & Operations
-
-이 문서는 ShakiShaki Archive의 **CI/CD 파이프라인, 인프라 구성, 모니터링 전략, FinOps, 성능 지표**를 설명합니다.
-
----
-
-## 📋 목차
-
-1. [CI/CD Pipeline](#cicd-pipeline)
-2. [Infrastructure as Code](#infrastructure-as-code)
-3. [Monitoring & Observability](#monitoring--observability)
-4. [Runbook](#runbook)
-5. [Cost Optimization (FinOps)](#cost-optimization-finops)
-6. [Performance Metrics](#performance-metrics)
-7. [Developer Experience (DX)](#developer-experience-dx)
-8. [Technical Roadmap](#technical-roadmap)
-
----
-
-## CI/CD Pipeline
-
-### GitHub Actions 워크플로우
-
-**목표**: `main` 브랜치에 푸시하면 자동으로 빌드 → 배포 (45초 소요)
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Build
-        run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
-
-      - name: Deploy to S3
-        run: |
-          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }} \
-            --delete \
-            --cache-control "public, max-age=31536000, immutable" \
-            --exclude "index.html"
-
-          # index.html은 캐시 비활성화 (SPA 라우팅)
-          aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET }}/index.html \
-            --cache-control "no-cache, no-store, must-revalidate"
-
-      - name: Invalidate CloudFront cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
-
-      - name: Notify deployment
-        if: success()
-        run: |
-          echo "✅ Deployment successful!"
-          echo "🚀 Live at: https://shakishaki-archive.com"
-```
-
-### 배포 플로우 다이어그램
-
-```mermaid
-graph LR
-    A[Git Push to main] --> B[GitHub Actions Trigger]
-    B --> C[npm ci]
-    C --> D[Type Check]
-    D --> E[Build Vite]
-    E --> F[Upload to S3]
-    F --> G[Invalidate CloudFront]
-    G --> H[🚀 Live in 45s]
-```
-
-### 주요 최적화 포인트
-
-| 단계 | 최적화 기법 | 효과 |
-|------|------------|------|
-| **의존성 설치** | `npm ci` + cache | 30초 → 8초 (73% 단축) |
-| **빌드** | Vite 병렬 빌드 | 5초 → 2초 (60% 단축) |
-| **S3 업로드** | `--exclude` 전략 | 불필요한 파일 제외 |
-| **캐시 무효화** | `/*` 경로만 무효화 | 비용 절감 |
-
----
-
-## Infrastructure as Code
-
-### Terraform 구성
-
-**파일 구조**:
-```
-terraform/
-├── main.tf          # S3 버킷, CloudFront 배포
-├── variables.tf     # 환경 변수
-├── outputs.tf       # CloudFront URL 등 출력
-└── backend.tf       # Terraform 상태 관리 (S3 백엔드)
-```
-
-### S3 버킷 설정
-
-```hcl
-# terraform/main.tf
-resource "aws_s3_bucket" "frontend" {
-  bucket = "shakishaki-archive-frontend"
-
-  tags = {
-    Name        = "ShakiShaki Archive Frontend"
-    Environment = "production"
-    ManagedBy   = "Terraform"
-  }
-}
-
-# Public Access 차단 (CloudFront만 접근 허용)
-resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# 정적 웹사이트 호스팅 설정
-resource "aws_s3_bucket_website_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  # SPA 라우팅: 404 시 index.html로 폴백
-  error_document {
-    key = "index.html"
-  }
-}
-```
-
-### CloudFront 배포
-
-```hcl
-resource "aws_cloudfront_distribution" "frontend" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "ShakiShaki Archive Frontend CDN"
-  default_root_object = "index.html"
-  price_class         = "PriceClass_200"  # 한국, 일본, 미국, 유럽
-
-  origin {
-    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id   = "S3-shakishaki-archive"
-
-    # OAI (Origin Access Identity) - S3 직접 접근 차단
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
-    }
-  }
-
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-shakishaki-archive"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 86400   # 1일
-    max_ttl                = 31536000 # 1년
-    compress               = true
-  }
-
-  # SPA 라우팅: 404 → 200 (index.html)
-  custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 0
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-    # SSL 인증서 사용 시:
-    # acm_certificate_arn = aws_acm_certificate.cert.arn
-    # ssl_support_method  = "sni-only"
-  }
-}
-
-# CloudFront OAI
-resource "aws_cloudfront_origin_access_identity" "frontend" {
-  comment = "OAI for ShakiShaki Archive"
-}
-
-# S3 버킷 정책 (CloudFront만 접근 허용)
-resource "aws_s3_bucket_policy" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontOAI"
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
-      }
-    ]
-  })
-}
-```
-
-### 인프라 비용
-
-| 리소스 | 월간 비용 (1만 PV 기준) | 설명 |
-|--------|------------------------|------|
-| **S3 스토리지** | $0.23 | 100MB 저장 (빌드 파일) |
-| **S3 요청** | $0.05 | GET 요청 1만 건 |
-| **CloudFront** | $10.50 | 데이터 전송 10GB |
-| **CloudFront 요청** | $0.10 | HTTPS 요청 1만 건 |
-| **Route 53** | $1.00 | 호스팅 영역 (도메인 사용 시) |
-| **총합** | **$11.88** | ≈ $12/월 |
-
----
-
-## Monitoring & Observability
-
-### 모니터링 스택
-
-```mermaid
-graph TD
-    A[Frontend App] -->|Error Tracking| B[Sentry]
-    A -->|Performance| C[Lighthouse CI]
-    A -->|RUM| D[CloudWatch RUM]
-    B --> E[Slack Alerts]
-    C --> F[GitHub PR Comment]
-    D --> G[CloudWatch Dashboard]
-```
-
-### 1. Sentry (에러 트래킹)
-
-**설정 파일**: `src/main.ts`
-
-```typescript
-import * as Sentry from "@sentry/vue";
-
-const app = createApp(App);
-
-// Production 환경에서만 Sentry 활성화
-if (import.meta.env.PROD) {
-  Sentry.init({
-    app,
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    environment: import.meta.env.MODE,
-    integrations: [
-      new Sentry.BrowserTracing({
-        routingInstrumentation: Sentry.vueRouterInstrumentation(router),
-      }),
-      new Sentry.Replay({
-        maskAllText: true,
-        blockAllMedia: true,
-      }),
-    ],
-    tracesSampleRate: 0.1,  // 10% 트랜잭션 추적
-    replaysSessionSampleRate: 0.1,  // 10% 세션 재생
-    replaysOnErrorSampleRate: 1.0,  // 에러 발생 시 100% 재생
-    beforeSend(event, hint) {
-      // 민감한 정보 필터링
-      if (event.request?.cookies) {
-        delete event.request.cookies;
-      }
-      return event;
-    },
-  });
-}
-```
-
-**알림 규칙**:
-- 에러 발생 시 Slack #alerts 채널에 알림
-- 중복 에러는 5분간 그룹화
-- 우선순위: High (Payment 관련), Medium (API), Low (기타)
-
-### 2. Lighthouse CI (성능 모니터링)
-
-**GitHub Actions 통합**:
-
-```yaml
-# .github/workflows/lighthouse.yml
-name: Lighthouse CI
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  lighthouse:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - run: npm ci
-      - run: npm run build
-
-      - name: Run Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v10
-        with:
-          urls: |
-            http://localhost:3000
-            http://localhost:3000/product/all
-            http://localhost:3000/cart
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-```
-
-**성능 임계값**: `lighthouserc.json`
-
-```json
-{
-  "ci": {
-    "assert": {
-      "preset": "lighthouse:recommended",
-      "assertions": {
-        "categories:performance": ["error", {"minScore": 0.9}],
-        "categories:accessibility": ["error", {"minScore": 0.9}],
-        "categories:best-practices": ["error", {"minScore": 0.9}],
-        "categories:seo": ["error", {"minScore": 0.9}],
-        "first-contentful-paint": ["error", {"maxNumericValue": 2000}],
-        "largest-contentful-paint": ["error", {"maxNumericValue": 2500}],
-        "cumulative-layout-shift": ["error", {"maxNumericValue": 0.1}]
-      }
-    }
-  }
-}
-```
-
-### 3. CloudWatch RUM (Real User Monitoring)
-
-**설정**:
-
-```typescript
-// src/lib/cloudwatch-rum.ts
-import { AwsRum } from 'aws-rum-web';
-
-export function initRUM() {
-  if (import.meta.env.PROD) {
-    try {
-      const config = {
-        sessionSampleRate: 1.0,
-        guestRoleArn: import.meta.env.VITE_RUM_GUEST_ROLE_ARN,
-        identityPoolId: import.meta.env.VITE_RUM_IDENTITY_POOL_ID,
-        endpoint: "https://dataplane.rum.ap-northeast-2.amazonaws.com",
-        telemetries: ["performance", "errors", "http"],
-        allowCookies: true,
-        enableXRay: false
-      };
-
-      const APPLICATION_ID = import.meta.env.VITE_RUM_APP_ID;
-      const APPLICATION_VERSION = '1.0.0';
-      const APPLICATION_REGION = 'ap-northeast-2';
-
-      new AwsRum(
-        APPLICATION_ID,
-        APPLICATION_VERSION,
-        APPLICATION_REGION,
-        config
-      );
-    } catch (error) {
-      console.error('Failed to initialize CloudWatch RUM:', error);
-    }
-  }
-}
-```
-
-**추적 메트릭**:
-- **Navigation Timing**: 페이지 로드 시간
-- **Resource Timing**: 이미지, CSS, JS 로드 시간
-- **User Interaction**: 클릭, 스크롤 등
-- **Custom Events**: 장바구니 추가, 결제 완료 등
-
----
-
-## Runbook
-
-### 배포 롤백 절차
-
-**시나리오**: 배포 후 치명적 버그 발견 시 긴급 롤백
-
-**Step 1: CloudFront 캐시 무효화 중단**
-```bash
-# 진행 중인 무효화 작업 확인
-aws cloudfront list-invalidations \
-  --distribution-id <DISTRIBUTION_ID>
-
-# 무효화 작업 취소 (진행 중이면)
-# → CloudFront는 취소 불가, 새 배포로 덮어씌우기 필요
-```
-
-**Step 2: 이전 커밋으로 되돌리기**
-```bash
-# Git 히스토리 확인
-git log --oneline -n 5
-
-# 이전 커밋으로 revert (권장)
-git revert HEAD --no-edit
-git push origin main
-
-# 또는 강제 reset (비권장)
-git reset --hard HEAD~1
-git push origin main --force
-```
-
-**Step 3: GitHub Actions 재실행**
-- GitHub Actions 탭에서 "Re-run all jobs" 클릭
-- 또는 수동 배포 트리거:
-  ```bash
-  gh workflow run deploy.yml
-  ```
-
-**예상 소요 시간**: 3분 (롤백 결정 30초 + 재배포 45초 + 검증 1분 45초)
-
-### 장애 대응 플레이북
-
-#### 1. CloudFront 5xx 에러
-
-**증상**: 사용자가 "503 Service Unavailable" 화면 보고
-
-**원인 분석**:
-```bash
-# CloudFront 에러율 확인
-aws cloudwatch get-metric-statistics \
-  --namespace AWS/CloudFront \
-  --metric-name 5xxErrorRate \
-  --dimensions Name=DistributionId,Value=<DISTRIBUTION_ID> \
-  --start-time 2024-01-01T00:00:00Z \
-  --end-time 2024-01-01T01:00:00Z \
-  --period 300 \
-  --statistics Average
-```
-
-**해결 방법**:
-1. S3 버킷 권한 확인 (OAI 설정 확인)
-2. CloudFront Origin 설정 확인 (S3 도메인 정확성)
-3. S3 파일 존재 여부 확인:
-   ```bash
-   aws s3 ls s3://<BUCKET_NAME>/ --recursive | head -20
-   ```
-
-#### 2. 결제 API 타임아웃
-
-**증상**: 사용자가 "결제 처리 중" 화면에서 멈춤
-
-**원인 분석**:
-- Sentry에서 `/api/orders/payment/confirm` 타임아웃 로그 확인
-- Backend 서버 로그 확인
-
-**임시 조치**:
-```typescript
-// src/lib/api.ts
-const PAYMENT_TIMEOUT = 30000; // 30초 → 60초로 증가
-
-export async function confirmPayment(data: PaymentConfirmRequest) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 임시 증가
-
-  try {
-    const response = await fetch(`${API_URL}/api/orders/payment/confirm`, {
-      method: 'POST',
-      signal: controller.signal,
-      // ...
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-```
-
-**근본 해결**: Backend 팀에 DB 쿼리 최적화 요청 (N+1 문제 확인)
-
-#### 3. S3 스토리지 용량 초과
-
-**증상**: 배포 실패 (S3 업로드 에러)
-
-**원인**: S3 버킷 용량 제한 도달 (무료 티어 5GB)
-
-**해결 방법**:
-```bash
-# 오래된 빌드 파일 정리 (30일 이상)
-aws s3api list-objects-v2 \
-  --bucket <BUCKET_NAME> \
-  --query 'Contents[?LastModified<=`2024-01-01`].[Key]' \
-  --output text | \
-  xargs -I {} aws s3 rm s3://<BUCKET_NAME>/{}
-
-# Lifecycle 정책 설정 (자동 삭제)
-aws s3api put-bucket-lifecycle-configuration \
-  --bucket <BUCKET_NAME> \
-  --lifecycle-configuration file://lifecycle.json
-```
-
-**lifecycle.json**:
-```json
-{
-  "Rules": [
-    {
-      "Id": "DeleteOldBuilds",
-      "Status": "Enabled",
-      "Prefix": "builds/",
-      "Expiration": {
-        "Days": 30
-      }
-    }
-  ]
-}
-```
-
----
-
-## Cost Optimization (FinOps)
-
-### 비용 최적화 전략
-
-#### 1. CloudFront 캐시 적중률 개선
-
-**현재 적중률**: 85% → **목표**: 95%
-
-**개선 방법**:
-
-```javascript
-// vite.config.ts
-export default defineConfig({
-  build: {
-    rollupOptions: {
-      output: {
-        // 파일명에 해시 추가 (캐시 무효화 전략)
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]',
-      },
-    },
-  },
-});
-```
-
-**효과**:
-- 캐시 적중률 10% 증가 → CloudFront 비용 30% 절감
-- 월 $10.50 → **$7.35** (-$3.15)
-
-#### 2. 이미지 최적화
-
-**문제**: WebP 이미지 평균 크기 150KB (큰 편)
-
-**해결책**:
-```bash
-# 이미지 압축 (80% 품질)
-npx @squoosh/cli --webp '{"quality":80}' src/assets/images/*.jpg
-
-# 결과: 150KB → 60KB (60% 감소)
-```
-
-**효과**:
-- 데이터 전송량 60% 감소
-- CloudFront 비용: $10.50 → **$4.20** (-$6.30)
-
-#### 3. S3 스토리지 클래스 최적화
-
-**현재**: STANDARD (가장 비쌈)
-
-**개선**: INTELLIGENT-TIERING (자동 비용 절감)
-
-```bash
-aws s3api put-bucket-intelligent-tiering-configuration \
-  --bucket <BUCKET_NAME> \
-  --id MyIntelligentTieringConfig \
-  --intelligent-tiering-configuration file://tiering.json
-```
-
-**tiering.json**:
-```json
-{
-  "Id": "MyIntelligentTieringConfig",
-  "Status": "Enabled",
-  "Tierings": [
-    {
-      "Days": 90,
-      "AccessTier": "ARCHIVE_ACCESS"
-    },
-    {
-      "Days": 180,
-      "AccessTier": "DEEP_ARCHIVE_ACCESS"
-    }
-  ]
-}
-```
-
-**효과**: S3 비용 40% 절감 ($0.23 → **$0.14**)
-
-### 최종 비용 비교
-
-| 항목 | 최적화 전 | 최적화 후 | 절감액 |
-|------|----------|----------|-------|
-| S3 스토리지 | $0.23 | $0.14 | -$0.09 |
-| S3 요청 | $0.05 | $0.05 | $0 |
-| CloudFront 전송 | $10.50 | $4.20 | -$6.30 |
-| CloudFront 요청 | $0.10 | $0.10 | $0 |
-| Route 53 | $1.00 | $1.00 | $0 |
-| **총합** | **$11.88** | **$5.49** | **-$6.39 (54%)** |
-
----
-
-## Performance Metrics
-
-### Lighthouse 점수 (2024년 1월 기준)
-
-| 페이지 | Performance | Accessibility | Best Practices | SEO |
-|--------|-------------|---------------|----------------|-----|
-| **홈** | 96 | 100 | 100 | 100 |
-| **상품 목록** | 94 | 100 | 100 | 100 |
-| **상품 상세** | 92 | 100 | 100 | 100 |
-| **장바구니** | 95 | 100 | 100 | 100 |
-| **주문** | 93 | 100 | 95 | 100 |
-| **평균** | **94** | **100** | **99** | **100** |
-
-### Core Web Vitals
-
-| 메트릭 | 목표 | 실제 | 상태 |
-|--------|------|------|------|
-| **LCP** (Largest Contentful Paint) | < 2.5s | 1.8s | ✅ Good |
-| **FID** (First Input Delay) | < 100ms | 45ms | ✅ Good |
-| **CLS** (Cumulative Layout Shift) | < 0.1 | 0.05 | ✅ Good |
-| **FCP** (First Contentful Paint) | < 1.8s | 1.2s | ✅ Good |
-| **TTI** (Time to Interactive) | < 3.8s | 2.9s | ✅ Good |
-| **TBT** (Total Blocking Time) | < 200ms | 120ms | ✅ Good |
-
-### Bundle Size
-
-```bash
-npm run build
-
-# 결과:
-dist/assets/index-a1b2c3d4.js       120.45 kB │ gzip:  42.12 kB
-dist/assets/vendor-e5f6g7h8.js      35.58 kB  │ gzip:  13.91 kB
-dist/assets/index-i9j0k1l2.css      8.23 kB   │ gzip:   2.15 kB
-
-Total size: 156.03 kB (gzip)
-```
-
-**번들 최적화**:
-- **Code Splitting**: 라우트별 lazy loading
-- **Tree Shaking**: 미사용 코드 제거
-- **Minification**: Terser로 압축
-- **Dynamic Import**: 결제 모듈은 필요 시에만 로드
-
-```typescript
-// src/router/index.ts
-const routes = [
-  {
-    path: '/checkout',
-    component: () => import('@/pages/order/Checkout.vue'), // Lazy load
-  },
-  {
-    path: '/admin/products',
-    component: () => import('@/pages/admin/ProductAdmin.vue'), // 관리자만
-  },
-];
-```
-
-### 성능 개선 히스토리
-
-| 날짜 | 개선 내용 | Before | After | 개선율 |
-|------|----------|--------|-------|-------|
-| 2024-01-05 | 이미지 Lazy Loading 적용 | 3.2s (LCP) | 1.8s | **44%** |
-| 2024-01-10 | WebP 변환 + 압축 | 250KB/이미지 | 60KB | **76%** |
-| 2024-01-15 | Code Splitting (라우트별) | 280KB (번들) | 156KB | **44%** |
-| 2024-01-20 | Vite 4 → Vite 5 업그레이드 | 5.2s (빌드) | 2.0s | **62%** |
-| 2024-01-25 | N+1 쿼리 최적화 (Backend) | 1200ms (API) | 110ms | **91%** |
-
----
-
-## Developer Experience (DX)
-
-### 개발 환경 셋업 시간
-
-**목표**: 신규 개발자가 **10분 이내**에 로컬 환경 실행
-
-**실제 측정** (MacBook Pro M1):
-1. Git Clone: 15초
-2. `npm install`: 2분 30초
-3. `.env` 설정: 1분
-4. `npm run dev`: 5초
-5. **총 소요 시간**: **3분 50초** ✅
-
-### VSCode 추천 확장
-
-`.vscode/extensions.json`:
-
-```json
-{
-  "recommendations": [
-    "Vue.volar",
-    "Vue.vscode-typescript-vue-plugin",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "bradlc.vscode-tailwindcss",
-    "usernamehw.errorlens"
-  ]
-}
-```
-
-### 개발 서버 HMR (Hot Module Replacement)
-
-**Vite HMR 성능**:
-- 파일 수정 후 반영 시간: **평균 80ms**
-- 전체 페이지 새로고침 불필요
-- Vue 컴포넌트 상태 유지
-
-```typescript
-// vite.config.ts
-export default defineConfig({
-  server: {
-    hmr: {
-      overlay: true, // 에러 오버레이 표시
-    },
-    port: 3000,
-    open: true, // 자동 브라우저 오픈
-  },
-});
-```
-
-### TypeScript 타입 체크 속도
-
-**측정**:
-```bash
-time npm run type-check
-
-# 결과:
-real    0m3.542s  # 3.5초
-user    0m8.123s
-sys     0m0.892s
-```
-
-**최적화**:
-- `tsconfig.json`에서 `skipLibCheck: true` 설정
-- `vue-tsc --noEmit` 대신 `vue-tsc --noEmit --skipLibCheck` 사용
-
-### 개발 생산성 메트릭
-
-| 메트릭 | 수치 | 설명 |
-|--------|------|------|
-| **빌드 시간** | 2.0초 | `npm run build` |
-| **타입 체크** | 3.5초 | `npm run type-check` |
-| **HMR 속도** | 80ms | 파일 수정 후 반영 |
-| **테스트 실행** | N/A | (미구현) |
-| **배포 시간** | 45초 | GitHub Actions |
-
----
-
-## Technical Roadmap
-
-### 2024년 Q1-Q2 로드맵
-
-```mermaid
-gantt
-    title ShakiShaki Archive Frontend Roadmap
-    dateFormat  YYYY-MM-DD
-    section 성능
-    이미지 최적화 (WebP)      :done,    perf1, 2024-01-01, 2024-01-10
-    Code Splitting            :done,    perf2, 2024-01-10, 2024-01-15
-    Lighthouse CI 통합        :active,  perf3, 2024-01-20, 2024-02-01
-    PWA 지원                  :         perf4, 2024-02-01, 2024-03-01
-
-    section 기능
-    위시리스트 구현           :done,    feat1, 2024-01-01, 2024-01-15
-    주문 조회 개선            :done,    feat2, 2024-01-15, 2024-01-25
-    배송 추적 API 연동        :active,  feat3, 2024-01-25, 2024-02-15
-    쿠폰 시스템               :         feat4, 2024-02-15, 2024-03-15
-
-    section 인프라
-    Terraform 도입            :active,  infra1, 2024-01-20, 2024-02-01
-    Sentry 에러 트래킹        :done,    infra2, 2024-01-10, 2024-01-15
-    CloudWatch RUM            :         infra3, 2024-02-01, 2024-02-15
-    CDN 최적화                :         infra4, 2024-02-15, 2024-03-01
-
-    section 보안
-    OWASP Top 10 점검         :active,  sec1, 2024-01-20, 2024-02-01
-    CSP (Content Security Policy) :     sec2, 2024-02-01, 2024-02-15
-    HTTPS 전환                :         sec3, 2024-02-15, 2024-03-01
-```
-
-### 우선순위별 태스크
-
-#### High Priority (P0)
-
-- [ ] **PWA 지원** (Progressive Web App)
-  - Service Worker 구현
-  - Offline 모드 지원
-  - Add to Home Screen 기능
-  - **예상 완료**: 2024년 3월 1일
-
-- [ ] **배송 추적 API 연동**
-  - CJ대한통운 API 통합
-  - 실시간 배송 상태 표시
-  - **예상 완료**: 2024년 2월 15일
-
-#### Medium Priority (P1)
-
-- [ ] **쿠폰 시스템**
-  - 쿠폰 발급/사용 UI
-  - 할인가 계산 로직
-  - **예상 완료**: 2024년 3월 15일
-
-- [ ] **CSP (Content Security Policy)**
-  - XSS 공격 방어 강화
-  - `<meta>` 태그 또는 HTTP 헤더 설정
-  - **예상 완료**: 2024년 2월 15일
-
-#### Low Priority (P2)
-
-- [ ] **다크모드**
-  - Tailwind CSS 다크모드 활성화
-  - 사용자 설정 저장 (LocalStorage)
-  - **예상 완료**: 2024년 4월 1일
-
-- [ ] **다국어 지원 (i18n)**
-  - vue-i18n 도입
-  - 한국어/영어 지원
-  - **예상 완료**: 2024년 4월 15일
-
-### 기술 부채 (Technical Debt)
-
-| 항목 | 우선순위 | 상태 | 예상 공수 |
-|------|----------|------|----------|
-| **Unit Test 추가** (Vitest) | High | To Do | 2주 |
-| **E2E Test** (Playwright) | Medium | To Do | 1주 |
-| **Accessibility (a11y) 개선** | Medium | In Progress | 1주 |
-| **API 응답 캐싱** (React Query 도입 검토) | Low | To Do | 3일 |
-| **Storybook 도입** (컴포넌트 문서화) | Low | To Do | 1주 |
-
----
-
-## 참고 자료
-
-### AWS 공식 문서
-- [S3 정적 웹사이트 호스팅](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html)
-- [CloudFront 배포 가이드](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-
-### 성능 최적화
-- [Web.dev - Core Web Vitals](https://web.dev/vitals/)
-- [Lighthouse CI 가이드](https://github.com/GoogleChrome/lighthouse-ci)
-- [Vite 성능 최적화](https://vitejs.dev/guide/performance.html)
-
-### 모니터링
-- [Sentry Vue.js 가이드](https://docs.sentry.io/platforms/javascript/guides/vue/)
-- [CloudWatch RUM 사용 설명서](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-RUM.html)
-
----
-
-**작성일**: 2024년 1월 20일
-**작성자**: ShakiShaki Archive 개발팀
-**버전**: 1.0.0
+# DevOps와 운영
+
+현재 기준 감사일: 2026-07-10
+
+이 문서는 저장소에 실제 존재하는 자동화만 설명한다. AWS와 외부 console이 현재 source와 동일하게 구성되어 있다고 가정하지 않는다.
+
+## 1. Source-Controlled 자동화
+
+- .github/workflows/deploy.yml: production build/deploy
+- scripts/prerender/: SEO static build
+- scripts/indexnow-ping.js: deploy 후 indexing signal
+- scripts/verify-docs.js: 문서·환경 변수·핵심 source contract 검사
+- cloudfront-function.js: viewer-request rewrite source
+- terraform/backend/: Terraform remote state
+- terraform/environments/prod/: API Gateway, VPC Link, Cloud Map, access log
+- cloudfront-invalidate.sh: placeholder helper이며 production-ready script가 아님
+
+## 2. Production Trigger 주의
+
+workflow는 다음 이벤트에서 실행된다.
+
+- main의 모든 push, 문서 전용 변경 포함
+- v* tag
+- repository_dispatch type content-update
+- workflow_dispatch
+
+path filter가 없으므로 current 문서/하네스 변경을 main에 push해도 production API를 호출하고 S3/CloudFront를 변경할 수 있다.
+
+실제 push와 deploy는 이 문서 정리 범위에 포함하지 않는다.
+
+## 3. CI/CD Pipeline
+
+Build 단계:
+
+- Ubuntu runner
+- Node.js 20
+- npm ci
+- npm run build:full
+- VITE_API_URL, VITE_GA_ID, VITE_KAKAO_APP_KEY 주입
+
+Prerender gate:
+
+- home, FAQ, policy, category, product 결과 집계
+- generated와 attempted 불일치 또는 failed 존재 시 실패
+- sitemap 또는 llms.txt 실패 시 실패
+- incomplete artifact는 exit code 1로 deploy 차단
+
+Deploy 단계:
+
+- GitHub Secrets로 AWS credential 설정
+- dist/assets를 1년 immutable cache로 sync
+- 나머지 dist를 5분 cache와 stale-while-revalidate로 sync
+- robots, llms, sitemap의 UTF-8 content type 보정
+- assets/ 60일 lifecycle 재적용
+- selective 또는 full CloudFront invalidation
+- IndexNow best-effort ping
+- S3 Cache-Control 검증
+
+현재 workflow에는 unit test, ESLint, browser smoke, npm audit, Terraform validation이 없다. TypeScript 검사는 npm run build 안에서 수행된다.
+
+## 4. Local Gate
+
+backend 없이 실행 가능한 기본 gate:
+
+    npm ci
+    npm run verify
+
+개별 명령:
+
+    npm run docs:lint
+    npm run typecheck
+    npm run build
+
+backend-dependent gate:
+
+    VITE_API_URL=http://localhost:8080 npm run build:full
+
+full build는 모든 prerender group이 완전해야 성공한다. 일부 page 누락을 warning으로 허용하지 않는다.
+
+## 5. Artifact와 Cache
+
+- Vite는 JS/CSS/assets에 hash filename을 사용한다.
+- assets는 max-age=31536000, immutable이다.
+- HTML/root file은 max-age=300, stale-while-revalidate=86400이다.
+- old assets는 60일 lifecycle로 보존해 stale index의 chunk 404 가능성을 낮춘다.
+- browser는 stale chunk 실패 시 한 번만 reload한다.
+
+Lifecycle 주의:
+
+deploy workflow의 put-bucket-lifecycle-configuration은 bucket lifecycle 전체를 교체한다. 다른 rule이 필요하면 같은 JSON에 병합해야 한다.
+
+## 6. CloudFront Rewrite
+
+cloudfront-function.js의 source contract:
+
+- /assets/와 /fonts/ 통과
+- js/css/image/font/txt/xml/json 등의 정적 확장자 통과
+- /product/all은 SPA /index.html fallback
+- 실제 category와 product detail은 prerender .html
+- /faq는 /faq.html
+- 기타 route는 /index.html
+
+CloudFront function publish와 association은 deploy.yml에 포함되지 않는다. source가 수정돼도 운영 function은 자동 반영되지 않는다.
+
+## 7. Invalidation
+
+기본 selective invalidation:
+
+- /index.html
+- /faq와 /faq.html
+- /terms와 /terms.html
+- /privacy와 /privacy.html
+- /product/*
+- /productDetail/*
+- /sitemap.xml
+- /robots.txt
+- /llms.txt
+
+full invalidation 조건:
+
+- tag deploy
+- workflow_dispatch full_invalidation
+- head commit message의 [full-invalidate]
+
+terms/privacy path를 invalidate하는 것은 cache 정리 목적이다. 아래 policy summary를 권위 문서로 서빙하라는 의미가 아니다.
+
+## 8. 정책 페이지 운영 금지선
+
+scripts/prerender/staticPages.js의 terms/privacy는 Vue policy 원문의 요약 복제본이며 내용이 동일하지 않다.
+
+single-source 결정 전:
+
+- /terms와 /privacy를 terms.html/privacy.html로 rewrite하지 않는다.
+- SPA fallback으로 src/pages/static의 Vue 원문을 보여 준다.
+- generated policy HTML을 법적·canonical source로 간주하지 않는다.
+- policy HTML 생성 로직을 변경할 때 Vue 원문과 별도 검토한다.
+
+현재 summary .html은 upload되고 direct .html request는 function에서 통과할 수 있다. 링크·운영 근거로 사용하지 말고 single-source 전환 또는 duplicate artifact 제거를 P0로 처리한다.
+
+## 9. Infrastructure as Code
+
+terraform/backend:
+
+- versioning, AES256 encryption, public access block을 가진 state S3 bucket
+- DynamoDB lock table
+- state bucket prevent_destroy
+
+terraform/environments/prod:
+
+- 기존 VPC, subnet, ECS cluster, ECS task security group data source
+- Cloud Map private namespace와 SRV service
+- VPC Link security group과 VPC Link
+- ECS inbound rule
+- API Gateway HTTP API, proxy route, stage
+- JSON access log를 가진 CloudWatch log group
+
+CloudFront distribution resource는 주석 상태다. ECS service의 Cloud Map 등록도 이 저장소에서 자동 적용되지 않는다.
+
+안전한 local check:
+
+    terraform fmt -check -recursive
+
+credential과 input을 의도적으로 준비한 뒤에만:
+
+    cp terraform/environments/prod/terraform.tfvars.example terraform/environments/prod/terraform.tfvars
+    cd terraform/environments/prod
+    terraform init
+    terraform validate
+    terraform plan
+
+apply, destroy, import, origin 전환은 별도 승인과 rollback plan이 필요한 High-risk 작업이다.
+
+## 10. 관측성
+
+현재 존재:
+
+- optional GA4 page_view
+- Terraform이 적용된 경우 API Gateway access log
+- GitHub Actions log
+- S3/CloudFront CLI output
+
+현재 없음:
+
+- Sentry 또는 frontend error tracker
+- CloudWatch RUM client
+- Lighthouse CI
+- source-map upload
+- synthetic browser monitoring
+- 구조화된 frontend security event log
+
+production build는 console/debugger를 제거한다. error tracker가 없으므로 browser runtime incident 근거가 부족할 수 있다.
+
+## 11. Release와 Rollback
+
+Release 전 확인:
+
+1. git status와 diff 검토
+2. npm run verify
+3. SEO/API contract 변경이면 target backend에 npm run build:full
+4. main push가 즉시 deploy되어도 되는지 확인
+5. required secret과 backend health 확인
+6. 불필요한 full invalidation 금지
+
+Rollback 절차:
+
+1. bad commit을 git revert
+2. revert에서 npm run verify
+3. 정상 workflow로 redeploy
+4. root/static cache 제거가 필요할 때만 full invalidation
+5. 이전 behavior 재검증
+
+history rewrite reset은 shared production branch에서 사용하지 않는다.
+
+## 12. Incident Triage
+
+Blank/stale frontend:
+
+- index HTML과 missing chunk request 확인
+- asset object와 cache header 확인
+- stale chunk guard와 invalidation 상태 확인
+- font 문제면 /fonts/가 function에서 통과되는지 확인
+
+Prerender 실패:
+
+- VITE_API_URL과 backend product/category/SEO response 확인
+- runStats의 failed group 확인
+- partial artifact를 강제로 deploy하지 않음
+- policy 실패도 현재 completeness gate를 막는다는 점 확인
+
+인증 실패:
+
+- Set-Cookie와 backend response 확인
+- exact CORS origin, credential, cookie domain/SameSite/Secure 확인
+- client route guard 변경으로 우회하지 않음
+
+결제 실패:
+
+- 반복 승인 시도 중지
+- provider/order ID 보존
+- backend idempotency와 provider status 확인
+- callback URL과 browser transient state 보존
+
+## 13. 문서 권위
+
+현재 운영 절차는 이 문서, DEPLOY.md, tracked Terraform source만 사용한다.
+
+다음 ignored 문서는 historical unsafe snapshot이므로 명령·secret 이름·origin 변경 절차를 실행하면 안 된다.
+
+- CLOUDFRONT_SETUP.md
+- terraform/TERRA_SETUP_GUIDE.md
+
+다음 성능 문서는 historical measurement이며 현재 수치로 인용하지 않는다.
+
+- performance-final-report.md
+- performance-ultimate-report.md
+- performance-comparison.md
+
+## 14. Needs Verification
+
+- actual AWS resource와 Terraform drift
+- deployed CloudFront function version/association
+- backend content-update dispatch
+- S3 object versioning과 restore 가능성
+- DNS/certificate ownership
+- production security header
+- search/merchant console
+- 실제 cost와 performance
+
+검증 대기는 [Project Memory](../MEMORY.md)를 따른다.

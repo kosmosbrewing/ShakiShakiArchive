@@ -1,202 +1,235 @@
 # 배포 가이드
 
-## 🚀 자동 배포 시스템
+현재 기준 감사일: 2026-07-10
 
-main 브랜치에 Push하면 GitHub Actions가 자동으로 S3 + CloudFront 배포를 실행합니다.
+Production 배포의 단일 source는 .github/workflows/deploy.yml이다.
 
-## 📋 배포 프로세스
+## 1. High-Risk 경계
 
-```
-main 브랜치 Push
-  ↓
-GitHub Actions 트리거
-  ↓
-npm run build:full (운영 API 기준 Prerendering)
-  ↓
-S3 업로드 (Cache-Control 헤더 포함)
-  ↓
-CloudFront 캐시 무효화
-  ↓
-✅ 배포 완료
-```
+- main의 모든 push가 deploy될 수 있다. 문서-only push도 포함한다.
+- v* tag도 workflow를 실행한다.
+- repository_dispatch type content-update도 실행한다.
+- workflow_dispatch 수동 실행을 지원한다.
+- build:full은 설정된 backend API를 호출한다.
+- staging deploy workflow는 없다.
 
-## 🎯 캐시 무효화 전략
+이 문서/하네스 변경을 main에 push하면 S3 upload와 CloudFront invalidation이 발생할 수 있다. 실제 push와 deploy는 별도 릴리스 판단 후 수행한다.
 
-### 1. 선택적 무효화 (기본) - 비용 $0
+## 2. Pipeline
 
-**언제 사용:**
-- 콘텐츠 수정 (상품 추가/삭제, 텍스트 변경)
-- 작은 버그 수정
-- SEO 메타 태그 업데이트
+Ubuntu + Node.js 20 job:
 
-**무효화 대상:**
-- HTML 파일만 (`/index.html`, `/product/*`, `/productDetail/*`)
+1. Checkout
+2. Node setup과 npm cache
+3. npm ci
+4. VITE_API_URL, VITE_GA_ID, VITE_KAKAO_APP_KEY로 npm run build:full
+5. AWS credential 설정
+6. dist/assets를 1년 immutable cache로 S3 upload
+7. 나머지 dist를 5분 cache + stale-while-revalidate로 upload
+8. robots.txt, llms.txt, sitemap.xml UTF-8 content type 보정
+9. assets/ 60일 lifecycle 보장
+10. selective/full CloudFront invalidation
+11. IndexNow ping
+12. S3 Cache-Control 검증
+13. CloudFront domain summary
 
-**사용 방법:**
-```bash
-# 일반 커밋
-git add .
-git commit -m "feat: 새 상품 추가"
-git push origin main
-```
+Unit test, ESLint, browser smoke, security scan, Terraform validation은 current workflow에 없다.
 
-**비용:** 무료 (월 1,000회 무료 범위 내)
+## 3. GitHub Secrets
 
----
+프런트엔드:
 
-### 2. 전체 무효화 - 필요 시에만
+- VITE_API_URL
+- VITE_GA_ID, application behavior상 optional
+- VITE_KAKAO_APP_KEY, application behavior상 optional
 
-**언제 사용:**
-- 전체 디자인 리뉴얼
-- CSS/JS 긴급 버그 수정
-- 메이저 버전 릴리스
+AWS:
 
-**무효화 대상:**
-- 모든 파일 (`/*`)
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- AWS_S3_BUCKET_NAME
+- CLOUDFRONT_DISTRIBUTION_ID
 
-**사용 방법 (3가지):**
+Secret 값을 문서에 복사하지 않는다. GitHub Secrets로 주입해도 VITE_ 값은 build 후 public이다.
 
-#### 방법 1: 커밋 메시지에 키워드 포함 (추천)
-```bash
-git add .
-git commit -m "feat: 디자인 전면 개편 [full-invalidate]"
-git push origin main
-```
+IndexNow key는 protocol 특성상 공개값이며 script와 public text file에 존재한다.
 
-#### 방법 2: Git 태그 사용
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+## 4. Local Build
 
-#### 방법 3: 수동 트리거
-1. GitHub → Actions 탭
-2. "Deploy to AWS S3 + CloudFront" 선택
-3. "Run workflow" 클릭
-4. "전체 캐시 무효화" 체크박스 선택 ✅
-5. "Run workflow" 실행
+백엔드 없이:
 
-**비용:** 약간의 비용 발생 가능 (1,000회 초과 시 경로당 $0.005)
+    npm ci
+    npm run verify
 
----
+Backend가 준비된 경우:
 
-## 💰 비용 최적화 원리
+    VITE_API_URL=http://localhost:8080 npm run build:full
 
-### 파일 버전 관리 (해시 기반)
+실제 .env를 열거나 production API를 임의로 사용하지 않는다.
 
-Vite가 자동으로 파일명에 해시를 추가:
-```
-index-Cfoa3JrS.js  ← 코드 변경 시 해시 자동 갱신
-vendor-CPgcqiMU.js ← 새 파일명으로 인식
-```
+## 5. Fail-Closed Prerender
 
-### Cache-Control 헤더 전략
+scripts/prerender/index.js의 assertComplete는 다음을 검사한다.
 
-| 파일 타입 | Cache-Control | 설명 |
-|---------|--------------|------|
-| **HTML** | `max-age=300, must-revalidate` | 5분마다 재검증 |
-| **JS/CSS/이미지** | `max-age=31536000, immutable` | 1년 캐시, 변경 불가 |
+- home, FAQ, policy, category, product의 generated/attempted 일치
+- 모든 failed list가 비어 있음
+- sitemap 생성
+- llms.txt 갱신
 
-**결과:**
-- JS/CSS는 무효화 불필요 (해시 변경으로 자동 갱신)
-- HTML만 무효화하면 충분
-- 대부분의 경우 비용 $0
+하나라도 incomplete면 exit code 1로 workflow를 중단한다. S3 upload step은 실행되지 않는다.
 
----
+Why: partial dist가 성공 처리되면 non-assets sync --delete가 이전 정상 HTML을 삭제할 수 있다.
 
-## 🛠️ GitHub Secrets 설정
+## 6. Cache Policy
 
-Repository Settings → Secrets and variables → Actions
+Asset:
 
-| Secret 이름 | 설명 | 예시 |
-|------------|------|-----|
-| `VITE_API_URL` | 운영 백엔드 API URL | `https://api.shakishaki.com` |
-| `AWS_ACCESS_KEY_ID` | AWS 액세스 키 | - |
-| `AWS_SECRET_ACCESS_KEY` | AWS 시크릿 키 | - |
-| `AWS_REGION` | AWS 리전 | `ap-northeast-2` |
-| `AWS_S3_BUCKET_NAME` | S3 버킷 이름 | - |
-| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront Distribution ID | - |
+    Cache-Control: max-age=31536000, immutable
 
----
+HTML/root:
 
-## 📊 배포 시나리오별 가이드
+    Cache-Control: max-age=300, stale-while-revalidate=86400
 
-### 시나리오 1: 상품 추가/수정
-```bash
-git commit -m "feat: 겨울 신상품 10개 추가"
-git push origin main
-```
-→ HTML만 무효화 (비용 $0)
+assets/ lifecycle:
 
-### 시나리오 2: 작은 CSS 수정
-```bash
-git commit -m "fix: 버튼 색상 수정"
-git push origin main
-```
-→ HTML만 무효화 (비용 $0)
-→ 새 CSS 파일은 해시가 다르므로 자동 갱신
+- expiration 60일
+- deploy마다 재적용
+- 실패는 warning-only
+- bucket의 전체 lifecycle document를 교체
 
-### 시나리오 3: 전체 디자인 리뉴얼
-```bash
-git commit -m "feat: 메인 페이지 전면 리디자인 [full-invalidate]"
-git push origin main
-```
-→ 전체 무효화 (약간의 비용 발생 가능)
+다른 lifecycle rule이 필요하면 workflow JSON에 함께 병합한다.
 
-### 시나리오 4: 긴급 버그 수정
-```bash
-git commit -m "hotfix: 결제 오류 긴급 수정 [full-invalidate]"
-git push origin main
-```
-→ 전체 무효화로 즉시 반영
+## 7. Selective Invalidation
 
-### 시나리오 5: 메이저 버전 릴리스
-```bash
-git tag v2.0.0
-git push origin v2.0.0
-```
-→ 자동으로 전체 무효화 실행
+기본 path:
 
----
+- /index.html
+- /faq, /faq.html
+- /terms, /terms.html
+- /privacy, /privacy.html
+- /product/*
+- /productDetail/*
+- /sitemap.xml
+- /robots.txt
+- /llms.txt
 
-## ✅ 배포 확인
+전체 invalidation 조건:
 
-1. **GitHub Actions 로그 확인**
-   - Repository → Actions 탭
-   - 각 단계별 성공 여부 확인
+- tag
+- manual full_invalidation=true
+- head commit message에 [full-invalidate]
 
-2. **CloudFront 무효화 확인**
-   - AWS Console → CloudFront → Invalidations
-   - 진행 상태 확인 (보통 1-2분 소요)
+CloudFront wait timeout은 AWS invalidation 실패를 뜻하지 않을 수 있다.
 
-3. **SNS 공유 테스트**
-   - 카카오톡: https://developers.kakao.com/tool/debugger/sharing
-   - 페이스북: https://developers.facebook.com/tools/debug/
+FAQ/terms/privacy path가 selective list에 포함된 것은 stale cache 제거 목적이다. Policy summary HTML을 권위 문서로 서빙한다는 뜻이 아니다.
 
-4. **브라우저 캐시 확인**
-   - DevTools → Network 탭
-   - Cache-Control 헤더 확인
+## 8. CloudFront Function
 
----
+cloudfront-function.js의 현재 mapping:
 
-## 🔧 트러블슈팅
+- /assets/와 /fonts/ 통과
+- js/css/map/image/font/txt/xml/json 등 static extension 통과
+- /api/ 통과
+- / -> /index.html
+- /productDetail/{slug} -> matching .html
+- /product/all -> /index.html
+- /product/{actualCategorySlug} -> matching .html
+- /faq -> /faq.html
+- 기타 -> /index.html
 
-### Q: 배포 후에도 옛날 화면이 보여요
-**A:** 브라우저 캐시 삭제 또는 시크릿 모드로 확인
+Function publish/association은 deploy.yml과 Terraform에 자동화되어 있지 않다. Source 수정 후에도 AWS Console의 deployed function은 별도 검증이 필요하다.
 
-### Q: SNS 공유 시 옛날 이미지가 보여요
-**A:** SNS 디버거에서 캐시 갱신 (Fetch new information 클릭)
+## 9. Policy Page 서빙 금지선
 
-### Q: 긴급하게 전체를 업데이트해야 해요
-**A:** 수동 트리거 사용 (GitHub Actions → Run workflow → 체크박스 선택)
+scripts/prerender/staticPages.js는 terms.html/privacy.html을 만들지만 body는 Vue 원문의 별도 요약이며 내용이 동일하지 않다.
 
-### Q: 비용이 걱정돼요
-**A:** 기본 배포는 비용 $0, 전체 무효화도 월 1,000회까지 무료
+Single-source 결정 전:
 
----
+- /terms, /privacy를 generated .html로 rewrite하지 않는다.
+- 현재 function의 /index.html SPA fallback을 유지한다.
+- Vue page를 사용자에게 보이는 원문으로 취급한다.
+- summary를 canonical/legal source로 배포하지 않는다.
 
-## 📚 참고 자료
+Policy artifact 생성은 현재 completeness gate의 일부지만, 권위 문서로 서빙하는 결정과는 별개다.
 
-- [CloudFront 캐시 무효화 비용](https://aws.amazon.com/ko/cloudfront/pricing/)
-- [Cache-Control 헤더 가이드](https://developer.mozilla.org/ko/docs/Web/HTTP/Headers/Cache-Control)
-- [GitHub Actions 문서](https://docs.github.com/en/actions)
+현재 deploy는 summary .html도 upload하고 explicit .html request는 pass-through한다. Direct /terms.html과 /privacy.html 노출은 known gap이며 링크 금지와 함께 artifact 제거/single-source 전환이 필요하다.
+
+## 10. Release 검증
+
+Local 검증:
+
+    npm run verify
+    node --check cloudfront-function.js
+
+Backend fixture가 있으면:
+
+    npm run build:full
+
+확인 항목:
+
+- incomplete prerender가 non-zero로 실패
+- /fonts/ URI가 rewrite되지 않음
+- /product/all이 /index.html로 mapping
+- actual category/product detail/FAQ mapping
+- /terms와 /privacy가 policy summary .html로 mapping되지 않음
+- selective invalidation path에 FAQ/terms/privacy 포함
+
+실제 public curl, AWS Console, deploy는 별도 승인된 운영 점검에서 수행한다.
+
+## 11. Rollback
+
+권장 code rollback:
+
+1. bad commit 확인
+2. git revert
+3. npm run verify
+4. 정상 workflow로 redeploy
+5. root/static cache 제거가 필요한 경우만 full invalidation
+6. 이전 behavior 확인
+
+Shared production branch에서 history-rewriting reset을 사용하지 않는다.
+
+S3 version restore는 이 repository에서 자동화되지 않는다. Bucket versioning을 실제 AWS에서 확인하기 전에는 rollback 수단으로 가정하지 않는다.
+
+## 12. Terraform 범위
+
+terraform/backend:
+
+- remote-state S3 bucket
+- DynamoDB lock table
+
+terraform/environments/prod:
+
+- API Gateway HTTP API
+- VPC Link와 security group
+- Cloud Map namespace/service
+- API Gateway access log
+
+CloudFront distribution resource는 주석 상태다. 기존 VPC, subnet, ECS cluster, ECS task security group은 data source다.
+
+안전한 check:
+
+    terraform fmt -check -recursive
+
+apply, import, destroy, CloudFront origin 변경, ECS service-discovery attachment는 reviewed plan과 rollback이 필요한 High-risk 작업이다.
+
+## 13. Historical Unsafe Guide
+
+다음 ignored local guide는 현재 source와 불일치한다.
+
+- CLOUDFRONT_SETUP.md
+- terraform/TERRA_SETUP_GUIDE.md
+
+그 안의 function code, secret 이름, cache/origin/Terraform 명령을 실행하지 않는다. 현재 절차는 이 문서, docs/DEVOPS.md, tracked source만 따른다.
+
+## 14. 운영 Gap
+
+- source-controlled staging 없음
+- automated browser smoke 없음
+- CloudFront function publish 자동화 없음
+- frontend error tracking 없음
+- production AWS state를 repository만으로 증명할 수 없음
+- policy single-source 미해결
+
+관련 문서: [DevOps](docs/DEVOPS.md), [Project Memory](MEMORY.md).

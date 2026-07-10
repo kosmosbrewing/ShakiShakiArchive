@@ -84,6 +84,40 @@ function printSummary(runStats) {
 }
 
 /**
+ * 일부 페이지가 빠진 채 성공 종료하면 뒤의 S3 sync --delete가 이전 정상 HTML을 지울 수 있다.
+ * 배포 artifact는 전 페이지가 생성됐을 때만 성공으로 취급한다.
+ */
+function assertComplete(runStats) {
+  const incomplete = [];
+  const pageGroups = [
+    ["홈", runStats.home],
+    ["FAQ", runStats.faq],
+    ["정책", runStats.staticPolicies],
+    ["카테고리", runStats.categories],
+    ["상품 상세", runStats.products],
+  ];
+
+  for (const [label, stats] of pageGroups) {
+    if (stats.failed.length > 0 || stats.generated !== stats.attempted) {
+      incomplete.push(
+        `${label} ${stats.generated}/${stats.attempted}` +
+          (stats.failed.length > 0 ? ` (${stats.failed.join(", ")})` : "")
+      );
+    }
+  }
+  if (!runStats.sitemap.generated || runStats.sitemap.failed.length > 0) {
+    incomplete.push("sitemap.xml");
+  }
+  if (!runStats.llms.updated || runStats.llms.failed.length > 0) {
+    incomplete.push("llms.txt");
+  }
+
+  if (incomplete.length > 0) {
+    throw new Error(`불완전한 prerender artifact: ${incomplete.join("; ")}`);
+  }
+}
+
+/**
  * 메인 Prerender 함수
  */
 async function prerender() {
@@ -120,6 +154,7 @@ async function prerender() {
     };
 
     printSummary(runStats);
+    assertComplete(runStats);
   } catch (error) {
     console.error("\n❌ Prerendering 실패:", error);
     process.exit(1);

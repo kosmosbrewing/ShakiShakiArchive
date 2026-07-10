@@ -1,488 +1,206 @@
-# 주요 기술 과제
-
-> ShakiShaki Archive 개발 중 마주한 5가지 주요 기술 과제와 해결 방법을 상세히 기록합니다.
+# 현재 기술 과제와 결정
 
----
+현재 기준 감사일: 2026-07-10
 
-## 📖 목차
+이 문서는 현재 frontend code에서 확인되는 문제와 선택을 기록한다. 검증되지 않은 production metric이나 backend 구현을 주장하지 않는다.
 
-1. [모바일 결제 후 뒤로 가기 UX 문제](#case-1-모바일-결제-후-뒤로-가기-ux-문제)
-2. [네이버페이 모바일 "페이지를 찾을 수 없음" 오류](#case-2-네이버페이-모바일-페이지를-찾을-수-없음-오류)
-3. [N+1 쿼리 문제 (주문 조회)](#case-3-n1-쿼리-문제-주문-조회)
-4. [재고 경쟁 조건 (Race Condition)](#case-4-재고-경쟁-조건-race-condition)
-5. [이미지 로딩 성능 최적화](#case-5-이미지-로딩-성능-최적화)
+## 1. Route Code Splitting 회귀 방지
 
----
+문제:
 
-## Case 1: 모바일 결제 후 뒤로 가기 UX 문제
+static route import와 넓은 manual chunk group은 public entry에 admin/payment code를 preload할 수 있다.
 
-### 문제 상황
+현재 설계:
 
-```
-[주문 페이지] → [PG사 결제 페이지] → [결제 완료 페이지]
-                      ↑
-                   뒤로 가기 시 여기로 이동 (나쁜 UX!)
-```
+- 모든 route page를 src/router/index.ts에서 dynamic import
+- page-domain manual chunk grouping 금지
+- vendor match를 vue 문자열이 아닌 path segment로 제한
+- Three.js를 home lazy dependency로 분리
+- API와 image optimizer를 안정적인 shared chunk로 분리
 
-**사용자 시나리오:**
-1. 모바일에서 토스페이/네이버페이로 결제 완료
-2. 뒤로 가기 버튼 클릭
-3. **PG사 결제 페이지로 이동** (이미 완료된 결제)
-4. 사용자 혼란 ("다시 결제해야 하나?")
+회귀 규칙:
 
-### 근본 원인
+Router에서 page barrel을 import하지 않는다. Build 후 dist/index.html의 modulepreload에 admin/order page가 없는지 확인한다.
 
-- 모바일 결제는 `window.location.href` 방식으로 리다이렉트
-- 브라우저가 PG사 페이지를 히스토리 스택에 자동 추가
-- Vue Router로는 **외부 도메인 히스토리 제어 불가**
+## 2. Stale HTML과 Hashed Lazy Chunk
 
-### 해결 방안
+문제:
 
-**파일**: `src/pages/order/PaymentCallback.vue`
+브라우저가 old index HTML을 유지한 채 새 deploy의 hash chunk를 요청하면 dynamic import 404가 날 수 있다.
 
-```typescript
-// 1. 모바일 환경 감지
-const isMobile = computed(() => {
-  if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-});
+현재 설계:
 
-// 2. 결제 완료 후 네비게이션
-setTimeout(() => {
-  const targetUrl = confirmResult.order?.id
-    ? `/orderdetail/${confirmResult.order.id}`
-    : "/orderlist";
+- asset upload에서 즉시 delete하지 않음
+- assets/를 60일 lifecycle로 보존
+- router.onError와 vite:preloadError가 같은 sessionStorage guard 사용
+- reload는 한 번만 시도
+- 성공 navigation에서 guard 해제
 
-  // ✅ 모바일: window.location.replace() 사용
-  // → 현재 히스토리 엔트리를 완전히 대체 (PG사 페이지 건너뜀)
-  if (isMobile.value && !isPopup.value) {
-    window.location.replace(targetUrl);
-  } else {
-    // PC: Vue Router 사용 (부드러운 전환)
-    router.replace(targetUrl);
-  }
-}, 2000);
-```
+트레이드오프:
 
-### 결과
+old asset이 storage를 사용한다. 60일보다 긴 deploy 공백이 있으면 아직 참조되는 asset도 만료될 수 있다.
 
-**변경 전:**
-```
-[주문 페이지] → [PG사 페이지] → [결제 완료 페이지]
-                      ↑ 뒤로 가기
-```
+## 3. Static Asset Rewrite
 
-**변경 후:**
-```
-[주문 페이지] → [결제 완료 페이지]
-     ↑               ↓
-     └─── 뒤로 가기 ──┘  (PG사 페이지 건너뜀!)
-```
+문제:
 
-### 성과
+CloudFront SPA fallback이 font/image 요청까지 index.html로 바꾸면 MIME mismatch와 전체 font failure가 발생한다.
 
-- 모바일 결제 UX 개선 (PG사 페이지 건너뜀)
-- 고객 문의 **"결제 후 뒤로 가기가 이상해요" 완전 해결**
+현재 설계:
 
-### 기술적 교훈
+- /assets/와 /fonts/ prefix 통과
+- js, css, image, font, txt, xml, json 등 정적 확장자 통과
+- API prefix 통과
 
-1. **외부 도메인 히스토리는 JavaScript로 제어 불가**
-   - PG사 페이지는 Same-Origin Policy로 접근 차단
-   - `history.replaceState()`로도 수정 불가
+Function test에서는 URI가 변경되지 않는지 확인해야 한다.
 
-2. **`window.location.replace()` vs `router.replace()`**
-   - `window.location.replace()`: 브라우저 히스토리 완전 대체 (페이지 새로고침)
-   - `router.replace()`: Vue Router 히스토리만 대체 (SPA 전환)
+## 4. 합성 Category와 실제 Prerender Category
 
-3. **조건부 네비게이션**
-   - 모바일: 히스토리 완전 대체 (페이지 새로고침 허용)
-   - PC: SPA 전환 유지 (부드러운 UX)
+문제:
 
----
+/product/all은 frontend에서 합성하는 목록이며 backend category가 아니다. 모든 /product/{slug}를 .html로 바꾸면 존재하지 않는 product/all.html을 요청한다.
 
-## Case 2: 네이버페이 모바일 "페이지를 찾을 수 없음" 오류
+현재 설계:
 
-### 문제 상황
+- /product/all은 /index.html SPA fallback
+- backend가 제공한 실제 category slug만 product/{slug}.html 대상으로 처리
 
-```
-PC 네이버페이: ✅ 정상 작동
-모바일 네이버페이: ❌ "페이지를 찾을 수 없습니다" 오류
-```
+## 5. Live Catalog 기반 SPA SEO
 
-**에러 로그:**
-```
-Naver Pay App → http://shakishaki.com/checkout/success?orderId=123
-                  ❌ 404 Not Found (상대 URL 인식 실패)
-```
+문제:
 
-### 근본 원인
+Vue route content는 base HTML에 없고 product metadata와 catalog는 backend에서 변한다.
 
-- 백엔드 API가 `/checkout/success` (상대 경로) 반환
-- PC 팝업: 상대 경로 정상 작동 (Same-Origin)
-- 모바일 앱: 네이버페이 앱에서 리다이렉트 → **절대 URL 필요**
+현재 설계:
 
-### 해결 방안
+- build:full이 paginated product와 category를 수집
+- page별 SEO API에서 Open Graph와 JSON-LD 수신
+- FAQ/product/category body 주입
+- sitemap과 llms date 생성
+- CloudFront function이 FAQ/category/product detail을 static HTML에 연결
 
-**파일**: `src/pages/order/Order.vue`
+트레이드오프:
 
-```typescript
-// 백엔드에서 받은 상대 경로를 절대 경로로 변환
-const absoluteReturnUrl = sdkConfig.returnUrl.startsWith('http')
-  ? sdkConfig.returnUrl  // 이미 절대 경로면 그대로 사용
-  : `${window.location.origin}${sdkConfig.returnUrl}`;  // 절대 경로로 변환
+- backend availability와 data 시점에 build가 의존
+- output이 시간에 따라 달라짐
+- function publication은 deploy.yml 밖의 운영 작업
 
-// 네이버페이 SDK에 절대 URL 전달
-Naver.Pay.create({
-  mode: sdkConfig.mode,
-  clientId: sdkConfig.clientId,
-  openType: isMobile ? "page" : "popup",  // 모바일: 앱 연동
-  returnUrl: `${absoluteReturnUrl}?orderId=${orderData.orderId}`,  // ✅ 절대 URL
-});
-```
+## 6. Incomplete Prerender 차단
 
-### 변환 예시
+문제:
 
-```
-Input (백엔드):  /checkout/success
-Output (프론트): https://shakishaki.com/checkout/success
-                 ↑ window.location.origin 추가
-```
+개별 page 실패를 warning으로만 처리하면 partial dist가 성공 배포되고 S3 sync --delete가 이전 정상 file을 제거할 수 있다.
 
-### 결과
+현재 설계:
 
-- 모바일 네이버페이 결제 오류 완전 해결
-- "페이지를 찾을 수 없음" 에러 0건
+assertComplete는 모든 page group, sitemap, llms 결과를 검사해 하나라도 incomplete면 exit code 1로 중단한다.
 
-### 기술적 교훈
+검증 과제:
 
-1. **모바일 앱 연동 시 절대 URL 필수**
-   - 네이버페이 앱은 별도 프로세스 (앱 스키마 `naversearchapp://`)
-   - 상대 경로는 앱 컨텍스트에서 해석 불가
+- mock failure에서 non-zero exit 확인
+- empty category/product가 정상 empty인지 API 오류인지 구분
+- 실패 후 upload step이 실행되지 않는지 workflow 수준 확인
 
-2. **`window.location.origin` 활용**
-   - 브라우저 표준 API (지원: Chrome 4+, Firefox 21+, Safari 6+)
-   - 프로토콜 + 도메인 + 포트 자동 추출 (`https://example.com:3000`)
+## 7. 정책 Summary와 Vue 원문 Drift
 
-3. **개발/프로덕션 환경 자동 대응**
-   - 로컬: `http://localhost:5173/checkout/success`
-   - 프로덕션: `https://shakishaki.com/checkout/success`
+문제:
 
----
+staticPages.js가 자체 terms/privacy 요약을 보유하고 Vue page도 별도 원문을 보유한다. 두 사본은 동일하지 않아 법적·privacy 고지가 drift한다.
 
-## Case 3: N+1 쿼리 문제 (주문 조회)
+현재 결정:
 
-### 문제 상황
+- Vue page를 사용자에게 보이는 원문으로 취급
+- /terms와 /privacy는 SPA fallback
+- generated summary HTML로 CloudFront rewrite 금지
+- single-source 결정 전 summary를 canonical/legal source로 사용 금지
 
-**사용자가 주문 내역 10개 조회 시:**
+남은 gap:
 
-```sql
--- ❌ BAD: 11번의 쿼리 (1 + 10)
-SELECT * FROM orders WHERE user_id = 123;  -- 1번
+- direct .html request는 pass-through되므로 summary file이 공개될 수 있음
+- duplicate artifact 생성/upload 제거가 필요
 
--- 각 주문마다 상품 정보 조회 (10번 반복)
-SELECT * FROM products WHERE id = 1;
-SELECT * FROM products WHERE id = 2;
-...
-SELECT * FROM products WHERE id = 10;
-```
+향후 선택:
 
-**성능 영향:**
-- DB 왕복: 11번 (네트워크 레이턴시 누적)
-- 응답 시간: 1.2초 (주문 10개 기준)
+- Vue 원문에서 build-time HTML을 생성하거나
+- 공통 structured policy source에서 Vue/prerender를 함께 생성
 
-### 해결 방안 (백엔드)
+## 8. Cookie Session과 Guest Cart
 
-**파일**: `OrderRepository.java` (Spring Data JPA)
+문제:
 
-```java
-@Query("""
-    SELECT o FROM Order o
-    JOIN FETCH o.orderItems oi
-    JOIN FETCH oi.product p
-    WHERE o.user.id = :userId
-    ORDER BY o.createdAt DESC
-    """)
-List<Order> findAllByUserIdWithProducts(@Param("userId") Long userId);
-```
+anonymous user는 server identity 없이 cart가 필요하고 login 후 item을 유지해야 한다.
 
-**최적화된 쿼리:**
-```sql
--- ✅ GOOD: 1번의 쿼리 (JOIN)
-SELECT
-  o.*, oi.*, p.*
-FROM orders o
-INNER JOIN order_items oi ON o.id = oi.order_id
-INNER JOIN products p ON oi.product_id = p.id
-WHERE o.user_id = 123
-ORDER BY o.created_at DESC;
-```
+현재 설계:
 
-**프론트엔드 API 호출:**
+- guest_cart는 localStorage
+- member cart는 backend
+- authStore가 login/session restore 후 순차 migration
+- productId와 quantity normalize
+- migration attempt 후 local guest data 제거
 
-```typescript
-// src/lib/api.ts
-export async function fetchOrders(): Promise<Order[]> {
-  // 백엔드가 JOIN된 데이터를 반환 (1번 호출로 모든 정보 획득)
-  return apiCall<Order[]>('/api/orders');
-}
-```
+트레이드오프:
 
-### 결과
+일부 migration 실패 시 local item이 사라질 수 있다. retry/reconciliation이 필요한지 제품 결정이 필요하다.
 
-| 지표 | Before | After | 개선율 |
-|------|--------|-------|--------|
-| 쿼리 횟수 | 11번 | 1번 | **91% ↓** |
-| 응답 시간 | 1.2초 | 0.15초 | **87% ↓** |
+## 9. Popup과 Redirect 결제 복구
 
-### 기술적 교훈
+문제:
 
-1. **N+1 문제는 프론트엔드에서 해결 불가**
-   - 프론트엔드에서 개별 API 호출하면 더 느림 (네트워크 레이턴시)
-   - 백엔드에서 JOIN으로 일괄 조회 필수
+desktop popup, popup block, mobile redirect, focus/back, provider callback의 lifecycle이 다르다. 중복 callback이 business side effect를 반복하면 안 된다.
 
-2. **프론트엔드의 역할: 적절한 API 설계 요구**
-   - "주문 목록" API가 상품 정보를 포함하도록 요구사항 명시
-   - GraphQL 대안: 필요한 필드만 선택적 조회
+현재 설계:
 
----
+- Order.vue가 transient provider/order marker 저장
+- PaymentCallback.vue가 success/fail/cancel과 popup handoff 처리
+- processed marker로 반복 처리 완화
+- keepalive 기반 best-effort order cleanup
+- UI에는 KakaoPay만 노출
 
-## Case 4: 재고 경쟁 조건 (Race Condition)
+Browser flag와 query param은 hint일 뿐이다. backend provider status, amount, ownership, idempotency가 최종 상태를 결정한다.
 
-### 문제 상황
+## 10. 빠른 Mount와 Backend Constants
 
-**시나리오: 재고 1개 남은 상품을 2명이 동시 구매**
+문제:
 
-```
-User A: 장바구니 추가 (재고 확인: 1개) ✅
-User B: 장바구니 추가 (재고 확인: 1개) ✅
-User A: 결제 완료 (재고 차감: 0개) ✅
-User B: 결제 완료 (재고 차감: -1개) ❌ 오버셀링!
-```
+mount 전 constants를 기다리면 first paint가 늦지만 shipping/payment 계산은 정확한 값이 필요하다.
 
-### 근본 원인
+현재 설계:
 
-- 재고 확인과 차감이 **원자적(Atomic) 연산이 아님**
-- 동시성 제어 없음 (Race Condition)
+- app을 먼저 mount
+- constants를 background load
+- 일반 UI는 FALLBACK_CONSTANTS 사용 가능
+- concurrent load는 같은 Promise 공유
+- Order.vue는 ensureLoaded로 critical calculation 전 대기
 
-### 해결 방안 (백엔드 - 비관적 락)
+Fallback이 backend와 drift할 수 있으므로 결제 경로의 ensureLoaded를 제거하지 않는다.
 
-**파일**: `ProductRepository.java`, `OrderService.java`
+## 11. Public Cache와 Private Data
 
-```java
-// ProductRepository.java
-@Lock(LockModeType.PESSIMISTIC_WRITE)
-@Query("SELECT p FROM Product p WHERE p.id = :id")
-Optional<Product> findByIdWithLock(@Param("id") Long id);
+문제:
 
-// OrderService.java
-@Transactional
-public Order createOrder(CreateOrderRequest request) {
-    // 1. 상품 조회 및 락 획득 (다른 트랜잭션은 대기)
-    Product product = productRepository.findByIdWithLock(request.getProductId())
-        .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다"));
+catalog call은 cache 이점이 있지만 user/order data cache는 leakage와 stale commerce risk를 만든다.
 
-    // 2. 재고 확인
-    if (product.getStock() < request.getQuantity()) {
-        throw new OutOfStockException("재고가 부족합니다");
-    }
+현재 설계:
 
-    // 3. 재고 차감 (원자적 연산)
-    product.decreaseStock(request.getQuantity());
+- category/product/site image/constants만 bounded memory TTL
+- sensitive endpoint pattern은 noCache 강제
+- mutation 후 관련 public cache invalidate
+- logout에서 전체 cache clear
 
-    // 4. 주문 생성
-    Order order = Order.create(request, product);
-    return orderRepository.save(order);
-}  // 트랜잭션 커밋 시 락 해제
-```
+새 sensitive route를 추가할 때 NEVER_CACHE_PATTERNS도 검토한다.
 
-**프론트엔드 에러 처리:**
+## 12. Historical Unsafe Guide
 
-**파일**: `src/pages/order/Order.vue`
+CLOUDFRONT_SETUP.md와 terraform/TERRA_SETUP_GUIDE.md는 현재 source와 불일치하는 ignored historical snapshot이다. 그 안의 function code, secret 이름, origin/Terraform 명령을 실행하지 않는다.
 
-```typescript
-try {
-  const order = await createOrder(orderData);
-  router.push('/checkout');
-} catch (error) {
-  if (error.code === 'OUT_OF_STOCK') {
-    showError('재고가 부족합니다. 수량을 조정해주세요.');
-    // 장바구니 재고 정보 갱신
-    await refreshCart();
-  } else {
-    showError('주문 생성에 실패했습니다.');
-  }
-}
-```
+## 13. 다음 과제
 
-### 결과
+- common API timeout
+- auth guard, cart migration, payment callback test
+- fail-closed prerender fixture 자동화
+- policy single-source
+- payment provider surface 확정과 dormant path 정리
+- CloudFront function publication 절차 자동화/문서화
+- 개인정보 filtering을 포함한 frontend error tracking
 
-- 오버셀링 발생률: **3.2% → 0%**
-- 재고 불일치 이슈 완전 해결
-
-### 기술적 교훈
-
-1. **동시성 제어는 백엔드 책임**
-   - 프론트엔드에서는 동시성 제어 불가 (여러 사용자가 독립적으로 접속)
-   - 백엔드에서 DB 락(Pessimistic Lock) 또는 낙관적 락(Optimistic Lock) 사용
-
-2. **프론트엔드의 역할: 사용자 경험 최적화**
-   - 재고 부족 에러 시 친절한 메시지 표시
-   - 장바구니 재고 정보 실시간 갱신
-
-3. **락의 종류 선택**
-   - **비관적 락**: 재고 관리 (충돌 빈번, 데이터 무결성 중요)
-   - **낙관적 락**: 게시글 수정 (충돌 드묾, 동시성 우선)
-
----
-
-## Case 5: 이미지 로딩 성능 최적화
-
-### 문제 상황
-
-**상품 목록 페이지에서 60개 상품 이미지 동시 로드:**
-
-```
-초기 로딩 시간: 8.5초
-Lighthouse Performance: 52점
-Largest Contentful Paint (LCP): 6.2초
-```
-
-### 근본 원인
-
-- 모든 이미지를 즉시 로드 (60개 * 평균 200KB = 12MB)
-- 뷰포트 밖 이미지도 로드 (스크롤해야 보이는 이미지)
-- WebP 포맷 미사용 (PNG 대비 30% 큰 용량)
-
-### 해결 방안
-
-#### 1. Lazy Loading (지연 로딩)
-
-**파일**: `src/components/ProductCard.vue`
-
-```vue
-<template>
-  <div class="product-card">
-    <img
-      :src="product.imageUrl"
-      :alt="product.name"
-      loading="lazy"  <!-- ✅ 브라우저 네이티브 Lazy Loading -->
-      class="product-image"
-    />
-  </div>
-</template>
-```
-
-#### 2. Intersection Observer (커스텀 지연 로딩)
-
-**파일**: `src/composables/useLazyImage.ts`
-
-```typescript
-export function useLazyImage() {
-  const imageRef = ref<HTMLImageElement>();
-  const isLoaded = ref(false);
-
-  onMounted(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          const img = imageRef.value;
-          if (img && img.dataset.src) {
-            img.src = img.dataset.src;  // 실제 이미지 로드
-            isLoaded.value = true;
-            observer.unobserve(img);
-          }
-        }
-      },
-      { rootMargin: '50px' }  // 뷰포트 50px 전에 미리 로드
-    );
-
-    if (imageRef.value) {
-      observer.observe(imageRef.value);
-    }
-  });
-
-  return { imageRef, isLoaded };
-}
-```
-
-#### 3. WebP 포맷 변환 (백엔드)
-
-**파일**: `ImageService.java` (백엔드)
-
-```java
-public String uploadProductImage(MultipartFile file) {
-    // 1. 이미지 리사이징 (1200px 최대 너비)
-    BufferedImage resized = Thumbnails.of(file.getInputStream())
-        .size(1200, 1200)
-        .asBufferedImage();
-
-    // 2. WebP 포맷으로 변환
-    ByteArrayOutputStream webpOutput = new ByteArrayOutputStream();
-    ImageIO.write(resized, "webp", webpOutput);
-
-    // 3. S3 업로드
-    String key = "products/" + UUID.randomUUID() + ".webp";
-    s3Client.putObject(bucket, key, webpOutput.toByteArray());
-
-    return cdnUrl + "/" + key;
-}
-```
-
-### 결과
-
-| 지표 | Before | After | 개선율 |
-|------|--------|-------|--------|
-| 초기 로딩 시간 | 8.5초 | 2.1초 | **75% ↓** |
-| Lighthouse Performance | 52점 | 96점 | **84% ↑** |
-| LCP (Largest Contentful Paint) | 6.2초 | 1.8초 | **71% ↓** |
-| 총 이미지 용량 | 12MB | 3.2MB | **73% ↓** |
-
-### 기술적 교훈
-
-1. **브라우저 네이티브 기능 우선**
-   - `loading="lazy"` 속성: 간단하고 성능 우수 (Intersection Observer보다 빠름)
-   - 지원: Chrome 77+, Firefox 75+, Safari 15.4+
-
-2. **프로그레시브 로딩 전략**
-   - 1순위: 뷰포트 내 이미지 (즉시 로드)
-   - 2순위: 뷰포트 근처 이미지 (rootMargin: 50px)
-   - 3순위: 뷰포트 밖 이미지 (스크롤 시 로드)
-
-3. **이미지 최적화는 백엔드와 협업**
-   - 프론트: Lazy Loading, Placeholder 표시
-   - 백엔드: 리사이징, WebP 변환, CDN 업로드
-
----
-
-## 요약
-
-### 문제 해결 패턴
-
-| 과제 | 문제 영역 | 해결 주체 | 핵심 기술 |
-|------|-----------|-----------|-----------|
-| 1. 모바일 뒤로 가기 | UX | 프론트엔드 | `window.location.replace()` |
-| 2. 네이버페이 404 | 통합 | 프론트엔드 | `window.location.origin` |
-| 3. N+1 쿼리 | 성능 | 백엔드 | JOIN FETCH |
-| 4. 재고 경쟁 조건 | 동시성 | 백엔드 | Pessimistic Lock |
-| 5. 이미지 로딩 | 성능 | 프론트+백엔드 | Lazy Loading + WebP |
-
-### 핵심 교훈
-
-1. **문제의 근본 원인을 정확히 파악하라**
-   - 증상만 보지 말고 Why를 5번 물어라
-
-2. **적절한 레이어에서 해결하라**
-   - 프론트엔드 문제: 프론트에서 해결
-   - 백엔드 문제: 백엔드에서 해결
-   - 협업 필요: 양쪽 모두 수정
-
-3. **성과를 측정하라**
-   - Before/After 수치로 개선 효과 검증
-   - 사용자 피드백으로 실제 UX 개선 확인
-
-**관련 문서**:
-- [시스템 아키텍처](ARCHITECTURE.md)
-- [DevOps & 성능](DEVOPS.md)
-- [보안](SECURITY.md)
+관련 문서: [Architecture](ARCHITECTURE.md), [Security](SECURITY.md), [Project Memory](../MEMORY.md).

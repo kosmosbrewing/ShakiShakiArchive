@@ -1,530 +1,267 @@
 # 시스템 아키텍처
 
-> ShakiShaki Archive 프론트엔드의 전체 시스템 아키텍처, 폴더 구조, 기술 스택 선택 근거를 상세히 설명합니다.
-
----
-
-## 📖 목차
-
-1. [전체 아키텍처 다이어그램](#전체-아키텍처-다이어그램)
-2. [프론트엔드 폴더 구조](#프론트엔드-폴더-구조)
-3. [데이터 흐름](#데이터-흐름)
-4. [기술 스택 선택 근거](#기술-스택-선택-근거)
-
----
-
-## 전체 아키텍처 다이어그램
-
-```mermaid
-graph TB
-    subgraph "Client Layer"
-        Browser[Web Browser<br/>Chrome/Safari/Firefox]
-        Mobile[Mobile Browser<br/>iOS/Android]
-    end
-
-    subgraph "CDN Layer - AWS CloudFront"
-        CDN[CloudFront<br/>전 세계 엣지 로케이션<br/>캐시 TTL: 1시간]
-    end
-
-    subgraph "Storage Layer - AWS S3"
-        S3[S3 Bucket<br/>정적 파일 호스팅<br/>dist/]
-    end
-
-    subgraph "Application Layer - Vue 3 SPA"
-        Router[Vue Router<br/>클라이언트 사이드 라우팅]
-        Store[Pinia Store<br/>전역 상태 관리]
-        Components[Vue Components<br/>Composition API]
-    end
-
-    subgraph "Backend Services"
-        API[Backend API Server<br/>Spring Boot<br/>Port 8080]
-        DB[(PostgreSQL<br/>주문/상품/사용자)]
-    end
-
-    subgraph "External Services"
-        Toss[토스페이먼츠<br/>결제 PG]
-        Naver[네이버페이<br/>간편결제]
-        Kakao[카카오/네이버<br/>소셜 로그인]
-        DaumAPI[다음 주소 API<br/>배송지 검색]
-    end
-
-    Browser --> CDN
-    Mobile --> CDN
-    CDN --> S3
-    S3 --> Router
-    Router --> Components
-    Components --> Store
-    Store --> API
-    API --> DB
-
-    Components -.결제.-> Toss
-    Components -.결제.-> Naver
-    Components -.소셜로그인.-> Kakao
-    Components -.주소검색.-> DaumAPI
-
-    style CDN fill:#FF9900
-    style S3 fill:#569A31
-    style API fill:#6DB33F
-    style DB fill:#336791
-```
-
----
-
-## 프론트엔드 폴더 구조
-
-### 전체 구조
-
-```
-src/
-├── pages/              # 페이지 컴포넌트 (라우트별)
-│   ├── auth/           # 인증 (Login, Signup, OAuth)
-│   ├── order/          # 주문 (Order, OrderList, PaymentCallback)
-│   ├── product/        # 상품 (Product, ProductDetail)
-│   ├── admin/          # 관리자 페이지
-│   └── static/         # 정적 페이지 (PrivacyPolicy)
-│
-├── components/         # 재사용 컴포넌트
-│   ├── ui/             # Shadcn/Vue 기본 컴포넌트
-│   ├── common/         # 공통 컴포넌트 (AddressForm, LoadingSpinner)
-│   └── admin/          # 관리자 전용 컴포넌트
-│
-├── composables/        # Vue Composables (비즈니스 로직)
-│   ├── useCart.ts      # 장바구니 로직
-│   ├── useOrders.ts    # 주문 로직
-│   ├── useAlert.ts     # 전역 알림
-│   └── useConfirm.ts   # 전역 확인 다이얼로그
-│
-├── stores/             # Pinia Stores (전역 상태)
-│   ├── auth.ts         # 인증 상태
-│   ├── cart.ts         # 장바구니 상태
-│   └── wishlist.ts     # 위시리스트 상태
-│
-├── services/           # 외부 서비스 연동
-│   ├── payment.ts      # 토스/네이버페이 SDK
-│   ├── socialAuth.ts   # 소셜 로그인
-│   └── addressSearch.ts # 다음 주소 API
-│
-├── lib/                # 유틸리티 & API 클라이언트
-│   ├── api.ts          # Fetch 기반 API 클라이언트
-│   ├── formatters.ts   # 가격/날짜 포맷터
-│   └── validators.ts   # Zod 스키마 검증
-│
-├── router/             # Vue Router 설정
-│   └── index.ts        # 라우트 정의 + 네비게이션 가드
-│
-└── types/              # TypeScript 타입 정의
-    └── api.ts          # API 인터페이스 (DTO)
-```
-
-### 폴더별 상세 설명
-
-#### `pages/` - 페이지 컴포넌트
-
-라우트별로 분리된 페이지 컴포넌트. 각 도메인(auth, order, product 등)별로 그룹화하여 관리합니다.
-
-**예시:**
-- `pages/auth/Login.vue` - 로그인 페이지
-- `pages/order/PaymentCallback.vue` - 결제 콜백 처리
-- `pages/admin/ProductAdmin.vue` - 관리자 상품 관리
-
-#### `composables/` - Vue Composables
-
-재사용 가능한 비즈니스 로직을 Composition API 패턴으로 분리합니다.
-
-**예시: `composables/useCart.ts`**
-```typescript
-export function useCart() {
-  const cartStore = useCartStore();
-  const { showSuccess, showError } = useAlert();
-
-  async function addToCart(productId: number, options: ProductOptions) {
-    try {
-      await cartStore.addItem(productId, options);
-      showSuccess('장바구니에 추가되었습니다!');
-    } catch (error) {
-      showError('장바구니 추가에 실패했습니다.');
-    }
-  }
-
-  return { addToCart, ...cartStore };
-}
-```
-
-#### `stores/` - Pinia Stores
-
-전역 상태 관리. 각 도메인별로 Store를 분리합니다.
-
-**예시: `stores/auth.ts`**
-```typescript
-export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null);
-  const isAuthenticated = computed(() => !!user.value);
-
-  async function loadUser() {
-    try {
-      user.value = await fetchMe();
-    } catch {
-      user.value = null;
-    }
-  }
-
-  return { user, isAuthenticated, loadUser };
-});
-```
-
-#### `lib/api.ts` - API 클라이언트
-
-모든 백엔드 API 호출을 중앙화하여 보안 설정(credentials, headers)을 일관되게 적용합니다.
-
-```typescript
-export async function apiCall<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    credentials: 'include', // CSRF 토큰 자동 전송
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
-  }
-
-  return response.json();
-}
-```
-
----
-
-## 데이터 흐름
-
-### 일반적인 사용자 액션 흐름
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Component
-    participant Composable
-    participant Store
-    participant API
-    participant Backend
-
-    User->>Component: 버튼 클릭 (장바구니 추가)
-    Component->>Composable: addToCart(productId, options)
-    Composable->>Store: cart.addItem()
-    Store->>API: POST /api/cart
-    API->>Backend: HTTP Request (credentials: include)
-    Backend-->>API: 200 OK + 장바구니 데이터
-    API-->>Store: 응답 데이터
-    Store->>Store: 상태 업데이트 (reactive)
-    Store-->>Composable: 성공
-    Composable-->>Component: 성공 메시지
-    Component->>User: Alert 표시 ("장바구니에 추가되었습니다")
-```
-
-### 레이어별 역할
-
-| 레이어 | 역할 | 예시 |
-|--------|------|------|
-| **Component** | UI 렌더링, 사용자 이벤트 처리 | `ProductDetail.vue` |
-| **Composable** | 비즈니스 로직, 에러 처리 | `useCart()` |
-| **Store** | 전역 상태 관리, API 호출 조정 | `useCartStore()` |
-| **API** | HTTP 통신, 보안 설정 | `apiCall()` |
-| **Backend** | 비즈니스 로직, DB 처리 | Spring Boot API |
-
----
-
-## 기술 스택 선택 근거
-
-### 1. Vue 3 (Composition API) vs React
-
-#### 선택 이유
-
-1. **학습 곡선 낮음**: 1인 개발에서 빠른 MVP 개발에 유리
-2. **TypeScript 공식 지원**: `<script setup lang="ts">` 문법으로 타입 안전성 확보
-3. **성능**: Virtual DOM 최적화 (Proxy 기반 반응성)
-4. **생태계**: Pinia, Vue Router 공식 지원
-
-#### 대안 검토
-
-| 프레임워크 | 장점 | 단점 | 선택하지 않은 이유 |
-|-----------|------|------|--------------------|
-| React | 생태계 방대, 채용 시장 유리 | 보일러플레이트 많음, 상태 관리 혼란 | 1인 개발에는 과도한 복잡도 |
-| Svelte | 번들 크기 최소, 컴파일 타임 최적화 | 생태계 작음, 라이브러리 부족 | 엔터프라이즈 사례 부족 |
-| Angular | 엔터프라이즈급 기능 내장 | 학습 곡선 가파름, 번들 크기 큼 | 오버엔지니어링 |
-
-#### 코드 비교
-
-```typescript
-// Vue 3 Composition API (선택)
-<script setup lang="ts">
-import { ref, computed } from 'vue';
-
-const count = ref(0);
-const doubled = computed(() => count.value * 2);
-
-function increment() {
-  count.value++;
-}
-</script>
-
-// React Hooks (대안)
-import { useState, useMemo } from 'react';
-
-function Counter() {
-  const [count, setCount] = useState(0);
-  const doubled = useMemo(() => count * 2, [count]);
-
-  function increment() {
-    setCount(count + 1);
-  }
-
-  return <div>...</div>;
-}
-```
-
-**결론**: Vue의 간결함이 빠른 MVP 개발에 유리
-
----
-
-### 2. TypeScript
-
-#### 선택 이유
-
-1. **런타임 오류 사전 차단**: 컴파일 타임에 80% 버그 발견
-2. **자동 완성 (IntelliSense)**: VSCode에서 API 자동 완성 → 개발 속도 30% 향상
-3. **리팩토링 안전성**: 함수 시그니처 변경 시 자동으로 오류 탐지
-4. **협업 준비**: 타입 정의 = 살아있는 문서
-
-#### 적용 사례
-
-```typescript
-// src/types/api.ts - API 응답 타입 정의
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  stock: number;
-  imageUrl: string;
-  category: Category;
-}
-
-export interface Order {
-  id: number;
-  totalPrice: number;
-  status: 'pending' | 'payment_confirmed' | 'shipped' | 'delivered';
-  orderItems: OrderItem[];
-  createdAt: string;
-}
-
-// src/lib/api.ts - 타입 안전한 API 호출
-export async function fetchProduct(id: number): Promise<Product> {
-  return apiCall<Product>(`/api/products/${id}`);
-}
-
-// 사용 예시: VSCode가 자동 완성 제공
-const product = await fetchProduct(123);
-console.log(product.name);  // ✅ 타입 안전
-console.log(product.title); // ❌ 컴파일 오류: Property 'title' does not exist
-```
-
-#### 성과
-
-- 런타임 오류: **85% 감소** (컴파일 타임에 차단)
-- 개발 속도: **30% 향상** (자동 완성 + 리팩토링)
-
----
-
-### 3. Pinia vs Vuex
-
-#### 선택 이유
-
-1. **Vue 3 공식 상태 관리**: Vuex의 후속 (더 간단한 API)
-2. **TypeScript 자동 추론**: `ref()`, `computed()` 타입 추론 완벽
-3. **DevTools 지원**: 시간 여행 디버깅
-4. **모듈화**: 스토어 분리 용이
-
-#### 코드 비교
-
-```typescript
-// ❌ Vuex (복잡함)
-const store = createStore({
-  state: { count: 0 },
-  mutations: {
-    increment(state) {
-      state.count++;
-    },
-  },
-  actions: {
-    incrementAsync({ commit }) {
-      setTimeout(() => commit('increment'), 1000);
-    },
-  },
-});
-
-// ✅ Pinia (간결함)
-export const useCounterStore = defineStore('counter', () => {
-  const count = ref(0);
-
-  function increment() {
-    count.value++;
-  }
-
-  async function incrementAsync() {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    count.value++;
-  }
-
-  return { count, increment, incrementAsync };
-});
-```
-
----
-
-### 4. Tailwind CSS + Shadcn/Vue
-
-#### 선택 이유
-
-1. **빠른 프로토타이핑**: 유틸리티 클래스로 즉시 스타일링
-2. **일관된 디자인**: CSS 변수 기반 테마 시스템
-3. **번들 최적화**: PurgeCSS로 미사용 스타일 자동 제거
-4. **컴포넌트 재사용**: Shadcn/Vue (Radix Vue 기반 접근성 우수)
-
-#### Tailwind vs CSS-in-JS
-
-```vue
-<!-- ✅ Tailwind (선택) -->
-<template>
-  <button class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90">
-    클릭
-  </button>
-</template>
-
-<!-- ❌ CSS-in-JS (styled-components) -->
-<template>
-  <StyledButton>클릭</StyledButton>
-</template>
-
-<script>
-const StyledButton = styled.button`
-  padding: 0.5rem 1rem;
-  background-color: var(--primary);
-  color: white;
-  border-radius: 0.375rem;
-
-  &:hover {
-    background-color: var(--primary-dark);
-  }
-`;
-</script>
-```
-
-#### 장점
-
-- HTML 한 곳에서 스타일 확인 (가독성)
-- 런타임 오버헤드 없음 (CSS-in-JS는 JS 실행 필요)
-- PurgeCSS로 최종 번들 크기 **45.67 kB** (gzip: 12.34 kB)
-
----
-
-### 5. Vite vs Webpack
-
-#### 선택 이유
-
-1. **빠른 개발 서버**: ESBuild 기반 (Webpack 대비 10배 빠름)
-2. **HMR (Hot Module Replacement)**: 파일 저장 즉시 브라우저 업데이트
-3. **TypeScript 기본 지원**: 설정 없이 즉시 사용
-4. **프로덕션 최적화**: Rollup 기반 번들링 (Tree Shaking)
-
-#### 성능 비교
-
-| 지표 | Webpack 5 | Vite | 개선율 |
-|------|-----------|------|--------|
-| 개발 서버 시작 | 8.5초 | 0.9초 | **89% ↓** |
-| HMR 속도 | 1.2초 | 0.05초 | **96% ↓** |
-| 프로덕션 빌드 | 45초 | 2초 | **96% ↓** |
-
-#### 설정 간소화
-
-```typescript
-// vite.config.ts (Vite)
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': '/src',  // @ 경로 별칭
-    },
-  },
-});
-
-// webpack.config.js (Webpack) - 비교
-module.exports = {
-  entry: './src/main.ts',
-  module: {
-    rules: [
-      { test: /\.vue$/, loader: 'vue-loader' },
-      { test: /\.ts$/, loader: 'ts-loader' },
-      // ... 수십 줄의 설정
-    ],
-  },
-  // ... 복잡한 설정 계속
-};
-```
-
----
-
-### 6. AWS S3 + CloudFront
-
-#### 선택 이유
-
-1. **서버리스**: EC2 서버 관리 불필요
-2. **무한 확장성**: S3는 트래픽에 자동 확장
-3. **낮은 비용**: 월 $12 (1만 PV 기준)
-4. **CDN 성능**: CloudFront 전 세계 엣지 로케이션
-
-#### 대안 검토
-
-| 서비스 | 비용 (월) | 장점 | 단점 |
-|--------|----------|------|------|
-| Vercel | $20 | 자동 배포, 프리뷰 환경 | 프리미엄 플랜 필요 (대역폭 제한) |
-| Netlify | $0 (무료) | 무료 플랜 충분 | 빌드 시간 제한 (월 300분) |
-| AWS S3+CF | $12 | 무한 확장, 세밀한 제어 | 설정 복잡 |
-
-#### 비용 분석 (월 1만 PV 기준)
-
-```
-S3 저장소: $0.023/GB * 1GB = $0.023
-S3 요청: $0.0004/1000 * 10,000 = $0.004
-CloudFront 데이터 전송: $0.085/GB * 100GB = $8.5
-CloudFront 요청: $0.0075/10,000 * 10,000 = $0.75
-
-총 비용: ~$9.3/월 (안전 마진 포함 $12)
-```
-
-#### Vercel 대비 이점
-
-- 무제한 대역폭 (Vercel은 100GB 제한)
-- 세밀한 캐시 제어 (CloudFront 정책)
-- AWS 생태계 통합 (S3, Lambda@Edge 확장 가능)
-
----
-
-## 요약
-
-ShakiShaki Archive 프론트엔드는 **"빠른 MVP 개발"**과 **"엔터프라이즈급 품질"**을 모두 달성하기 위해 신중하게 선택된 기술 스택으로 구성되어 있습니다.
-
-### 핵심 선택 기준
-
-1. **개발 속도**: Vue 3 + Vite (간결함, 빠른 빌드)
-2. **타입 안전성**: TypeScript 100% (런타임 오류 차단)
-3. **비용 효율성**: AWS S3 + CloudFront (월 $12)
-4. **확장 가능성**: 모듈화된 아키텍처, Composable 패턴
-
-**관련 문서**:
-- [주요 기술 과제](TECHNICAL_CHALLENGES.md)
-- [DevOps & 성능](DEVOPS.md)
-- [보안](SECURITY.md)
+현재 기준 감사일: 2026-07-10
+
+## 1. 시스템 경계
+
+이 저장소가 소유하는 범위:
+
+- Vue 브라우저 애플리케이션
+- client-side routing과 상태 관리
+- 프런트엔드 API contract
+- 공개 페이지의 build-time prerender
+- S3/CloudFront 배포 workflow
+- API Gateway에서 ECS로 연결하는 보조 Terraform
+
+이 저장소만으로 확정할 수 없는 범위:
+
+- 백엔드 인가와 비즈니스 규칙
+- DB schema와 migration
+- 결제 provider secret, webhook, idempotency
+- AWS Console의 실제 배포 상태
+- Search Console과 Merchant Console 설정
+
+## 2. 런타임 구성
+
+    사용자 브라우저
+      -> CloudFront
+        -> S3 정적 HTML/assets
+        -> 배포된 API origin/behavior
+      -> Vue Router
+      -> lazy page component
+      -> Pinia/composable
+      -> src/lib/api.ts
+      -> cookie session 기반 backend API
+
+    Build runner
+      -> Vite build
+      -> backend catalog/SEO API
+      -> prerender HTML + sitemap
+      -> 완전성 검사
+      -> S3 upload
+      -> CloudFront invalidation
+
+프런트와 백엔드가 서로 다른 origin을 사용할 수 있으므로 credentialed cookie, 정확한 CORS allowlist, cookie 속성이 함께 맞아야 한다.
+
+## 3. 애플리케이션 계층
+
+### Router
+
+src/router/index.ts가 전체 route를 정의한다.
+
+- 모든 route page는 dynamic import를 사용한다.
+- meta.requiresAuth와 meta.requiresAdmin이 client navigation을 제어한다.
+- navigation 전에 document title을 갱신한다.
+- UUID 상품 URL은 API에서 slug를 얻으면 canonical slug route로 교체한다.
+- NotFound route는 robots noindex,nofollow를 설정한다.
+- lazy chunk load 실패는 sessionStorage guard로 한 번만 reload한다.
+
+### Pages와 Components
+
+- src/pages: route 단위 orchestration
+- src/components/common: 재사용 domain UI
+- src/components/order: 주문·반품 UI
+- src/components/admin: 관리자 UI
+- src/components/ui: radix-vue 기반 low-level component
+- App.vue: Navbar, route view, Footer, 전역 alert
+
+### Composables와 Stores
+
+Composables는 장바구니, 상품, 주문, 배송지, 위시리스트, 재고, 이미지, alert 같은 재사용 workflow를 캡슐화한다.
+
+Pinia stores는 다음 공유 상태를 관리한다.
+
+- auth
+- cart
+- product
+- category
+- wishlist
+- site images
+- backend constants
+
+### API와 Types
+
+- src/lib/api.ts: 주 REST adapter
+- src/types/api.ts: frontend contract type
+- src/lib/apiCache.ts: 공개 GET data의 제한적 memory cache
+- src/services: 외부 SDK와 compatibility helper
+- src/lib/messages: domain별 사용자 메시지
+
+## 4. 핵심 데이터 흐름
+
+### 상품 탐색
+
+    route slug
+      -> product store/composable
+      -> fetchProduct 또는 fetchProducts
+      -> 짧은 public-data cache
+      -> page UI
+
+상품 mutation은 관련 cache group을 invalidate한다.
+
+### Session
+
+    App mount
+      -> authStore.loadUser
+      -> GET /api/auth/user with cookie
+      -> Pinia auth state
+      -> guest cart migration
+
+현재 활성 인증 설계는 localStorage access token을 필요로 하지 않는다.
+
+### 보호 route
+
+    route meta
+      -> user 미존재 시 session 조회
+      -> requiresAuth 검사
+      -> requiresAdmin 검사
+      -> page 진입
+
+이 검사는 UX guard일 뿐이다. 모든 실제 권한은 백엔드가 재검증해야 한다.
+
+### Checkout
+
+    direct purchase 또는 cart
+      -> order items와 backend constants 로드
+      -> 배송/결제 입력 검증
+      -> order 생성
+      -> provider redirect/popup
+      -> callback page
+      -> backend status/approval
+      -> cache와 임시 state 정리
+
+현재 UI는 KakaoPay만 노출한다. Toss/NaverPay code path의 존재는 활성 결제 수단을 뜻하지 않는다.
+
+## 5. 브라우저 저장소
+
+Memory:
+
+- Pinia state
+- 최대 100개 API cache entry
+- in-flight request guard
+
+localStorage:
+
+- guest_cart
+- OAuth popup/result flag
+- payment popup/result/current-order flag
+- 짧은 processed-payment guard
+
+sessionStorage:
+
+- direct purchase
+- OAuth reauthentication state
+- product view dedupe
+- chunk reload guard
+- 임시 form state
+
+브라우저 저장소는 same-origin JavaScript가 읽고 사용자가 조작할 수 있다. 인증 authority와 결제 확정 근거를 저장해서는 안 된다.
+
+## 6. Vite Build
+
+현재 build 특성:
+
+- JS/CSS/assets hashed filename
+- route 기반 code splitting
+- vendor, UI, libs, Three.js, API, image-optimizer chunk 분리
+- production source map 비활성
+- console/debugger 제거
+- home-only Three.js core를 고려한 600 kB warning limit
+- Vite build 후 public font를 dist/fonts로 복사
+
+Router에서 page barrel import를 다시 사용하면 eager preload가 재발할 수 있으므로 금지한다.
+
+## 7. Prerender와 완전성 계약
+
+scripts/prerender/index.js는 다음을 조정한다.
+
+- paginated product 수집
+- category 수집
+- page별 SEO API 호출
+- home, FAQ, policy, category, product HTML 생성
+- sitemap 생성
+- llms.txt Last-Updated 갱신
+
+assertComplete(runStats)는 다음 조건을 모두 만족해야 성공시킨다.
+
+- 각 page group의 generated가 attempted와 동일
+- 각 page group의 failed가 비어 있음
+- sitemap 생성 성공
+- llms.txt 갱신 성공
+
+하나라도 빠지면 process exit code 1로 fail-closed한다. Why: 불완전한 dist를 성공 처리하면 뒤의 S3 sync --delete가 이전 정상 HTML을 제거할 수 있기 때문이다.
+
+## 8. 정책 페이지의 Single Source 경계
+
+src/pages/static/TermsOfService.vue와 PrivacyPolicy.vue가 브라우저에서 보여 주는 현재 원문이다.
+
+scripts/prerender/staticPages.js에도 terms/privacy 요약 HTML이 별도로 있으나 Vue 원문을 그대로 변환한 것이 아니며 내용·분량이 다르다. 따라서:
+
+- terms.html과 privacy.html은 현재 권위 정책 문서가 아니다.
+- CloudFront에서 /terms 또는 /privacy를 해당 HTML로 rewrite하면 안 된다.
+- single-source 생성 방식이 확정되기 전에는 SPA fallback으로 Vue 원문을 제공한다.
+- policy summary를 검색엔진 canonical 본문이나 법적 고지 근거로 사용하지 않는다.
+
+Prerender가 이 파일들을 생성하고 완전성 검사 대상으로 삼는 것은 현재 build 사실이지만, 생성 여부와 권위 문서로 서빙하는 결정은 별개다.
+
+현재 pipeline은 summary .html도 upload하며 function의 explicit .html pass-through 때문에 direct URL이 노출될 수 있다. 이 gap은 P0로 제거해야 한다.
+
+## 9. CloudFront Rewrite 계약
+
+checked-in cloudfront-function.js의 현재 동작:
+
+- /assets/와 /fonts/는 그대로 통과
+- 정적 파일 확장자는 SPA fallback 없이 통과
+- /는 /index.html
+- /productDetail/{slug}는 해당 .html
+- /product/all은 합성 category이므로 /index.html
+- 실제 /product/{categorySlug}는 해당 .html
+- /faq는 /faq.html
+- 나머지는 /index.html
+
+따라서 /terms와 /privacy는 의도적으로 SPA fallback을 사용한다. policy single source가 해결되기 전에는 rewrite를 추가하지 않는다.
+
+## 10. 배포 아키텍처
+
+    GitHub event
+      -> GitHub Actions
+      -> npm ci
+      -> npm run build:full
+      -> fail-closed completeness gate
+      -> S3 sync
+      -> lifecycle configuration
+      -> CloudFront invalidation
+      -> IndexNow
+
+selective invalidation은 index, FAQ, terms/privacy, product/category path와 discovery file을 포함한다. terms/privacy invalidation 포함은 cache 정리 범위이며 요약 HTML을 권위 문서로 서빙한다는 뜻이 아니다.
+
+완전히 source-controlled되지 않은 항목:
+
+- CloudFront distribution과 function association
+- 기존 S3 bucket과 IAM
+- 기존 VPC/ECS/subnet
+- DNS와 certificate
+
+## 11. 문서 권위
+
+현재 절차는 README.md, DEPLOY.md, docs/DEVOPS.md, Terraform source를 따른다.
+
+다음 ignored local 문서는 historical unsafe snapshot이며 실행 절차로 사용하면 안 된다.
+
+- CLOUDFRONT_SETUP.md
+- terraform/TERRA_SETUP_GUIDE.md
+- performance-final-report.md
+- performance-ultimate-report.md
+
+## 12. 현재 제약
+
+- unit/component/E2E test framework 없음
+- ESLint script 없음
+- frontend error tracking 없음
+- 공통 fetch timeout 없음
+- production console 제거
+- full build가 backend availability에 의존
+- CloudFront function publish/association 자동화 없음
+- policy prerender summary와 Vue 원문의 single source 미해결
+
+최신 검증 대기는 [Project Memory](../MEMORY.md)를 따른다.

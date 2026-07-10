@@ -1,0 +1,35 @@
+# Copy this tracked placeholder to terraform.tfvars and fill it locally.
+# terraform.tfvars is ignored and may contain environment-specific identifiers.
+
+aws_region   = "ap-northeast-2"
+aws_profile  = "default"
+environment  = "prod"
+project_name = "shakishaki"
+
+# Existing VPC: prefer an explicit ID, or leave it empty and set vpc_name.
+vpc_id   = "vpc-xxxxxxxxxxxxxxxxx"
+vpc_name = ""
+
+# Existing private subnets: prefer explicit IDs, or use private_subnet_tags.
+private_subnet_ids = [
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-yyyyyyyyyyyyyyyyy",
+]
+private_subnet_tags = {}
+
+ecs_cluster_name        = "shakishaki-cluster"
+ecs_security_group_name = "shakishaki-ecs-tasks-sg"
+ecs_container_port      = 8080
+
+service_discovery_namespace = "shakishaki.local"
+
+cors_allowed_origins = [
+  "https://shakishakiarchive.com",
+  "https://www.shakishakiarchive.com",
+]
+frontend_domain   = "shakishakiarchive.com"
+log_retention_days = 30
+
+# Used only if the commented CloudFront Terraform resource is enabled after import.
+cloudfront_aliases  = []
+acm_certificate_arn = ""

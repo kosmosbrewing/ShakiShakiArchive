@@ -1,454 +1,239 @@
-# ShakiShaki Archive Frontend 🛍️
+# ShakiShaki Archive Frontend
 
-> **빈티지 의류 쇼핑몰 MVP - 보안과 성능을 타협하지 않은 1인 개발 프로젝트**
+ShakiShaki Archive의 빈티지 커머스 웹 프런트엔드입니다. Vue 3 SPA로 상품 탐색, 장바구니, 계정, 주문, 문의와 관리자 기능을 제공하고, 공개 상품 페이지는 빌드 시 정적 HTML로 프리렌더합니다.
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript25-blue)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-Private-red)](LICENSE)
+현재 기준 감사일: 2026-07-10
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-3.x-06B6D4?logo=tailwind-css&logoColor=white" />
-  <img src="https://img.shields.io/badge/AWS-API_Gateway_+_CloudFront-FF9900?logo=amazon-aws&logoColor=white" />
-  <img src="https://img.shields.io/badge/Terraform-IaC-7B42BC?logo=terraform&logoColor=white" />
-  <img src="https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white" />
-</p>
+> 코드와 설정이 동작의 단일 진실 소스입니다. 날짜가 붙은 릴리스/품질 문서와 performance-comparison.md는 당시 스냅샷이며 현재 성능이나 운영 상태를 보장하지 않습니다.
 
-<p align="center">
-  <img src="https://res.cloudinary.com/diyuvt3qg/image/upload/v1769258073/shakishaki/products/jfqepwrgv5zyimdx3wis.jpg" />
-</p>
+## 현재 제품 범위
 
----
+### 공개 영역
 
-## 🎯 프로젝트 개요
+- 홈, 카테고리별 상품 목록, slug 기반 상품 상세
+- Sold Archive, Journal, About, Notice
+- 비회원 localStorage 장바구니와 로그인 후 서버 장바구니 병합
+- FAQ, 공개 문의 목록/상세
+- 개인정보 처리방침, 이용약관
+- 카카오 공유, GA4 선택 구성
 
-**"보안과 성능을 타협하지 않으면서, 빠른 MVP 출시를 달성한 엔터프라이즈급 이커머스 프론트엔드"**
+### 계정
 
-ShakiShaki Archive는 Vue 3 + TypeScript로 구축된 빈티지 의류 쇼핑몰 웹 애플리케이션입니다.
+- 이메일 인증 회원가입, 이메일/비밀번호 로그인, 비밀번호 재설정
+- Naver/Kakao OAuth 진입과 공용 OAuth callback
+- 관리자 로그인 2차 인증 UI
+- 회원정보, 배송지, 위시리스트, 주문 내역
+- 주문 취소/부분 취소, 반품 요청·송장, 구매 확정 UI
 
-### 핵심 가치 제안
+### 주문·결제
 
-- **Security First**: OWASP Top 10 무결점, XSS/CSRF/Open Redirect 완벽 차단
-- **Mobile-Optimized**: 모바일 결제 UX 최적화 (PG사 히스토리 관리)
-- **Developer Experience**: TypeScript 100%, 자동 배포, 명확한 아키텍처
-- **Cost-Effective**: 서버리스 아키텍처로 월 $25 운영 목표 (트래픽 1만 PV 기준)
+- 현재 Order.vue가 사용자에게 노출하는 결제 수단은 KakaoPay 1개입니다.
+- Toss/NaverPay 구현 코드는 남아 있으나 현재 결제 수단 목록에는 노출되지 않습니다.
+- 이 상태가 장기 제품 정책인지, 비활성 통합을 정리할지는 Needs Verification입니다.
 
----
+### 관리자
 
-## ✨ 핵심 기능
-
-### 🛒 쇼핑 기능
-
-- 카테고리별 상품 브라우징 및 검색
-- 장바구니 (비회원/회원 자동 병합)
-- 위시리스트
-- 재고 실시간 확인 및 선점 시스템
-
-### 💳 결제 시스템
-
-- **토스페이먼츠**: PC iframe / 모바일 리다이렉트
-- **네이버페이**: PC 팝업 / 모바일 앱 연동
-- 재고 소프트 락 (3분 TTL)
-- 결제 실패 시 자동 환불
-
-### 👤 회원 기능
-
-- 이메일 회원가입/로그인
-- 소셜 로그인 (네이버, 카카오)
-- OAuth 2.0 인증 플로우
-- 마이페이지 (주문 내역, 배송지 관리)
-
-### 📦 주문 관리
-
-- 주문서 작성 (다음 주소 API 연동)
-- 주문 상태 추적 (결제완료 → 배송준비중 → 배송중 → 배송완료)
-- 주문 취소 및 환불
-
-### 🔧 관리자 기능
-
-- 상품/카테고리 관리
-- 주문/결제/배송 관리
-- 문의 답변
-- 회원 관리
+- 상품·옵션·실측·카테고리 관리
+- 주문·항목·환불 관리
+- 문의·답변 관리
+- 회원·권한 관리
 - 사이트 이미지 관리
+- 분석 요약 화면
+
+## 기술 스택
 
----
-
-## 🛠️ 기술 스택
-
-| 구분          | 기술                     | 버전 | 선택 근거                                  |
-| ------------- | ------------------------ | ---- | ------------------------------------------ |
-| Framework     | Vue.js (Composition API) | 3.x  | 낮은 학습 곡선, TypeScript 공식 지원       |
-| Language      | TypeScript               | 5.x  | 런타임 오류 사전 차단, 자동 완성           |
-| State         | Pinia                    | 2.x  | Vue 3 공식 상태 관리 (Vuex 후속)           |
-| Router        | Vue Router               | 4.x  | 클라이언트 사이드 라우팅 + 네비게이션 가드 |
-| Styling       | Tailwind CSS             | 3.x  | 빠른 프로토타이핑, 번들 최적화             |
-| UI Components | Radix Vue, shadcn/vue    | -    | 접근성 우수, 재사용 가능                   |
-| Validation    | VeeValidate + Zod        | -    | 타입 안전 폼 검증                          |
-| Build Tool    | Vite                     | 5.x  | Webpack 대비 10배 빠른 빌드                |
-| Payment       | 토스페이먼츠, 네이버페이 | SDK  | PG 연동                                    |
-| Deployment    | AWS S3 + CloudFront      | -    | 서버리스, 낮은 비용                        |
-| API Layer     | API Gateway + VPC Link   | v2   | ALB 대비 70% 비용 절감                     |
-| IaC           | Terraform                | -    | 인프라 코드화                              |
-| CI/CD         | GitHub Actions           | -    | 자동 배포 (45초)                           |
-
-**상세 기술 스택 선택 근거**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
----
-
-## 🏗️ System Architecture
-
-```
-                              ShakiShaki Archive - System Architecture
-
-                                     +-------------+
-                                     |   Client    |
-                                     |  (Browser)  |
-                                     +------+------+
-                                            | HTTPS
-                                            v
-                      +---------------------------------------------+
-                      |           CloudFront (CDN + SSL/TLS)        |
-                      |  - HTTPS 종료, 글로벌 엣지, DDoS 보호       |
-                      |  - 캐시: Assets 1년, HTML 5분               |
-                      +---------------------+-----------------------+
-                                            |
-                       +--------------------+--------------------+
-                       |                                         |
-                       v  /*                                     v  /api/*
-              +----------------+                    +---------------------------+
-              |   S3 Bucket    |                    |  API Gateway (HTTP v2)    |
-              |  - index.html  |                    |  - CORS 설정              |
-              |  - assets/     |                    |  - Route: ANY /{proxy+}   |
-              |    - *.js      |                    |  - CloudWatch 로깅        |
-              |    - *.css     |                    +-----------+---------------+
-              |    - images/   |                                |
-              +----------------+                                v
-                                                   +---------------------------+
-                                                   |        VPC Link           |
-   +------------------------+                      |  - Private Subnet 연결    |
-   |   Terraform (IaC)      |                      |  - Security Group 적용    |
-   |  - API Gateway         |                      +-----------+---------------+
-   |  - VPC Link            |                                  |
-   |  - Cloud Map           |                                  v
-   |  - Security Groups     |                      +---------------------------+
-   +------------------------+                      |   Cloud Map (DNS: SRV)    |
-                                                   |  - 동적 IP 등록/해제      |
-   +------------------------+                      |  - MULTIVALUE 로드밸런싱  |
-   | GitHub Actions (CI/CD) |                      +-----------+---------------+
-   |  1. npm run build      |                                  |
-   |  2. S3 Sync            |                                  v
-   |  3. Cache Invalidate   |                      +---------------------------+
-   |  4. 배포 검증          |                      |   ECS Fargate (Private)   |
-   +------------------------+                      |  - Node.js + Express      |
-                                                   |  - Helmet (CSP, HSTS)     |
-                                                   |  - Rate Limiting          |
-                                                   |  - Session Auth           |
-                                                   |  - Zod Validation         |
-                                                   |  - bcrypt Hashing         |
-                                                   +-----------+---------------+
-                                                               |
-                                                               v
-                                                   +---------------------------+
-                                                   |    PostgreSQL (RDS)       |
-                                                   |  - SSL 연결               |
-                                                   |  - Drizzle ORM            |
-                                                   |  - Session 저장소         |
-                                                   +---------------------------+
-
-   +---------------------------------------------------------------------------+
-   | Security: SSL/ACM, OAuth 2.0, Rate Limiting, Helmet, CORS, bcrypt         |
-   | DevOps: Terraform IaC, GitHub Actions CI/CD                               |
-   +---------------------------------------------------------------------------+
-```
-
----
-
-## 🚀 Quick Start
-
-### 사전 요구사항
-
-- Node.js 18.x 이상
-- npm 9.x 이상
-- Git 2.x 이상
-
-### 설치 및 실행
-
-```bash
-# 1. 저장소 클론
-# Note: 비공개 저장소입니다. 실제 URL은 별도 문의해주세요.
-git clone <repository-url>
-cd shakishaki-archive
-
-# 2. 의존성 설치
-npm install
-
-# 3. 환경 변수 설정
-cp .env.example .env
-# .env 파일에서 VITE_API_URL 수정
-
-# 4. 개발 서버 실행
-npm run dev
-
-# ✅ 브라우저에서 http://localhost:5173 접속
-```
-
-### 주요 스크립트
-
-| 명령어                 | 설명                             |
-| ---------------------- | -------------------------------- |
-| `npm run dev`          | 개발 서버 실행 (Vite, HMR 지원)  |
-| `npm run build`        | TypeScript 검사 + 프로덕션 빌드  |
-| `npm run preview`      | 빌드 결과물 로컬 미리보기        |
-| `npx vue-tsc --noEmit` | TypeScript 타입 체크 (빌드 없이) |
-
----
-
-## 📁 프로젝트 구조
-
-```
-ShakiShakiArchive/
-├── src/
-│   ├── pages/              # 페이지 컴포넌트 (auth, order, product, admin 등)
-│   ├── components/         # 재사용 컴포넌트 (ui, common, admin)
-│   ├── composables/        # Vue Composables (useCart, useOrders, useAlert 등)
-│   ├── stores/             # Pinia Stores (auth, cart, wishlist)
-│   ├── services/           # 외부 서비스 연동 (payment, socialAuth, addressSearch)
-│   ├── lib/                # 유틸리티 & API 클라이언트 (api, formatters, validators)
-│   ├── router/             # Vue Router 설정 (라우트 정의 + 네비게이션 가드)
-│   └── types/              # TypeScript 타입 정의 (API 인터페이스)
-│
-├── docs/                   # 상세 문서
-│   ├── ARCHITECTURE.md     # 시스템 아키텍처, 폴더 구조, 기술 스택 상세
-│   ├── TECHNICAL_CHALLENGES.md  # 5가지 주요 기술 과제 해결 사례
-│   ├── DEVOPS.md           # CI/CD, 모니터링, FinOps, 성능 지표
-│   └── SECURITY.md         # 보안 & 컴플라이언스 (OWASP Top 10)
-│
-├── .github/workflows/      # CI/CD
-│   └── deploy.yml          # S3 + CloudFront 자동 배포
-│
-├── terraform/              # Infrastructure as Code
-│   └── environments/prod/
-│       ├── api-gateway.tf       # API Gateway + Routes
-│       ├── vpc-link.tf          # VPC Link + Security Group
-│       ├── service-discovery.tf # Cloud Map (SRV 레코드)
-│       └── variables.tf         # 변수 정의
-│
-├── CLAUDE.md               # 프로젝트 가이드라인
-├── .claudeignore           # AI 컨텍스트 격리
-├── vite.config.ts
-├── tailwind.config.js
-└── package.json
-```
-
-**상세 아키텍처 다이어그램**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
----
-
-## 💬 메시지 관리 시스템
-
-사용자에게 표시되는 모든 알림, 에러 메시지는 `src/lib/messages/`에서 중앙 집중 관리됩니다.
-
-### 파일 구조
-
-```
-src/lib/messages/
-├── index.ts        # 모든 메시지 re-export
-├── auth.ts         # 인증 관련 (로그인, 회원가입, 비밀번호 등)
-├── account.ts      # 계정 관리 (프로필 수정, 회원 탈퇴 등)
-├── order.ts        # 주문 관련 (주문 취소, 배송 추적 등)
-├── cart.ts         # 장바구니 관련
-├── inquiry.ts      # 문의 관련
-├── product.ts      # 상품 관련
-├── admin.ts        # 관리자 기능 관련
-└── common.ts       # 공통 메시지
-```
+- Vue 3 Composition API와 TypeScript strict mode
+- Pinia 3, Vue Router 4
+- Vite 6
+- Tailwind CSS 3, radix-vue 기반 UI 컴포넌트
+- Zod, vee-validate
+- fetch 중심 API layer와 일부 Axios 호환 경로
+- Three.js 홈 비주얼
+- Node 기반 prerender와 sitemap/IndexNow 스크립트
+- AWS S3, CloudFront, GitHub Actions
 
-### 사용 방법
+정확한 의존성 버전은 package.json과 package-lock.json을 확인합니다.
 
-```typescript
-// 1. 필요한 메시지 상수 import
-import { AUTH_MESSAGES, ORDER_MESSAGES } from "@/lib/messages";
+## 빠른 시작
+
+### 요구사항
+
+- Node.js 20.x 권장: CI도 Node.js 20을 사용합니다.
+- npm과 실행 가능한 ShakiShakiArchiveBackend
+
+### 설치
 
-// 2. 컴포넌트에서 사용
-showAlert(AUTH_MESSAGES.loginSuccess);
-showAlert(ORDER_MESSAGES.cancelSuccess);
+    npm ci
+    cp .env.example .env
+    npm run dev
 
-// 3. 플레이스홀더가 있는 메시지
-// admin.ts: saveFailed: "저장 실패: {message}"
-showAlert(ADMIN_MESSAGES.saveFailed.replace("{message}", error.message));
-```
+개발 서버 기본 주소는 Vite 기본값인 http://localhost:5173이며, API 기본 주소는 VITE_API_URL이 없을 때 http://localhost:8080입니다.
+
+실제 .env 파일은 커밋하거나 문서에 전재하지 않습니다.
 
-### 새 메시지 추가하기
+## 환경 변수
 
-```typescript
-// src/lib/messages/auth.ts
-export const AUTH_MESSAGES = {
-  // 기존 메시지들...
+모든 VITE_ 값은 브라우저 번들에 공개됩니다. 서버 secret, OAuth client secret, 결제 secret, 관리자 secret을 넣으면 안 됩니다.
 
-  // 새 메시지 추가
-  newFeatureMessage: "새로운 기능 메시지입니다.",
-} as const;
-```
+| Key | Required | Current use |
+| --- | --- | --- |
+| VITE_API_URL | production | API base, 기본값 http://localhost:8080 |
+| VITE_GA_ID | no | 설정된 경우 GA4 SPA page view |
+| VITE_KAKAO_APP_KEY | no | 상품 상세 카카오 공유 |
+| VITE_KAKAO_CLIENT_ID | no | socialAuth 직접 SDK 호환 helper |
+| VITE_KAKAO_REDIRECT_URI | no | socialAuth 직접 SDK 호환 helper |
+| VITE_NAVER_CLIENT_ID | no | socialAuth 직접 SDK 호환 helper |
+| VITE_NAVER_REDIRECT_URI | no | socialAuth 직접 SDK 호환 helper |
+| VITE_GOOGLE_CLIENT_ID | no | 미연결 Google helper |
+| VITE_GOOGLE_REDIRECT_URI | no | 미연결 Google helper |
 
-### 메시지 도메인별 분류
+현재 로그인/회원가입 화면의 Naver/Kakao 흐름은 client id를 직접 조립하지 않고 백엔드 OAuth URL로 이동합니다. Google helper는 검증된 백엔드 route와 활성 UI가 없어 지원 기능으로 간주하지 않습니다.
 
-| 파일 | 용도 | 예시 |
-|------|------|------|
-| `auth.ts` | 인증/인가 | 로그인 성공, 이메일 인증, 비밀번호 변경 |
-| `account.ts` | 계정 관리 | 프로필 수정, 배송지 관리, 회원 탈퇴 |
-| `order.ts` | 주문 처리 | 주문 완료, 취소, 배송 상태 |
-| `cart.ts` | 장바구니 | 담기, 삭제, 수량 변경 |
-| `inquiry.ts` | 문의/답변 | 문의 등록, 답변 완료 |
-| `product.ts` | 상품 | 재고 부족, 품절 |
-| `admin.ts` | 관리자 | CRUD 성공/실패, 권한 |
-| `common.ts` | 공통 | 네트워크 에러, 데이터 로드 실패 |
+## 명령
 
-### 컨벤션
+| Command | Purpose | External dependency |
+| --- | --- | --- |
+| npm run dev | Vite 개발 서버 | API 기능에는 backend 필요 |
+| npm run typecheck | vue-tsc 검사 | 없음 |
+| npm run docs:lint | 필수 문서, 상대 링크, VITE_ 키 동기화 검사 | 없음 |
+| npm run build | 기존 TypeScript 검사 + Vite build + font 복사 | 없음 |
+| npm run preview | dist 로컬 미리보기 | 선행 build |
+| npm run prerender | dist에 공개 페이지 HTML과 sitemap 생성 | 실행 가능한 backend |
+| npm run build:full | build 후 prerender | 실행 가능한 backend |
+| npm run optimize-images | src/assets 이미지 최적화 | 원본 asset |
+| npm run verify | docs:lint 후 build | 없음 |
 
-- **네이밍**: `동작 + 결과` 형태 (예: `loginSuccess`, `createFailed`)
-- **플레이스홀더**: `{변수명}` 형식 사용 (예: `"최대 {max}개까지 가능합니다."`)
-- **타입 안전성**: `as const` 사용으로 리터럴 타입 보장
+현재 package.json에는 단위 테스트와 ESLint script가 없습니다. npm run verify는 문서·타입·프로덕션 번들 게이트이며 브라우저 E2E를 대체하지 않습니다.
 
----
+## 아키텍처
 
-## 🏗️ 핵심 엔지니어링 원칙
+    Browser
+      -> Vue Router lazy page
+      -> Pinia/composable
+      -> src/lib/api.ts
+      -> ShakiShakiArchiveBackend
 
-### 1. Security First (보안 무결점)
+    npm run build:full
+      -> Vite dist
+      -> backend product/category/SEO APIs
+      -> prerendered HTML + sitemap.xml
 
-> "보안은 나중에 추가할 수 있는 기능이 아니라, 처음부터 설계되어야 하는 아키텍처입니다."
+    GitHub Actions
+      -> npm ci + build:full
+      -> S3 assets/ and HTML upload
+      -> CloudFront invalidation
+      -> IndexNow ping
 
-- ✅ OWASP Top 10 무결점 (XSS/CSRF/Open Redirect 차단)
-- ✅ Input Validation (Zod 스키마 기반 엄격한 검증)
-- ✅ Output Sanitization (Vue 자동 이스케이프 + DOMPurify)
-- ✅ HTTPS Everywhere (CloudFront 강제 리다이렉트)
-- ✅ Secrets Management (환경 변수 + .claudeignore)
+주요 디렉터리:
 
-**상세**: [docs/SECURITY.md](docs/SECURITY.md)
+- src/pages: 라우트 페이지
+- src/components: 도메인·공용·UI 컴포넌트
+- src/composables: 화면 로직 조합
+- src/stores: Pinia 상태와 캐시
+- src/lib/api.ts: 프런트 API 계약
+- src/lib/apiCache.ts: 공개 데이터 메모리 캐시와 민감 경로 no-cache
+- src/router/index.ts: lazy route, auth/admin guard, canonical 이동, 404 noindex
+- scripts/prerender: SEO 정적 빌드
+- terraform: API Gateway/VPC Link/Cloud Map 보조 구성
 
-### 2. Stability & Performance (안정성 및 성능)
+상세 구조는 [Architecture](docs/ARCHITECTURE.md)를 참고합니다.
 
-> "서버가 죽지 않는 것이 가장 빠른 응답 속도입니다."
+## 인증과 데이터 규칙
 
-- ✅ N+1 쿼리 방지 (백엔드 JOIN 쿼리)
-- ✅ 이미지 최적화 (Lazy Loading + WebP 포맷)
-- ✅ 번들 최적화 (Code Splitting, Tree Shaking)
-- ✅ 캐싱 전략 (CloudFront 엣지 캐시, TTL: 1시간)
+- 인증은 백엔드 쿠키 세션이며 API 요청은 credentials: include를 사용합니다.
+- 프런트 route guard는 접근 UX만 보조합니다. 실제 인가 경계는 백엔드입니다.
+- 게스트 장바구니는 guest_cart 키로 localStorage에 저장되고 로그인 후 병합됩니다.
+- 사용자, 주문, 장바구니, 관리자, 문의 데이터는 API cache 대상에서 제외됩니다.
+- 공개 상품·카테고리·사이트 이미지·상수만 짧은 메모리 캐시를 사용합니다.
+- 공통 상수 API 실패 시 프런트 fallback이 있지만 주문 화면은 ensureLoaded로 정확한 값을 다시 확인합니다.
 
-**성과**:
+## SEO Build와 완전성
 
-- Lighthouse Performance: 96점
-- LCP: 1.8초 (목표 < 2.5초)
-- 번들 크기: 156.03 kB (gzip)
+npm run build는 SPA만 빌드합니다. npm run build:full은 추가로 백엔드 API를 읽어 다음 산출물을 만듭니다.
 
-**상세**: [docs/DEVOPS.md](docs/DEVOPS.md#성능-지표)
+- index.html
+- faq.html
+- terms.html, privacy.html
+- product/{categorySlug}.html
+- productDetail/{productSlugOrId}.html
+- sitemap.xml
+- 날짜가 갱신된 llms.txt
 
-### 3. MVP Efficiency (실전형 개발)
+Prerender는 모든 page group, sitemap, llms가 완전해야 성공합니다. 누락이나 failed entry가 하나라도 있으면 exit code 1로 fail-closed하여 S3 upload를 막습니다.
 
-> "이론적 완벽함보다 실무적 실용성을 우선합니다."
+CloudFront function의 현재 contract:
 
-- ✅ Modular Architecture (도메인별 폴더 구조)
-- ✅ Composable Pattern (로직 재사용)
-- ✅ Type Safety (TypeScript 100%)
-- ✅ Self-Documenting Code (명확한 네이밍)
+- /assets/와 /fonts/ 및 정적 확장자는 그대로 통과
+- /product/all은 frontend 합성 목록이므로 /index.html
+- 실제 category와 product detail은 prerender .html
+- /faq는 /faq.html
+- /terms와 /privacy는 /index.html SPA fallback
 
-### 4. Infrastructure as Code (IaC)
+주의: scripts/prerender/staticPages.js가 terms.html/privacy.html을 생성하지만, 이 본문은 Vue 정책 원문의 별도 요약이며 내용이 동일하지 않습니다. 사용자에게 보이는 원문은 src/pages/static/TermsOfService.vue와 PrivacyPolicy.vue입니다.
 
-> "수동 배포는 한 번 실수하면 서비스가 죽지만, 자동 배포는 실수해도 롤백됩니다."
+현재 pipeline은 summary .html도 upload하고 CloudFront function은 명시적 .html 요청을 통과시키므로 direct /terms.html, /privacy.html이 노출될 수 있습니다. 이는 해결되지 않은 High-risk drift입니다. Single-source 결정 전에는 해당 URL을 링크·권위 문서·canonical 본문으로 사용하거나 extensionless policy route를 그 파일로 rewrite하면 안 됩니다.
 
-- ✅ GitHub Actions 자동 배포 (main 브랜치 push → 45초 후 라이브)
-- ✅ TypeScript 타입 체크 (빌드 전 검증)
-- ✅ CloudFront 캐시 자동 무효화
-- ✅ Terraform IaC (API Gateway, VPC Link, Cloud Map 관리)
+자세한 내용은 [SEO Guide](SEO_GUIDE.md)를 참고합니다.
 
-**상세**: [docs/DEVOPS.md](docs/DEVOPS.md#cicd--배포)
+## 배포 주의
 
----
+main push는 프로덕션 배포를 시작합니다. 워크플로는 v* tag, content-update repository dispatch, manual dispatch도 받습니다. 기본 selective invalidation은 FAQ, terms, privacy, product/category와 discovery file을 포함합니다.
 
-## 💡 주요 기술 과제 하이라이트
+배포 전 기본 확인:
 
-### 1. 모바일 결제 후 뒤로 가기 UX 문제
+    npm run verify
 
-**문제**: 모바일에서 결제 완료 후 뒤로 가기 시 PG사 페이지로 이동 (나쁜 UX)
+백엔드가 준비된 경우:
 
-**해결**: `window.location.replace()` 활용하여 히스토리 스택 완전 대체
+    VITE_API_URL=http://localhost:8080 npm run build:full
 
-**성과**: 모바일 결제 UX 개선 (PG사 페이지 건너뜀)
+배포·무효화·롤백은 [Deploy Guide](DEPLOY.md), 현재 자동화 범위는 [DevOps](docs/DEVOPS.md)를 참고합니다.
 
-### 2. 네이버페이 모바일 "페이지를 찾을 수 없음" 오류
+## 문서 지도
 
-**문제**: PC는 정상, 모바일 네이버페이만 404 에러
+현재 source-of-truth 문서:
 
-**해결**: `window.location.origin` 활용하여 상대 경로 → 절대 경로 자동 변환
+- [Frontend Guide](FRONTEND_GUIDE.md)
+- [Frontend-to-Backend Contract](BACKEND_GUIDE.md)
+- [Deploy Guide](DEPLOY.md)
+- [SEO Guide](SEO_GUIDE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [DevOps](docs/DEVOPS.md)
+- [Security](docs/SECURITY.md)
+- [Technical Challenges](docs/TECHNICAL_CHALLENGES.md)
+- [SEO/GEO Status](docs/SEO_GEO_IMPROVEMENT_PLAN.md)
+- [Project Memory](MEMORY.md)
+- [Agent Rules](AGENTS.md)
+- [Project Codex](Codex.md)
 
-**성과**: 모바일 네이버페이 오류 완전 해결
+역사 스냅샷:
 
-### 3. N+1 쿼리 문제 (주문 조회)
+- [2026-07-08 Quality Improvements](docs/QUALITY_IMPROVEMENTS_2026-07-08.md)
+- [2026-07-08 Release](docs/RELEASE_2026-07-08.md)
+- [Historical Performance Comparison](performance-comparison.md)
 
-**문제**: 주문 10개 조회 시 11번의 쿼리 (1.2초 소요)
+Ignored historical unsafe 문서:
 
-**해결**: 백엔드 JOIN FETCH 쿼리 적용
+- CLOUDFRONT_SETUP.md
+- terraform/TERRA_SETUP_GUIDE.md
+- performance-final-report.md
+- performance-ultimate-report.md
 
-**성과**: 쿼리 횟수 91% 감소 (11번 → 1번), 응답 시간 87% 개선 (1.2초 → 0.15초)
+위 문서의 CloudFront/Terraform 명령, secret 이름, 성능 수치를 current 절차나 근거로 사용하지 않습니다.
 
-**전체 5가지 기술 과제**: [docs/TECHNICAL_CHALLENGES.md](docs/TECHNICAL_CHALLENGES.md)
+## Needs Verification
 
----
+- 운영 CloudFront 함수 association과 최신 source 반영
+- Vue policy를 single source로 prerender하는 방식
+- direct /terms.html, /privacy.html summary 노출 제거 또는 원문 기반 생성
+- 운영 쿠키/CORS/CSRF/보안 헤더
+- backend content-update dispatch 연결
+- GSC, 네이버, Merchant/RSS 운영 등록
+- KakaoPay 단일 정책과 비활성 Toss/NaverPay 코드의 향후 처리
+- 자동 테스트, lint, error tracking 부재
 
-## 📚 상세 문서
+최신 목록과 근거는 [Project Memory](MEMORY.md)에 유지합니다.
 
-프로젝트의 상세 내용은 다음 문서에서 확인할 수 있습니다:
+## 라이선스
 
-### 🏛️ [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
-- 전체 시스템 아키텍처 (Mermaid 다이어그램)
-- 프론트엔드 폴더 구조 상세
-- 데이터 흐름 (Sequence Diagram)
-- 기술 스택 선택 근거 (Vue vs React, Vite vs Webpack 등)
-- 각 기술의 대안 검토 및 성과
-
-### 💡 [TECHNICAL_CHALLENGES.md](docs/TECHNICAL_CHALLENGES.md)
-
-1. 모바일 결제 후 뒤로 가기 UX 문제
-2. 네이버페이 모바일 "페이지를 찾을 수 없음" 오류
-3. N+1 쿼리 문제 (주문 조회)
-4. 재고 경쟁 조건 (Race Condition)
-5. 이미지 로딩 성능 최적화
-
-**각 과제마다 포함된 내용**:
-
-- 문제 상황 및 근본 원인
-- 해결 방안 (코드 예시)
-- 성과 (Before/After 수치)
-- 기술적 교훈
-
-### 🚀 [DEVOPS.md](docs/DEVOPS.md)
-
-- CI/CD 파이프라인 (GitHub Actions 전체 코드)
-- Infrastructure as Code (Terraform 예시)
-- 모니터링 & 관찰성 (Sentry, Lighthouse CI, CloudWatch)
-- Runbook (장애 대응 가이드)
-- 비용 최적화 (FinOps, 캐시 정책, 트래픽 예측)
-- 성능 지표 (Lighthouse, Core Web Vitals, 번들 크기)
-- 개발자 경험 (DX 측정 지표, VSCode 설정, 온보딩)
-- 기술 로드맵 (Gantt 차트)
-
-### 🔒 [SECURITY.md](docs/SECURITY.md)
-
-- OWASP Top 10 대응 현황 (전수 검증)
-- XSS 방지 사례 (코드 예시)
-- CSRF 방지 (쿠키 기반 세션)
-- Open Redirect 방지
-- Secure SDLC (보안 개발 생명 주기)
-- 적용 사례 (요구사항 → 배포 → 운영)
-
----
-
-## 📧 Contact
-
-이슈는 GitHub Issues에 등록해주세요.
-
----
-
-**Built with for ShakiShaki Archive**
+All rights reserved. 사용 조건은 [LICENSE](LICENSE)를 확인하세요.

@@ -21,11 +21,14 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "typecheck": "vue-tsc --noEmit",
+    "docs:lint": "node scripts/verify-docs.js",
     "build": "vue-tsc && vite build && mkdir -p dist/fonts && cp public/fonts/*.woff2 dist/fonts/",
     "preview": "vite preview",
     "prerender": "node scripts/prerender/index.js",
     "build:full": "npm run build && npm run prerender",
-    "optimize-images": "node scripts/optimize-images.js"
+    "optimize-images": "node scripts/optimize-images.js",
+    "verify": "npm run docs:lint && npm run build"
   },
   "dependencies": {
     "@selemondev/vue3-marquee": "^0.0.8",

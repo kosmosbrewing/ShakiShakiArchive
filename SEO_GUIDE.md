@@ -1,326 +1,220 @@
-# SEO 메타 태그 설정 가이드
-
-## 📌 개요
-
-이 프로젝트는 **백엔드 API를 Single Source of Truth**로 사용하여 SEO 메타 태그를 동적으로 관리합니다.
-카카오톡, 페이스북, 트위터 등 SNS에서 링크 공유 시 올바른 이미지와 설명이 표시됩니다.
-
----
-
-## 🏗️ 아키텍처
-
-### 1. 백엔드 SEO API (Single Source of Truth)
-
-모든 SEO 데이터는 백엔드 API에서 관리됩니다.
-
-| 엔드포인트 | 설명 | 예시 |
-|-----------|------|------|
-| `GET /api/seo/home` | 홈페이지 메타데이터 | 메인 페이지 |
-| `GET /api/seo/products` | 전체 상품 목록 메타데이터 | 상품 리스트 페이지 |
-| `GET /api/seo/products/:id` | 상품 상세 메타데이터 | /productDetail/123 |
-| `GET /api/seo/categories/:slug` | 카테고리 메타데이터 | /product/outer |
-| `GET /api/seo/search?q=검색어` | 검색 결과 메타데이터 | 검색 페이지 |
-
-**API 응답 예시:**
-```json
-{
-  "openGraph": {
-    "title": "샤키샤키 아카이브",
-    "description": "빈티지 쇼핑몰",
-    "url": "http://s3-shakishakive-archivetest.s3-website.ap-northeast-2.amazonaws.com",
-    "type": "website",
-    "image": "https://res.cloudinary.com/...",
-    "siteName": "샤키샤키 아카이브",
-    "locale": "ko_KR",
-    "twitter": {
-      "card": "summary_large_image",
-      "title": "샤키샤키 아카이브",
-      "description": "빈티지 쇼핑몰",
-      "image": "https://res.cloudinary.com/..."
-    }
-  }
-}
-```
-
----
-
-### 2. 프론트엔드 동적 메타 태그 시스템
-
-#### 📄 index.html
-- **최소한의 정적 메타 태그만 유지**
-- 하드코딩된 OpenGraph/Twitter Card 태그 제거
-- SEO는 백엔드 API로 동적 설정
-
-```html
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>샤키샤키 아카이브</title>
-
-    <!-- SEO 메타 태그는 main.ts에서 백엔드 API를 통해 동적 설정 -->
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
-</html>
-```
-
-#### 📄 src/main.ts
-- **앱 부트스트랩 시점에 홈 SEO 데이터 로드**
-- 전역 기본 메타 태그 설정
-
-```typescript
-// src/main.ts
-import { useSeo } from "./composables/useSeo";
-import { fetchHomeSeoData } from "./lib/api";
-
-async function bootstrap() {
-  // ... Pinia, Router 등록
-
-  // 초기 SEO 메타 태그 설정 (백엔드 API 사용)
-  try {
-    const seoData = await fetchHomeSeoData();
-    useSeo(seoData);
-  } catch (e) {
-    console.warn("⚠️ SEO 데이터 로드 실패, 기본값으로 진행합니다.");
-  }
-
-  app.mount("#app");
-}
-```
-
-#### 📄 src/composables/useSeo.ts
-- **@vueuse/head를 사용한 메타 태그 동적 설정**
-- OpenGraph와 Twitter Card 지원
-
-```typescript
-import { useHead } from '@vueuse/head';
-import type { SeoData } from '@/types/api';
-
-export const useSeo = (seoData: SeoData) => {
-  useHead({
-    title: seoData.openGraph.title,
-    meta: [
-      { name: 'description', content: seoData.openGraph.description },
-      { property: 'og:title', content: seoData.openGraph.title },
-      { property: 'og:description', content: seoData.openGraph.description },
-      { property: 'og:image', content: seoData.openGraph.image },
-      { property: 'og:url', content: seoData.openGraph.url },
-      { property: 'og:type', content: seoData.openGraph.type },
-      { property: 'og:site_name', content: seoData.openGraph.siteName },
-      { property: 'og:locale', content: seoData.openGraph.locale },
-      { name: 'twitter:card', content: seoData.openGraph.twitter.card },
-      { name: 'twitter:title', content: seoData.openGraph.twitter.title },
-      { name: 'twitter:description', content: seoData.openGraph.twitter.description },
-      { name: 'twitter:image', content: seoData.openGraph.twitter.image },
-    ],
-  });
-};
-```
-
----
-
-## 🎯 페이지별 SEO 설정 방법
-
-### 1. 홈페이지
-- **main.ts에서 자동 설정됨**
-- 별도 코드 불필요
-
-```typescript
-// src/components/Home.vue
-// NOTE: 홈페이지 SEO는 main.ts의 bootstrap에서 이미 설정됨
-```
-
-### 2. 상품 상세 페이지
-- **onMounted에서 상품별 SEO 로드**
-
-```typescript
-// src/pages/product/ProductDetail.vue
-import { onMounted } from "vue";
-import { useSeo } from "@/composables/useSeo";
-import { fetchProductSeoData } from "@/lib/api";
-
-onMounted(async () => {
-  const productId = route.params.id;
-
-  try {
-    const seoData = await fetchProductSeoData(String(productId));
-    useSeo(seoData);
-  } catch (error) {
-    console.error("SEO 데이터 로드 실패:", error);
-  }
-});
-```
-
-### 3. 상품 목록 페이지
-```typescript
-// src/pages/product/Product.vue
-import { onMounted } from "vue";
-import { useSeo } from "@/composables/useSeo";
-import { fetchProductsSeoData } from "@/lib/api";
-
-onMounted(async () => {
-  try {
-    const seoData = await fetchProductsSeoData();
-    useSeo(seoData);
-  } catch (error) {
-    console.error("SEO 데이터 로드 실패:", error);
-  }
-});
-```
-
-### 4. 카테고리 페이지
-```typescript
-// src/pages/product/Product.vue (카테고리별 필터링 시)
-import { fetchCategorySeoData } from "@/lib/api";
-
-onMounted(async () => {
-  const categorySlug = route.params.category;
-
-  if (categorySlug) {
-    try {
-      const seoData = await fetchCategorySeoData(String(categorySlug));
-      useSeo(seoData);
-    } catch (error) {
-      console.error("SEO 데이터 로드 실패:", error);
-    }
-  }
-});
-```
-
-### 5. 검색 결과 페이지
-```typescript
-// src/pages/search/Search.vue
-import { fetchSearchSeoData } from "@/lib/api";
-
-onMounted(async () => {
-  const searchQuery = route.query.q;
-
-  if (searchQuery) {
-    try {
-      const seoData = await fetchSearchSeoData(String(searchQuery));
-      useSeo(seoData);
-    } catch (error) {
-      console.error("SEO 데이터 로드 실패:", error);
-    }
-  }
-});
-```
-
----
-
-## 📋 체크리스트
-
-### ✅ 구현 완료 항목
-- [x] `@vueuse/head` 라이브러리 설치
-- [x] `main.ts`에 head 플러그인 등록
-- [x] SEO 타입 정의 추가 (`src/types/api.ts`)
-- [x] `useSeo` composable 생성
-- [x] SEO API 함수 추가 (`src/lib/api.ts`)
-- [x] `index.html`에서 하드코딩 메타 태그 제거
-- [x] `main.ts` bootstrap에서 초기 SEO 설정
-- [x] 홈페이지 SEO 자동 설정
-- [x] 상품 상세 페이지 SEO 설정
-
-### 🔲 추가 구현 필요 항목
-- [ ] 상품 목록 페이지 SEO 설정
-- [ ] 카테고리 페이지 SEO 설정
-- [ ] 검색 결과 페이지 SEO 설정
-
----
-
-## 🔍 테스트 방법
-
-### 1. 개발 환경에서 확인
-브라우저 개발자 도구에서 메타 태그를 확인합니다:
-
-```bash
-npm run dev
-```
-
-개발자 도구(F12) → Elements → `<head>` 태그 내부 확인
-
-### 2. SNS 미리보기 테스트
-
-#### 카카오톡 링크 미리보기
-1. https://developers.kakao.com/tool/debugger/sharing
-2. URL 입력 후 "미리보기" 클릭
-
-#### 페이스북 디버거
-1. https://developers.facebook.com/tools/debug/
-2. URL 입력 후 "디버그" 클릭
-3. 캐시 초기화: "Scrape Again" 버튼 클릭
-
-#### 트위터 카드 검증
-1. https://cards-dev.twitter.com/validator
-2. URL 입력 후 "Preview card" 클릭
-
-### 3. 메타 태그 확인 도구
-```bash
-curl -s https://your-domain.com | grep -i "og:"
-curl -s https://your-domain.com | grep -i "twitter:"
-```
-
----
-
-## 🚨 주의사항
-
-### ⚠️ Single Source of Truth
-- **모든 SEO 데이터는 백엔드 API에서 관리합니다**
-- `index.html`에 메타 태그를 직접 추가하지 마세요
-- 백엔드 API만 수정하면 프론트엔드에 자동 반영됩니다
-
-### ⚠️ 에러 핸들링
-- SEO 로드 실패해도 앱은 정상 작동합니다
-- 에러 발생 시 콘솔에 경고 메시지만 출력됩니다
-
-### ⚠️ 이미지 URL
-- OpenGraph 이미지는 **절대 경로(HTTPS)** 사용
-- 상대 경로나 로컬 파일 경로는 SNS에서 표시 안 됨
-- 권장: Cloudinary 등 CDN 사용
-
-### ⚠️ 캐싱
-- SNS 플랫폼은 메타 태그를 캐싱합니다
-- 변경 후에는 각 플랫폼의 디버거에서 캐시 초기화 필요
-
----
-
-## 📚 참고 자료
-
-- [Open Graph Protocol](https://ogp.me/)
-- [Twitter Card Documentation](https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/abouts-cards)
-- [@vueuse/head Documentation](https://github.com/vueuse/head)
-- [카카오톡 링크 공유 가이드](https://developers.kakao.com/docs/latest/ko/message/common)
-
----
-
-## 🔧 문제 해결
-
-### Q: 카카오톡에서 이미지가 안 보여요
-A:
-1. 이미지 URL이 HTTPS인지 확인
-2. 이미지 크기가 최소 200x200px 이상인지 확인
-3. 카카오톡 디버거에서 캐시 초기화
-
-### Q: 메타 태그가 업데이트 안 돼요
-A:
-1. 브라우저 캐시 초기화 (Ctrl+F5)
-2. SNS 플랫폼 디버거에서 캐시 초기화
-3. 개발자 도구에서 메타 태그 직접 확인
-
-### Q: 백엔드 API 수정했는데 반영 안 돼요
-A:
-1. 프론트엔드 재시작 불필요 (동적 로드)
-2. 페이지 새로고침만 하면 됨
-3. 백엔드 API 응답 형식 확인
-
----
-
-## ✅ 결론
-
-이 프로젝트는 **백엔드 API를 Single Source of Truth**로 사용하여 SEO를 일관되게 관리합니다.
-프론트엔드는 백엔드 API만 호출하면 되므로, 유지보수가 간편하고 데이터 일관성이 보장됩니다.
+# SEO와 Prerender 가이드
+
+현재 기준 감사일: 2026-07-10
+
+ShakiShakiArchive는 Vue SPA 위에 build-time static layer를 둔다. Static layer는 backend catalog/SEO endpoint에 의존한다.
+
+## 1. Source of Truth
+
+- Site URL: scripts/prerender/config.js
+- Orchestration: scripts/prerender/index.js
+- Backend fetch: scripts/prerender/api.js
+- Meta/JSON-LD: scripts/prerender/meta.js
+- FAQ body: scripts/prerender/faq.js
+- Product/category body: scripts/prerender/productBody.js
+- Policy summary: scripts/prerender/staticPages.js
+- Sitemap: scripts/prerender/sitemap.js
+- URL rewrite: cloudfront-function.js
+- Crawl rule: public/robots.txt
+- LLM summary: public/llms.txt
+
+과거 scripts/prerender.js 경로를 사용하지 않는다. 현재 구현은 scripts/prerender/에 분리되어 있다.
+
+## 2. Build Flow
+
+    npm run build:full
+      -> npm run build
+      -> dist/index.html load
+      -> products/categories fetch
+      -> page SEO data fetch
+      -> meta/canonical/JSON-LD/static body inject
+      -> page HTML write
+      -> sitemap.xml write
+      -> llms.txt Last-Updated
+      -> assertComplete
+
+Backend endpoint 목록:
+
+- /api/products?page=N&limit=100
+- /api/categories
+- /api/seo/home
+- /api/seo/faq
+- /api/seo/categories/:slug
+- /api/seo/products/:id
+
+## 3. Fail-Closed 완전성
+
+assertComplete는 다음 group 전체를 검사한다.
+
+- home
+- FAQ
+- policy
+- categories
+- products
+- sitemap
+- llms
+
+각 group에서 generated와 attempted가 다르거나 failed가 있으면 전체 실패다. sitemap/llms 실패도 exit code 1이다.
+
+불완전한 SEO artifact를 배포해 이전 정상 file을 삭제하는 것보다 build를 중단하는 것이 우선이다.
+
+## 4. Generated Artifact
+
+| 개념 | 생성 file | 현재 서빙 판단 |
+| --- | --- | --- |
+| home | index.html | root SPA/prerender meta |
+| FAQ | faq.html | /faq에서 사용 |
+| terms | terms.html | extensionless route에는 미사용, direct file 노출 가능·권위 사용 금지 |
+| privacy | privacy.html | extensionless route에는 미사용, direct file 노출 가능·권위 사용 금지 |
+| category | product/{slug}.html | 실제 backend category만 사용 |
+| product | productDetail/{slug-or-id}.html | slug 우선 |
+| discovery | sitemap.xml | public URL 목록 |
+
+Vue mount 시 injected body는 application UI로 교체된다.
+
+## 5. Policy Single Source
+
+Browser에서 보여 주는 현재 정책 원문:
+
+- src/pages/static/TermsOfService.vue
+- src/pages/static/PrivacyPolicy.vue
+
+staticPages.js의 terms/privacy body는 원문을 그대로 생성한 결과가 아니라 별도 요약 복제본이다.
+
+Single-source 결정 전 금지:
+
+- /terms -> /terms.html rewrite
+- /privacy -> /privacy.html rewrite
+- summary HTML을 canonical/legal source로 사용
+- summary 내용만 수정하고 Vue 원문과 동기화됐다고 가정
+
+현재 CloudFront fallback은 /terms와 /privacy를 /index.html로 보내 Vue 원문을 제공한다. 이 behavior를 유지한다.
+
+남은 위험: deploy pipeline은 summary .html을 S3에 upload하고 function은 .html 요청을 그대로 통과시킨다. 따라서 direct /terms.html과 /privacy.html은 접근 가능할 수 있다. Single-source 해결 전 해당 URL을 link/indexing source로 사용하지 말고 duplicate artifact 생성 또는 public 노출을 제거해야 한다.
+
+## 6. Meta Output
+
+generateMetaTags가 생성하는 항목:
+
+- page title
+- description
+- backend openGraph.url이 있을 때 canonical
+- Open Graph title/description/url/type/site name/locale/image
+- Twitter card
+- 하나 이상의 JSON-LD script
+
+Text는 HTML escape하고 JSON-LD의 closing script sequence를 escape한다. Product SEO fact의 authority는 backend response다.
+
+## 7. Canonical URL
+
+- Product: /productDetail/:slug
+- Category: /product/:category
+- UUID product entry는 slug가 있으면 canonical route로 replace
+- Sitemap은 product.slug 우선, 없으면 id fallback
+
+/product/all은 frontend 합성 목록이며 backend category가 아니다. product/all.html을 생성·가정하지 않고 CloudFront에서 /index.html로 보낸다.
+
+## 8. CloudFront Rewrite
+
+현재 function:
+
+- /assets/와 /fonts/ 통과
+- static extension 통과
+- /product/all -> /index.html
+- actual /product/{slug} -> .html
+- /productDetail/{slug} -> .html
+- /faq -> /faq.html
+- /terms, /privacy 포함 기타 route -> /index.html
+- direct .html request -> 그대로 통과하므로 policy summary 노출 가능
+
+Function publish/association은 GitHub deploy workflow에 포함되지 않는다.
+
+## 9. Sitemap
+
+sitemap.xml 포함 범위:
+
+- home, FAQ, policy, About, Notice
+- all-products, Sold Archive, Journal
+- slug가 있는 backend category
+- available product
+- product image URL
+- 신뢰 가능한 date가 있을 때 lastmod
+
+Backend data에 따라 URL 수가 변한다. 고정 count를 보장하지 않는다.
+
+Sitemap에 /terms와 /privacy가 존재해도 generated policy summary를 서빙해야 한다는 의미는 아니다. Route는 SPA Vue 원문을 제공한다.
+
+## 10. robots.txt와 noindex
+
+public/robots.txt는 public crawl을 허용하고 admin, auth, account, cart, order, payment 등 private flow를 disallow한다.
+
+S3/CloudFront fallback은 unknown route에도 HTTP 200을 줄 수 있어 NotFound route가 noindex,nofollow로 색인 오염을 완화한다. 진짜 HTTP 404를 만드는 것은 아니다.
+
+## 11. llms.txt
+
+public/llms.txt는 public site summary와 policy link를 제공한다. Prerender는 dist copy의 Last-Updated를 갱신한다.
+
+Business fact와 policy value는 실제 product policy와 Vue policy 원문을 기준으로 review한다. Code 존재만으로 운영 사실을 증명하지 않는다.
+
+## 12. IndexNow
+
+scripts/indexnow-ping.js:
+
+- dist/sitemap.xml 읽기
+- home과 최근 2일 URL 선택
+- 최대 500 URL
+- IndexNow endpoint POST
+- HTTP 200/202 성공 처리
+- 실패가 deploy를 막지 않음
+
+Key는 protocol상 public이며 public/{key}.txt와 일치한다.
+
+## 13. Invalidation
+
+Selective invalidation은 FAQ, terms, privacy의 extensionless path와 .html path를 모두 포함한다.
+
+- FAQ는 prerender HTML cache 갱신
+- terms/privacy는 SPA route/index 및 stale artifact cache 정리
+- invalidation 포함 자체는 policy summary 서빙 승인이 아님
+
+## 14. Analytics와 Sharing
+
+- VITE_GA_ID가 있으면 GA4 script와 router page_view 활성
+- VITE_KAKAO_APP_KEY가 있으면 product detail Kakao share 초기화
+- index.html Kakao SDK는 pinned version과 integrity 사용
+
+이 기능 존재는 search indexing 성공 증거가 아니다.
+
+## 15. 검증
+
+Local gate:
+
+    npm run verify
+    node --check cloudfront-function.js
+
+Backend가 준비된 경우:
+
+    npm run build:full
+    rg -n "<h1|canonical|application/ld\\+json" dist/faq.html dist/product dist/productDetail
+    rg -n "<url>|<loc>" dist/sitemap.xml
+
+Unit-like fixture에서는 하나의 category/product/FAQ 실패가 non-zero exit을 만드는지 확인한다.
+
+실제 production fetch, AWS function publish, deploy는 별도 승인 범위다.
+
+## 16. Historical Unsafe Guide
+
+CLOUDFRONT_SETUP.md와 terraform/TERRA_SETUP_GUIDE.md는 ignored historical snapshot이다. 그 안의 rewrite code나 AWS/Terraform 절차를 current guide로 사용하지 않는다.
+
+## 17. Needs Verification
+
+- GSC ownership와 sitemap 제출
+- Naver Search Advisor ownership와 sitemap/RSS 제출
+- feed endpoint와 Merchant Center 등록
+- deployed CloudFront function version/association
+- actual indexed URL, impression, Core Web Vitals
+- backend content-update dispatch
+- policy single-source 생성 방식
+- direct policy summary .html 제거
+
+관련 문서: [SEO/GEO Status](docs/SEO_GEO_IMPROVEMENT_PLAN.md), [Project Memory](MEMORY.md).
