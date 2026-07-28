@@ -10,7 +10,6 @@ import { fetchAllProducts, fetchCategories } from "./api.js";
 import {
   prerenderHome,
   prerenderFaq,
-  prerenderStaticPolicies,
   prerenderCategories,
   prerenderProducts,
 } from "./pages.js";
@@ -57,14 +56,12 @@ function printSummary(runStats) {
   console.log("📦 생성된 파일:");
   console.log("   - index.html (홈)");
   console.log("   - faq.html (FAQ)");
-  console.log("   - terms.html / privacy.html (정책)");
   console.log("   - product/{category}.html (카테고리별)");
   console.log("   - productDetail/{id}.html (상품별)");
   console.log("   - sitemap.xml\n");
   console.log("📊 Prerender 요약:");
   console.log(`   - 홈: ${runStats.home.generated}/${runStats.home.attempted} (${toRate(runStats.home.generated, runStats.home.attempted)}%)`);
   console.log(`   - FAQ: ${runStats.faq.generated}/${runStats.faq.attempted} (${toRate(runStats.faq.generated, runStats.faq.attempted)}%)`);
-  console.log(`   - 정책: ${runStats.staticPolicies.generated}/${runStats.staticPolicies.attempted} (${toRate(runStats.staticPolicies.generated, runStats.staticPolicies.attempted)}%)`);
   console.log(`   - 카테고리: ${runStats.categories.generated}/${runStats.categories.attempted} (${toRate(runStats.categories.generated, runStats.categories.attempted)}%)`);
   console.log(`   - 상품 상세: ${runStats.products.generated}/${runStats.products.attempted} (${toRate(runStats.products.generated, runStats.products.attempted)}%)`);
   console.log(`   - sitemap.xml: ${runStats.sitemap.generated ? "성공" : "실패"}`);
@@ -77,7 +74,6 @@ function printSummary(runStats) {
   };
   warnIfFailed("카테고리", runStats.categories.failed);
   warnIfFailed("FAQ", runStats.faq.failed);
-  warnIfFailed("정책 페이지", runStats.staticPolicies.failed);
   warnIfFailed("상품 상세", runStats.products.failed);
   warnIfFailed("sitemap", runStats.sitemap.failed);
   warnIfFailed("llms 갱신", runStats.llms.failed);
@@ -92,7 +88,6 @@ function assertComplete(runStats) {
   const pageGroups = [
     ["홈", runStats.home],
     ["FAQ", runStats.faq],
-    ["정책", runStats.staticPolicies],
     ["카테고리", runStats.categories],
     ["상품 상세", runStats.products],
   ];
@@ -146,7 +141,6 @@ async function prerender() {
     const runStats = {
       home: await prerenderHome(template),
       faq: await prerenderFaq(template),
-      staticPolicies: await prerenderStaticPolicies(template),
       categories: await prerenderCategories(template, categories),
       products: await prerenderProducts(template, products),
       sitemap: generateSitemap(products, categories),

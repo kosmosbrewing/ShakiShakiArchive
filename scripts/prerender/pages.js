@@ -5,7 +5,6 @@ import { fetchSeoData } from "./api.js";
 import { generateMetaTags, injectMetaTags } from "./meta.js";
 import { saveHtmlFile } from "./utils.js";
 import { extractFaqEntries, injectFaqBodyHtml } from "./faq.js";
-import { STATIC_POLICY_PAGES, injectStaticBodyHtml } from "./staticPages.js";
 import {
   injectProductBodyHtml,
   injectCategoryBodyHtml,
@@ -54,26 +53,10 @@ export async function prerenderFaq(template) {
   return { attempted: 1, generated: 1, failed: [] };
 }
 
-/**
- * 1-2. 정적 정책 페이지 Prerender
- */
-export async function prerenderStaticPolicies(template) {
-  console.log("\n📄 정책 페이지 Prerendering...");
-  const stats = { attempted: 0, generated: 0, failed: [] };
-
-  for (const pageKey of Object.keys(STATIC_POLICY_PAGES)) {
-    stats.attempted++;
-    try {
-      const html = injectStaticBodyHtml(template, pageKey);
-      saveHtmlFile(`${pageKey}.html`, html);
-      stats.generated++;
-    } catch (error) {
-      stats.failed.push(`${pageKey}:${error.message}`);
-    }
-  }
-
-  return stats;
-}
+// 1-2. 정적 정책 페이지 Prerender는 제거됨.
+// terms.html/privacy.html 요약본이 Vue 원문과 다른 내용으로 공개 노출되던 문제
+// (SEO_GEO_IMPROVEMENT_PLAN.md P0) 때문. /terms·/privacy는 SPA fallback으로
+// Vue 원문을 제공한다. 상세 근거는 staticPages.js 주석 참고.
 
 /**
  * 2. 카테고리별 페이지 Prerender (meta + 상품 링크 목록 본문 주입)

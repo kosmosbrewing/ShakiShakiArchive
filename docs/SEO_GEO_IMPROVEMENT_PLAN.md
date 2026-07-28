@@ -55,14 +55,26 @@ checked-in function:
 
 /product/all은 backend category가 아니라 frontend 합성 목록이므로 prerender category file을 가정하지 않는다.
 
-## 4. 정책 페이지 Single Source 미해결
+## 4. 정책 페이지 Single Source
 
-scripts/prerender/staticPages.js의 terms/privacy body는 다음 Vue 원문의 요약 복제본이다.
+기존 상태: scripts/prerender/staticPages.js의 terms/privacy body가 다음 Vue 원문의 요약 복제본이었다.
 
 - src/pages/static/TermsOfService.vue
 - src/pages/static/PrivacyPolicy.vue
 
 내용이 동일하지 않으므로 generated terms.html/privacy.html을 권위 문서로 서빙하면 안 된다.
+
+### 2026-07-28 조치: duplicate artifact 제거 (P0 해소)
+
+staticPages.js에서 body와 injectStaticBodyHtml을 삭제하고 pages.js의 prerenderStaticPolicies,
+index.js의 orchestration/summary/assertComplete 그룹을 제거했다. 이제 terms.html과 privacy.html은
+생성되지 않는다. staticPages.js에는 sitemap이 참조하는 lastmod 등 메타데이터만 남는다.
+
+deploy는 `aws s3 sync --delete`로 기존 S3 객체를 지우고, selective invalidation의
+/terms.html, /privacy.html path가 CDN cache를 정리한다. 이후 해당 URL은 S3 404 →
+custom error response → index.html(SPA) → Vue router NotFound → noindex 경로를 탄다.
+
+single-source 생성 방식 설계는 여전히 미해결이며 P1로 남는다.
 
 single-source 결정 전 정책:
 
@@ -71,9 +83,7 @@ single-source 결정 전 정책:
 - summary를 canonical/legal source로 사용 금지
 - search engine 검증 시 Vue 원문을 기준으로 판단
 
-현재 selective invalidation이 /terms, /terms.html, /privacy, /privacy.html을 포함하는 것은 cache 정리 범위다. 권위 문서 승격을 의미하지 않는다.
-
-현재 deploy artifact에는 summary .html이 남고 direct URL이 통과할 수 있다. Single-source 전환 또는 duplicate file 제거 전에는 링크하지 않으며 public 노출 제거를 P0로 둔다.
+현재 selective invalidation이 /terms, /terms.html, /privacy, /privacy.html을 포함하는 것은 cache 정리 범위다. 권위 문서 승격을 의미하지 않는다. 제거 후에도 이 path는 유지한다(기존 cache 객체 정리 목적, verify-docs 계약).
 
 ## 5. 구현됐지만 운영 검증 필요
 
@@ -94,7 +104,10 @@ P0:
 - GSC domain ownership와 sitemap 제출 확인
 - Naver Search Advisor ownership와 sitemap/RSS 제출 확인
 - submitted 대비 indexed URL과 exclusion reason 수집
-- deployed CloudFront function source hash/association 확인
+- ~~deployed CloudFront function source hash/association 확인~~ → 2026-07-28 해소.
+  구버전 함수가 배포돼 /fonts/*.woff2와 /faq가 index.html로 rewrite되던 것을 함수 게시(Publish)로 수정.
+  live 검증: fonts는 font/woff2 정상, /faq와 /faq/는 prerender 13884B, 그 외 route 회귀 없음.
+  참고: Functions는 개발/라이브 stage가 분리돼 "저장"만으로는 edge에 반영되지 않는다.
 
 P1:
 
