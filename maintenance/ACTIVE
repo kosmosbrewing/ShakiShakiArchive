@@ -1,0 +1,8 @@
+이 파일이 존재하면 배포가 준비 중(Coming Soon) 모드로 동작합니다.
+
+- 배포는 npm run build:maintenance 산출물(안내 페이지)만 S3에 올립니다.
+- prerender를 건너뛰므로 백엔드·DB가 꺼져 있어도 배포가 성공합니다.
+- 기존 상품/카테고리/FAQ/sitemap은 S3에서 삭제됩니다(--delete).
+
+해제: npm run maintenance:off 실행 후 커밋·push.
+단, 해제 전에 RDS와 백엔드를 먼저 살려야 합니다(prerender가 백엔드 API를 호출).
