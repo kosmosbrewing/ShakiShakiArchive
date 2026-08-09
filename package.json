@@ -28,6 +28,8 @@
     "prerender": "node scripts/prerender/index.js",
     "build:full": "npm run build && npm run prerender",
     "build:maintenance": "node scripts/build-maintenance.mjs",
+    "maintenance:on": "node scripts/maintenance-toggle.mjs on",
+    "maintenance:off": "node scripts/maintenance-toggle.mjs off",
     "optimize-images": "node scripts/optimize-images.js",
     "verify": "npm run docs:lint && npm run build"
   },

@@ -29,7 +29,11 @@ export async function fetchAllProducts() {
   let page = 1;
   const limit = 100; // 백엔드 허용 최대값
 
-  while (true) {
+  // 백엔드가 hasMore=true를 계속 반환하는 버그(오프셋 오류 등)에 걸리면 무한 루프로
+  // CI 러너가 최대 실행 시간까지 소진되므로 하드 캡을 둔다. 100페이지 = 상품 1만 개.
+  const MAX_PAGES = 100;
+
+  while (page <= MAX_PAGES) {
     const { data } = await axios.get(
       `${BACKEND_API}/api/products?page=${page}&limit=${limit}`
     );
@@ -40,6 +44,12 @@ export async function fetchAllProducts() {
     const hasMore = data?.pagination?.hasMore;
     if (!hasMore || batch.length === 0) break;
     page++;
+  }
+
+  if (page > MAX_PAGES) {
+    throw new Error(
+      `상품 페이지네이션이 ${MAX_PAGES}페이지를 넘었습니다 — 백엔드 hasMore 응답을 확인하세요`
+    );
   }
 
   console.log(`   📦 전체 상품 ${all.length}개 수집 완료 (${page}페이지)`);

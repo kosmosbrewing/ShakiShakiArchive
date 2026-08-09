@@ -85,6 +85,23 @@ function printSummary(runStats) {
  */
 function assertComplete(runStats) {
   const incomplete = [];
+
+  // 하한선 검사: generated === attempted만 보면 "0개 시도 → 0개 성공"이 통과한다.
+  // 백엔드가 200으로 빈 목록을 주는 경우(RDS 콜드 스타트 직후, 커넥션 풀 미준비,
+  // 응답 스키마 변경)가 실제로 있고, 그대로 배포되면 뒤이은 s3 sync --delete가
+  // 색인된 상품/카테고리 HTML을 통째로 지운다. 특히 재오픈 직후가 이 창이 가장 크다.
+  // 카탈로그를 의도적으로 줄였다면 PRERENDER_MIN_PRODUCTS로 하한을 낮춘다.
+  const minProducts = Number(process.env.PRERENDER_MIN_PRODUCTS ?? 50);
+  if (runStats.products.attempted < minProducts) {
+    incomplete.push(
+      `상품 수집량 부족 ${runStats.products.attempted}개 (하한 ${minProducts}) ` +
+        `— 백엔드가 빈 목록을 반환했을 가능성. 의도한 축소면 PRERENDER_MIN_PRODUCTS를 조정하세요`
+    );
+  }
+  if (runStats.categories.attempted < 1) {
+    incomplete.push("카테고리 0개 — 백엔드 응답 확인 필요");
+  }
+
   const pageGroups = [
     ["홈", runStats.home],
     ["FAQ", runStats.faq],

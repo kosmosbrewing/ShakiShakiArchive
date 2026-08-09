@@ -24,6 +24,13 @@ on:
 env:
   NODE_VERSION: "20"
 
+# 배포는 마지막에 `aws s3 sync --delete`로 끝나므로 두 job이 겹치면 서로의 산출물을 지운다.
+# 특히 준비 중 모드 전환·해제 순간에 이전 트리거의 job이 아직 돌고 있으면 결과가 뒤바뀐다.
+# sync 도중 취소가 더 위험하므로 취소 대신 직렬화한다.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,6 +39,21 @@ jobs:
       # 1. 코드 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # 1-1. 배포 모드 판정 (준비 중 vs 정상 운영)
+      # maintenance/ACTIVE 파일이 상태의 단일 소스다. push·repository_dispatch·수동 실행 등
+      # 어떤 트리거로 돌든 같은 결과가 나오게 하려고 파일로 둔다.
+      # (수동 실행 입력 maintenance_mode는 파일 없이 한 번만 시험할 때 쓰는 우회로)
+      - name: Determine deploy mode
+        id: mode
+        run: |
+          if [ -f maintenance/ACTIVE ] || [ "${{ inputs.maintenance_mode }}" == "true" ]; then
+            echo "maintenance=true" >> $GITHUB_OUTPUT
+            echo "🚧 준비 중(Coming Soon) 모드로 배포합니다"
+          else
+            echo "maintenance=false" >> $GITHUB_OUTPUT
+            echo "🟢 정상 운영 모드로 배포합니다"
+          fi
 
       # 2. Node.js 설정
       - name: Setup Node.js
@@ -45,10 +67,10 @@ jobs:
         run: npm ci
 
       # 4. 프로덕션 빌드 + Prerendering (운영 API/DB 기준)
-      # maintenance_mode에서는 건너뛴다 — prerender가 살아있는 백엔드 API를 필수로 호출하므로
+      # 준비 중 모드에서는 건너뛴다 — prerender가 살아있는 백엔드 API를 필수로 호출하므로
       # 백엔드를 내린 상태에서는 이 스텝이 반드시 실패한다(fail-closed).
       - name: Build and Prerender
-        if: inputs.maintenance_mode != true
+        if: steps.mode.outputs.maintenance != 'true'
         run: npm run build:full
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
@@ -56,9 +78,9 @@ jobs:
           VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
 
       # 4-M. 준비 중 모드 빌드 (백엔드·DB 불필요)
-      # 수동 실행(workflow_dispatch)에서 maintenance_mode를 켰을 때만 동작한다.
+      # maintenance/ACTIVE가 있거나 수동 실행에서 maintenance_mode를 켰을 때 동작한다.
       - name: Build maintenance page
-        if: inputs.maintenance_mode == true
+        if: steps.mode.outputs.maintenance == 'true'
         run: |
           echo "::warning::준비 중 모드로 배포합니다 — 기존 prerender 산출물(상품/카테고리/FAQ/sitemap)이 S3에서 삭제됩니다"
           npm run build:maintenance
@@ -116,6 +138,9 @@ jobs:
       # - 매 배포마다 재적용(멱등)해 콘솔 설정 유실 시에도 자동 복구
       # - assets는 매 배포마다 재업로드되어 타임스탬프가 갱신되므로,
       #   60일 이상 배포 공백이 없는 한 현역 청크는 삭제되지 않음
+      # - 예외: 준비 중 모드는 dist/assets/가 비어 있어 갱신이 일어나지 않는다.
+      #   장기 중단 시 옛 청크가 만료되지만, 안내 페이지는 assets를 참조하지 않고
+      #   재오픈 시 build:full이 전부 재생성하므로 실피해 없음
       # - Prefix "assets/" 한정 필수: index.html·robots·sitemap 등 루트 객체는 대상 외
       # - IAM 권한(s3:PutLifecycleConfiguration) 부재 시 경고만 남기고 배포는 계속
       - name: Ensure S3 lifecycle rule for old assets
@@ -136,16 +161,19 @@ jobs:
       # 8. 무효화 전략 판단 및 실행
       - name: Determine invalidation strategy
         id: invalidation
+        # 커밋 메시지는 반드시 env로 넘긴다. 셸에 직접 보간하면 메시지에 들어 있는
+        # $(...) · 백틱이 AWS 자격증명을 가진 러너에서 실행된다(script injection).
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # 커밋 메시지에 [full-invalidate] 키워드 확인
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
 
           # 조건 체크
           # 준비 중 모드는 전 경로가 안내 페이지로 바뀌므로 반드시 전체 무효화한다
           # (선택적 무효화는 상품/카테고리 경로를 일부만 지워 옛 페이지가 캐시에 남는다)
           if [[ "${{ github.ref_type }}" == "tag" ]] || \
              [[ "${{ inputs.full_invalidation }}" == "true" ]] || \
-             [[ "${{ inputs.maintenance_mode }}" == "true" ]] || \
+             [[ "${{ steps.mode.outputs.maintenance }}" == "true" ]] || \
              [[ "$COMMIT_MSG" == *"[full-invalidate]"* ]]; then
             echo "strategy=full" >> $GITHUB_OUTPUT
             echo "🔄 전체 캐시 무효화 실행"
@@ -203,7 +231,7 @@ jobs:
       # 준비 중 모드에서는 건너뛴다 — sitemap을 배포하지 않고 전 URL이 안내 페이지로
       # 폴백되므로, 색인 핑을 보내면 중복 페이지 재크롤만 유발한다.
       - name: Ping IndexNow
-        if: inputs.maintenance_mode != true
+        if: steps.mode.outputs.maintenance != 'true'
         run: node scripts/indexnow-ping.js
 
       # 10. 배포 검증 (Cache-Control 헤더 확인)

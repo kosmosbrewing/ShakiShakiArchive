@@ -21,21 +21,48 @@ const SRC = path.join(ROOT, "maintenance");
 
 // IndexNow 키 파일은 준비 중에도 유지한다. 지우면 재오픈 시 키 검증이 실패해
 // 색인 핑을 다시 쓸 수 없다(파일명 = 키 값이라 재발급도 번거롭다).
-const INDEXNOW_KEY_FILE = "f9acd9e5d4965bba5d297222b48dc5a5.txt";
+// 파일명을 하드코딩하지 않고 public/에서 찾는다 — 키를 회전해도 여기를 고칠 필요가 없다.
+function findIndexNowKeyFile() {
+  const publicDir = path.join(ROOT, "public");
+  if (!fs.existsSync(publicDir)) return null;
+  return fs.readdirSync(publicDir).find((f) => /^[0-9a-f]{32}\.txt$/i.test(f)) ?? null;
+}
 
-const COPIES = [
-  { from: path.join(SRC, "index.html"), to: path.join(DIST, "index.html") },
-  { from: path.join(SRC, "robots.txt"), to: path.join(DIST, "robots.txt") },
-  { from: path.join(ROOT, "src/assets/logo01-2.png"), to: path.join(DIST, "logo.png") },
-  { from: path.join(ROOT, "src/assets/favicon.png"), to: path.join(DIST, "favicon.png") },
-  {
-    from: path.join(ROOT, "public", INDEXNOW_KEY_FILE),
-    to: path.join(DIST, INDEXNOW_KEY_FILE),
-  },
-];
+function buildCopyList() {
+  const copies = [
+    { from: path.join(SRC, "index.html"), to: path.join(DIST, "index.html") },
+    { from: path.join(SRC, "robots.txt"), to: path.join(DIST, "robots.txt") },
+    // 안내 페이지는 로고를 data URI로 인라인하지만, og:image는 절대 URL이 필요해
+    // 파일도 함께 배포한다(소셜 공유 카드용).
+    { from: path.join(ROOT, "src/assets/logo01-2.png"), to: path.join(DIST, "logo.png") },
+  ];
+
+  const keyFile = findIndexNowKeyFile();
+  if (keyFile) {
+    copies.push({
+      from: path.join(ROOT, "public", keyFile),
+      to: path.join(DIST, keyFile),
+    });
+  } else {
+    console.warn("   ⚠️  public/에서 IndexNow 키 파일을 찾지 못했습니다 (재오픈 시 색인 핑 검증 실패 가능)");
+  }
+
+  return copies;
+}
 
 function main() {
   console.log("🚧 준비 중(maintenance) 모드 빌드 시작\n");
+
+  const COPIES = buildCopyList();
+
+  // 검증을 dist 삭제보다 먼저 한다. 순서가 반대면 자산이 누락됐을 때
+  // 멀쩡한 이전 빌드까지 날린 뒤 실패한다(로컬에서 dist를 서빙 중이면 즉시 404).
+  const missing = COPIES.filter((c) => !fs.existsSync(c.from));
+  if (missing.length > 0) {
+    console.error("❌ 필수 파일 누락 (dist는 그대로 보존됨):");
+    for (const m of missing) console.error(`   - ${path.relative(ROOT, m.from)}`);
+    process.exit(1);
+  }
 
   // 정상 빌드 산출물이 섞이면 안 되므로 dist를 통째로 비우고 시작한다.
   fs.rmSync(DIST, { recursive: true, force: true });
@@ -44,13 +71,6 @@ function main() {
   // deploy.yml의 "Upload Assets to S3" 스텝이 dist/assets/를 sync하므로
   // 디렉터리가 없으면 aws cli가 에러로 죽는다. 빈 디렉터리를 만들어 둔다.
   fs.mkdirSync(path.join(DIST, "assets"), { recursive: true });
-
-  const missing = COPIES.filter((c) => !fs.existsSync(c.from));
-  if (missing.length > 0) {
-    console.error("❌ 필수 파일 누락:");
-    for (const m of missing) console.error(`   - ${path.relative(ROOT, m.from)}`);
-    process.exit(1);
-  }
 
   for (const { from, to } of COPIES) {
     fs.copyFileSync(from, to);
