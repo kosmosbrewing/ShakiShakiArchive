@@ -100,6 +100,7 @@ ShakiShaki Archive의 빈티지 커머스 웹 프런트엔드입니다. Vue 3 SP
 | npm run preview | dist 로컬 미리보기 | 선행 build |
 | npm run prerender | dist에 공개 페이지 HTML과 sitemap 생성 | 실행 가능한 backend |
 | npm run build:full | build 후 prerender | 실행 가능한 backend |
+| npm run build:maintenance | dist를 Coming Soon 안내 페이지로만 구성 (준비 중 모드) | 없음 (backend·DB 불필요) |
 | npm run optimize-images | src/assets 이미지 최적화 | 원본 asset |
 | npm run verify | docs:lint 후 build | 없음 |
 

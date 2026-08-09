@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      maintenance_mode:
+        description: '⚠️ 준비 중 모드: 사이트를 Coming Soon 안내 페이지로 교체 (기존 prerender 산출물 전부 삭제됨)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   NODE_VERSION: "20"
@@ -40,12 +45,23 @@ jobs:
         run: npm ci
 
       # 4. 프로덕션 빌드 + Prerendering (운영 API/DB 기준)
+      # maintenance_mode에서는 건너뛴다 — prerender가 살아있는 백엔드 API를 필수로 호출하므로
+      # 백엔드를 내린 상태에서는 이 스텝이 반드시 실패한다(fail-closed).
       - name: Build and Prerender
+        if: inputs.maintenance_mode != true
         run: npm run build:full
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
           VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
+
+      # 4-M. 준비 중 모드 빌드 (백엔드·DB 불필요)
+      # 수동 실행(workflow_dispatch)에서 maintenance_mode를 켰을 때만 동작한다.
+      - name: Build maintenance page
+        if: inputs.maintenance_mode == true
+        run: |
+          echo "::warning::준비 중 모드로 배포합니다 — 기존 prerender 산출물(상품/카테고리/FAQ/sitemap)이 S3에서 삭제됩니다"
+          npm run build:maintenance
 
       # 5. AWS 자격 증명 설정
       - name: Configure AWS credentials
@@ -77,19 +93,24 @@ jobs:
             --delete
 
       # 7-1. SEO/LLM 텍스트 파일 Content-Type + charset 명시
+      # 준비 중 모드에는 llms.txt/sitemap.xml이 없으므로 존재하는 파일만 처리한다
+      # (없는 파일에 aws s3 cp를 하면 스텝 전체가 실패한다)
       - name: Set UTF-8 metadata for SEO files
         run: |
-          aws s3 cp dist/robots.txt s3://${{ secrets.AWS_S3_BUCKET_NAME }}/robots.txt \
-            --content-type "text/plain; charset=utf-8" \
-            --cache-control "max-age=300, stale-while-revalidate=86400"
+          upload_text() {
+            local file="$1" content_type="$2"
+            if [ ! -f "dist/$file" ]; then
+              echo "⏭️  dist/$file 없음 - 건너뜀"
+              return 0
+            fi
+            aws s3 cp "dist/$file" "s3://${{ secrets.AWS_S3_BUCKET_NAME }}/$file" \
+              --content-type "$content_type" \
+              --cache-control "max-age=300, stale-while-revalidate=86400"
+          }
 
-          aws s3 cp dist/llms.txt s3://${{ secrets.AWS_S3_BUCKET_NAME }}/llms.txt \
-            --content-type "text/plain; charset=utf-8" \
-            --cache-control "max-age=300, stale-while-revalidate=86400"
-
-          aws s3 cp dist/sitemap.xml s3://${{ secrets.AWS_S3_BUCKET_NAME }}/sitemap.xml \
-            --content-type "application/xml; charset=utf-8" \
-            --cache-control "max-age=300, stale-while-revalidate=86400"
+          upload_text robots.txt "text/plain; charset=utf-8"
+          upload_text llms.txt "text/plain; charset=utf-8"
+          upload_text sitemap.xml "application/xml; charset=utf-8"
 
       # 7-2. S3 Lifecycle 규칙 보장 (60일 지난 assets/ 자동 삭제)
       # - 매 배포마다 재적용(멱등)해 콘솔 설정 유실 시에도 자동 복구
@@ -120,8 +141,11 @@ jobs:
           COMMIT_MSG="${{ github.event.head_commit.message }}"
 
           # 조건 체크
+          # 준비 중 모드는 전 경로가 안내 페이지로 바뀌므로 반드시 전체 무효화한다
+          # (선택적 무효화는 상품/카테고리 경로를 일부만 지워 옛 페이지가 캐시에 남는다)
           if [[ "${{ github.ref_type }}" == "tag" ]] || \
              [[ "${{ inputs.full_invalidation }}" == "true" ]] || \
+             [[ "${{ inputs.maintenance_mode }}" == "true" ]] || \
              [[ "$COMMIT_MSG" == *"[full-invalidate]"* ]]; then
             echo "strategy=full" >> $GITHUB_OUTPUT
             echo "🔄 전체 캐시 무효화 실행"
@@ -176,7 +200,10 @@ jobs:
 
       # 9-C. IndexNow 색인 핑 (무효화 완료 후 — 페이지가 실존해야 핑이 유효)
       # 최근 변경된 URL을 네이버/빙 등 IndexNow 지원 검색엔진에 즉시 알림
+      # 준비 중 모드에서는 건너뛴다 — sitemap을 배포하지 않고 전 URL이 안내 페이지로
+      # 폴백되므로, 색인 핑을 보내면 중복 페이지 재크롤만 유발한다.
       - name: Ping IndexNow
+        if: inputs.maintenance_mode != true
         run: node scripts/indexnow-ping.js
 
       # 10. 배포 검증 (Cache-Control 헤더 확인)
